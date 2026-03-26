@@ -1,0 +1,8 @@
+{
+  "scopeName": "text.html.markdown",
+  "name": "MDC",
+  "comment": "MDC files use the same grammar as Markdown",
+  "patterns": [
+    { "include": "text.html.markdown" }
+  ]
+}

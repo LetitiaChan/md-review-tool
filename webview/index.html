@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'none'; 
+                   style-src ${cspSource} 'unsafe-inline'; 
+                   script-src 'nonce-${nonce}' ${cspSource}; 
+                   img-src ${cspSource} data:;">
+    <title>MD 批阅工具</title>
+    <link rel="stylesheet" href="${styleUri}">
+    <link rel="stylesheet" href="${markdownCssUri}">
+    <link rel="stylesheet" href="${annotationsCssUri}">
+</head>
+<body>
+    <!-- 顶部工具栏 -->
+    <header class="toolbar">
+        <div class="toolbar-left">
+            <h1 class="app-title">MD 批阅工具</h1>
+            <button class="btn btn-help" id="btnHelp" title="使用帮助">❓ 帮助</button>
+            <div class="file-selector-group" id="fileSelectorGroup" style="display:none;">
+                <select class="file-select" id="fileSelect" title="选择MD文件">
+                    <option value="">-- 选择文件 --</option>
+                </select>
+                <button class="btn btn-refresh" id="btnRefresh" title="刷新当前文件（重新读取）">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.65 2.35A7.96 7.96 0 0 0 8 0C3.58 0 0 3.58 0 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 8 14 6 6 0 1 1 8 2c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z" fill="currentColor" transform="scale(0.9) translate(1,1)"/></svg>
+                </button>
+            </div>
+            <span class="file-name" id="fileName">未打开文件</span>
+            <span class="file-change-badge" id="fileChangeBadge" style="display:none;">文件已更新</span>
+            <div class="mode-switch" id="modeSwitch">
+                <button class="mode-btn active" data-mode="preview" id="btnPreviewMode" title="预览模式（查看渲染效果、添加批注）">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3C4 3 1 8 1 8s3 5 7 5 7-5 7-5-3-5-7-5z" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
+                    预览
+                </button>
+                <button class="mode-btn" data-mode="edit" id="btnEditMode" title="编辑模式（所见即所得，直接在页面上编辑）">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                    编辑
+                </button>
+            </div>
+            <span class="edit-status" id="editStatus"></span>
+            <button class="btn btn-save-md" id="btnSaveMd" style="display:none;" title="保存修改到源文件 (Ctrl+S)">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13 14H3a1 1 0 01-1-1V3a1 1 0 011-1h8l3 3v9a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 2v4h5V2M5 14v-4h6v4" stroke="currentColor" stroke-width="1.2"/></svg>
+                保存
+            </button>
+            <span class="annotation-count" id="annotationCount">0 条批注</span>
+        </div>
+        <div class="toolbar-right">
+            <span class="auto-save-status" id="autoSaveStatus"></span>
+            <button class="btn btn-secondary" id="btnExport" disabled>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8m0 0l-3-3m3 3l3-3M2 12v1h12v-1" stroke="currentColor" stroke-width="1.5"/></svg>
+                保存批阅记录
+            </button>
+            <button class="btn btn-apply" id="btnApplyReview" disabled title="根据批阅记录一键AI修复源文件">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8.5l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                一键AI修复
+            </button>
+            <button class="btn btn-outline" id="btnClearAll" disabled>
+                清除所有批注
+            </button>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="main-container">
+        <!-- 欢迎页 -->
+        <div class="welcome" id="welcomeScreen">
+            <div class="welcome-icon">📝</div>
+            <h2>欢迎使用 MD 批阅工具</h2>
+            <p>打开一个 Markdown 文件，像导师批改论文一样进行批阅</p>
+            <div class="welcome-features">
+                <div class="feature">
+                    <span class="feature-icon">✏️</span>
+                    <span>选中文字添加评论</span>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">🗑️</span>
+                    <span>标记删除内容</span>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">🖼️</span>
+                    <span>评论中插入图片</span>
+                </div>
+                <div class="feature">
+                    <span class="feature-icon">📄</span>
+                    <span>导出AI可读批阅记录</span>
+                </div>
+            </div>
+            <div class="welcome-folder-hint" id="welcomeFolderHint">
+                <p>💡 在 VSCode 中打开 <code>.md</code> 文件后，通过命令面板或右键菜单启动批阅面板</p>
+                <p style="margin-top:6px;color:#999;font-size:13px;">批阅记录会自动保存到工作区 <code>批阅文件/</code> 目录</p>
+            </div>
+        </div>
+
+        <!-- 编辑区 -->
+        <div class="editor-container" id="editorContainer" style="display:none;">
+
+            <!-- 文档内容区 -->
+            <div class="document-panel">
+                <!-- 左侧目录导航栏（悬浮在文档面板内） -->
+                <div class="toc-panel" id="tocPanel">
+                    <div class="toc-header">
+                        <span class="toc-title">目录</span>
+                        <button class="toc-collapse-btn" id="btnCollapseToc" title="收起目录">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                    </div>
+                    <div class="toc-list" id="tocList">
+                        <div class="toc-empty">打开文档后自动生成目录</div>
+                    </div>
+                </div>
+                <!-- 展开目录按钮（收起时显示） -->
+                <button class="btn-expand-toc" id="btnExpandToc" style="display:none;" title="展开目录">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+
+                <div class="wysiwyg-toolbar" id="wysiwygToolbar">
+                    <div class="toolbar-group">
+                        <button class="wysiwyg-btn" data-command="bold" title="加粗 (Ctrl+B)"><b>B</b></button>
+                        <button class="wysiwyg-btn" data-command="italic" title="斜体 (Ctrl+I)"><i>I</i></button>
+                        <button class="wysiwyg-btn" data-command="strikeThrough" title="删除线"><s>S</s></button>
+                    </div>
+                    <div class="toolbar-group">
+                        <button class="wysiwyg-btn" data-command="heading" data-value="H1" title="一级标题" style="font-size:15px;">H1</button>
+                        <button class="wysiwyg-btn" data-command="heading" data-value="H2" title="二级标题" style="font-size:14px;">H2</button>
+                        <button class="wysiwyg-btn" data-command="heading" data-value="H3" title="三级标题" style="font-size:13px;">H3</button>
+                    </div>
+                    <div class="toolbar-group">
+                        <button class="wysiwyg-btn" data-command="insertUnorderedList" title="无序列表">
+                            <svg viewBox="0 0 16 16" fill="none"><circle cx="3" cy="4" r="1.2" fill="currentColor"/><circle cx="3" cy="8" r="1.2" fill="currentColor"/><circle cx="3" cy="12" r="1.2" fill="currentColor"/><line x1="6" y1="4" x2="14" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.5"/></svg>
+                        </button>
+                        <button class="wysiwyg-btn" data-command="insertOrderedList" title="有序列表">
+                            <svg viewBox="0 0 16 16" fill="none"><text x="1" y="5.5" font-size="5" fill="currentColor" font-weight="600">1.</text><text x="1" y="9.5" font-size="5" fill="currentColor" font-weight="600">2.</text><text x="1" y="13.5" font-size="5" fill="currentColor" font-weight="600">3.</text><line x1="6" y1="4" x2="14" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.5"/></svg>
+                        </button>
+                    </div>
+                    <div class="toolbar-group">
+                        <button class="wysiwyg-btn" data-command="formatBlock" data-value="blockquote" title="引用块">
+                            <svg viewBox="0 0 16 16" fill="none"><path d="M3 4h4v4H5l-2 3V8H3V4zm6 0h4v4h-2l-2 3V8H9V4z" fill="currentColor" opacity="0.7"/></svg>
+                        </button>
+                        <button class="wysiwyg-btn" data-command="insertHorizontalRule" title="分隔线">
+                            <svg viewBox="0 0 16 16" fill="none"><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="2"/></svg>
+                        </button>
+                    </div>
+                    <div class="toolbar-group">
+                        <button class="wysiwyg-btn" data-command="undo" title="撤销 (Ctrl+Z)">
+                            <svg viewBox="0 0 16 16" fill="none"><path d="M3 7h7a3 3 0 110 6H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6 4L3 7l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                        <button class="wysiwyg-btn" data-command="redo" title="重做 (Ctrl+Y)">
+                            <svg viewBox="0 0 16 16" fill="none"><path d="M13 7H6a3 3 0 100 6h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="document-content" id="documentContent"></div>
+            </div>
+
+            <!-- 展开批注侧边栏按钮（收起时显示） -->
+            <button class="btn-expand-panel" id="btnExpandPanel" style="display:none;" title="展开批注列表">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span class="expand-badge" id="expandBadge"></span>
+            </button>
+
+            <!-- 批注侧边栏 -->
+            <div class="annotations-panel" id="annotationsPanel">
+                <div class="panel-header">
+                    <span>批注列表</span>
+                    <div class="sort-controls">
+                        <select class="sort-select" id="sortSelect" title="排序方式">
+                            <option value="time">按批阅时间 ↓</option>
+                            <option value="position">按文本位置</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-sm" id="btnCollapsePanel">收起</button>
+                </div>
+                <div class="annotations-list" id="annotationsList">
+                    <div class="empty-annotations">
+                        <p>暂无批注</p>
+                        <p class="hint">选中文本后右键或点击工具栏添加批注</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 右键菜单 -->
+    <div class="context-menu" id="contextMenu" style="display:none;">
+        <div class="context-menu-item" id="menuAddComment">
+            <span class="menu-icon">💬</span> 添加评论
+        </div>
+        <div class="context-menu-item" id="menuMarkDelete">
+            <span class="menu-icon">🗑️</span> 标记删除
+        </div>
+        <div class="context-menu-item" id="menuAddInsert">
+            <span class="menu-icon">➕</span> 插入内容（在此处之后）
+        </div>
+    </div>
+
+    <!-- 表格编辑右键菜单（编辑模式下） -->
+    <div class="context-menu table-context-menu" id="tableContextMenu" style="display:none;">
+        <div class="context-menu-header">📊 表格操作</div>
+        <div class="context-menu-item" id="tableMenuInsertRowAbove">
+            <span class="menu-icon">⬆️</span> 在上方插入行
+        </div>
+        <div class="context-menu-item" id="tableMenuInsertRowBelow">
+            <span class="menu-icon">⬇️</span> 在下方插入行
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" id="tableMenuInsertColLeft">
+            <span class="menu-icon">⬅️</span> 在左侧插入列
+        </div>
+        <div class="context-menu-item" id="tableMenuInsertColRight">
+            <span class="menu-icon">➡️</span> 在右侧插入列
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item context-menu-item-danger" id="tableMenuDeleteRow">
+            <span class="menu-icon">🗑️</span> 删除当前行
+        </div>
+        <div class="context-menu-item context-menu-item-danger" id="tableMenuDeleteCol">
+            <span class="menu-icon">🗑️</span> 删除当前列
+        </div>
+    </div>
+
+    <!-- 评论弹窗 -->
+    <div class="modal-overlay" id="commentModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="commentModalTitle">添加评论</h3>
+                <button class="btn-close" id="btnCloseModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="selected-text-preview">
+                    <label>选中的文本：</label>
+                    <div class="preview-text" id="selectedTextPreview"></div>
+                </div>
+                <div class="comment-input-area">
+                    <label>评论内容：</label>
+                    <textarea id="commentText" placeholder="输入你的评论..." rows="4"></textarea>
+                </div>
+                <div class="image-upload-area">
+                    <label>插入图片（可选）：</label>
+                    <div class="image-upload-zone" id="imageUploadZone">
+                        <input type="file" id="imageInput" accept="image/*" multiple style="display:none;">
+                        <p>点击、拖拽或 Ctrl+V 粘贴图片</p>
+                    </div>
+                    <div class="image-previews" id="imagePreviews"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="btnCancelComment">取消</button>
+                <button class="btn btn-primary" id="btnSubmitComment">提交评论</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 插入内容弹窗 -->
+    <div class="modal-overlay" id="insertModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>插入内容</h3>
+                <button class="btn-close" id="btnCloseInsertModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="selected-text-preview">
+                    <label>插入位置（在此内容之后）：</label>
+                    <div class="preview-text" id="insertPositionPreview"></div>
+                </div>
+                <div class="comment-input-area">
+                    <label>要插入的内容：</label>
+                    <textarea id="insertText" placeholder="输入要插入的内容（支持Markdown格式）..." rows="6"></textarea>
+                </div>
+                <div class="comment-input-area">
+                    <label>插入说明（可选）：</label>
+                    <textarea id="insertReason" placeholder="说明插入原因..." rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="btnCancelInsert">取消</button>
+                <button class="btn btn-primary" id="btnSubmitInsert">确认插入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 清除所有批注确认弹窗 -->
+    <div class="modal-overlay" id="clearAllModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>⚠️ 清除所有批注</h3>
+                <button class="btn-close" id="btnCloseClearAll">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin:0;line-height:1.8;">确定要清除所有批注吗？<br><strong style="color:var(--danger);">此操作不可恢复！</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="btnCancelClearAll">取消</button>
+                <button class="btn btn-danger" id="btnConfirmClearAll">确认清除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 一键AI修复确认弹窗 -->
+    <div class="modal-overlay" id="applyConfirmModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>🤖 一键AI修复确认</h3>
+                <button class="btn-close" id="btnCloseApplyConfirm">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="apply-summary" id="applySummary"></div>
+                <div class="apply-warning">
+                    <p>⚠️ 此操作将生成 AI 修改指令文件，保存到工作区 <code>批阅文件/</code> 目录。</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="btnCancelApply">取消</button>
+                <button class="btn btn-apply" id="btnConfirmApply">生成AI指令</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 一键AI修复结果弹窗 -->
+    <div class="modal-overlay" id="applyResultModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>📋 更新结果</h3>
+                <button class="btn-close" id="btnCloseApplyResult">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="apply-result-content" id="applyResultContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="btnCloseResultOk">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 帮助弹窗 -->
+    <div class="modal-overlay" id="helpModal" style="display:none;">
+        <div class="modal modal-help">
+            <div class="modal-header">
+                <h3>📖 使用帮助</h3>
+                <button class="btn-close" id="btnCloseHelp">&times;</button>
+            </div>
+            <div class="modal-body help-content">
+                <section class="help-section">
+                    <h4>🚀 快速开始</h4>
+                    <p>在 VSCode 中打开 <code>.md</code> 文件，通过命令面板（<kbd>Ctrl+Shift+P</kbd>）搜索「MD批阅: 打开批阅面板」，或右键编辑器选择「MD批阅: 打开批阅面板」。</p>
+                </section>
+                <section class="help-section">
+                    <h4>💬 添加评论</h4>
+                    <ol>
+                        <li>在文档中<strong>选中一段文字</strong></li>
+                        <li>松开鼠标后出现浮层工具条，点击 <strong>「💬 评论」</strong>（也可右键选择）</li>
+                        <li>在弹窗中输入评论内容，可选上传图片</li>
+                        <li>点击 <strong>「提交评论」</strong></li>
+                    </ol>
+                    <p class="help-hint">选中的文字会被标记为 <span style="color:var(--primary);font-weight:600;">紫色高亮</span>，右侧批注栏同步显示评论卡片。</p>
+                </section>
+                <section class="help-section">
+                    <h4>🗑️ 标记删除</h4>
+                    <ol>
+                        <li><strong>选中</strong>需要删除的文字</li>
+                        <li>点击浮层中的 <strong>「🗑️ 删除」</strong>（或右键选择）</li>
+                    </ol>
+                </section>
+                <section class="help-section">
+                    <h4>➕ 插入内容</h4>
+                    <ol>
+                        <li><strong>选中</strong>一段文字作为插入位置的锚点</li>
+                        <li>点击浮层中的 <strong>「➕ 插入」</strong>（或右键选择）</li>
+                        <li>输入要插入的内容（支持 Markdown）</li>
+                    </ol>
+                </section>
+                <section class="help-section">
+                    <h4>✏️ 直接编辑（所见即所得）</h4>
+                    <ol>
+                        <li>点击文档面板头部的 <strong>「✏️ 编辑」</strong> 按钮</li>
+                        <li>直接在渲染后的文档上修改内容</li>
+                        <li>内容会在停止输入 1.5 秒后 <strong>自动保存</strong></li>
+                    </ol>
+                </section>
+                <section class="help-section">
+                    <h4>⌨️ 快捷键</h4>
+                    <div class="help-shortcuts">
+                        <div class="shortcut-item"><kbd>Ctrl+Shift+E</kbd> <span>切换编辑/预览模式</span></div>
+                        <div class="shortcut-item"><kbd>Ctrl+S</kbd> <span>立即保存</span></div>
+                        <div class="shortcut-item"><kbd>Ctrl+B</kbd> <span>加粗</span></div>
+                        <div class="shortcut-item"><kbd>Ctrl+I</kbd> <span>斜体</span></div>
+                        <div class="shortcut-item"><kbd>Ctrl+Z</kbd> <span>撤销</span></div>
+                        <div class="shortcut-item"><kbd>Ctrl+E</kbd> <span>导出批阅</span></div>
+                        <div class="shortcut-item"><kbd>Esc</kbd> <span>关闭弹窗</span></div>
+                    </div>
+                </section>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="btnCloseHelpOk">知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入第三方库 -->
+    <script src="${markedUri}"></script>
+    <script src="${turndownUri}"></script>
+    <!-- 初始化 VSCode API -->
+    <script nonce="${nonce}">
+        const vscode = acquireVsCodeApi();
+    </script>
+    <!-- 应用脚本 -->
+    <script src="${storeUri}"></script>
+    <script src="${rendererUri}"></script>
+    <script src="${annotationsUri}"></script>
+    <script src="${exportUri}"></script>
+    <script src="${appUri}"></script>
+</body>
+</html>

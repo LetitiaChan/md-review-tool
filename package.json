@@ -1,0 +1,85 @@
+{
+  "name": "md-review-tool",
+  "displayName": "MD 批阅工具",
+  "description": "Markdown 文件批阅工具，支持评论、标记删除、插入内容，导出 AI 可读的结构化修改指令",
+  "version": "1.0.0",
+  "publisher": "md-review",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:mdReview.openPanel"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "mdc",
+        "extensions": [".mdc"],
+        "aliases": ["MDC", "Markdown Cursor"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "mdc",
+        "scopeName": "text.html.markdown",
+        "path": "./syntaxes/mdc.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "mdReview.openPanel",
+        "title": "MD批阅: 打开批阅面板",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "mdReview.exportReview",
+        "title": "MD批阅: 导出批阅记录"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "mdReview.openPanel",
+          "when": "resourceLangId == markdown || resourceLangId == mdc || resourceExtname == .mdc",
+          "group": "navigation@0"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "mdReview.openPanel",
+          "when": "resourceLangId == markdown || resourceLangId == mdc || resourceExtname == .mdc",
+          "group": "navigation@0"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "mdReview.openPanel",
+          "when": "resourceLangId == markdown || resourceLangId == mdc || resourceExtname == .mdc",
+          "group": "navigation@0"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "mdReview.exportReview",
+        "key": "ctrl+e",
+        "when": "mdReviewPanelFocused"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.0",
+    "@types/vscode": "^1.74.0",
+    "typescript": "^5.3.3"
+  }
+}

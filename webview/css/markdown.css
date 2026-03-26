@@ -1,0 +1,243 @@
+/* ===== Markdown 渲染样式 ===== */
+.document-content h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 24px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+    color: var(--text);
+}
+
+.document-content h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 20px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text);
+}
+
+.document-content h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 16px 0 8px;
+    color: var(--text);
+}
+
+.document-content h4, .document-content h5, .document-content h6 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 12px 0 8px;
+    color: var(--text-secondary);
+}
+
+.document-content p {
+    margin: 0 0 12px;
+    line-height: 1.8;
+}
+
+.document-content ul, .document-content ol {
+    margin: 0 0 12px;
+    padding-left: 24px;
+}
+
+.document-content li {
+    margin-bottom: 4px;
+    line-height: 1.7;
+}
+
+.document-content blockquote {
+    margin: 0 0 12px;
+    padding: 8px 16px;
+    border-left: 4px solid var(--primary);
+    background: var(--primary-light);
+    color: var(--text-secondary);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.document-content code {
+    background: var(--border-light);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 0.9em;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    color: var(--danger);
+}
+
+.document-content pre {
+    margin: 0 0 12px;
+    padding: 16px;
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.document-content pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+}
+
+.document-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 12px;
+    font-size: 14px;
+}
+
+.document-content th, .document-content td {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    text-align: left;
+}
+
+.document-content th {
+    background: var(--border-light);
+    font-weight: 600;
+}
+
+.document-content hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+}
+
+.document-content img {
+    max-width: 100%;
+    border-radius: var(--radius);
+    margin: 8px 0;
+}
+
+.document-content .img-placeholder {
+    display: inline-block;
+    padding: 16px 24px;
+    margin: 8px 0;
+    background: #fff3cd;
+    border: 1px dashed #ffc107;
+    border-radius: var(--radius);
+    color: #856404;
+    font-size: 13px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.document-content a {
+    color: var(--primary);
+    text-decoration: none;
+}
+.document-content a:hover {
+    text-decoration: underline;
+}
+
+/* ===== 可选择的段落块 ===== */
+.document-content .md-block {
+    position: relative;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s;
+}
+
+.document-content .md-block:hover {
+    background: rgba(79, 70, 229, 0.03);
+}
+
+/* ===== 高亮标记样式 ===== */
+.highlight-comment {
+    background: rgba(79, 70, 229, 0.15);
+    border-bottom: 2px solid var(--primary);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.15s;
+    position: relative;
+}
+
+.highlight-comment:hover {
+    background: rgba(79, 70, 229, 0.25);
+}
+
+.highlight-comment .annotation-indicator {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background: var(--primary);
+    color: white;
+    font-size: 10px;
+    text-align: center;
+    line-height: 16px;
+    border-radius: 50%;
+    margin-left: 2px;
+    vertical-align: super;
+    cursor: pointer;
+}
+
+.highlight-delete {
+    background: rgba(239, 68, 68, 0.15);
+    text-decoration: line-through;
+    color: var(--danger);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.15s;
+    position: relative;
+}
+
+.highlight-delete:hover {
+    background: rgba(239, 68, 68, 0.25);
+}
+
+.highlight-delete .annotation-indicator {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background: var(--danger);
+    color: white;
+    font-size: 10px;
+    text-align: center;
+    line-height: 16px;
+    border-radius: 50%;
+    margin-left: 2px;
+    vertical-align: super;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+/* ===== 插入标记样式 ===== */
+.highlight-insert {
+    display: inline;
+    position: relative;
+}
+
+.insert-marker {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--insert-light);
+    border: 1px dashed var(--insert-color);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+    margin: 2px 4px;
+    font-size: 12px;
+    color: var(--insert-color);
+    cursor: pointer;
+    transition: background 0.15s;
+    vertical-align: baseline;
+}
+
+.insert-marker:hover {
+    background: rgba(37, 99, 235, 0.15);
+}
+
+.insert-marker .annotation-indicator {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background: var(--insert-color);
+    color: white;
+    font-size: 10px;
+    text-align: center;
+    line-height: 16px;
+    border-radius: 50%;
+    cursor: pointer;
+}
