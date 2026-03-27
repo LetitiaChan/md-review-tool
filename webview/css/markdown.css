@@ -24,7 +24,13 @@
     color: var(--text);
 }
 
-.document-content h4, .document-content h5, .document-content h6 {
+.document-content h4, .document-content h5 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 12px 0 8px;
+    color: var(--text);
+}
+.document-content h6 {
     font-size: 15px;
     font-weight: 600;
     margin: 12px 0 8px;
@@ -46,29 +52,135 @@
     line-height: 1.7;
 }
 
-.document-content blockquote {
-    margin: 0 0 12px;
-    padding: 8px 16px;
-    border-left: 4px solid var(--primary);
-    background: var(--primary-light);
-    color: var(--text-secondary);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+/* 列表项内段落（loose list，即列表项之间有空行时 marked 保留 <p> 标签） */
+.document-content li > p {
+    margin: 0 0 8px;
+}
+.document-content li > p:last-child {
+    margin-bottom: 0;
 }
 
+/* 嵌套列表缩进 */
+.document-content li > ul,
+.document-content li > ol {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+/* ===== 引用块 blockquote 多级嵌套风格 ===== */
+.document-content blockquote {
+    margin: 0 0 16px;
+    padding: 12px 16px 12px 20px;
+    border-left: 4px solid #a3c4f3;
+    background: rgba(59, 130, 246, 0.06);
+    color: #57606a;
+    border-radius: 0 8px 8px 0;
+    position: relative;
+    font-style: normal;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.document-content blockquote:hover {
+    background: rgba(59, 130, 246, 0.10);
+}
+.document-content blockquote > :first-child {
+    margin-top: 0;
+}
+.document-content blockquote > :last-child {
+    margin-bottom: 0;
+}
+
+/* 嵌套引用 - 逐级增强颜色区分 */
+.document-content blockquote blockquote {
+    margin-top: 8px;
+    margin-bottom: 8px;
+    border-left-color: #7baaf5;
+    background: rgba(59, 130, 246, 0.09);
+}
+.document-content blockquote blockquote blockquote {
+    border-left-color: #5b94e8;
+    background: rgba(59, 130, 246, 0.12);
+}
+.document-content blockquote blockquote blockquote blockquote {
+    border-left-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.16);
+}
+
+/* 引用块中段落间距优化 */
+.document-content blockquote p {
+    margin-bottom: 8px;
+}
+.document-content blockquote p:last-child {
+    margin-bottom: 0;
+}
+
+/* 引用块中的强调文字 */
+.document-content blockquote strong {
+    color: var(--text);
+}
+
+/* 引用块中的代码 */
+.document-content blockquote code {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+/* 引用块中的链接 */
+.document-content blockquote a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-decoration-color: rgba(79, 70, 229, 0.3);
+    text-underline-offset: 2px;
+}
+.document-content blockquote a:hover {
+    text-decoration-color: var(--primary);
+}
+
+/* --- 暗色主题引用 --- */
+.theme-dark .document-content blockquote {
+    border-left-color: #888888;
+    border-left-width: 5px;
+    color: #e0e0e0;
+    background: rgba(255, 255, 255, 0.04);
+}
+.theme-dark .document-content blockquote:hover {
+    background: rgba(255, 255, 255, 0.07);
+}
+.theme-dark .document-content blockquote blockquote {
+    border-left-color: #999999;
+    background: rgba(255, 255, 255, 0.05);
+}
+.theme-dark .document-content blockquote blockquote blockquote {
+    border-left-color: #aaaaaa;
+    background: rgba(255, 255, 255, 0.06);
+}
+.theme-dark .document-content blockquote blockquote blockquote blockquote {
+    border-left-color: #bbbbbb;
+    background: rgba(255, 255, 255, 0.07);
+}
+.theme-dark .document-content blockquote strong {
+    color: #f0f0f0;
+}
+.theme-dark .document-content blockquote code {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* code 通用样式（字体、圆角等） */
 .document-content code {
-    background: var(--border-light);
+    background: #f1f3f5;
     padding: 2px 6px;
     border-radius: var(--radius-sm);
     font-size: 0.9em;
     font-family: 'Fira Code', 'Consolas', monospace;
-    color: var(--danger);
+}
+/* 行内 code 文字色（排除代码块中的 code.hljs） */
+.document-content code:not(.hljs) {
+    color: #c7254e;
 }
 
 .document-content pre {
     margin: 0 0 12px;
     padding: 16px;
-    background: #1e293b;
-    color: #e2e8f0;
+    background: #1a1a1a;
+    color: #e0e0e0;
     border-radius: var(--radius);
     overflow-x: auto;
     font-size: 13px;
@@ -77,28 +189,31 @@
 
 .document-content pre code {
     background: none;
-    color: inherit;
     padding: 0;
     font-size: inherit;
 }
-
-.document-content table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0 0 12px;
-    font-size: 14px;
+.document-content pre code:not(.hljs) {
+    color: inherit;
 }
 
-.document-content th, .document-content td {
-    padding: 8px 12px;
-    border: 1px solid var(--border);
-    text-align: left;
+/* hljs 高亮代码块 - 背景色和文字色由 highlight-themes.css 中的 [data-code-theme] 控制 */
+[data-code-theme] .document-content pre {
+    background: transparent;
+    color: unset;
+}
+[data-code-theme] .document-content pre code.hljs {
+    background: none;
+    padding: 0;
+}
+[data-code-theme] .document-content .code-block {
+    color: unset;
+}
+[data-code-theme] .document-content .code-block pre {
+    background: transparent;
 }
 
-.document-content th {
-    background: var(--border-light);
-    font-weight: 600;
-}
+
+
 
 .document-content hr {
     border: none;
@@ -240,4 +355,984 @@
     line-height: 16px;
     border-radius: 50%;
     cursor: pointer;
+}
+
+/* ===== Mermaid 图表样式 ===== */
+.mermaid-container {
+    margin: 16px 0;
+    text-align: center;
+}
+
+.mermaid-rendered {
+    display: inline-block;
+    max-width: 100%;
+    min-height: 200px;
+    overflow: hidden;
+}
+
+.mermaid-rendered svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    margin: 0 auto;
+    min-height: 200px;
+}
+
+.mermaid-source {
+    background: var(--code-bg, #f6f8fa);
+    border: 1px solid var(--border, #e1e4e8);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-secondary, #666);
+    white-space: pre-wrap;
+    text-align: left;
+}
+
+.mermaid-error {
+    background: #fff3f3;
+    border: 1px solid #ffc9c9;
+    border-radius: 6px;
+    padding: 12px 16px;
+    color: #c92a2a;
+    font-size: 13px;
+    text-align: left;
+}
+
+.mermaid-error-icon {
+    margin-right: 4px;
+}
+
+.mermaid-error pre {
+    margin: 8px 0 0;
+    padding: 8px;
+    background: rgba(0,0,0,0.04);
+    border-radius: 4px;
+    font-size: 12px;
+    color: #666;
+    white-space: pre-wrap;
+}
+
+.theme-dark .mermaid-source {
+    background: #2d2d2d;
+    border-color: #444;
+    color: #aaa;
+}
+
+.theme-dark .mermaid-error {
+    background: #3d1f1f;
+    border-color: #6b2c2c;
+    color: #ff8888;
+}
+
+.theme-dark .mermaid-error pre {
+    background: rgba(255,255,255,0.06);
+    color: #999;
+}
+
+/* ===== KaTeX 数学公式样式 ===== */
+.katex-display {
+    display: block;
+    margin: 16px 0;
+    text-align: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 0;
+}
+
+.katex-inline {
+    display: inline;
+}
+
+.katex-error {
+    color: #c92a2a;
+    border-bottom: 1px dashed #c92a2a;
+    cursor: help;
+}
+
+.theme-dark .katex-error {
+    color: #ff8888;
+    border-bottom-color: #ff8888;
+}
+
+/* KaTeX 文本颜色跟随主题 */
+.katex .katex-html {
+    color: var(--text, #333);
+}
+
+/* ===== 高亮文本 ==text== ===== */
+.document-content mark {
+    background: #fef08a;
+    color: inherit;
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+.theme-dark .document-content mark {
+    background: rgba(250, 204, 21, 0.35);
+}
+
+/* ===== 键盘按键 <kbd> ===== */
+.document-content kbd {
+    display: inline-block;
+    padding: 2px 7px;
+    font-size: 0.85em;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    line-height: 1.4;
+    color: #24292f;
+    vertical-align: middle;
+    background-color: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-bottom-width: 3px;
+    border-radius: 6px;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.06);
+}
+.theme-dark .document-content kbd {
+    color: #e0e0e0;
+    background-color: #2d2d2d;
+    border-color: #505050;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* ===== 上标 ^text^ / 下标 ~text~ ===== */
+.document-content sup,
+.document-content sub {
+    font-size: 0.75em;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+}
+.document-content sup {
+    top: -0.5em;
+}
+.document-content sub {
+    bottom: -0.25em;
+}
+
+/* ===== 删除线 ~~text~~ / 下划线 ++text++ ===== */
+.document-content del {
+    text-decoration: line-through;
+    color: var(--text-secondary);
+}
+.document-content ins {
+    text-decoration: underline;
+    text-decoration-color: var(--primary);
+    text-underline-offset: 2px;
+}
+
+/* ===== 任务列表（自定义 checkbox 样式） ===== */
+
+/* 任务列表容器 - 去掉父级 ul 的默认间距 */
+.document-content ul:has(> .task-list-item) {
+    padding-left: 0;
+    list-style: none;
+}
+
+.document-content .task-list-item {
+    list-style: none;
+    position: relative;
+    margin-left: 0;
+    padding: 6px 10px 6px 8px;
+    display: flex;
+    align-items: flex-start;
+    border-radius: 6px;
+    transition: background-color 0.15s ease;
+}
+
+.document-content .task-list-item + .task-list-item {
+    margin-top: 2px;
+}
+
+.document-content .task-list-item:hover {
+    background-color: #f6f8fa;
+}
+
+/* 隐藏原生 checkbox */
+.document-content .task-checkbox input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+/* 自定义 checkbox */
+.document-content .task-checkbox {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    border: 2px solid #d0d7de;
+    border-radius: 4px;
+    background: #ffffff;
+    margin-right: 10px;
+    margin-top: 2px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: default;
+    flex-shrink: 0;
+}
+
+/* 未选中时的悬浮效果 */
+.document-content .task-list-item:hover .task-checkbox:not(.checked) {
+    border-color: #0969da;
+    box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1);
+}
+
+/* 选中状态 */
+.document-content .task-checkbox.checked {
+    background: #0969da;
+    border-color: #0969da;
+}
+
+/* 勾选图标 */
+.document-content .task-check-icon {
+    color: #ffffff;
+}
+
+/* 任务文本 */
+.document-content .task-text {
+    flex: 1;
+    line-height: 1.6;
+    min-width: 0;
+}
+
+/* 已完成的任务文本 - 删除线 + 淡化 */
+.document-content .task-list-item.checked .task-text {
+    text-decoration: line-through;
+    color: #57606a;
+    text-decoration-color: #57606a;
+}
+
+/* 勾选弹出动画 */
+@keyframes taskCheckPop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* --- 暗色主题任务列表 --- */
+.theme-dark .document-content .task-list-item:hover {
+    background-color: #1a1a1a;
+}
+
+.theme-dark .document-content .task-checkbox {
+    border-color: #4a4a4a;
+    background: #141414;
+}
+
+.theme-dark .document-content .task-list-item:hover .task-checkbox:not(.checked) {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.1);
+}
+
+.theme-dark .document-content .task-checkbox.checked {
+    background: #818cf8;
+    border-color: #818cf8;
+}
+
+.theme-dark .document-content .task-check-icon {
+    color: #141414;
+}
+
+.theme-dark .document-content .task-list-item.checked .task-text {
+    color: #6b6b6b;
+    text-decoration-color: #6b6b6b;
+}
+
+/* ===== GitHub 风格告警块 ===== */
+.document-content .gh-alert {
+    margin: 12px 0 16px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border-left: 0.25em solid;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text);
+}
+.document-content .gh-alert-title {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+.document-content .gh-alert-content p {
+    margin: 4px 0;
+}
+.document-content .gh-alert-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* 各类型告警颜色 —— GitHub 标准配色 */
+.gh-alert.alert-note {
+    border-left-color: #0969da;
+    background-color: #ddf4ff;
+}
+.gh-alert.alert-note .gh-alert-title {
+    color: #0969da;
+}
+
+.gh-alert.alert-tip {
+    border-left-color: #1a7f37;
+    background-color: #dafbe1;
+}
+.gh-alert.alert-tip .gh-alert-title {
+    color: #1a7f37;
+}
+
+.gh-alert.alert-important {
+    border-left-color: #8250df;
+    background-color: #fbefff;
+}
+.gh-alert.alert-important .gh-alert-title {
+    color: #8250df;
+}
+
+.gh-alert.alert-warning {
+    border-left-color: #9a6700;
+    background-color: #fff8c5;
+}
+.gh-alert.alert-warning .gh-alert-title {
+    color: #9a6700;
+}
+
+.gh-alert.alert-caution {
+    border-left-color: #cf222e;
+    background-color: #ffebe9;
+}
+.gh-alert.alert-caution .gh-alert-title {
+    color: #cf222e;
+}
+
+/* 空白高亮块 - 无标题无图标的简洁高亮区块 */
+.gh-alert.alert-blank {
+    border-left-color: #d0d7de;
+    background-color: #f6f8fa;
+}
+
+/* 暗色主题告警 */
+.theme-dark .gh-alert {
+    color: #d0d0d0;
+}
+.theme-dark .gh-alert.alert-note {
+    background-color: rgba(56, 139, 253, 0.1);
+}
+.theme-dark .gh-alert.alert-note .gh-alert-title {
+    color: #6ba3f7;
+}
+.theme-dark .gh-alert.alert-tip {
+    background-color: rgba(46, 160, 67, 0.1);
+}
+.theme-dark .gh-alert.alert-tip .gh-alert-title {
+    color: #3fb950;
+}
+.theme-dark .gh-alert.alert-important {
+    background-color: rgba(130, 80, 223, 0.1);
+}
+.theme-dark .gh-alert.alert-important .gh-alert-title {
+    color: #a371f7;
+}
+.theme-dark .gh-alert.alert-warning {
+    background-color: rgba(187, 128, 9, 0.1);
+}
+.theme-dark .gh-alert.alert-warning .gh-alert-title {
+    color: #d29922;
+}
+.theme-dark .gh-alert.alert-caution {
+    background-color: rgba(248, 81, 73, 0.1);
+}
+.theme-dark .gh-alert.alert-caution .gh-alert-title {
+    color: #f85149;
+}
+.theme-dark .gh-alert.alert-blank {
+    border-left-color: #4a4a4a;
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* ===== 代码块（div.code-block 结构） ===== */
+.document-content .code-block {
+    position: relative;
+    margin: 0 0 12px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.6;
+    border: 1px solid #e1e4e8;
+    transition: border-color 0.3s ease;
+}
+
+.document-content .code-block pre {
+    margin: 0;
+    padding: 16px;
+    overflow-x: auto;
+    background: transparent;
+}
+
+.document-content .code-block code {
+    background: none;
+    padding: 0;
+    font-size: inherit;
+}
+/* code.hljs 的颜色由 highlight-themes.css 控制，不要用 inherit 覆盖 */
+.document-content .code-block code:not(.hljs) {
+    color: inherit;
+}
+
+/* 代码块头部：语言标签 + 复制按钮 */
+.document-content .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: #f1f3f5;
+    border-bottom: 1px solid #e1e4e8;
+    font-size: 12px;
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.document-content .code-lang {
+    color: #586069;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 11px;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.document-content .code-copy-btn {
+    background: #fff;
+    border: 1px solid #d1d5da;
+    color: #586069;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    transition: all 0.15s;
+}
+.document-content .code-copy-btn:hover {
+    background: #e1e4e8;
+    color: #24292e;
+}
+
+
+
+/* 代码行（默认无行号） */
+.code-line {
+    display: inline;
+}
+
+/* 行号模式：仅当 body.show-line-numbers 时激活 */
+body.show-line-numbers .code-block code {
+    display: flex;
+    flex-direction: column;
+}
+
+body.show-line-numbers .code-line {
+    display: block;
+    padding-left: 3.5em;
+    position: relative;
+}
+
+body.show-line-numbers .code-line::before {
+    content: attr(data-line);
+    position: absolute;
+    left: 0;
+    width: 3em;
+    text-align: right;
+    color: rgba(0, 0, 0, 0.3);
+    font-size: 12px;
+    user-select: none;
+    pointer-events: none;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    padding-right: 8px;
+}
+
+/* Diff 代码块：code 用 flex 布局，消除 <pre> 中 \n 文本节点产生的空行 */
+pre code.hljs.language-diff,
+pre code.language-diff {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Diff 行着色（addition/deletion） */
+.code-line.diff-addition {
+    display: block;
+    background: rgba(46, 160, 67, 0.15);
+    border-left: 3px solid #2ea043;
+}
+.code-line.diff-deletion {
+    display: block;
+    background: rgba(248, 81, 73, 0.15);
+    border-left: 3px solid #f85149;
+}
+
+/* ===== 表格 ===== */
+.document-content .table-wrapper {
+    overflow-x: auto;
+    margin: 16px 0;
+    border-radius: 8px;
+    border: 1px solid #d0d7de;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.document-content .table-wrapper table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0;
+}
+
+.document-content .table-wrapper th,
+.document-content .table-wrapper td {
+    padding: 10px 16px;
+    border: 1px solid #d0d7de;
+    text-align: left;
+}
+
+/* 去掉外层重复边框 */
+.document-content .table-wrapper table tr:first-child th {
+    border-top: none;
+}
+.document-content .table-wrapper table tr:last-child td {
+    border-bottom: none;
+}
+.document-content .table-wrapper table th:first-child,
+.document-content .table-wrapper table td:first-child {
+    border-left: none;
+}
+.document-content .table-wrapper table th:last-child,
+.document-content .table-wrapper table td:last-child {
+    border-right: none;
+}
+
+.document-content .table-wrapper th {
+    background: linear-gradient(180deg, #f0f3f6 0%, #e4e9ed 100%);
+    font-weight: 600;
+    color: #24292f;
+    font-size: 0.9em;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    border-bottom: 2px solid #c8cfd6;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    white-space: nowrap;
+}
+
+.document-content .table-wrapper tr:hover td {
+    background: rgba(234, 238, 242, 0.5);
+}
+
+/* 暗色表格 */
+.theme-dark .document-content .table-wrapper {
+    border-color: #333333;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.theme-dark .document-content .table-wrapper th,
+.theme-dark .document-content .table-wrapper td {
+    border-color: #333333;
+}
+.theme-dark .document-content .table-wrapper th {
+    background: linear-gradient(180deg, #2a2a2a 0%, #222222 100%);
+    color: #e0e0e0;
+    border-bottom-color: #444444;
+}
+.theme-dark .document-content .table-wrapper tr:hover td {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* ===== 脚注 ===== */
+.document-content .footnotes,
+.document-content section[data-footnotes] {
+    margin-top: 32px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+.document-content .footnotes-sep,
+.document-content section[data-footnotes]::before {
+    content: '';
+    display: block;
+    border: none;
+    border-top: 1px solid var(--border);
+    margin-bottom: 12px;
+}
+.document-content .footnotes-list,
+.document-content section[data-footnotes] ol {
+    padding-left: 20px;
+}
+.document-content .footnote-item,
+.document-content section[data-footnotes] li {
+    margin-bottom: 4px;
+    line-height: 1.6;
+}
+.document-content .footnote-ref a,
+.document-content sup a[data-fn-ref] {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+.document-content .footnote-ref a:hover,
+.document-content sup a[data-fn-ref]:hover {
+    text-decoration: underline;
+}
+.document-content .footnote-backref,
+.document-content a[data-fn-backref] {
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 12px;
+    margin-left: 4px;
+}
+/* 无障碍：隐藏脚注标题（仅屏幕阅读器可见） */
+.document-content .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ===== 定义列表 ===== */
+.document-content dl {
+    padding: 0;
+    margin: 0 0 16px;
+}
+.document-content dl dt {
+    padding: 0;
+    margin-top: 16px;
+    font-size: 1em;
+    font-style: italic;
+    font-weight: 600;
+    color: var(--text);
+}
+.document-content dl dd {
+    padding: 0 16px;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
+/* ===== 折叠内容区域 <details> ===== */
+.document-content details {
+    margin-bottom: 16px;
+}
+.document-content details summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 4px 0;
+}
+.document-content details summary:hover {
+    color: #0969da;
+}
+
+.theme-dark .document-content details summary:hover {
+    color: #818cf8;
+}
+
+/* ===== 图片增强（span 容器 + 图注） ===== */
+.document-content .md-image-container {
+    display: inline-block;
+    text-align: center;
+    margin: 4px 0;
+}
+.document-content .md-image,
+.document-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+    cursor: zoom-in;
+    transition: box-shadow 0.2s;
+}
+.document-content .md-image:hover,
+.document-content img:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+.document-content .md-image-caption {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-light);
+    font-style: italic;
+}
+/* 独占一行的图片容器居中 */
+.document-content p > .md-image-container:only-child {
+    display: block;
+    text-align: center;
+}
+
+/* ===== 图片预览遮罩（lightbox） ===== */
+.image-lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    animation: imageLightboxFadeIn 0.2s ease;
+    overflow: hidden;
+    user-select: none;
+}
+.image-lightbox-overlay img {
+    max-width: 95%;
+    max-height: 95%;
+    object-fit: contain;
+    border: none;
+    border-radius: 4px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    cursor: default;
+    transform-origin: center center;
+    transition: transform 0.08s ease-out;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+.image-lightbox-close {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    transition: background 0.15s;
+    line-height: 1;
+}
+.image-lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+/* 缩放百分比提示 */
+.image-lightbox-zoom-tip {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 16px;
+    border-radius: 20px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 10001;
+    font-variant-numeric: tabular-nums;
+}
+.image-lightbox-zoom-tip.visible {
+    opacity: 1;
+}
+@keyframes imageLightboxFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ===== Mermaid 大图弹窗 ===== */
+.mermaid-container {
+    position: relative;
+}
+
+.mermaid-rendered {
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+    border-radius: 6px;
+}
+.mermaid-rendered:hover {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 弹窗大图 */
+.mermaid-lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.mermaid-lightbox-overlay:active {
+    cursor: default;
+}
+
+.mermaid-lightbox-container {
+    position: relative;
+    width: 95vw;
+    height: 95vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+}
+.mermaid-lightbox-container.grabbing {
+    cursor: grabbing;
+}
+
+.mermaid-lightbox-content {
+    transform-origin: center center;
+    transition: transform 0.1s ease-out;
+    display: inline-block;
+}
+
+.mermaid-lightbox-content svg {
+    max-width: none !important;
+    max-height: none !important;
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .mermaid-lightbox-content svg {
+    background: #1e1e1e;
+}
+
+.mermaid-lightbox-close {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9001;
+    transition: background 0.15s;
+}
+.mermaid-lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.mermaid-lightbox-hint {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    z-index: 9001;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px 12px;
+    border-radius: 12px;
+}
+
+/* 缩放控制条 */
+.mermaid-lightbox-zoombar {
+    position: fixed;
+    bottom: 48px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 4px 8px;
+    z-index: 9001;
+}
+
+.mermaid-lightbox-zoombar .zoom-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 14px;
+    transition: background 0.15s;
+    line-height: 1;
+}
+.mermaid-lightbox-zoombar .zoom-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+.mermaid-lightbox-zoombar .zoom-level {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    min-width: 48px;
+    text-align: center;
+    user-select: none;
+}
+
+/* ===== 暗色主题 — 行内代码（排除代码块内的 code.hljs） ===== */
+.theme-dark .document-content code:not(.hljs) {
+    background: rgba(99, 102, 241, 0.15);
+    color: #f472b6;
+}
+
+/* ===== 暗色主题 — 图片占位符 ===== */
+.theme-dark .document-content .img-placeholder {
+    background: rgba(251, 191, 36, 0.12);
+    border-color: rgba(251, 191, 36, 0.3);
+    color: #fbbf24;
+}
+
+/* ===== 暗色主题 — 代码块结构 ===== */
+/* 代码块框架样式（header、边框、行号等）现由 highlight-themes.css 中的
+   [data-code-theme-mode="dark|light"] 统一控制，确保代码高亮主题
+   在任何页面亮暗主题下都能正确显示。
+   以下仅作为 fallback（当 data-code-theme-mode 未设置时） */
+
+/* ===== 暗色主题 — Mermaid 错误提示 ===== */
+.theme-dark .mermaid-error {
+    background: rgba(248, 81, 73, 0.12);
+    border-color: rgba(248, 81, 73, 0.3);
+    color: #f87171;
+}
+
+/* ===== 暗色主题 — 行号 ===== */
+/* 行号颜色现由 highlight-themes.css 中的 data-code-theme-mode 统一控制 */
+
+/* ===== 暗色主题 — 表格默认边框 ===== */
+.theme-dark .document-content .table-wrapper td,
+.theme-dark .document-content .table-wrapper th {
+    border-color: #333333;
+}
+
+/* ===== 暗色主题 — 任务列表 hover ===== */
+/* (已在上方 574 行定义) */
+
+/* ===== 暗色主题 — 完成任务文本 ===== */
+/* (已在上方 598 行定义) */
+
+/* ===== 暗色主题 — details summary ===== */
+/* (已在上方 976 行定义) */
+
+/* ===== 暗色主题 — 外部链接图标 ===== */
+
+/* 外部链接图标指示 */
+.document-content a[target="_blank"]::after {
+    content: '↗';
+    font-size: 0.75em;
+    margin-left: 2px;
+    opacity: 0.5;
+    vertical-align: super;
 }

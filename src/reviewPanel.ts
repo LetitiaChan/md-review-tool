@@ -187,6 +187,64 @@ export class ReviewPanel {
                 vscode.window.showInformationMessage(payload.message);
                 break;
             }
+            case 'zenModeChanged': {
+                const entering = payload.entering;
+                if (entering) {
+                    // 进入禅模式：隐藏 IDE 左侧栏和右侧栏
+                    vscode.commands.executeCommand('workbench.action.closeSidebar');
+                    vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
+                } else {
+                    // 退出禅模式：恢复 IDE 左侧栏（资源管理器）
+                    vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
+                    vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
+                }
+                break;
+            }
+            case 'getSettings': {
+                const config = vscode.workspace.getConfiguration('mdReview');
+                const settings = {
+                    fontSize: config.get<number>('fontSize', 16),
+                    lineHeight: config.get<number>('lineHeight', 1.6),
+                    contentMaxWidth: config.get<number>('contentMaxWidth', 1200),
+                    fontFamily: config.get<string>('fontFamily', ''),
+                    theme: config.get<string>('theme', 'light'),
+                    showToc: config.get<boolean>('showToc', true),
+                    showAnnotations: config.get<boolean>('showAnnotations', true),
+                    sidebarLayout: config.get<string>('sidebarLayout', 'toc-left'),
+                    enableMermaid: config.get<boolean>('enableMermaid', true),
+                    enableMath: config.get<boolean>('enableMath', true),
+                    showLineNumbers: config.get<boolean>('showLineNumbers', false),
+                    autoSave: config.get<boolean>('autoSave', true),
+                    autoSaveDelay: config.get<number>('autoSaveDelay', 1500),
+                    codeTheme: config.get<string>('codeTheme', 'default-dark-modern')
+                };
+                this.postMessage({ type: 'settingsData', payload: settings, requestId });
+                break;
+            }
+            case 'saveSettings': {
+                try {
+                    const config = vscode.workspace.getConfiguration('mdReview');
+                    const target = vscode.ConfigurationTarget.Global;
+                    if (payload.fontSize !== undefined) { await config.update('fontSize', payload.fontSize, target); }
+                    if (payload.lineHeight !== undefined) { await config.update('lineHeight', payload.lineHeight, target); }
+                    if (payload.contentMaxWidth !== undefined) { await config.update('contentMaxWidth', payload.contentMaxWidth, target); }
+                    if (payload.fontFamily !== undefined) { await config.update('fontFamily', payload.fontFamily, target); }
+                    if (payload.theme !== undefined) { await config.update('theme', payload.theme, target); }
+                    if (payload.showToc !== undefined) { await config.update('showToc', payload.showToc, target); }
+                    if (payload.showAnnotations !== undefined) { await config.update('showAnnotations', payload.showAnnotations, target); }
+                    if (payload.sidebarLayout !== undefined) { await config.update('sidebarLayout', payload.sidebarLayout, target); }
+                    if (payload.enableMermaid !== undefined) { await config.update('enableMermaid', payload.enableMermaid, target); }
+                    if (payload.enableMath !== undefined) { await config.update('enableMath', payload.enableMath, target); }
+                    if (payload.showLineNumbers !== undefined) { await config.update('showLineNumbers', payload.showLineNumbers, target); }
+                    if (payload.autoSave !== undefined) { await config.update('autoSave', payload.autoSave, target); }
+                    if (payload.autoSaveDelay !== undefined) { await config.update('autoSaveDelay', payload.autoSaveDelay, target); }
+                    if (payload.codeTheme !== undefined) { await config.update('codeTheme', payload.codeTheme, target); }
+                    this.postMessage({ type: 'settingsSaved', payload: { success: true }, requestId });
+                } catch (e: any) {
+                    this.postMessage({ type: 'settingsSaved', payload: { success: false, error: e.message }, requestId });
+                }
+                break;
+            }
         }
     }
 
@@ -208,14 +266,23 @@ export class ReviewPanel {
         const nonce = this._getNonce();
 
         const markedUri = webviewUri('lib/marked.min.js');
+        const markedFootnoteUri = webviewUri('lib/marked-footnote.umd.js');
+        const hljsUri = webviewUri('lib/highlight.min.js');
         const turndownUri = webviewUri('lib/turndown.js');
+        const katexUri = webviewUri('lib/katex.min.js');
+        const mermaidUri = webviewUri('lib/mermaid.min.js');
+        const emojiMapUri = webviewUri('lib/emoji-map.js');
         const styleUri = webviewUri('css/style.css');
         const markdownCssUri = webviewUri('css/markdown.css');
         const annotationsCssUri = webviewUri('css/annotations.css');
+        const settingsCssUri = webviewUri('css/settings.css');
+        const highlightThemesCssUri = webviewUri('css/highlight-themes.css');
+        const katexCssUri = webviewUri('css/katex.min.css');
         const storeUri = webviewUri('js/store.js');
         const rendererUri = webviewUri('js/renderer.js');
         const annotationsUri = webviewUri('js/annotations.js');
         const exportUri = webviewUri('js/export.js');
+        const settingsUri = webviewUri('js/settings.js');
         const appUri = webviewUri('js/app.js');
 
         // Read the HTML template
@@ -226,14 +293,23 @@ export class ReviewPanel {
         html = html.replace(/\$\{nonce\}/g, nonce);
         html = html.replace(/\$\{cspSource\}/g, cspSource);
         html = html.replace(/\$\{markedUri\}/g, markedUri);
+        html = html.replace(/\$\{markedFootnoteUri\}/g, markedFootnoteUri);
+        html = html.replace(/\$\{hljsUri\}/g, hljsUri);
         html = html.replace(/\$\{turndownUri\}/g, turndownUri);
+        html = html.replace(/\$\{katexUri\}/g, katexUri);
+        html = html.replace(/\$\{mermaidUri\}/g, mermaidUri);
+        html = html.replace(/\$\{emojiMapUri\}/g, emojiMapUri);
         html = html.replace(/\$\{styleUri\}/g, styleUri);
         html = html.replace(/\$\{markdownCssUri\}/g, markdownCssUri);
         html = html.replace(/\$\{annotationsCssUri\}/g, annotationsCssUri);
+        html = html.replace(/\$\{settingsCssUri\}/g, settingsCssUri);
+        html = html.replace(/\$\{highlightThemesCssUri\}/g, highlightThemesCssUri);
+        html = html.replace(/\$\{katexCssUri\}/g, katexCssUri);
         html = html.replace(/\$\{storeUri\}/g, storeUri);
         html = html.replace(/\$\{rendererUri\}/g, rendererUri);
         html = html.replace(/\$\{annotationsUri\}/g, annotationsUri);
         html = html.replace(/\$\{exportUri\}/g, exportUri);
+        html = html.replace(/\$\{settingsUri\}/g, settingsUri);
         html = html.replace(/\$\{appUri\}/g, appUri);
 
         return html;

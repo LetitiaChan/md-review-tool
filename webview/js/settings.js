@@ -1,0 +1,596 @@
+/**
+ * settings.js - 设置模块
+ * 管理用户偏好设置，通过 postMessage 与 Extension Host 通信
+ * 实时预览设置变更效果
+ */
+const Settings = (() => {
+
+    // 默认设置
+    const DEFAULTS = {
+        fontSize: 16,
+        lineHeight: 1.6,
+        contentMaxWidth: 1200,
+        fontFamily: '',
+        theme: 'light',
+        showToc: true,
+        showAnnotations: true,
+        sidebarLayout: 'toc-left',
+        enableMermaid: true,
+        enableMath: true,
+        showLineNumbers: false,
+        autoSave: true,
+        autoSaveDelay: 1500,
+        codeTheme: 'default-dark-modern'
+    };
+
+    // 暗色代码主题列表
+    const DARK_CODE_THEMES = [
+        'github-dark', 'monokai', 'vs2015', 'atom-one-dark', 'dracula',
+        'nord', 'solarized-dark', 'tokyo-night', 'one-dark-pro', 'default-dark-modern'
+    ];
+
+    // 亮色 ↔ 暗色代码主题映射（用于页面主题切换时自动适配代码主题亮暗）
+    const LIGHT_TO_DARK_MAP = {
+        'github': 'github-dark',
+        'atom-one-light': 'atom-one-dark',
+        'solarized-light': 'solarized-dark',
+        'default-light-modern': 'default-dark-modern'
+    };
+    const DARK_TO_LIGHT_MAP = Object.fromEntries(
+        Object.entries(LIGHT_TO_DARK_MAP).map(([k, v]) => [v, k])
+    );
+
+    let currentSettings = { ...DEFAULTS };
+    let panelVisible = false;
+
+    /**
+     * 初始化：从 Extension Host 获取设置
+     */
+    function init() {
+        // 请求当前设置
+        vscode.postMessage({ type: 'getSettings' });
+
+        // 监听系统主题变化（auto 模式下自动切换）
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (currentSettings.theme === 'auto') {
+                applyTheme('auto');
+                // 同步代码高亮主题
+                applyCodeTheme(currentSettings.codeTheme);
+            }
+        });
+    }
+
+    /**
+     * 接收来自 Extension Host 的设置数据
+     */
+    function applySettings(settings) {
+        currentSettings = { ...DEFAULTS, ...settings };
+        applyToDOM();
+        updatePanelUI();
+    }
+
+    /**
+     * 将设置应用到 DOM 样式
+     */
+    function applyToDOM() {
+        const root = document.documentElement;
+
+        // 字体大小
+        root.style.setProperty('--doc-font-size', currentSettings.fontSize + 'px');
+
+        // 行高
+        root.style.setProperty('--doc-line-height', String(currentSettings.lineHeight));
+
+        // 最大宽度
+        root.style.setProperty('--doc-max-width', currentSettings.contentMaxWidth + 'px');
+
+        // 字体
+        if (currentSettings.fontFamily === 'serif') {
+            const serifFont = "Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif";
+            root.style.setProperty('--doc-font-family', serifFont);
+        } else if (currentSettings.fontFamily === 'monospace') {
+            const monoFont = "'Fira Code', Consolas, 'Courier New', monospace";
+            root.style.setProperty('--doc-font-family', monoFont);
+        } else if (currentSettings.fontFamily) {
+            root.style.setProperty('--doc-font-family', currentSettings.fontFamily);
+        } else {
+            root.style.removeProperty('--doc-font-family');
+        }
+
+        // 应用到文档内容区
+        const docContent = document.getElementById('documentContent');
+        if (docContent) {
+            docContent.style.fontSize = currentSettings.fontSize + 'px';
+            docContent.style.lineHeight = String(currentSettings.lineHeight);
+            docContent.style.maxWidth = currentSettings.contentMaxWidth + 'px';
+            if (currentSettings.fontFamily === 'serif') {
+                docContent.style.fontFamily = "Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif";
+            } else if (currentSettings.fontFamily === 'monospace') {
+                docContent.style.fontFamily = "'Fira Code', Consolas, 'Courier New', monospace";
+            } else if (currentSettings.fontFamily) {
+                docContent.style.fontFamily = currentSettings.fontFamily + ", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+            } else {
+                docContent.style.fontFamily = '';
+            }
+        }
+
+        // 主题
+        applyTheme(currentSettings.theme);
+
+        // 目录
+        const tocPanel2 = document.getElementById('tocPanel');
+        if (tocPanel2) {
+            if (!currentSettings.showToc) {
+                tocPanel2.classList.add('collapsed');
+            }
+        }
+
+        // 批注列表
+        const annotationsPanel = document.getElementById('annotationsPanel');
+        if (annotationsPanel) {
+            if (!currentSettings.showAnnotations) {
+                annotationsPanel.classList.add('collapsed');
+            } else {
+                annotationsPanel.classList.remove('collapsed');
+            }
+        }
+
+        // 侧边栏布局
+        if (currentSettings.sidebarLayout === 'toc-right') {
+            document.body.classList.add('sidebar-reversed');
+        } else {
+            document.body.classList.remove('sidebar-reversed');
+        }
+
+        // 代码行号
+        if (currentSettings.showLineNumbers) {
+            document.body.classList.add('show-line-numbers');
+        } else {
+            document.body.classList.remove('show-line-numbers');
+        }
+
+        // 代码高亮主题
+        applyCodeTheme(currentSettings.codeTheme);
+    }
+
+    /**
+     * 应用主题
+     */
+    function applyTheme(theme) {
+        document.body.classList.remove('theme-light', 'theme-dark');
+        if (theme === 'auto') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.body.classList.add(prefersDark ? 'theme-dark' : 'theme-light');
+        } else if (theme === 'dark') {
+            document.body.classList.add('theme-dark');
+        } else {
+            document.body.classList.add('theme-light');
+        }
+    }
+
+    /**
+     * 解析代码主题 - 处理 auto 模式，以及亮暗页面主题下的自动适配
+     * 
+     * - auto 模式：根据页面亮暗自动选择 github / github-dark
+     * - 非 auto 模式：如果页面是暗色但代码主题是亮色（或反之），
+     *   自动映射到对应的暗色/亮色代码主题，避免视觉冲突
+     */
+    function resolveCodeTheme(codeTheme) {
+        const isDark = document.body.classList.contains('theme-dark');
+        if (codeTheme === 'auto') {
+            return isDark ? 'github-dark' : 'github';
+        }
+        // 暗色页面 + 亮色代码主题 → 自动映射到暗色对应主题
+        if (isDark && LIGHT_TO_DARK_MAP[codeTheme]) {
+            return LIGHT_TO_DARK_MAP[codeTheme];
+        }
+        // 亮色页面 + 暗色代码主题 → 自动映射到亮色对应主题
+        if (!isDark && DARK_TO_LIGHT_MAP[codeTheme]) {
+            return DARK_TO_LIGHT_MAP[codeTheme];
+        }
+        return codeTheme;
+    }
+
+    /**
+     * 应用代码高亮主题
+     */
+    function applyCodeTheme(codeTheme) {
+        const resolved = resolveCodeTheme(codeTheme);
+        document.documentElement.setAttribute('data-code-theme', resolved);
+        // 标记代码主题的亮暗属性，供 CSS 做跨主题适配
+        // 当代码高亮主题为暗色但整体页面为亮色时（或反之），
+        // 代码块的 header、行号等框架元素需要根据代码主题的亮暗来决定颜色
+        const isDarkCodeTheme = DARK_CODE_THEMES.includes(resolved);
+        document.documentElement.setAttribute('data-code-theme-mode', isDarkCodeTheme ? 'dark' : 'light');
+    }
+
+    /**
+     * 打开设置面板
+     */
+    function show() {
+        const overlay = document.getElementById('settingsOverlay');
+        if (overlay) {
+            overlay.classList.add('visible');
+            panelVisible = true;
+            updatePanelUI();
+        }
+    }
+
+    /**
+     * 关闭设置面板
+     */
+    function hide() {
+        const overlay = document.getElementById('settingsOverlay');
+        if (overlay) {
+            overlay.classList.remove('visible');
+            panelVisible = false;
+        }
+    }
+
+    /**
+     * 更新面板 UI 到当前设置
+     */
+    function updatePanelUI() {
+        if (!panelVisible) return;
+
+        // 字体大小
+        const fontSizeSlider = document.getElementById('settingFontSize');
+        const fontSizeValue = document.getElementById('settingFontSizeValue');
+        if (fontSizeSlider) fontSizeSlider.value = currentSettings.fontSize;
+        if (fontSizeValue) fontSizeValue.textContent = currentSettings.fontSize + 'px';
+
+        // 行高
+        const lineHeightSlider = document.getElementById('settingLineHeight');
+        const lineHeightValue = document.getElementById('settingLineHeightValue');
+        if (lineHeightSlider) lineHeightSlider.value = currentSettings.lineHeight;
+        if (lineHeightValue) lineHeightValue.textContent = currentSettings.lineHeight.toFixed(1);
+
+        // 内容宽度
+        const widthSlider = document.getElementById('settingMaxWidth');
+        const widthValue = document.getElementById('settingMaxWidthValue');
+        if (widthSlider) widthSlider.value = currentSettings.contentMaxWidth;
+        if (widthValue) widthValue.textContent = currentSettings.contentMaxWidth + 'px';
+
+        // 字体按钮组
+        document.querySelectorAll('.font-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.font === currentSettings.fontFamily);
+        });
+
+        // 主题
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.theme === currentSettings.theme);
+        });
+
+        // 代码高亮主题
+        const codeThemeSelect = document.getElementById('settingCodeTheme');
+        if (codeThemeSelect) codeThemeSelect.value = currentSettings.codeTheme;
+
+        // 代码预览区高亮
+        updateCodePreview();
+
+        // 目录
+        const tocSwitch = document.getElementById('settingShowToc');
+        if (tocSwitch) tocSwitch.checked = currentSettings.showToc;
+
+        // 批注列表
+        const annotationsSwitch = document.getElementById('settingShowAnnotations');
+        if (annotationsSwitch) annotationsSwitch.checked = currentSettings.showAnnotations;
+
+        // 侧边栏布局
+        document.querySelectorAll('.sidebar-layout-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.layout === currentSettings.sidebarLayout);
+        });
+
+        // Mermaid
+        const mermaidSwitch = document.getElementById('settingEnableMermaid');
+        if (mermaidSwitch) mermaidSwitch.checked = currentSettings.enableMermaid;
+
+        // 数学公式
+        const mathSwitch = document.getElementById('settingEnableMath');
+        if (mathSwitch) mathSwitch.checked = currentSettings.enableMath;
+
+        // 代码行号
+        const lineNumSwitch = document.getElementById('settingShowLineNumbers');
+        if (lineNumSwitch) lineNumSwitch.checked = currentSettings.showLineNumbers;
+
+        // 自动保存
+        const autoSaveSwitch = document.getElementById('settingAutoSave');
+        if (autoSaveSwitch) autoSaveSwitch.checked = currentSettings.autoSave;
+
+        // 自动保存延迟
+        const delaySlider = document.getElementById('settingAutoSaveDelay');
+        const delayValue = document.getElementById('settingAutoSaveDelayValue');
+        if (delaySlider) delaySlider.value = currentSettings.autoSaveDelay;
+        if (delayValue) delayValue.textContent = (currentSettings.autoSaveDelay / 1000).toFixed(1) + 's';
+
+        // 排版预览
+        updateTypographyPreview();
+    }
+
+    /**
+     * 更新代码预览区的语法高亮
+     * 预渲染好的 hljs 标签不需要运行时高亮，只需切换 data-code-theme 属性
+     */
+    function updateCodePreview() {
+        const previewContainer = document.getElementById('codeThemePreview');
+        if (!previewContainer) return;
+        // auto 模式下使用 github 主题作为预览
+        const previewTheme = currentSettings.codeTheme === 'auto' ? 'github' : currentSettings.codeTheme;
+        previewContainer.setAttribute('data-code-theme', previewTheme);
+    }
+
+    /**
+     * 更新排版预览区的样式
+     */
+    function updateTypographyPreview() {
+        const preview = document.getElementById('typographyPreview');
+        if (!preview) return;
+        preview.style.fontSize = currentSettings.fontSize + 'px';
+        preview.style.lineHeight = String(currentSettings.lineHeight);
+        preview.style.maxWidth = currentSettings.contentMaxWidth + 'px';
+        if (currentSettings.fontFamily === 'serif') {
+            preview.style.fontFamily = "Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif";
+        } else if (currentSettings.fontFamily === 'monospace') {
+            preview.style.fontFamily = "'Fira Code', Consolas, 'Courier New', monospace";
+        } else {
+            preview.style.fontFamily = '';
+        }
+    }
+
+    /**
+     * 绑定设置面板事件
+     */
+    function bindEvents() {
+        // 打开/关闭
+        const btnSettings = document.getElementById('btnSettings');
+        if (btnSettings) btnSettings.addEventListener('click', show);
+
+        const closeBtn = document.getElementById('btnCloseSettings');
+        if (closeBtn) closeBtn.addEventListener('click', hide);
+
+        const overlay = document.getElementById('settingsOverlay');
+        if (overlay) {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) hide();
+            });
+        }
+
+        // 主题按钮组
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentSettings.theme = btn.dataset.theme;
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applyToDOM();
+                saveSettings();
+            });
+        });
+
+        // 代码高亮主题下拉框
+        const codeThemeSelect = document.getElementById('settingCodeTheme');
+        if (codeThemeSelect) {
+            codeThemeSelect.addEventListener('change', () => {
+                currentSettings.codeTheme = codeThemeSelect.value;
+                applyCodeTheme(currentSettings.codeTheme);
+                updateCodePreview();
+                saveSettings();
+            });
+        }
+
+        // 字体按钮组
+        document.querySelectorAll('.font-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentSettings.fontFamily = btn.dataset.font;
+                document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applyToDOM();
+                updateTypographyPreview();
+                saveSettings();
+            });
+        });
+
+        // 字体大小滑块
+        const fontSizeSlider = document.getElementById('settingFontSize');
+        if (fontSizeSlider) {
+            fontSizeSlider.addEventListener('input', () => {
+                currentSettings.fontSize = parseInt(fontSizeSlider.value);
+                document.getElementById('settingFontSizeValue').textContent = currentSettings.fontSize + 'px';
+                applyToDOM();
+                updateTypographyPreview();
+            });
+            fontSizeSlider.addEventListener('change', () => {
+                saveSettings();
+            });
+        }
+
+        // 行高滑块
+        const lineHeightSlider = document.getElementById('settingLineHeight');
+        if (lineHeightSlider) {
+            lineHeightSlider.addEventListener('input', () => {
+                currentSettings.lineHeight = parseFloat(lineHeightSlider.value);
+                document.getElementById('settingLineHeightValue').textContent = currentSettings.lineHeight.toFixed(1);
+                applyToDOM();
+                updateTypographyPreview();
+            });
+            lineHeightSlider.addEventListener('change', () => {
+                saveSettings();
+            });
+        }
+
+        // 内容宽度滑块
+        const widthSlider = document.getElementById('settingMaxWidth');
+        if (widthSlider) {
+            widthSlider.addEventListener('input', () => {
+                currentSettings.contentMaxWidth = parseInt(widthSlider.value);
+                document.getElementById('settingMaxWidthValue').textContent = currentSettings.contentMaxWidth + 'px';
+                applyToDOM();
+                updateTypographyPreview();
+            });
+            widthSlider.addEventListener('change', () => {
+                saveSettings();
+            });
+        }
+
+        // 目录开关
+        const tocSwitch = document.getElementById('settingShowToc');
+        if (tocSwitch) {
+            tocSwitch.addEventListener('change', () => {
+                currentSettings.showToc = tocSwitch.checked;
+                const tocPanel = document.getElementById('tocPanel');
+                if (tocSwitch.checked) {
+                    tocPanel.classList.remove('collapsed');
+                } else {
+                    tocPanel.classList.add('collapsed');
+                }
+                // 同步工具栏目录按钮状态
+                const tocToolbarBtn = document.getElementById('btnToggleToc');
+                if (tocToolbarBtn) {
+                    tocToolbarBtn.classList.toggle('toc-active', tocSwitch.checked);
+                    tocToolbarBtn.classList.toggle('toc-inactive', !tocSwitch.checked);
+                }
+                saveSettings();
+            });
+        }
+
+        // 批注列表开关
+        const annotationsSwitch = document.getElementById('settingShowAnnotations');
+        if (annotationsSwitch) {
+            annotationsSwitch.addEventListener('change', () => {
+                currentSettings.showAnnotations = annotationsSwitch.checked;
+                const annotationsPanel = document.getElementById('annotationsPanel');
+                if (annotationsPanel) {
+                    if (annotationsSwitch.checked) {
+                        annotationsPanel.classList.remove('collapsed');
+                    } else {
+                        annotationsPanel.classList.add('collapsed');
+                    }
+                }
+                saveSettings();
+            });
+        }
+
+        // 侧边栏布局按钮组
+        document.querySelectorAll('.sidebar-layout-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentSettings.sidebarLayout = btn.dataset.layout;
+                document.querySelectorAll('.sidebar-layout-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applyToDOM();
+                saveSettings();
+            });
+        });
+
+        // Mermaid 开关
+        const mermaidSwitch = document.getElementById('settingEnableMermaid');
+        if (mermaidSwitch) {
+            mermaidSwitch.addEventListener('change', () => {
+                currentSettings.enableMermaid = mermaidSwitch.checked;
+                applyToDOM();
+                saveSettings();
+            });
+        }
+
+        // 数学公式开关
+        const mathSwitch = document.getElementById('settingEnableMath');
+        if (mathSwitch) {
+            mathSwitch.addEventListener('change', () => {
+                currentSettings.enableMath = mathSwitch.checked;
+                applyToDOM();
+                saveSettings();
+            });
+        }
+
+        // 代码行号开关
+        const lineNumSwitch = document.getElementById('settingShowLineNumbers');
+        if (lineNumSwitch) {
+            lineNumSwitch.addEventListener('change', () => {
+                currentSettings.showLineNumbers = lineNumSwitch.checked;
+                applyToDOM();
+                saveSettings();
+            });
+        }
+
+        // 自动保存开关
+        const autoSaveSwitch = document.getElementById('settingAutoSave');
+        if (autoSaveSwitch) {
+            autoSaveSwitch.addEventListener('change', () => {
+                currentSettings.autoSave = autoSaveSwitch.checked;
+                if (currentSettings.autoSave) {
+                    Exporter.enableAutoSave();
+                } else {
+                    Exporter.disableAutoSave();
+                }
+                saveSettings();
+            });
+        }
+
+        // 自动保存延迟
+        const delaySlider = document.getElementById('settingAutoSaveDelay');
+        if (delaySlider) {
+            delaySlider.addEventListener('input', () => {
+                currentSettings.autoSaveDelay = parseInt(delaySlider.value);
+                document.getElementById('settingAutoSaveDelayValue').textContent = (currentSettings.autoSaveDelay / 1000).toFixed(1) + 's';
+            });
+            delaySlider.addEventListener('change', () => {
+                saveSettings();
+            });
+        }
+
+        // 重置按钮
+        const resetBtn = document.getElementById('btnResetSettings');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                currentSettings = { ...DEFAULTS };
+                updatePanelUI();
+                applyToDOM();
+                applyCodeTheme(currentSettings.codeTheme);
+                saveSettings();
+            });
+        }
+
+        // ESC 关闭
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && panelVisible) {
+                hide();
+            }
+        });
+    }
+
+    /**
+     * 保存设置到 Extension Host
+     */
+    function saveSettings() {
+        vscode.postMessage({
+            type: 'saveSettings',
+            payload: { ...currentSettings }
+        });
+        // Toast 提示
+        let toast = document.getElementById('_toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = '_toast';
+            toast.className = 'toast-notification';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = '✅ 设置已自动保存';
+        toast.classList.add('show');
+        setTimeout(() => { toast.classList.remove('show'); }, 2000);
+    }
+
+    /**
+     * 获取当前设置
+     */
+    function getSettings() {
+        return { ...currentSettings };
+    }
+
+    return {
+        init,
+        applySettings,
+        show,
+        hide,
+        bindEvents,
+        getSettings,
+        applyToDOM
+    };
+})();

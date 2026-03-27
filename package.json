@@ -18,8 +18,13 @@
     "languages": [
       {
         "id": "mdc",
-        "extensions": [".mdc"],
-        "aliases": ["MDC", "Markdown Cursor"],
+        "extensions": [
+          ".mdc"
+        ],
+        "aliases": [
+          "MDC",
+          "Markdown Cursor"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -70,7 +75,152 @@
         "key": "ctrl+e",
         "when": "mdReviewPanelFocused"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "MD 批阅工具",
+      "properties": {
+        "mdReview.fontSize": {
+          "type": "number",
+          "default": 16,
+          "minimum": 12,
+          "maximum": 24,
+          "description": "文档正文字体大小（px）"
+        },
+        "mdReview.lineHeight": {
+          "type": "number",
+          "default": 1.6,
+          "minimum": 1.2,
+          "maximum": 2,
+          "description": "文档正文行高"
+        },
+        "mdReview.contentMaxWidth": {
+          "type": "number",
+          "default": 1200,
+          "minimum": 600,
+          "maximum": 1400,
+          "description": "文档内容区最大宽度（px）"
+        },
+        "mdReview.fontFamily": {
+          "type": "string",
+          "default": "",
+          "enum": [
+            "",
+            "serif",
+            "monospace"
+          ],
+          "enumDescriptions": [
+            "系统默认",
+            "衬线体",
+            "等宽字体"
+          ],
+          "description": "文档正文字体风格"
+        },
+        "mdReview.theme": {
+          "type": "string",
+          "default": "light",
+          "enum": [
+            "light",
+            "dark",
+            "auto"
+          ],
+          "enumDescriptions": [
+            "亮色主题",
+            "暗色主题",
+            "跟随系统"
+          ],
+          "description": "界面主题"
+        },
+        "mdReview.showToc": {
+          "type": "boolean",
+          "default": true,
+          "description": "默认显示目录导航栏"
+        },
+        "mdReview.autoSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用批注自动保存"
+        },
+        "mdReview.autoSaveDelay": {
+          "type": "number",
+          "default": 1500,
+          "minimum": 500,
+          "maximum": 10000,
+          "description": "自动保存延迟（毫秒）"
+        },
+        "mdReview.showAnnotations": {
+          "type": "boolean",
+          "default": true,
+          "description": "默认显示批注列表面板"
+        },
+        "mdReview.sidebarLayout": {
+          "type": "string",
+          "default": "toc-left",
+          "enum": [
+            "toc-left",
+            "toc-right"
+          ],
+          "enumDescriptions": [
+            "目录在左，批注在右",
+            "批注在左，目录在右"
+          ],
+          "description": "侧边栏布局方式"
+        },
+        "mdReview.enableMermaid": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用 Mermaid 图表渲染"
+        },
+        "mdReview.enableMath": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用数学公式渲染"
+        },
+        "mdReview.showLineNumbers": {
+          "type": "boolean",
+          "default": false,
+          "description": "在代码块中显示行号"
+        },
+        "mdReview.codeTheme": {
+          "type": "string",
+          "default": "default-dark-modern",
+          "enum": [
+            "auto",
+            "github",
+            "github-dark",
+            "monokai",
+            "vs2015",
+            "atom-one-dark",
+            "atom-one-light",
+            "dracula",
+            "nord",
+            "solarized-light",
+            "solarized-dark",
+            "tokyo-night",
+            "one-dark-pro",
+            "default-light-modern",
+            "default-dark-modern"
+          ],
+          "enumDescriptions": [
+            "自动（跟随界面主题）",
+            "GitHub Light",
+            "GitHub Dark",
+            "Monokai",
+            "VS 2015",
+            "Atom One Dark",
+            "Atom One Light",
+            "Dracula",
+            "Nord",
+            "Solarized Light",
+            "Solarized Dark",
+            "Tokyo Night",
+            "One Dark Pro",
+            "Default Light Modern",
+            "Default Dark Modern"
+          ],
+          "description": "代码高亮主题"
+        }
+      }
+    }
   },
   "scripts": {
     "compile": "tsc -p ./",
@@ -80,6 +230,7 @@
   "devDependencies": {
     "@types/node": "^18.19.0",
     "@types/vscode": "^1.74.0",
+    "marked": "^15.0.12",
     "typescript": "^5.3.3"
   }
 }

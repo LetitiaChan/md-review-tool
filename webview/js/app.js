@@ -14,6 +14,7 @@
     let tocCollapsed = false;
     let tocRefreshTimer = null;
     const TOC_REFRESH_DELAY = 800;
+    let zenMode = false;
 
     // ===== postMessage 通信辅助 =====
     const _pendingRequests = new Map();
@@ -62,6 +63,10 @@
                 Renderer.setImageUriCache(message.payload);
                 refreshCurrentView();
                 break;
+            case 'settingsData':
+                Settings.applySettings(message.payload);
+                updateThemeButtonLabel(Settings.getSettings().theme);
+                break;
         }
     });
 
@@ -77,6 +82,17 @@
     // ===== 初始化 =====
     async function init() {
         bindEvents();
+
+        // 初始化设置模块
+        Settings.bindEvents();
+        Renderer.configureHighlight();
+        Settings.init();
+
+        // 初始化工具栏主题按钮标签
+        updateThemeButtonLabel(Settings.getSettings().theme);
+        // 初始化工具栏目录按钮状态
+        const tocBtn = document.getElementById('btnToggleToc');
+        if (tocBtn) tocBtn.classList.add('toc-active');
 
         // 从 Webview state 恢复数据
         const data = Store.load();
@@ -139,8 +155,9 @@
         document.getElementById('fileSelect').addEventListener('change', handleFileSelectChange);
         document.getElementById('btnRefresh').addEventListener('click', handleRefresh);
 
-        document.getElementById('btnPreviewMode').addEventListener('click', () => switchMode('preview'));
-        document.getElementById('btnEditMode').addEventListener('click', () => switchMode('edit'));
+        document.getElementById('btnModeToggle').addEventListener('click', () => {
+            switchMode(currentMode === 'preview' ? 'edit' : 'preview');
+        });
 
         document.getElementById('btnSaveMd').addEventListener('click', handleSaveMd);
 
@@ -227,13 +244,83 @@
             document.getElementById('helpModal').style.display = 'none';
         });
 
-        // 收起/展开侧边栏
-        document.getElementById('btnCollapsePanel').addEventListener('click', () => toggleAnnotationsPanel(false));
-        document.getElementById('btnExpandPanel').addEventListener('click', () => toggleAnnotationsPanel(true));
+        // 切换批注面板（仅通过顶部按钮控制）
+        document.getElementById('btnToggleAnnotations').addEventListener('click', () => {
+            const panel = document.getElementById('annotationsPanel');
+            const isHidden = panel.classList.contains('collapsed');
+            toggleAnnotationsPanel(isHidden);
+        });
 
-        // 目录面板
-        document.getElementById('btnCollapseToc').addEventListener('click', () => toggleTocPanel(false));
-        document.getElementById('btnExpandToc').addEventListener('click', () => toggleTocPanel(true));
+        // 工具栏目录按钮（唯一的目录显隐控制）
+        document.getElementById('btnToggleToc').addEventListener('click', () => {
+            const tocPanel = document.getElementById('tocPanel');
+            const isCollapsed = tocPanel.classList.contains('collapsed');
+            toggleTocPanel(isCollapsed);
+        });
+
+        // 目录头部...菜单
+        document.getElementById('btnTocMenu').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const dropdown = document.getElementById('tocMenuDropdown');
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        });
+        document.getElementById('tocMenuCollapseAll').addEventListener('click', (e) => {
+            e.stopPropagation();
+            tocCollapseAll();
+            document.getElementById('tocMenuDropdown').style.display = 'none';
+        });
+        document.getElementById('tocMenuExpandAll').addEventListener('click', (e) => {
+            e.stopPropagation();
+            tocExpandAll();
+            document.getElementById('tocMenuDropdown').style.display = 'none';
+        });
+        // 点击其他区域关闭目录菜单
+        document.addEventListener('click', () => {
+            document.getElementById('tocMenuDropdown').style.display = 'none';
+        });
+
+        // 禅模式
+        document.getElementById('btnZenMode').addEventListener('click', () => {
+            toggleZenMode();
+        });
+
+        // 工具栏主题切换按钮（三态切换：light → dark → auto → light）
+        document.getElementById('btnToggleTheme').addEventListener('click', () => {
+            const settings = Settings.getSettings();
+            const themeOrder = ['light', 'dark', 'auto'];
+            const currentIndex = themeOrder.indexOf(settings.theme);
+            const nextTheme = themeOrder[(currentIndex + 1) % themeOrder.length];
+            Settings.applySettings({ ...settings, theme: nextTheme });
+            // 通知 Host 保存设置
+            vscode.postMessage({ type: 'saveSettings', payload: { ...settings, theme: nextTheme } });
+            updateThemeButtonLabel(nextTheme);
+            // 重新初始化 Mermaid 以适配新主题
+            Renderer.reinitMermaid();
+            renderMathAndMermaid();
+        });
+
+        // 回到顶部按钮
+        document.getElementById('btnScrollTop').addEventListener('click', () => {
+            const docContent = document.getElementById('documentContent');
+            if (docContent) {
+                docContent.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+
+        // 文档内锚点链接（#hash）点击处理 — 支持中文目录跳转
+        document.getElementById('documentContent').addEventListener('click', (e) => {
+            const anchor = e.target.closest('a[href^="#"]');
+            if (!anchor) return;
+            const hash = decodeURIComponent(anchor.getAttribute('href').slice(1));
+            if (!hash) return;
+            const target = document.getElementById(hash);
+            if (!target) return;
+            e.preventDefault();
+            const container = document.getElementById('documentContent');
+            const containerRect = container.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            container.scrollTo({ top: targetRect.top - containerRect.top + container.scrollTop - 16, behavior: 'smooth' });
+        });
 
         document.getElementById('documentContent').addEventListener('scroll', () => {
             if (tocScrollTimer) clearTimeout(tocScrollTimer);
@@ -243,12 +330,21 @@
         // 快捷键
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
+                // ESC 优先退出禅模式
+                if (zenMode) {
+                    toggleZenMode();
+                    return;
+                }
                 document.getElementById('commentModal').style.display = 'none';
                 document.getElementById('insertModal').style.display = 'none';
                 document.getElementById('contextMenu').style.display = 'none';
                 document.getElementById('applyConfirmModal').style.display = 'none';
                 document.getElementById('applyResultModal').style.display = 'none';
                 document.getElementById('helpModal').style.display = 'none';
+            }
+            if (e.altKey && (e.key === 'z' || e.key === 'Z')) {
+                e.preventDefault();
+                toggleZenMode();
             }
             if (e.ctrlKey && e.key === 'e') {
                 e.preventDefault();
@@ -271,6 +367,9 @@
                 }
             }
         });
+
+        // 面板拖拽调整宽度
+        initPanelResize();
     }
 
 
@@ -301,6 +400,7 @@
                         Store.restoreFromReviewRecord(matchedRecord, fileData.name, fileData.content, fileData.docVersion);
                         const newBlocks = Renderer.parseMarkdown(fileData.content);
                         Renderer.renderBlocks(newBlocks, Store.getAnnotations());
+                        renderMathAndMermaid();
                         Annotations.setBlocks(newBlocks);
                         Annotations.init(newBlocks);
                         Annotations.renderAnnotationsList();
@@ -352,6 +452,7 @@
                             Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
                             const newBlocks = Renderer.parseMarkdown(data.content);
                             Renderer.renderBlocks(newBlocks, Store.getAnnotations());
+                            renderMathAndMermaid();
                             Annotations.setBlocks(newBlocks);
                             Annotations.init(newBlocks);
                             Annotations.renderAnnotationsList();
@@ -388,6 +489,9 @@
         const data = Store.getData();
         Renderer.renderBlocks(blocks, data.annotations);
 
+        // 渲染数学公式和 Mermaid 图表
+        renderMathAndMermaid();
+
         Annotations.setBlocks(blocks);
         Annotations.init(blocks);
         Annotations.renderAnnotationsList();
@@ -401,11 +505,483 @@
         if (!data.rawMarkdown) return;
         blocks = Renderer.parseMarkdown(data.rawMarkdown);
         Renderer.renderBlocks(blocks, data.annotations);
+
+        // 渲染数学公式和 Mermaid 图表
+        renderMathAndMermaid();
+
         Annotations.setBlocks(blocks);
         Annotations.init(blocks);
         Annotations.renderAnnotationsList();
         Annotations.updateToolbarState();
         refreshToc();
+    }
+
+    /**
+     * 根据设置状态渲染数学公式和 Mermaid 图表，并绑定代码块事件
+     */
+    function renderMathAndMermaid() {
+        const settings = Settings.getSettings();
+        if (settings.enableMath) {
+            Renderer.renderMath();
+        }
+        if (settings.enableMermaid) {
+            Renderer.renderMermaid();
+            // 渲染完成后绑定大图弹窗事件
+            setTimeout(bindMermaidLightbox, 200);
+        }
+        // 绑定代码块复制按钮事件
+        bindCodeCopyButtons();
+        // 绑定图片点击放大事件
+        bindImageLightbox();
+    }
+
+    // ===== 图片点击放大（lightbox） =====
+    function bindImageLightbox() {
+        const contentEl = document.getElementById('documentContent');
+        if (!contentEl || contentEl.dataset.imageLightboxBound) return;
+        contentEl.dataset.imageLightboxBound = 'true';
+
+        contentEl.addEventListener('click', (e) => {
+            const img = e.target.closest('img');
+            if (!img) return;
+            // 排除已经在 lightbox / mermaid 弹窗内的图片
+            if (img.closest('.image-lightbox-overlay') || img.closest('.mermaid-lightbox-overlay')) return;
+            // 排除占位符和失败提示图
+            if (img.classList.contains('img-placeholder')) return;
+            // 排除编辑模式
+            if (contentEl.getAttribute('contenteditable') === 'true') return;
+
+            openImageLightbox(img.src);
+        });
+    }
+
+    function openImageLightbox(src) {
+        // 创建遮罩
+        const overlay = document.createElement('div');
+        overlay.className = 'image-lightbox-overlay';
+
+        const img = document.createElement('img');
+        img.src = src;
+        img.draggable = false; // 禁用原生拖拽
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'image-lightbox-close';
+        closeBtn.innerHTML = '&times;';
+
+        // 缩放百分比提示
+        const zoomTip = document.createElement('div');
+        zoomTip.className = 'image-lightbox-zoom-tip';
+
+        overlay.appendChild(img);
+        overlay.appendChild(closeBtn);
+        overlay.appendChild(zoomTip);
+        document.body.appendChild(overlay);
+
+        // ===== 缩放 & 拖拽状态 =====
+        let scale = 1;
+        let translateX = 0;
+        let translateY = 0;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragStartTX = 0;
+        let dragStartTY = 0;
+        let zoomTipTimer = null;
+
+        const MIN_SCALE = 0.1;
+        const MAX_SCALE = 20;
+
+        function applyTransform() {
+            img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        }
+
+        function showZoomTip() {
+            zoomTip.textContent = `${Math.round(scale * 100)}%`;
+            zoomTip.classList.add('visible');
+            if (zoomTipTimer) clearTimeout(zoomTipTimer);
+            zoomTipTimer = setTimeout(() => {
+                zoomTip.classList.remove('visible');
+            }, 800);
+        }
+
+        function updateCursor() {
+            if (scale > 1) {
+                img.style.cursor = isDragging ? 'grabbing' : 'grab';
+                overlay.style.cursor = isDragging ? 'grabbing' : 'zoom-out';
+            } else {
+                img.style.cursor = 'default';
+                overlay.style.cursor = 'zoom-out';
+            }
+        }
+
+        // ===== 鼠标滚轮缩放 =====
+        overlay.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -1 : 1;
+            // 根据当前缩放比例动态计算步长，小缩放时步长小，大缩放时步长大
+            const factor = delta > 0 ? 1.15 : 1 / 1.15;
+            const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
+
+            // 以鼠标位置为中心缩放
+            const rect = img.getBoundingClientRect();
+            const imgCenterX = rect.left + rect.width / 2;
+            const imgCenterY = rect.top + rect.height / 2;
+            const mouseOffsetX = e.clientX - imgCenterX;
+            const mouseOffsetY = e.clientY - imgCenterY;
+
+            const ratio = newScale / scale;
+            translateX = translateX - mouseOffsetX * (ratio - 1);
+            translateY = translateY - mouseOffsetY * (ratio - 1);
+            scale = newScale;
+
+            applyTransform();
+            showZoomTip();
+            updateCursor();
+        }, { passive: false });
+
+        // ===== 拖拽移动 =====
+        img.addEventListener('mousedown', (e) => {
+            if (scale <= 1) return; // 未缩放时不允许拖拽
+            e.preventDefault();
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            dragStartTX = translateX;
+            dragStartTY = translateY;
+            updateCursor();
+        });
+
+        function onMouseMove(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            translateX = dragStartTX + (e.clientX - dragStartX);
+            translateY = dragStartTY + (e.clientY - dragStartY);
+            applyTransform();
+        }
+
+        function onMouseUp(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            updateCursor();
+        }
+
+        overlay.addEventListener('mousemove', onMouseMove);
+        overlay.addEventListener('mouseup', onMouseUp);
+        overlay.addEventListener('mouseleave', onMouseUp);
+
+        // ===== 双击还原 =====
+        img.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            scale = 1;
+            translateX = 0;
+            translateY = 0;
+            applyTransform();
+            showZoomTip();
+            updateCursor();
+        });
+
+        // ===== 关闭 =====
+        function closeLightbox() {
+            overlay.style.animation = 'none';
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.15s ease';
+            document.removeEventListener('keydown', onKeyDown);
+            setTimeout(() => {
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            }, 150);
+        }
+
+        overlay.addEventListener('click', (e) => {
+            // 拖拽结束时不触发关闭（判断鼠标是否有明显移动）
+            if (e.target === overlay && !isDragging) closeLightbox();
+        });
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeLightbox();
+        });
+
+        // ESC 关闭 / 双击恢复的键盘支持
+        function onKeyDown(e) {
+            if (e.key === 'Escape') {
+                closeLightbox();
+            } else if (e.key === '0') {
+                // 按 0 恢复原始大小
+                scale = 1;
+                translateX = 0;
+                translateY = 0;
+                applyTransform();
+                showZoomTip();
+                updateCursor();
+            }
+        }
+        document.addEventListener('keydown', onKeyDown);
+    }
+
+    // ===== 代码块复制按钮 =====
+    function bindCodeCopyButtons() {
+        const copyBtns = document.querySelectorAll('.code-copy-btn');
+        copyBtns.forEach(btn => {
+            if (btn.dataset.copyBound) return;
+            btn.dataset.copyBound = 'true';
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const codeBlock = btn.closest('.code-block');
+                if (!codeBlock) return;
+                const codeEl = codeBlock.querySelector('code');
+                if (!codeEl) return;
+                const text = codeEl.textContent;
+                navigator.clipboard.writeText(text).then(() => {
+                    btn.textContent = '✅ 已复制';
+                    setTimeout(() => { btn.textContent = '📋 复制'; }, 2000);
+                }).catch(() => {
+                    // fallback
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    btn.textContent = '✅ 已复制';
+                    setTimeout(() => { btn.textContent = '📋 复制'; }, 2000);
+                });
+            });
+        });
+    }
+
+    // ===== Mermaid 大图弹窗（缩放+拖拽） =====
+    function bindMermaidLightbox() {
+        const rendered = document.querySelectorAll('.mermaid-rendered');
+        rendered.forEach(el => {
+            if (el.dataset.lightboxBound) return;
+            el.dataset.lightboxBound = 'true';
+            el.title = '点击查看大图';
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openMermaidLightbox(el);
+            });
+        });
+    }
+
+    function openMermaidLightbox(mermaidEl) {
+        const svgEl = mermaidEl.querySelector('svg');
+        if (!svgEl) return;
+
+        let scale = 1;
+        let translateX = 0;
+        let translateY = 0;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragStartTranslateX = 0;
+        let dragStartTranslateY = 0;
+        const minScale = 0.1;
+        const maxScale = 10;
+        const scaleStep = 0.15;
+
+        // 创建弹窗
+        const overlay = document.createElement('div');
+        overlay.className = 'mermaid-lightbox-overlay';
+
+        const container = document.createElement('div');
+        container.className = 'mermaid-lightbox-container';
+
+        const content = document.createElement('div');
+        content.className = 'mermaid-lightbox-content';
+
+        // 克隆 SVG 并恢复原始尺寸（从 viewBox 读取，确保缩放计算准确）
+        const clonedSvg = svgEl.cloneNode(true);
+        const viewBox = clonedSvg.getAttribute('viewBox');
+        if (viewBox) {
+            const parts = viewBox.split(/[\s,]+/);
+            const vbW = parseFloat(parts[2]);
+            const vbH = parseFloat(parts[3]);
+            if (vbW && vbH) {
+                clonedSvg.setAttribute('width', vbW);
+                clonedSvg.setAttribute('height', vbH);
+            }
+        }
+        clonedSvg.style.cssText = 'width: auto; height: auto;';
+        content.appendChild(clonedSvg);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'mermaid-lightbox-close';
+        closeBtn.innerHTML = '&times;';
+
+        // 缩放控制条
+        const zoomBar = document.createElement('div');
+        zoomBar.className = 'mermaid-lightbox-zoombar';
+        zoomBar.innerHTML = `
+            <button class="zoom-btn zoom-out" title="缩小 (-)">−</button>
+            <span class="zoom-level">100%</span>
+            <button class="zoom-btn zoom-in" title="放大 (+)">+</button>
+            <button class="zoom-btn zoom-fit" title="适应窗口 (0)">⊡</button>
+            <button class="zoom-btn zoom-reset" title="重置 (R)">1:1</button>
+        `;
+
+        const hint = document.createElement('div');
+        hint.className = 'mermaid-lightbox-hint';
+        hint.textContent = '滚轮缩放 · 拖拽移动 · +/-/0 快捷键 · ESC 关闭';
+
+        container.appendChild(content);
+        overlay.appendChild(container);
+        overlay.appendChild(closeBtn);
+        overlay.appendChild(zoomBar);
+        overlay.appendChild(hint);
+        document.body.appendChild(overlay);
+
+        const zoomLevelEl = zoomBar.querySelector('.zoom-level');
+
+        function updateTransform() {
+            content.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+            zoomLevelEl.textContent = Math.round(scale * 100) + '%';
+        }
+
+        function setScale(newScale, centerX, centerY) {
+            const oldScale = scale;
+            newScale = Math.max(minScale, Math.min(maxScale, newScale));
+            if (newScale === oldScale) return;
+
+            // 以 centerX/centerY 为中心缩放
+            if (centerX !== undefined && centerY !== undefined) {
+                const rect = container.getBoundingClientRect();
+                const cx = centerX - rect.left - rect.width / 2;
+                const cy = centerY - rect.top - rect.height / 2;
+                translateX = cx - (cx - translateX) * newScale / oldScale;
+                translateY = cy - (cy - translateY) * newScale / oldScale;
+            }
+
+            scale = newScale;
+            updateTransform();
+        }
+
+        function fitToWindow() {
+            const svgInLightbox = content.querySelector('svg');
+            if (!svgInLightbox) return;
+            const containerRect = container.getBoundingClientRect();
+            // 使用 SVG 属性或 viewBox 获取原始尺寸（比 getBoundingClientRect 更准确）
+            let svgW = parseFloat(svgInLightbox.getAttribute('width')) || 0;
+            let svgH = parseFloat(svgInLightbox.getAttribute('height')) || 0;
+            if (!svgW || !svgH) {
+                const vb = svgInLightbox.getAttribute('viewBox');
+                if (vb) {
+                    const p = vb.split(/[\s,]+/);
+                    svgW = parseFloat(p[2]) || 0;
+                    svgH = parseFloat(p[3]) || 0;
+                }
+            }
+            if (!svgW || !svgH) {
+                // 最终回退：用 BoundingClientRect 除以当前 scale
+                svgW = svgInLightbox.getBoundingClientRect().width / scale;
+                svgH = svgInLightbox.getBoundingClientRect().height / scale;
+            }
+            const padding = 80;
+            const fitScale = Math.min(
+                (containerRect.width - padding) / svgW,
+                (containerRect.height - padding) / svgH,
+                2 // 最大不超过 200%
+            );
+            scale = fitScale;
+            translateX = 0;
+            translateY = 0;
+            updateTransform();
+        }
+
+        // 滚轮缩放（以光标为中心）
+        function onWheel(e) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -scaleStep : scaleStep;
+            setScale(scale * (1 + delta), e.clientX, e.clientY);
+        }
+
+        // 拖拽
+        function onMouseDown(e) {
+            if (e.target.closest('.zoom-btn') || e.target === closeBtn || e.target === closeBtn.firstChild) return;
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            dragStartTranslateX = translateX;
+            dragStartTranslateY = translateY;
+            container.classList.add('grabbing');
+        }
+
+        function onMouseMove(e) {
+            if (!isDragging) return;
+            translateX = dragStartTranslateX + (e.clientX - dragStartX);
+            translateY = dragStartTranslateY + (e.clientY - dragStartY);
+            updateTransform();
+        }
+
+        function onMouseUp() {
+            if (isDragging) {
+                isDragging = false;
+                container.classList.remove('grabbing');
+            }
+        }
+
+        // 关闭
+        function closeLightbox() {
+            overlay.removeEventListener('wheel', onWheel);
+            overlay.removeEventListener('mousedown', onMouseDown);
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            document.removeEventListener('keydown', onKeyDown);
+            overlay.remove();
+        }
+
+        // 键盘快捷键
+        function onKeyDown(e) {
+            if (e.key === 'Escape') { closeLightbox(); return; }
+            if (e.key === '+' || e.key === '=') {
+                const rect = container.getBoundingClientRect();
+                setScale(scale * (1 + scaleStep), rect.left + rect.width / 2, rect.top + rect.height / 2);
+                return;
+            }
+            if (e.key === '-' || e.key === '_') {
+                const rect = container.getBoundingClientRect();
+                setScale(scale * (1 - scaleStep), rect.left + rect.width / 2, rect.top + rect.height / 2);
+                return;
+            }
+            if (e.key === '0') { fitToWindow(); return; }
+            if (e.key === 'r' || e.key === 'R') { scale = 1; translateX = 0; translateY = 0; updateTransform(); return; }
+        }
+
+        // 缩放控制条事件
+        zoomBar.querySelector('.zoom-out').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = container.getBoundingClientRect();
+            setScale(scale * (1 - scaleStep), rect.left + rect.width / 2, rect.top + rect.height / 2);
+        });
+        zoomBar.querySelector('.zoom-in').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const rect = container.getBoundingClientRect();
+            setScale(scale * (1 + scaleStep), rect.left + rect.width / 2, rect.top + rect.height / 2);
+        });
+        zoomBar.querySelector('.zoom-fit').addEventListener('click', (e) => { e.stopPropagation(); fitToWindow(); });
+        zoomBar.querySelector('.zoom-reset').addEventListener('click', (e) => { e.stopPropagation(); scale = 1; translateX = 0; translateY = 0; updateTransform(); });
+
+        closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closeLightbox(); });
+        overlay.addEventListener('dblclick', (e) => {
+            if (e.target === overlay) closeLightbox();
+        });
+        // 单击空白区域关闭（区分拖拽和点击）
+        let clickStartX = 0, clickStartY = 0;
+        overlay.addEventListener('mousedown', (e) => { clickStartX = e.clientX; clickStartY = e.clientY; });
+        overlay.addEventListener('click', (e) => {
+            const dx = Math.abs(e.clientX - clickStartX);
+            const dy = Math.abs(e.clientY - clickStartY);
+            if (dx < 5 && dy < 5 && e.target === overlay) closeLightbox();
+        });
+
+        overlay.addEventListener('wheel', onWheel, { passive: false });
+        overlay.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        document.addEventListener('keydown', onKeyDown);
+
+        // 打开后自动适应窗口
+        requestAnimationFrame(() => fitToWindow());
     }
 
     // ===== 文件选择下拉框高亮 =====
@@ -422,24 +998,15 @@
     // ===== 切换批注面板 =====
     function toggleAnnotationsPanel(show) {
         const panel = document.getElementById('annotationsPanel');
-        const expandBtn = document.getElementById('btnExpandPanel');
+        const toggleBtn = document.getElementById('btnToggleAnnotations');
         if (show) {
             panel.classList.remove('collapsed');
-            expandBtn.style.display = 'none';
+            if (toggleBtn) toggleBtn.classList.remove('panel-hidden');
         } else {
             panel.classList.add('collapsed');
-            expandBtn.style.display = 'flex';
-            updateExpandBadge();
+            if (toggleBtn) toggleBtn.classList.add('panel-hidden');
         }
     }
-
-    function updateExpandBadge() {
-        const badge = document.getElementById('expandBadge');
-        const count = Store.getAnnotations().length;
-        badge.textContent = count > 0 ? count : '';
-    }
-
-    window._updateExpandBadge = updateExpandBadge;
 
     // ===== 文件变更提示 =====
     function showFileChangeBadge() {
@@ -462,6 +1029,23 @@
         toast.textContent = msg;
         toast.classList.add('show');
         setTimeout(() => { toast.classList.remove('show'); }, 2500);
+    }
+
+    // ===== 编辑模式 Tips 提示 =====
+    function showEditModeTips() {
+        let tips = document.getElementById('_editModeTips');
+        if (!tips) {
+            tips = document.createElement('div');
+            tips.id = '_editModeTips';
+            tips.className = 'mode-edit-tips';
+            tips.textContent = '⚠️ 编辑模式修改不计入变更历史，推荐使用预览模式批阅';
+            document.body.appendChild(tips);
+        }
+        // 重新触发动画
+        tips.classList.remove('show');
+        void tips.offsetWidth;
+        tips.classList.add('show');
+        setTimeout(() => { tips.classList.remove('show'); }, 4000);
     }
 
     // ===== 一键AI修复 =====
@@ -717,8 +1301,22 @@
         const scrollAnchor = getScrollAnchor();
         currentMode = mode;
 
-        document.getElementById('btnPreviewMode').classList.toggle('active', mode === 'preview');
-        document.getElementById('btnEditMode').classList.toggle('active', mode === 'edit');
+        // 更新切换按钮状态
+        const toggleBtn = document.getElementById('btnModeToggle');
+        const previewIcon = toggleBtn.querySelector('.mode-icon-preview');
+        const editIcon = toggleBtn.querySelector('.mode-icon-edit');
+        const modeLabel = toggleBtn.querySelector('.mode-toggle-label');
+        if (mode === 'edit') {
+            toggleBtn.classList.add('mode-edit');
+            previewIcon.style.display = 'none';
+            editIcon.style.display = '';
+            modeLabel.textContent = '编辑';
+        } else {
+            toggleBtn.classList.remove('mode-edit');
+            previewIcon.style.display = '';
+            editIcon.style.display = 'none';
+            modeLabel.textContent = '预览';
+        }
 
         const docContent = document.getElementById('documentContent');
         const saveBtn = document.getElementById('btnSaveMd');
@@ -735,6 +1333,8 @@
             updateEditStatus('', '编辑模式');
             refreshToc();
             restoreScrollAnchor(scrollAnchor);
+            // 弹出编辑模式提示
+            showEditModeTips();
             setTimeout(() => {
                 restoreScrollAnchor(scrollAnchor);
                 docContent.focus({ preventScroll: true });
@@ -754,6 +1354,10 @@
             const latestData = Store.getData();
             blocks = Renderer.parseMarkdown(latestData.rawMarkdown);
             Renderer.renderBlocks(blocks, latestData.annotations);
+
+            // 渲染数学公式和 Mermaid 图表
+            renderMathAndMermaid();
+
             Annotations.setBlocks(blocks);
             Annotations.init(blocks);
             Annotations.renderAnnotationsList();
@@ -768,6 +1372,19 @@
         const el = document.getElementById('editStatus');
         el.className = 'edit-status' + (className ? ' ' + className : '');
         el.textContent = text;
+    }
+
+    // ===== 主题按钮标签更新 =====
+    function updateThemeButtonLabel(theme) {
+        const btn = document.getElementById('btnToggleTheme');
+        if (!btn) return;
+        const labels = { light: '亮色', dark: '暗色', auto: '自动' };
+        const icons = {
+            light: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+            dark: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M14 9.2A6.5 6.5 0 016.8 2 6 6 0 1014 9.2z" stroke="currentColor" stroke-width="1.3"/></svg>',
+            auto: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 14h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M8 11v3" stroke="currentColor" stroke-width="1.3"/></svg>'
+        };
+        btn.innerHTML = (icons[theme] || icons.light) + ' ' + (labels[theme] || '主题');
     }
 
     // ===== 自动保存调度 =====
@@ -881,17 +1498,144 @@
         }
     }
 
+    // ===== 面板拖拽调整宽度 =====
+    const PANEL_MIN_WIDTH = 160;
+    const PANEL_MAX_WIDTH_RATIO = 0.45; // 最大占窗口宽度比例
+
+    function initPanelResize() {
+        setupResize('tocResizeHandle', 'tocPanel');
+        setupResize('annotationsResizeHandle', 'annotationsPanel');
+    }
+
+    /**
+     * @param {string} handleId  拖拽手柄元素 ID
+     * @param {string} panelId   面板元素 ID
+     */
+    function setupResize(handleId, panelId) {
+        const handle = document.getElementById(handleId);
+        const panel = document.getElementById(panelId);
+        if (!handle || !panel) return;
+
+        let startX = 0;
+        let startWidth = 0;
+        let dragging = false;
+
+        /**
+         * 动态判断拖拽方向：
+         * 根据面板的实际定位（left 还是 right）决定拖拽变宽方向。
+         * 面板定位在左侧 → 手柄在右侧 → 向右拖变宽 → side='right'
+         * 面板定位在右侧 → 手柄在左侧 → 向左拖变宽 → side='left'
+         */
+        function getResizeSide() {
+            const style = window.getComputedStyle(panel);
+            // 如果面板的 right 为 auto 或很大值，说明面板在左侧定位
+            const rightVal = style.right;
+            if (rightVal === 'auto' || rightVal === '') {
+                return 'right'; // 面板在左侧，手柄在右侧
+            }
+            const leftVal = style.left;
+            if (leftVal === 'auto' || leftVal === '') {
+                return 'left'; // 面板在右侧，手柄在左侧
+            }
+            // 两侧都有值时，比较哪边更小来判断面板实际位于哪一侧
+            const leftPx = parseFloat(leftVal) || 0;
+            const rightPx = parseFloat(rightVal) || 0;
+            return leftPx <= rightPx ? 'right' : 'left';
+        }
+
+        function onMouseDown(e) {
+            // 面板折叠时不允许拖拽
+            if (panel.classList.contains('collapsed')) return;
+            e.preventDefault();
+            dragging = true;
+            startX = e.clientX;
+            startWidth = panel.getBoundingClientRect().width;
+            handle.classList.add('dragging');
+            panel.classList.add('resizing');
+            document.body.classList.add('resizing-panel');
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+
+        function onMouseMove(e) {
+            if (!dragging) return;
+            const maxWidth = window.innerWidth * PANEL_MAX_WIDTH_RATIO;
+            const side = getResizeSide();
+            let delta;
+            if (side === 'right') {
+                // 面板在左侧：手柄在右边，向右拖 = 变宽
+                delta = e.clientX - startX;
+            } else {
+                // 面板在右侧：手柄在左边，向左拖 = 变宽
+                delta = startX - e.clientX;
+            }
+            const newWidth = Math.min(Math.max(startWidth + delta, PANEL_MIN_WIDTH), maxWidth);
+            panel.style.width = newWidth + 'px';
+        }
+
+        function onMouseUp() {
+            if (!dragging) return;
+            dragging = false;
+            handle.classList.remove('dragging');
+            panel.classList.remove('resizing');
+            document.body.classList.remove('resizing-panel');
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        handle.addEventListener('mousedown', onMouseDown);
+    }
+
     // ===== 目录导航 =====
     function scheduleTocRefresh() {
         if (tocRefreshTimer) clearTimeout(tocRefreshTimer);
         tocRefreshTimer = setTimeout(() => { tocRefreshTimer = null; refreshToc(); }, TOC_REFRESH_DELAY);
     }
 
+    // ===== 禅模式 =====
+    function toggleZenMode() {
+        zenMode = !zenMode;
+        const body = document.body;
+        const zenBtn = document.getElementById('btnZenMode');
+
+        if (zenMode) {
+            // 记住进入禅模式前的面板状态
+            zenBtn._prevTocCollapsed = tocCollapsed;
+            zenBtn._prevAnnotationsCollapsed = document.getElementById('annotationsPanel').classList.contains('collapsed');
+
+            body.classList.add('zen-mode');
+            zenBtn.classList.add('zen-active');
+            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M4 4h8v8H4z" fill="currentColor" opacity="0.3"/><path d="M1.5 1.5l13 13M14.5 1.5l-13 13" stroke="currentColor" stroke-width="0.6" opacity="0.4"/></svg> 退出禅模式';
+
+            // 通知 Extension Host 隐藏 IDE 侧边栏
+            vscode.postMessage({ type: 'zenModeChanged', payload: { entering: true } });
+        } else {
+            body.classList.remove('zen-mode');
+            zenBtn.classList.remove('zen-active');
+            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><rect x="4" y="4" width="8" height="8" rx="1" fill="currentColor" opacity="0.15" stroke="currentColor" stroke-width="0.8"/></svg> 禅模式';
+
+            // 通知 Extension Host 恢复 IDE 侧边栏
+            vscode.postMessage({ type: 'zenModeChanged', payload: { entering: false } });
+
+            // 恢复进入禅模式前的面板状态
+            if (!zenBtn._prevTocCollapsed) {
+                toggleTocPanel(true);
+            }
+            if (!zenBtn._prevAnnotationsCollapsed) {
+                toggleAnnotationsPanel(true);
+            }
+        }
+    }
+
     function toggleTocPanel(show) {
         const tocPanel = document.getElementById('tocPanel');
-        const expandBtn = document.getElementById('btnExpandToc');
-        if (show) { tocPanel.classList.remove('collapsed'); expandBtn.style.display = 'none'; tocCollapsed = false; }
-        else { tocPanel.classList.add('collapsed'); expandBtn.style.display = 'flex'; tocCollapsed = true; }
+        const tocToolbarBtn = document.getElementById('btnToggleToc');
+        if (show) { tocPanel.classList.remove('collapsed'); tocCollapsed = false; }
+        else { tocPanel.classList.add('collapsed'); tocCollapsed = true; }
+        if (tocToolbarBtn) {
+            tocToolbarBtn.classList.toggle('toc-active', show);
+            tocToolbarBtn.classList.toggle('toc-inactive', !show);
+        }
     }
 
     function refreshToc() {
@@ -902,23 +1646,68 @@
 
         if (headings.length === 0) { tocList.innerHTML = '<div class="toc-empty">当前文档没有标题</div>'; return; }
 
+        // 保存之前折叠状态
+        const prevCollapsedSet = new Set();
+        tocList.querySelectorAll('.toc-item.toc-collapsed').forEach(item => {
+            prevCollapsedSet.add(item.dataset.headingId);
+        });
+
         tocList.innerHTML = '';
+
+        // 收集所有标题信息
+        const tocData = [];
         headings.forEach((heading, idx) => {
             const level = parseInt(heading.tagName.charAt(1), 10);
             const text = heading.textContent.trim();
             if (!text) return;
             if (!heading.id) heading.id = 'toc-heading-' + idx;
+            tocData.push({ level, text, id: heading.id });
+        });
 
+        // 判断每个标题是否有子标题（后面紧跟的更深层级标题）
+        tocData.forEach((item, idx) => {
+            const hasChildren = idx < tocData.length - 1 && tocData[idx + 1].level > item.level;
+            item.hasChildren = hasChildren;
+        });
+
+        tocData.forEach((item, idx) => {
             const tocItem = document.createElement('div');
             tocItem.className = 'toc-item';
-            tocItem.dataset.level = level;
-            tocItem.dataset.headingId = heading.id;
-            tocItem.textContent = text;
-            tocItem.title = text;
+            tocItem.dataset.level = item.level;
+            tocItem.dataset.headingId = item.id;
+            tocItem.dataset.index = idx;
+
+            // 折叠箭头（仅有子项的标题显示）
+            if (item.hasChildren) {
+                const arrow = document.createElement('span');
+                arrow.className = 'toc-arrow';
+                arrow.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3 2l4 3-4 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                arrow.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleTocItemCollapse(tocItem, idx, tocData);
+                });
+                tocItem.appendChild(arrow);
+            } else {
+                // 占位，保持文字对齐
+                const spacer = document.createElement('span');
+                spacer.className = 'toc-arrow-spacer';
+                tocItem.appendChild(spacer);
+            }
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'toc-item-text';
+            textSpan.textContent = item.text;
+            textSpan.title = item.text;
+            tocItem.appendChild(textSpan);
+
+            // 恢复之前的折叠状态
+            if (prevCollapsedSet.has(item.id)) {
+                tocItem.classList.add('toc-collapsed');
+            }
 
             tocItem.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const targetHeading = document.getElementById(tocItem.dataset.headingId);
+                const targetHeading = document.getElementById(item.id);
                 if (!targetHeading) return;
                 const container = document.getElementById('documentContent');
                 const containerRect = container.getBoundingClientRect();
@@ -929,7 +1718,78 @@
 
             tocList.appendChild(tocItem);
         });
+
+        // 应用折叠状态（隐藏被折叠的子项）
+        applyTocCollapseState(tocList, tocData);
         updateTocActiveItem();
+    }
+
+    function toggleTocItemCollapse(tocItem, idx, tocData) {
+        const isCollapsed = tocItem.classList.contains('toc-collapsed');
+        if (isCollapsed) {
+            tocItem.classList.remove('toc-collapsed');
+        } else {
+            tocItem.classList.add('toc-collapsed');
+        }
+        const tocList = document.getElementById('tocList');
+        applyTocCollapseState(tocList, tocData);
+    }
+
+    function applyTocCollapseState(tocList, tocData) {
+        const items = tocList.querySelectorAll('.toc-item');
+        // 先全部显示
+        items.forEach(item => { item.style.display = ''; });
+
+        // 找出所有折叠的项，隐藏其子项
+        const collapsedIndices = [];
+        items.forEach((item, i) => {
+            if (item.classList.contains('toc-collapsed')) {
+                collapsedIndices.push(i);
+            }
+        });
+
+        // 对每个折叠项，隐藏它的所有子项（层级更深的后续项）
+        collapsedIndices.forEach(ci => {
+            const parentLevel = tocData[ci].level;
+            for (let j = ci + 1; j < tocData.length; j++) {
+                if (tocData[j].level <= parentLevel) break;
+                items[j].style.display = 'none';
+            }
+        });
+    }
+
+    function tocCollapseAll() {
+        const tocList = document.getElementById('tocList');
+        if (!tocList) return;
+        const items = tocList.querySelectorAll('.toc-item');
+        const tocData = getTocDataFromItems(items);
+        items.forEach((item, i) => {
+            if (tocData[i] && tocData[i].hasChildren) {
+                item.classList.add('toc-collapsed');
+            }
+        });
+        applyTocCollapseState(tocList, tocData);
+    }
+
+    function tocExpandAll() {
+        const tocList = document.getElementById('tocList');
+        if (!tocList) return;
+        const items = tocList.querySelectorAll('.toc-item');
+        const tocData = getTocDataFromItems(items);
+        items.forEach(item => {
+            item.classList.remove('toc-collapsed');
+        });
+        applyTocCollapseState(tocList, tocData);
+    }
+
+    function getTocDataFromItems(items) {
+        const tocData = [];
+        items.forEach((item, i) => {
+            const level = parseInt(item.dataset.level, 10);
+            const hasChildren = i < items.length - 1 && parseInt(items[i + 1].dataset.level, 10) > level;
+            tocData.push({ level, hasChildren, id: item.dataset.headingId });
+        });
+        return tocData;
     }
 
     function setTocActive(activeTocItem) {

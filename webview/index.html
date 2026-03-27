@@ -7,11 +7,15 @@
           content="default-src 'none'; 
                    style-src ${cspSource} 'unsafe-inline'; 
                    script-src 'nonce-${nonce}' ${cspSource}; 
-                   img-src ${cspSource} data:;">
+                   img-src ${cspSource} https: http: data:;
+                   font-src ${cspSource};">
     <title>MD 批阅工具</title>
     <link rel="stylesheet" href="${styleUri}">
     <link rel="stylesheet" href="${markdownCssUri}">
     <link rel="stylesheet" href="${annotationsCssUri}">
+    <link rel="stylesheet" href="${settingsCssUri}">
+    <link rel="stylesheet" href="${highlightThemesCssUri}">
+    <link rel="stylesheet" href="${katexCssUri}">
 </head>
 <body>
     <!-- 顶部工具栏 -->
@@ -23,41 +27,60 @@
                 <select class="file-select" id="fileSelect" title="选择MD文件">
                     <option value="">-- 选择文件 --</option>
                 </select>
-                <button class="btn btn-refresh" id="btnRefresh" title="刷新当前文件（重新读取）">
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.65 2.35A7.96 7.96 0 0 0 8 0C3.58 0 0 3.58 0 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 8 14 6 6 0 1 1 8 2c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z" fill="currentColor" transform="scale(0.9) translate(1,1)"/></svg>
-                </button>
             </div>
             <span class="file-name" id="fileName">未打开文件</span>
             <span class="file-change-badge" id="fileChangeBadge" style="display:none;">文件已更新</span>
-            <div class="mode-switch" id="modeSwitch">
-                <button class="mode-btn active" data-mode="preview" id="btnPreviewMode" title="预览模式（查看渲染效果、添加批注）">
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3C4 3 1 8 1 8s3 5 7 5 7-5 7-5-3-5-7-5z" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
-                    预览
-                </button>
-                <button class="mode-btn" data-mode="edit" id="btnEditMode" title="编辑模式（所见即所得，直接在页面上编辑）">
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                    编辑
-                </button>
-            </div>
             <span class="edit-status" id="editStatus"></span>
             <button class="btn btn-save-md" id="btnSaveMd" style="display:none;" title="保存修改到源文件 (Ctrl+S)">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13 14H3a1 1 0 01-1-1V3a1 1 0 011-1h8l3 3v9a1 1 0 01-1 1z" stroke="currentColor" stroke-width="1.5"/><path d="M5 2v4h5V2M5 14v-4h6v4" stroke="currentColor" stroke-width="1.2"/></svg>
                 保存
             </button>
-            <span class="annotation-count" id="annotationCount">0 条批注</span>
         </div>
         <div class="toolbar-right">
+            <!-- 自动保存状态 -->
             <span class="auto-save-status" id="autoSaveStatus"></span>
-            <button class="btn btn-secondary" id="btnExport" disabled>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8m0 0l-3-3m3 3l3-3M2 12v1h12v-1" stroke="currentColor" stroke-width="1.5"/></svg>
-                保存批阅记录
+            <!-- n条批注 -->
+            <button class="btn-toggle-annotations" id="btnToggleAnnotations" title="展开/收起批注列表">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <span class="toggle-annotations-count" id="annotationCount">0 条批注</span>
             </button>
+            <!-- 目录（胶囊风格，和批注按钮一致） -->
+            <button class="btn-toggle-annotations" id="btnToggleToc" title="展开/收起目录导航">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 7h8M2 11h10M2 15h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <span class="toggle-annotations-count">目录</span>
+            </button>
+            <!-- 禅模式 -->
+            <button class="btn-toolbar-text" id="btnZenMode" title="禅模式：隐藏侧栏，专注阅读 (Alt+Z)">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><rect x="4" y="4" width="8" height="8" rx="1" fill="currentColor" opacity="0.15" stroke="currentColor" stroke-width="0.8"/></svg>
+                禅模式
+            </button>
+            <!-- 主题 -->
+            <button class="btn-toolbar-text" id="btnToggleTheme" title="切换亮色/暗色主题">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                主题
+            </button>
+            <!-- 预览/编辑切换按钮 -->
+            <button class="btn-mode-toggle" id="btnModeToggle" title="切换预览/编辑模式">
+                <svg class="mode-icon mode-icon-preview" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3C4 3 1 8 1 8s3 5 7 5 7-5 7-5-3-5-7-5z" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
+                <svg class="mode-icon mode-icon-edit" width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:none;"><path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                <span class="mode-toggle-label">预览</span>
+            </button>
+            <!-- 一键AI修复 -->
             <button class="btn btn-apply" id="btnApplyReview" disabled title="根据批阅记录一键AI修复源文件">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8.5l4 4 8-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 一键AI修复
             </button>
-            <button class="btn btn-outline" id="btnClearAll" disabled>
-                清除所有批注
+            <!-- 设置（仅图标） -->
+            <button class="btn-toolbar-icon" id="btnSettings" title="设置">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6.5 1.5h3l.4 1.9.7.3 1.7-1 2.1 2.1-1 1.7.3.7 1.9.4v3l-1.9.4-.3.7 1 1.7-2.1 2.1-1.7-1-.7.3-.4 1.9h-3l-.4-1.9-.7-.3-1.7 1-2.1-2.1 1-1.7-.3-.7-1.9-.4v-3l1.9-.4.3-.7-1-1.7 2.1-2.1 1.7 1 .7-.3.4-1.9z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.2"/></svg>
+            </button>
+            <!-- 顶部（仅图标） -->
+            <button class="btn-toolbar-icon" id="btnScrollTop" title="回到顶部">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13V4M4 7l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="3" y1="2" x2="13" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+            <!-- 刷新（仅图标） -->
+            <button class="btn-toolbar-icon" id="btnRefresh" title="刷新当前文件">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.65 2.35A7.96 7.96 0 0 0 8 0C3.58 0 0 3.58 0 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 8 14 6 6 0 1 1 8 2c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z" fill="currentColor" transform="scale(0.85) translate(1.2,1.2)"/></svg>
             </button>
         </div>
     </header>
@@ -98,22 +121,31 @@
 
             <!-- 文档内容区 -->
             <div class="document-panel">
-                <!-- 左侧目录导航栏（悬浮在文档面板内） -->
+                <!-- 左侧目录导航栏（悬浮在文档面板内，通过工具栏按钮控制显隐） -->
                 <div class="toc-panel" id="tocPanel">
+                    <div class="resize-handle resize-handle-right" id="tocResizeHandle"></div>
                     <div class="toc-header">
                         <span class="toc-title">目录</span>
-                        <button class="toc-collapse-btn" id="btnCollapseToc" title="收起目录">
-                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        </button>
+                        <div class="toc-menu-wrapper">
+                            <button class="toc-menu-btn" id="btnTocMenu" title="更多操作">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="13" cy="8" r="1.3" fill="currentColor"/></svg>
+                            </button>
+                            <div class="toc-menu-dropdown" id="tocMenuDropdown" style="display:none;">
+                                <div class="toc-menu-item" id="tocMenuCollapseAll">
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    折叠全部
+                                </div>
+                                <div class="toc-menu-item" id="tocMenuExpandAll">
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 3l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    展开全部
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="toc-list" id="tocList">
                         <div class="toc-empty">打开文档后自动生成目录</div>
                     </div>
                 </div>
-                <!-- 展开目录按钮（收起时显示） -->
-                <button class="btn-expand-toc" id="btnExpandToc" style="display:none;" title="展开目录">
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
 
                 <div class="wysiwyg-toolbar" id="wysiwygToolbar">
                     <div class="toolbar-group">
@@ -154,23 +186,27 @@
                 <div class="document-content" id="documentContent"></div>
             </div>
 
-            <!-- 展开批注侧边栏按钮（收起时显示） -->
-            <button class="btn-expand-panel" id="btnExpandPanel" style="display:none;" title="展开批注列表">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                <span class="expand-badge" id="expandBadge"></span>
-            </button>
-
             <!-- 批注侧边栏 -->
             <div class="annotations-panel" id="annotationsPanel">
+                <div class="resize-handle resize-handle-left" id="annotationsResizeHandle"></div>
                 <div class="panel-header">
                     <span>批注列表</span>
-                    <div class="sort-controls">
-                        <select class="sort-select" id="sortSelect" title="排序方式">
-                            <option value="time">按批阅时间 ↓</option>
-                            <option value="position">按文本位置</option>
-                        </select>
+                    <div class="panel-header-actions">
+                        <button class="btn btn-header-save" id="btnExport" disabled title="保存批阅记录">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v8m0 0l-3-3m3 3l3-3M2 12v1h12v-1" stroke="currentColor" stroke-width="1.5"/></svg>
+                            保存
+                        </button>
+                        <button class="btn btn-header-clear" id="btnClearAll" disabled title="清除所有批注">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v8.5a.5.5 0 00.5.5h5a.5.5 0 00.5-.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            清除
+                        </button>
+                        <div class="sort-controls">
+                            <select class="sort-select" id="sortSelect" title="排序方式">
+                                <option value="time">按批阅时间 ↓</option>
+                                <option value="position">按文本位置</option>
+                            </select>
+                        </div>
                     </div>
-                    <button class="btn btn-sm" id="btnCollapsePanel">收起</button>
                 </div>
                 <div class="annotations-list" id="annotationsList">
                     <div class="empty-annotations">
@@ -378,18 +414,7 @@
                         <li>内容会在停止输入 1.5 秒后 <strong>自动保存</strong></li>
                     </ol>
                 </section>
-                <section class="help-section">
-                    <h4>⌨️ 快捷键</h4>
-                    <div class="help-shortcuts">
-                        <div class="shortcut-item"><kbd>Ctrl+Shift+E</kbd> <span>切换编辑/预览模式</span></div>
-                        <div class="shortcut-item"><kbd>Ctrl+S</kbd> <span>立即保存</span></div>
-                        <div class="shortcut-item"><kbd>Ctrl+B</kbd> <span>加粗</span></div>
-                        <div class="shortcut-item"><kbd>Ctrl+I</kbd> <span>斜体</span></div>
-                        <div class="shortcut-item"><kbd>Ctrl+Z</kbd> <span>撤销</span></div>
-                        <div class="shortcut-item"><kbd>Ctrl+E</kbd> <span>导出批阅</span></div>
-                        <div class="shortcut-item"><kbd>Esc</kbd> <span>关闭弹窗</span></div>
-                    </div>
-                </section>
+
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary" id="btnCloseHelpOk">知道了</button>
@@ -397,9 +422,290 @@
         </div>
     </div>
 
+    <!-- 设置面板 -->
+    <div class="settings-overlay" id="settingsOverlay">
+        <div class="settings-panel">
+            <!-- 渐变紫蓝头部 -->
+            <div class="settings-header">
+                <div class="settings-header-content">
+                    <div>
+                        <h2><span class="settings-icon">⚙️</span> 设置</h2>
+                        <div class="settings-subtitle">自定义批阅工具的外观与行为</div>
+                    </div>
+                    <button class="settings-close-btn" id="btnCloseSettings">&times;</button>
+                </div>
+            </div>
+
+            <!-- 设置内容 -->
+            <div class="settings-body">
+                <div class="settings-live-hint">调整设置后可实时预览效果</div>
+
+                <!-- 外观设置卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <div class="card-icon appearance">🎨</div>
+                        <div>
+                            <h3>外观主题</h3>
+                            <div class="card-desc">选择界面的整体风格</div>
+                        </div>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">主题模式</div>
+                                <div class="label-desc">切换亮色或暗色风格</div>
+                            </div>
+                            <div class="theme-button-group">
+                                <button class="theme-btn active" data-theme="light">☀️ 亮色</button>
+                                <button class="theme-btn" data-theme="dark">🌙 暗色</button>
+                                <button class="theme-btn" data-theme="auto">🖥️ 跟随系统</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 代码高亮主题卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <div class="card-icon code-theme">✏️</div>
+                        <div>
+                            <h3>代码高亮主题</h3>
+                            <div class="card-desc">选择代码块的高亮配色方案</div>
+                        </div>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">代码高亮主题</div>
+                                <div class="label-desc">选择代码块的高亮配色方案</div>
+                            </div>
+                            <select class="setting-select" id="settingCodeTheme">
+                                <optgroup label="🔆 亮色主题">
+                                    <option value="default-light-modern">Default Light Modern</option>
+                                    <option value="github">GitHub</option>
+                                    <option value="atom-one-light">Atom One Light</option>
+                                    <option value="solarized-light">Solarized Light</option>
+                                </optgroup>
+                                <optgroup label="🌙 暗色主题">
+                                    <option value="default-dark-modern">Default Dark Modern</option>
+                                    <option value="github-dark">GitHub Dark</option>
+                                    <option value="monokai">Monokai</option>
+                                    <option value="vs2015">VS 2015</option>
+                                    <option value="atom-one-dark">Atom One Dark</option>
+                                    <option value="one-dark-pro">One Dark Pro</option>
+                                    <option value="dracula">Dracula</option>
+                                    <option value="nord">Nord</option>
+                                    <option value="solarized-dark">Solarized Dark</option>
+                                    <option value="tokyo-night">Tokyo Night</option>
+                                </optgroup>
+                                <optgroup label="🔄 自动">
+                                    <option value="auto">跟随页面主题</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <!-- 代码预览区（预渲染 hljs 高亮标签，切换主题只需改 data-code-theme 属性） -->
+                        <div class="code-theme-preview" id="codeThemePreview">
+                            <pre class="preview-code-block"><div class="preview-code-header"><span class="preview-code-lang">javascript</span></div><code class="hljs" id="codePreviewContent"><span class="hljs-keyword">function</span> <span class="hljs-title function_">fibonacci</span>(<span class="hljs-params">n</span>) {
+  <span class="hljs-comment">// 递归实现斐波那契数列</span>
+  <span class="hljs-keyword">if</span> (n &lt;= <span class="hljs-number">1</span>) <span class="hljs-keyword">return</span> n;
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">fibonacci</span>(n - <span class="hljs-number">1</span>) + <span class="hljs-title function_">fibonacci</span>(n - <span class="hljs-number">2</span>);
+}
+<span class="hljs-keyword">const</span> result = <span class="hljs-title function_">fibonacci</span>(<span class="hljs-number">10</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`Result: <span class="hljs-subst">${result}</span>`</span>);</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 排版设置卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <div class="card-icon typography">📄</div>
+                        <div>
+                            <h3>排版设置</h3>
+                            <div class="card-desc">调整文档阅读体验</div>
+                        </div>
+                    </div>
+                    <div class="settings-card-body">
+                        <!-- 正文字体 -->
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">🔤 正文字体</div>
+                                <div class="label-desc">选择 Markdown 正文的显示字体</div>
+                            </div>
+                            <div class="font-button-group">
+                                <button class="font-btn active" data-font="">系统默认</button>
+                                <button class="font-btn" data-font="serif">衬线体</button>
+                                <button class="font-btn" data-font="monospace">等宽字体</button>
+                            </div>
+                        </div>
+                        <!-- 字体大小 -->
+                        <div class="setting-item vertical">
+                            <div class="setting-label">
+                                <div class="label-text">🔠 字体大小</div>
+                                <div class="label-desc">调整正文字体大小（12px - 24px）</div>
+                            </div>
+                            <div class="slider-row">
+                                <span class="slider-end-label">A</span>
+                                <input type="range" class="slider-full" id="settingFontSize" min="12" max="24" step="1" value="16">
+                                <span class="slider-end-label slider-end-large">A</span>
+                                <span class="slider-value" id="settingFontSizeValue">16px</span>
+                            </div>
+                        </div>
+                        <!-- 行高 -->
+                        <div class="setting-item vertical">
+                            <div class="setting-label">
+                                <div class="label-text">↕️ 行高</div>
+                                <div class="label-desc">调整段落行高（1.2 - 2.0）</div>
+                            </div>
+                            <div class="slider-row">
+                                <span class="slider-end-label">紧凑</span>
+                                <input type="range" class="slider-full" id="settingLineHeight" min="1.2" max="2.0" step="0.1" value="1.6">
+                                <span class="slider-end-label">宽松</span>
+                                <span class="slider-value" id="settingLineHeightValue">1.6</span>
+                            </div>
+                        </div>
+                        <!-- 内容最大宽度 -->
+                        <div class="setting-item vertical">
+                            <div class="setting-label">
+                                <div class="label-text">↔️ 内容最大宽度</div>
+                                <div class="label-desc">调整正文区域最大宽度（600px - 1400px）</div>
+                            </div>
+                            <div class="slider-row">
+                                <span class="slider-end-label">窄</span>
+                                <input type="range" class="slider-full" id="settingMaxWidth" min="600" max="1400" step="50" value="1200">
+                                <span class="slider-end-label">宽</span>
+                                <span class="slider-value" id="settingMaxWidthValue">1200px</span>
+                            </div>
+                        </div>
+                        <!-- 排版预览 -->
+                        <div class="setting-item vertical">
+                            <div class="setting-label">
+                                <div class="label-text">👁 排版预览</div>
+                                <div class="label-desc">实时预览排版效果</div>
+                            </div>
+                            <div class="typography-preview" id="typographyPreview">
+                                <h3 style="margin-top:0;">Markdown Viewer Enhanced</h3>
+                                <p>这是一段预览文本，用于展示当前排版设置的效果。The quick brown fox jumps over the lazy dog.</p>
+                                <p>支持渲染 <code>Mermaid</code> 图表和代码高亮，让 Markdown 阅读体验更加出色。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 功能设置卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <div class="card-icon function">🔧</div>
+                        <div>
+                            <h3>功能设置</h3>
+                            <div class="card-desc">开启或关闭工具功能</div>
+                        </div>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">显示目录导航</div>
+                                <div class="label-desc">默认展开目录面板</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingShowToc" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">显示批注列表</div>
+                                <div class="label-desc">默认展开批注面板</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingShowAnnotations" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">侧边栏位置</div>
+                                <div class="label-desc">调整目录和批注面板的左右布局</div>
+                            </div>
+                            <div class="font-button-group">
+                                <button class="sidebar-layout-btn active" data-layout="toc-left">目录左 批注右</button>
+                                <button class="sidebar-layout-btn" data-layout="toc-right">批注左 目录右</button>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">Mermaid 图表渲染</div>
+                                <div class="label-desc">启用 Mermaid 图表语法渲染</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingEnableMermaid" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">数学公式渲染</div>
+                                <div class="label-desc">启用 LaTeX 数学公式渲染</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingEnableMath" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">显示代码行号</div>
+                                <div class="label-desc">在代码块中显示行号</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingShowLineNumbers">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">自动保存批注</div>
+                                <div class="label-desc">批注变更后自动保存到文件</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingAutoSave" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">自动保存延迟</div>
+                                <div class="label-desc">修改后延迟多久自动保存</div>
+                            </div>
+                            <div class="slider-control">
+                                <input type="range" id="settingAutoSaveDelay" min="500" max="10000" step="500" value="1500">
+                                <span class="slider-value" id="settingAutoSaveDelayValue">1.5s</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+
+            <!-- 底部操作栏 -->
+            <div class="settings-footer">
+                <div class="settings-footer-left">💡 设置修改后自动保存</div>
+                <div class="settings-footer-right">
+                    <button class="btn-settings-reset" id="btnResetSettings">恢复默认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 引入第三方库 -->
     <script src="${markedUri}"></script>
+    <script src="${markedFootnoteUri}"></script>
+    <script src="${hljsUri}"></script>
     <script src="${turndownUri}"></script>
+    <script src="${katexUri}"></script>
+    <script src="${mermaidUri}"></script>
+    <script src="${emojiMapUri}"></script>
     <!-- 初始化 VSCode API -->
     <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
@@ -409,6 +715,7 @@
     <script src="${rendererUri}"></script>
     <script src="${annotationsUri}"></script>
     <script src="${exportUri}"></script>
+    <script src="${settingsUri}"></script>
     <script src="${appUri}"></script>
 </body>
 </html>

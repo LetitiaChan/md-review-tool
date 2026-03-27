@@ -692,9 +692,6 @@ const Annotations = (() => {
         Renderer.renderBlocks(blocks, data.annotations);
         renderAnnotationsList();
         updateToolbarState();
-        if (typeof window._updateExpandBadge === 'function') {
-            window._updateExpandBadge();
-        }
     }
 
     function setBlocks(b) {

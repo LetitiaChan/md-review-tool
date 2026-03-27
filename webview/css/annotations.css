@@ -1,22 +1,29 @@
-/* ===== 批注侧边栏 ===== */
+/* ===== 批注侧边栏（悬浮半透明，与目录栏风格一致） ===== */
 .annotations-panel {
     width: 340px;
-    border-left: 1px solid var(--border);
-    background: var(--bg);
     display: flex;
     flex-direction: column;
-    flex-shrink: 0;
-    transition: width 0.2s ease;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(229, 231, 235, 0.5);
+    border-radius: 8px;
+    transition: width 0.2s ease, opacity 0.2s ease;
+    overflow: hidden;
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    bottom: 8px;
+    z-index: 40;
+    box-shadow: -2px 0 16px rgba(0, 0, 0, 0.08);
 }
 
 .annotations-panel.collapsed {
     width: 0;
-    overflow: hidden;
-    border-left: none;
-}
-
-.annotations-panel .panel-header {
-    gap: 6px;
+    border: none;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: none;
 }
 
 /* ===== 排序控件 ===== */
@@ -244,3 +251,42 @@
     border-radius: var(--radius);
     box-shadow: var(--shadow-lg);
 }
+
+/* ===== 批注面板头部半透明边框 ===== */
+.annotations-panel .panel-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+/* ===== 暗色主题批注面板适配 ===== */
+body.theme-dark .annotations-panel {
+    background: rgba(28, 28, 28, 0.95);
+    border-color: var(--border);
+}
+
+body.theme-dark .annotations-panel .panel-header {
+    border-bottom-color: var(--border);
+}
+
+/* 暗色主题 — 批注卡片 hover */
+body.theme-dark .annotation-card:hover {
+    border-color: var(--primary);
+}
+
+/* 暗色主题 — 排序下拉框 */
+body.theme-dark .sort-select {
+    background: var(--bg);
+    color: var(--text-secondary);
+    border-color: var(--border);
+}
+
+/* 暗色主题 — 图片查看 */
+body.theme-dark .annotation-images img {
+    border-color: var(--border);
+}
+
+body.theme-dark .annotation-images img:hover {
+    border-color: var(--primary);
+}
+
+
