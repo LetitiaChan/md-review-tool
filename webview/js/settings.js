@@ -29,19 +29,11 @@ const Settings = (() => {
         'nord', 'solarized-dark', 'tokyo-night', 'one-dark-pro', 'default-dark-modern'
     ];
 
-    // 亮色 ↔ 暗色代码主题映射（用于页面主题切换时自动适配代码主题亮暗）
-    const LIGHT_TO_DARK_MAP = {
-        'github': 'github-dark',
-        'atom-one-light': 'atom-one-dark',
-        'solarized-light': 'solarized-dark',
-        'default-light-modern': 'default-dark-modern'
-    };
-    const DARK_TO_LIGHT_MAP = Object.fromEntries(
-        Object.entries(LIGHT_TO_DARK_MAP).map(([k, v]) => [v, k])
-    );
-
     let currentSettings = { ...DEFAULTS };
     let panelVisible = false;
+
+    // 设置变更回调列表（外部模块可注册监听）
+    let _onChangeCallbacks = [];
 
     /**
      * 初始化：从 Extension Host 获取设置
@@ -54,8 +46,8 @@ const Settings = (() => {
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
             if (currentSettings.theme === 'auto') {
                 applyTheme('auto');
-                // 同步代码高亮主题
-                applyCodeTheme(currentSettings.codeTheme);
+                // 通知外部模块（如顶部主题按钮标签）刷新
+                _notifyChange('themeChanged', 'auto');
             }
         });
     }
@@ -122,6 +114,8 @@ const Settings = (() => {
         if (tocPanel2) {
             if (!currentSettings.showToc) {
                 tocPanel2.classList.add('collapsed');
+            } else {
+                tocPanel2.classList.remove('collapsed');
             }
         }
 
@@ -169,24 +163,13 @@ const Settings = (() => {
     }
 
     /**
-     * 解析代码主题 - 处理 auto 模式，以及亮暗页面主题下的自动适配
-     * 
-     * - auto 模式：根据页面亮暗自动选择 github / github-dark
-     * - 非 auto 模式：如果页面是暗色但代码主题是亮色（或反之），
-     *   自动映射到对应的暗色/亮色代码主题，避免视觉冲突
+     * 解析代码主题 - 直接返回用户选择的主题，不做自动适配
+     * 代码高亮主题独立于页面亮暗主题，用户选什么就用什么
      */
     function resolveCodeTheme(codeTheme) {
-        const isDark = document.body.classList.contains('theme-dark');
+        // 兼容旧设置中可能存在的 auto 值，回退到默认主题
         if (codeTheme === 'auto') {
-            return isDark ? 'github-dark' : 'github';
-        }
-        // 暗色页面 + 亮色代码主题 → 自动映射到暗色对应主题
-        if (isDark && LIGHT_TO_DARK_MAP[codeTheme]) {
-            return LIGHT_TO_DARK_MAP[codeTheme];
-        }
-        // 亮色页面 + 暗色代码主题 → 自动映射到亮色对应主题
-        if (!isDark && DARK_TO_LIGHT_MAP[codeTheme]) {
-            return DARK_TO_LIGHT_MAP[codeTheme];
+            return DEFAULTS.codeTheme;
         }
         return codeTheme;
     }
@@ -314,8 +297,7 @@ const Settings = (() => {
     function updateCodePreview() {
         const previewContainer = document.getElementById('codeThemePreview');
         if (!previewContainer) return;
-        // auto 模式下使用 github 主题作为预览
-        const previewTheme = currentSettings.codeTheme === 'auto' ? 'github' : currentSettings.codeTheme;
+        const previewTheme = currentSettings.codeTheme;
         previewContainer.setAttribute('data-code-theme', previewTheme);
     }
 
@@ -363,6 +345,8 @@ const Settings = (() => {
                 btn.classList.add('active');
                 applyToDOM();
                 saveSettings();
+                // 通知外部模块主题已变更（用于 Mermaid 重新渲染等）
+                _notifyChange('themeChanged', btn.dataset.theme);
             });
         });
 
@@ -487,6 +471,7 @@ const Settings = (() => {
                 currentSettings.enableMermaid = mermaidSwitch.checked;
                 applyToDOM();
                 saveSettings();
+                _notifyChange('enableMermaid', mermaidSwitch.checked);
             });
         }
 
@@ -497,6 +482,7 @@ const Settings = (() => {
                 currentSettings.enableMath = mathSwitch.checked;
                 applyToDOM();
                 saveSettings();
+                _notifyChange('enableMath', mathSwitch.checked);
             });
         }
 
@@ -545,6 +531,14 @@ const Settings = (() => {
                 applyToDOM();
                 applyCodeTheme(currentSettings.codeTheme);
                 saveSettings();
+                // 同步工具栏目录按钮状态
+                const tocToolbarBtn = document.getElementById('btnToggleToc');
+                if (tocToolbarBtn) {
+                    tocToolbarBtn.classList.toggle('toc-active', currentSettings.showToc);
+                    tocToolbarBtn.classList.toggle('toc-inactive', !currentSettings.showToc);
+                }
+                // 通知外部模块（如 Mermaid/数学公式渲染）刷新页面
+                _notifyChange('reset', null);
             });
         }
 
@@ -584,6 +578,25 @@ const Settings = (() => {
         return { ...currentSettings };
     }
 
+    /**
+     * 注册设置变更回调
+     * @param {function} callback - 回调函数，参数为 (key, value)
+     */
+    function onChange(callback) {
+        if (typeof callback === 'function') {
+            _onChangeCallbacks.push(callback);
+        }
+    }
+
+    /**
+     * 通知所有注册的回调
+     */
+    function _notifyChange(key, value) {
+        for (const cb of _onChangeCallbacks) {
+            try { cb(key, value); } catch (e) { console.warn('[Settings] onChange callback error:', e); }
+        }
+    }
+
     return {
         init,
         applySettings,
@@ -591,6 +604,7 @@ const Settings = (() => {
         hide,
         bindEvents,
         getSettings,
-        applyToDOM
+        applyToDOM,
+        onChange
     };
 })();

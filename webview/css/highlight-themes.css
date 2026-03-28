@@ -1,6 +1,7 @@
 /**
  * Highlight.js 多主题样式文件
  * 通过 [data-code-theme="xxx"] 属性选择器切换主题
+ * 基于 highlight.js v11.11.1 官方主题更新
  * 
  * 包含主题：
  * - github (默认亮色)
@@ -9,12 +10,14 @@
  * - vs2015
  * - atom-one-dark
  * - atom-one-light
- * - dracula
+ * - dracula (Base16)
  * - nord
- * - solarized-light
- * - solarized-dark
+ * - solarized-light (Base16)
+ * - solarized-dark (Base16)
  * - tokyo-night
  * - one-dark-pro
+ * - default-light-modern (VS Code)
+ * - default-dark-modern (VS Code)
  */
 
 /* ==================== 通用基础样式 ==================== */
@@ -207,7 +210,7 @@ code.hljs {
   color: #c9d1d9;
 }
 [data-code-theme="github-dark"] .hljs-section {
-  color: #79c0ff;
+  color: #1f6feb;
   font-weight: 700;
 }
 [data-code-theme="github-dark"] .hljs-bullet {
@@ -231,80 +234,72 @@ code.hljs {
 }
 
 /* ==================== Monokai ==================== */
+/* 基于 highlight.js 11.11.1 官方 monokai 主题 */
 
 [data-code-theme="monokai"] .hljs {
-  color: #f8f8f2;
+  color: #ddd;
   background: transparent;
 }
-[data-code-theme="monokai"] .hljs-keyword,
 [data-code-theme="monokai"] .hljs-tag,
-[data-code-theme="monokai"] .hljs-template-tag,
-[data-code-theme="monokai"] .hljs-selector-tag {
-  color: #f92672;
-}
-[data-code-theme="monokai"] .hljs-title,
-[data-code-theme="monokai"] .hljs-title.class_,
-[data-code-theme="monokai"] .hljs-title.function_,
-[data-code-theme="monokai"] .hljs-section {
-  color: #a6e22e;
-}
+[data-code-theme="monokai"] .hljs-keyword,
+[data-code-theme="monokai"] .hljs-selector-tag,
+[data-code-theme="monokai"] .hljs-literal,
+[data-code-theme="monokai"] .hljs-strong,
 [data-code-theme="monokai"] .hljs-number,
-[data-code-theme="monokai"] .hljs-literal {
-  color: #ae81ff;
-}
-[data-code-theme="monokai"] .hljs-string,
-[data-code-theme="monokai"] .hljs-regexp,
-[data-code-theme="monokai"] .hljs-meta .hljs-string {
-  color: #e6db74;
-}
-[data-code-theme="monokai"] .hljs-built_in,
-[data-code-theme="monokai"] .hljs-type {
-  color: #66d9ef;
-  font-style: italic;
-}
-[data-code-theme="monokai"] .hljs-comment,
-[data-code-theme="monokai"] .hljs-quote {
-  color: #75715e;
-}
-[data-code-theme="monokai"] .hljs-attr,
-[data-code-theme="monokai"] .hljs-attribute {
-  color: #a6e22e;
-}
-[data-code-theme="monokai"] .hljs-variable,
-[data-code-theme="monokai"] .hljs-template-variable,
-[data-code-theme="monokai"] .hljs-symbol,
-[data-code-theme="monokai"] .hljs-bullet {
-  color: #f8f8f2;
-}
-[data-code-theme="monokai"] .hljs-operator {
-  color: #f92672;
-}
-[data-code-theme="monokai"] .hljs-doctag {
-  color: #75715e;
-}
-[data-code-theme="monokai"] .hljs-meta,
-[data-code-theme="monokai"] .hljs-meta .hljs-keyword {
-  color: #f92672;
-}
 [data-code-theme="monokai"] .hljs-name {
   color: #f92672;
 }
-[data-code-theme="monokai"] .hljs-emphasis {
-  font-style: italic;
+[data-code-theme="monokai"] .hljs-code {
+  color: #66d9ef;
 }
-[data-code-theme="monokai"] .hljs-strong {
-  font-weight: 700;
+[data-code-theme="monokai"] .hljs-attribute,
+[data-code-theme="monokai"] .hljs-attr,
+[data-code-theme="monokai"] .hljs-symbol,
+[data-code-theme="monokai"] .hljs-regexp,
+[data-code-theme="monokai"] .hljs-link {
+  color: #bf79db;
 }
-[data-code-theme="monokai"] .hljs-addition {
+[data-code-theme="monokai"] .hljs-string,
+[data-code-theme="monokai"] .hljs-bullet,
+[data-code-theme="monokai"] .hljs-subst,
+[data-code-theme="monokai"] .hljs-title,
+[data-code-theme="monokai"] .hljs-section,
+[data-code-theme="monokai"] .hljs-emphasis,
+[data-code-theme="monokai"] .hljs-type,
+[data-code-theme="monokai"] .hljs-built_in,
+[data-code-theme="monokai"] .hljs-selector-attr,
+[data-code-theme="monokai"] .hljs-selector-pseudo,
+[data-code-theme="monokai"] .hljs-addition,
+[data-code-theme="monokai"] .hljs-variable,
+[data-code-theme="monokai"] .hljs-template-tag,
+[data-code-theme="monokai"] .hljs-template-variable {
   color: #a6e22e;
-  background-color: rgba(166, 226, 46, 0.15);
 }
-[data-code-theme="monokai"] .hljs-deletion {
-  color: #f92672;
-  background-color: rgba(249, 38, 114, 0.15);
+[data-code-theme="monokai"] .hljs-title.class_,
+[data-code-theme="monokai"] .hljs-class .hljs-title {
+  color: white;
 }
-[data-code-theme="monokai"] .hljs-subst {
-  color: #f8f8f2;
+[data-code-theme="monokai"] .hljs-comment,
+[data-code-theme="monokai"] .hljs-quote,
+[data-code-theme="monokai"] .hljs-deletion,
+[data-code-theme="monokai"] .hljs-meta {
+  color: #75715e;
+}
+[data-code-theme="monokai"] .hljs-keyword,
+[data-code-theme="monokai"] .hljs-selector-tag,
+[data-code-theme="monokai"] .hljs-literal,
+[data-code-theme="monokai"] .hljs-doctag,
+[data-code-theme="monokai"] .hljs-title,
+[data-code-theme="monokai"] .hljs-section,
+[data-code-theme="monokai"] .hljs-type,
+[data-code-theme="monokai"] .hljs-selector-id {
+  font-weight: bold;
+}
+[data-code-theme="monokai"] .hljs-title.function_ {
+  color: #a6e22e;
+}
+[data-code-theme="monokai"] .hljs-meta .hljs-string {
+  color: #e6db74;
 }
 
 /* ==================== VS 2015 (Visual Studio Dark) ==================== */
@@ -386,12 +381,14 @@ code.hljs {
   color: #d7ba7d;
 }
 [data-code-theme="vs2015"] .hljs-addition {
-  color: #b5cea8;
-  background-color: rgba(181, 206, 168, 0.15);
+  background-color: #144212;
+  display: inline-block;
+  width: 100%;
 }
 [data-code-theme="vs2015"] .hljs-deletion {
-  color: #ce9178;
-  background-color: rgba(206, 145, 120, 0.15);
+  background-color: #600;
+  display: inline-block;
+  width: 100%;
 }
 
 /* ==================== Atom One Dark ==================== */
@@ -447,7 +444,8 @@ code.hljs {
 [data-code-theme="atom-one-dark"] .hljs-title,
 [data-code-theme="atom-one-dark"] .hljs-title.class_,
 [data-code-theme="atom-one-dark"] .hljs-title.function_,
-[data-code-theme="atom-one-dark"] .hljs-built_in {
+[data-code-theme="atom-one-dark"] .hljs-built_in,
+[data-code-theme="atom-one-dark"] .hljs-class .hljs-title {
   color: #e6c07b;
 }
 [data-code-theme="atom-one-dark"] .hljs-emphasis {
@@ -513,7 +511,8 @@ code.hljs {
 [data-code-theme="atom-one-light"] .hljs-title,
 [data-code-theme="atom-one-light"] .hljs-title.class_,
 [data-code-theme="atom-one-light"] .hljs-title.function_,
-[data-code-theme="atom-one-light"] .hljs-built_in {
+[data-code-theme="atom-one-light"] .hljs-built_in,
+[data-code-theme="atom-one-light"] .hljs-class .hljs-title {
   color: #c18401;
 }
 [data-code-theme="atom-one-light"] .hljs-emphasis {
@@ -527,360 +526,455 @@ code.hljs {
 }
 
 /* ==================== Dracula ==================== */
+/* 基于 highlight.js 11.11.1 官方 Base16 Dracula 主题 */
 
 [data-code-theme="dracula"] .hljs {
-  color: #f8f8f2;
+  color: #e9e9f4;
   background: transparent;
 }
-[data-code-theme="dracula"] .hljs-keyword,
-[data-code-theme="dracula"] .hljs-meta .hljs-keyword,
-[data-code-theme="dracula"] .hljs-selector-tag,
-[data-code-theme="dracula"] .hljs-template-tag,
+[data-code-theme="dracula"] .hljs-comment {
+  color: #626483;
+}
+[data-code-theme="dracula"] .hljs-tag {
+  color: #62d6e8;
+}
+[data-code-theme="dracula"] .hljs-subst,
+[data-code-theme="dracula"] .hljs-punctuation,
+[data-code-theme="dracula"] .hljs-operator {
+  color: #e9e9f4;
+}
+[data-code-theme="dracula"] .hljs-bullet,
+[data-code-theme="dracula"] .hljs-variable,
 [data-code-theme="dracula"] .hljs-template-variable,
-[data-code-theme="dracula"] .hljs-type {
-  color: #ff79c6;
+[data-code-theme="dracula"] .hljs-selector-tag,
+[data-code-theme="dracula"] .hljs-name,
+[data-code-theme="dracula"] .hljs-deletion {
+  color: #ea51b2;
+}
+[data-code-theme="dracula"] .hljs-symbol,
+[data-code-theme="dracula"] .hljs-number,
+[data-code-theme="dracula"] .hljs-link,
+[data-code-theme="dracula"] .hljs-attr,
+[data-code-theme="dracula"] .hljs-variable.constant_,
+[data-code-theme="dracula"] .hljs-literal {
+  color: #b45bcf;
 }
 [data-code-theme="dracula"] .hljs-title,
-[data-code-theme="dracula"] .hljs-title.class_,
-[data-code-theme="dracula"] .hljs-title.function_ {
-  color: #50fa7b;
-}
-[data-code-theme="dracula"] .hljs-attr,
-[data-code-theme="dracula"] .hljs-attribute,
-[data-code-theme="dracula"] .hljs-literal,
-[data-code-theme="dracula"] .hljs-meta,
-[data-code-theme="dracula"] .hljs-number,
-[data-code-theme="dracula"] .hljs-operator,
-[data-code-theme="dracula"] .hljs-selector-attr,
-[data-code-theme="dracula"] .hljs-selector-class,
-[data-code-theme="dracula"] .hljs-selector-id,
-[data-code-theme="dracula"] .hljs-variable {
-  color: #bd93f9;
-}
-[data-code-theme="dracula"] .hljs-string,
-[data-code-theme="dracula"] .hljs-regexp,
-[data-code-theme="dracula"] .hljs-meta .hljs-string {
-  color: #f1fa8c;
-}
-[data-code-theme="dracula"] .hljs-built_in,
-[data-code-theme="dracula"] .hljs-symbol {
-  color: #ffb86c;
-}
-[data-code-theme="dracula"] .hljs-code,
-[data-code-theme="dracula"] .hljs-comment,
-[data-code-theme="dracula"] .hljs-formula {
-  color: #6272a4;
-}
-[data-code-theme="dracula"] .hljs-name,
-[data-code-theme="dracula"] .hljs-quote,
-[data-code-theme="dracula"] .hljs-selector-pseudo {
-  color: #f8f8f2;
-}
-[data-code-theme="dracula"] .hljs-subst {
-  color: #f8f8f2;
-}
-[data-code-theme="dracula"] .hljs-section {
-  color: #ff79c6;
-  font-weight: 700;
-}
-[data-code-theme="dracula"] .hljs-bullet {
-  color: #8be9fd;
-}
-[data-code-theme="dracula"] .hljs-emphasis {
-  color: #f1fa8c;
-  font-style: italic;
+[data-code-theme="dracula"] .hljs-class .hljs-title,
+[data-code-theme="dracula"] .hljs-title.class_ {
+  color: #00f769;
 }
 [data-code-theme="dracula"] .hljs-strong {
-  color: #ffb86c;
-  font-weight: 700;
+  font-weight: bold;
+  color: #00f769;
 }
-[data-code-theme="dracula"] .hljs-addition {
-  color: #50fa7b;
-  background-color: rgba(80, 250, 123, 0.15);
+[data-code-theme="dracula"] .hljs-code,
+[data-code-theme="dracula"] .hljs-addition,
+[data-code-theme="dracula"] .hljs-title.class_.inherited__,
+[data-code-theme="dracula"] .hljs-string {
+  color: #ebff87;
 }
-[data-code-theme="dracula"] .hljs-deletion {
-  color: #ff5555;
-  background-color: rgba(255, 85, 85, 0.15);
+[data-code-theme="dracula"] .hljs-built_in,
+[data-code-theme="dracula"] .hljs-doctag,
+[data-code-theme="dracula"] .hljs-quote,
+[data-code-theme="dracula"] .hljs-keyword.hljs-atrule,
+[data-code-theme="dracula"] .hljs-regexp {
+  color: #a1efe4;
 }
-[data-code-theme="dracula"] .hljs-doctag {
-  color: #8be9fd;
+[data-code-theme="dracula"] .hljs-function .hljs-title,
+[data-code-theme="dracula"] .hljs-attribute,
+[data-code-theme="dracula"] .hljs-title.function_,
+[data-code-theme="dracula"] .hljs-section {
+  color: #62d6e8;
+}
+[data-code-theme="dracula"] .hljs-type,
+[data-code-theme="dracula"] .hljs-template-tag,
+[data-code-theme="dracula"] .diff .hljs-meta,
+[data-code-theme="dracula"] .hljs-keyword {
+  color: #b45bcf;
+}
+[data-code-theme="dracula"] .hljs-emphasis {
+  color: #b45bcf;
+  font-style: italic;
+}
+[data-code-theme="dracula"] .hljs-meta,
+[data-code-theme="dracula"] .hljs-meta .hljs-keyword,
+[data-code-theme="dracula"] .hljs-meta .hljs-string {
+  color: #00f769;
+}
+[data-code-theme="dracula"] .hljs-meta .hljs-keyword {
+  font-weight: bold;
 }
 
 /* ==================== Nord ==================== */
+/* 基于 highlight.js 11.11.1 官方 Nord 主题 (Arctic Ice Studio) */
 
 [data-code-theme="nord"] .hljs {
   color: #d8dee9;
   background: transparent;
 }
-[data-code-theme="nord"] .hljs-keyword,
-[data-code-theme="nord"] .hljs-selector-tag,
-[data-code-theme="nord"] .hljs-meta .hljs-keyword,
-[data-code-theme="nord"] .hljs-template-tag {
-  color: #81a1c1;
-}
-[data-code-theme="nord"] .hljs-title,
-[data-code-theme="nord"] .hljs-title.class_,
-[data-code-theme="nord"] .hljs-title.function_ {
-  color: #88c0d0;
-}
-[data-code-theme="nord"] .hljs-attr,
-[data-code-theme="nord"] .hljs-attribute,
-[data-code-theme="nord"] .hljs-literal,
-[data-code-theme="nord"] .hljs-meta,
-[data-code-theme="nord"] .hljs-number,
-[data-code-theme="nord"] .hljs-operator,
-[data-code-theme="nord"] .hljs-variable {
-  color: #b48ead;
-}
-[data-code-theme="nord"] .hljs-string,
-[data-code-theme="nord"] .hljs-regexp,
-[data-code-theme="nord"] .hljs-meta .hljs-string {
-  color: #a3be8c;
-}
-[data-code-theme="nord"] .hljs-built_in,
-[data-code-theme="nord"] .hljs-symbol,
-[data-code-theme="nord"] .hljs-type {
-  color: #ebcb8b;
-}
-[data-code-theme="nord"] .hljs-code,
-[data-code-theme="nord"] .hljs-comment,
-[data-code-theme="nord"] .hljs-formula {
-  color: #616e88;
-}
-[data-code-theme="nord"] .hljs-name,
-[data-code-theme="nord"] .hljs-quote,
-[data-code-theme="nord"] .hljs-selector-pseudo,
-[data-code-theme="nord"] .hljs-selector-class,
-[data-code-theme="nord"] .hljs-selector-id {
-  color: #8fbcbb;
-}
+[data-code-theme="nord"] .hljs,
 [data-code-theme="nord"] .hljs-subst {
   color: #d8dee9;
 }
-[data-code-theme="nord"] .hljs-section {
+[data-code-theme="nord"] .hljs-selector-tag {
+  color: #81a1c1;
+}
+[data-code-theme="nord"] .hljs-selector-id {
+  color: #8fbcbb;
+  font-weight: bold;
+}
+[data-code-theme="nord"] .hljs-selector-class {
+  color: #8fbcbb;
+}
+[data-code-theme="nord"] .hljs-selector-attr {
+  color: #8fbcbb;
+}
+[data-code-theme="nord"] .hljs-property {
   color: #88c0d0;
-  font-weight: 700;
+}
+[data-code-theme="nord"] .hljs-selector-pseudo {
+  color: #88c0d0;
+}
+[data-code-theme="nord"] .hljs-addition {
+  background-color: rgba(163, 190, 140, 0.5);
+}
+[data-code-theme="nord"] .hljs-deletion {
+  background-color: rgba(191, 97, 106, 0.5);
+}
+[data-code-theme="nord"] .hljs-built_in,
+[data-code-theme="nord"] .hljs-type {
+  color: #8fbcbb;
+}
+[data-code-theme="nord"] .hljs-class {
+  color: #8fbcbb;
+}
+[data-code-theme="nord"] .hljs-function {
+  color: #88c0d0;
+}
+[data-code-theme="nord"] .hljs-title.hljs-function,
+[data-code-theme="nord"] .hljs-function > .hljs-title {
+  color: #88c0d0;
+}
+[data-code-theme="nord"] .hljs-keyword,
+[data-code-theme="nord"] .hljs-literal,
+[data-code-theme="nord"] .hljs-symbol {
+  color: #81a1c1;
+}
+[data-code-theme="nord"] .hljs-number {
+  color: #b48ead;
+}
+[data-code-theme="nord"] .hljs-regexp {
+  color: #ebcb8b;
+}
+[data-code-theme="nord"] .hljs-string {
+  color: #a3be8c;
+}
+[data-code-theme="nord"] .hljs-title {
+  color: #8fbcbb;
+}
+[data-code-theme="nord"] .hljs-params {
+  color: #d8dee9;
 }
 [data-code-theme="nord"] .hljs-bullet {
-  color: #d08770;
+  color: #81a1c1;
+}
+[data-code-theme="nord"] .hljs-code {
+  color: #8fbcbb;
 }
 [data-code-theme="nord"] .hljs-emphasis {
   font-style: italic;
 }
+[data-code-theme="nord"] .hljs-formula {
+  color: #8fbcbb;
+}
 [data-code-theme="nord"] .hljs-strong {
-  font-weight: 700;
+  font-weight: bold;
 }
-[data-code-theme="nord"] .hljs-addition {
+[data-code-theme="nord"] .hljs-link:hover {
+  text-decoration: underline;
+}
+[data-code-theme="nord"] .hljs-quote {
+  color: #4c566a;
+}
+[data-code-theme="nord"] .hljs-comment {
+  color: #4c566a;
+}
+[data-code-theme="nord"] .hljs-doctag {
+  color: #8fbcbb;
+}
+[data-code-theme="nord"] .hljs-meta,
+[data-code-theme="nord"] .hljs-meta .hljs-keyword {
+  color: #5e81ac;
+}
+[data-code-theme="nord"] .hljs-meta .hljs-string {
   color: #a3be8c;
-  background-color: rgba(163, 190, 140, 0.15);
 }
-[data-code-theme="nord"] .hljs-deletion {
-  color: #bf616a;
-  background-color: rgba(191, 97, 106, 0.15);
+[data-code-theme="nord"] .hljs-attr {
+  color: #8fbcbb;
 }
-[data-code-theme="nord"] .hljs-doctag,
+[data-code-theme="nord"] .hljs-attribute {
+  color: #d8dee9;
+}
+[data-code-theme="nord"] .hljs-name {
+  color: #81a1c1;
+}
+[data-code-theme="nord"] .hljs-section {
+  color: #88c0d0;
+}
+[data-code-theme="nord"] .hljs-tag {
+  color: #81a1c1;
+}
+[data-code-theme="nord"] .hljs-variable {
+  color: #d8dee9;
+}
 [data-code-theme="nord"] .hljs-template-variable {
-  color: #d08770;
+  color: #d8dee9;
+}
+[data-code-theme="nord"] .hljs-template-tag {
+  color: #5e81ac;
 }
 
 /* ==================== Solarized Light ==================== */
+/* 基于 highlight.js 11.11.1 官方 Base16 Solarized Light 主题 */
 
 [data-code-theme="solarized-light"] .hljs {
-  color: #657b83;
+  color: #586e75;
   background: transparent;
 }
-[data-code-theme="solarized-light"] .hljs-keyword,
-[data-code-theme="solarized-light"] .hljs-selector-tag {
-  color: #859900;
+[data-code-theme="solarized-light"] .hljs-comment {
+  color: #839496;
+}
+[data-code-theme="solarized-light"] .hljs-tag {
+  color: #657b83;
+}
+[data-code-theme="solarized-light"] .hljs-subst,
+[data-code-theme="solarized-light"] .hljs-punctuation,
+[data-code-theme="solarized-light"] .hljs-operator {
+  color: #586e75;
+}
+[data-code-theme="solarized-light"] .hljs-bullet,
+[data-code-theme="solarized-light"] .hljs-variable,
+[data-code-theme="solarized-light"] .hljs-template-variable,
+[data-code-theme="solarized-light"] .hljs-selector-tag,
+[data-code-theme="solarized-light"] .hljs-name,
+[data-code-theme="solarized-light"] .hljs-deletion {
+  color: #dc322f;
+}
+[data-code-theme="solarized-light"] .hljs-symbol,
+[data-code-theme="solarized-light"] .hljs-number,
+[data-code-theme="solarized-light"] .hljs-link,
+[data-code-theme="solarized-light"] .hljs-attr,
+[data-code-theme="solarized-light"] .hljs-variable.constant_,
+[data-code-theme="solarized-light"] .hljs-literal {
+  color: #cb4b16;
 }
 [data-code-theme="solarized-light"] .hljs-title,
-[data-code-theme="solarized-light"] .hljs-title.class_,
+[data-code-theme="solarized-light"] .hljs-class .hljs-title,
+[data-code-theme="solarized-light"] .hljs-title.class_ {
+  color: #b58900;
+}
+[data-code-theme="solarized-light"] .hljs-strong {
+  font-weight: bold;
+  color: #b58900;
+}
+[data-code-theme="solarized-light"] .hljs-code,
+[data-code-theme="solarized-light"] .hljs-addition,
+[data-code-theme="solarized-light"] .hljs-title.class_.inherited__,
+[data-code-theme="solarized-light"] .hljs-string {
+  color: #859900;
+}
+[data-code-theme="solarized-light"] .hljs-built_in,
+[data-code-theme="solarized-light"] .hljs-doctag,
+[data-code-theme="solarized-light"] .hljs-quote,
+[data-code-theme="solarized-light"] .hljs-keyword.hljs-atrule,
+[data-code-theme="solarized-light"] .hljs-regexp {
+  color: #2aa198;
+}
+[data-code-theme="solarized-light"] .hljs-function .hljs-title,
+[data-code-theme="solarized-light"] .hljs-attribute,
 [data-code-theme="solarized-light"] .hljs-title.function_,
 [data-code-theme="solarized-light"] .hljs-section {
   color: #268bd2;
 }
-[data-code-theme="solarized-light"] .hljs-number,
-[data-code-theme="solarized-light"] .hljs-literal {
-  color: #d33682;
-}
-[data-code-theme="solarized-light"] .hljs-string,
-[data-code-theme="solarized-light"] .hljs-regexp {
-  color: #2aa198;
-}
-[data-code-theme="solarized-light"] .hljs-built_in,
-[data-code-theme="solarized-light"] .hljs-type {
-  color: #b58900;
-}
-[data-code-theme="solarized-light"] .hljs-comment,
-[data-code-theme="solarized-light"] .hljs-quote {
-  color: #93a1a1;
-  font-style: italic;
-}
-[data-code-theme="solarized-light"] .hljs-attr,
-[data-code-theme="solarized-light"] .hljs-attribute {
-  color: #b58900;
-}
-[data-code-theme="solarized-light"] .hljs-variable,
-[data-code-theme="solarized-light"] .hljs-template-variable,
-[data-code-theme="solarized-light"] .hljs-symbol,
-[data-code-theme="solarized-light"] .hljs-bullet {
-  color: #cb4b16;
-}
-[data-code-theme="solarized-light"] .hljs-name,
-[data-code-theme="solarized-light"] .hljs-meta {
-  color: #859900;
+[data-code-theme="solarized-light"] .hljs-type,
+[data-code-theme="solarized-light"] .hljs-template-tag,
+[data-code-theme="solarized-light"] .diff .hljs-meta,
+[data-code-theme="solarized-light"] .hljs-keyword {
+  color: #6c71c4;
 }
 [data-code-theme="solarized-light"] .hljs-emphasis {
+  color: #6c71c4;
   font-style: italic;
 }
-[data-code-theme="solarized-light"] .hljs-strong {
-  font-weight: 700;
+[data-code-theme="solarized-light"] .hljs-meta,
+[data-code-theme="solarized-light"] .hljs-meta .hljs-keyword,
+[data-code-theme="solarized-light"] .hljs-meta .hljs-string {
+  color: #d33682;
 }
-[data-code-theme="solarized-light"] .hljs-addition {
-  color: #859900;
-  background-color: rgba(133, 153, 0, 0.1);
-}
-[data-code-theme="solarized-light"] .hljs-deletion {
-  color: #dc322f;
-  background-color: rgba(220, 50, 47, 0.1);
+[data-code-theme="solarized-light"] .hljs-meta .hljs-keyword {
+  font-weight: bold;
 }
 
 /* ==================== Solarized Dark ==================== */
+/* 基于 highlight.js 11.11.1 官方 Base16 Solarized Dark 主题 */
 
 [data-code-theme="solarized-dark"] .hljs {
-  color: #839496;
+  color: #93a1a1;
   background: transparent;
 }
-[data-code-theme="solarized-dark"] .hljs-keyword,
-[data-code-theme="solarized-dark"] .hljs-selector-tag {
-  color: #859900;
+[data-code-theme="solarized-dark"] .hljs-comment {
+  color: #657b83;
+}
+[data-code-theme="solarized-dark"] .hljs-tag {
+  color: #839496;
+}
+[data-code-theme="solarized-dark"] .hljs-subst,
+[data-code-theme="solarized-dark"] .hljs-punctuation,
+[data-code-theme="solarized-dark"] .hljs-operator {
+  color: #93a1a1;
+}
+[data-code-theme="solarized-dark"] .hljs-bullet,
+[data-code-theme="solarized-dark"] .hljs-variable,
+[data-code-theme="solarized-dark"] .hljs-template-variable,
+[data-code-theme="solarized-dark"] .hljs-selector-tag,
+[data-code-theme="solarized-dark"] .hljs-name,
+[data-code-theme="solarized-dark"] .hljs-deletion {
+  color: #dc322f;
+}
+[data-code-theme="solarized-dark"] .hljs-symbol,
+[data-code-theme="solarized-dark"] .hljs-number,
+[data-code-theme="solarized-dark"] .hljs-link,
+[data-code-theme="solarized-dark"] .hljs-attr,
+[data-code-theme="solarized-dark"] .hljs-variable.constant_,
+[data-code-theme="solarized-dark"] .hljs-literal {
+  color: #cb4b16;
 }
 [data-code-theme="solarized-dark"] .hljs-title,
-[data-code-theme="solarized-dark"] .hljs-title.class_,
+[data-code-theme="solarized-dark"] .hljs-class .hljs-title,
+[data-code-theme="solarized-dark"] .hljs-title.class_ {
+  color: #b58900;
+}
+[data-code-theme="solarized-dark"] .hljs-strong {
+  font-weight: bold;
+  color: #b58900;
+}
+[data-code-theme="solarized-dark"] .hljs-code,
+[data-code-theme="solarized-dark"] .hljs-addition,
+[data-code-theme="solarized-dark"] .hljs-title.class_.inherited__,
+[data-code-theme="solarized-dark"] .hljs-string {
+  color: #859900;
+}
+[data-code-theme="solarized-dark"] .hljs-built_in,
+[data-code-theme="solarized-dark"] .hljs-doctag,
+[data-code-theme="solarized-dark"] .hljs-quote,
+[data-code-theme="solarized-dark"] .hljs-keyword.hljs-atrule,
+[data-code-theme="solarized-dark"] .hljs-regexp {
+  color: #2aa198;
+}
+[data-code-theme="solarized-dark"] .hljs-function .hljs-title,
+[data-code-theme="solarized-dark"] .hljs-attribute,
 [data-code-theme="solarized-dark"] .hljs-title.function_,
 [data-code-theme="solarized-dark"] .hljs-section {
   color: #268bd2;
 }
-[data-code-theme="solarized-dark"] .hljs-number,
-[data-code-theme="solarized-dark"] .hljs-literal {
-  color: #d33682;
-}
-[data-code-theme="solarized-dark"] .hljs-string,
-[data-code-theme="solarized-dark"] .hljs-regexp {
-  color: #2aa198;
-}
-[data-code-theme="solarized-dark"] .hljs-built_in,
-[data-code-theme="solarized-dark"] .hljs-type {
-  color: #b58900;
-}
-[data-code-theme="solarized-dark"] .hljs-comment,
-[data-code-theme="solarized-dark"] .hljs-quote {
-  color: #586e75;
-  font-style: italic;
-}
-[data-code-theme="solarized-dark"] .hljs-attr,
-[data-code-theme="solarized-dark"] .hljs-attribute {
-  color: #b58900;
-}
-[data-code-theme="solarized-dark"] .hljs-variable,
-[data-code-theme="solarized-dark"] .hljs-template-variable,
-[data-code-theme="solarized-dark"] .hljs-symbol,
-[data-code-theme="solarized-dark"] .hljs-bullet {
-  color: #cb4b16;
-}
-[data-code-theme="solarized-dark"] .hljs-name,
-[data-code-theme="solarized-dark"] .hljs-meta {
-  color: #859900;
+[data-code-theme="solarized-dark"] .hljs-type,
+[data-code-theme="solarized-dark"] .hljs-template-tag,
+[data-code-theme="solarized-dark"] .diff .hljs-meta,
+[data-code-theme="solarized-dark"] .hljs-keyword {
+  color: #6c71c4;
 }
 [data-code-theme="solarized-dark"] .hljs-emphasis {
+  color: #6c71c4;
   font-style: italic;
 }
-[data-code-theme="solarized-dark"] .hljs-strong {
-  font-weight: 700;
+[data-code-theme="solarized-dark"] .hljs-meta,
+[data-code-theme="solarized-dark"] .hljs-meta .hljs-keyword,
+[data-code-theme="solarized-dark"] .hljs-meta .hljs-string {
+  color: #d33682;
 }
-[data-code-theme="solarized-dark"] .hljs-addition {
-  color: #859900;
-  background-color: rgba(133, 153, 0, 0.15);
-}
-[data-code-theme="solarized-dark"] .hljs-deletion {
-  color: #dc322f;
-  background-color: rgba(220, 50, 47, 0.15);
+[data-code-theme="solarized-dark"] .hljs-meta .hljs-keyword {
+  font-weight: bold;
 }
 
 /* ==================== Tokyo Night ==================== */
+/* 基于 highlight.js 11.11.1 官方 Tokyo Night Dark 主题 */
 
 [data-code-theme="tokyo-night"] .hljs {
-  color: #a9b1d6;
+  color: #9aa5ce;
   background: transparent;
 }
-[data-code-theme="tokyo-night"] .hljs-keyword,
-[data-code-theme="tokyo-night"] .hljs-operator {
-  color: #bb9af7;
+[data-code-theme="tokyo-night"] .hljs-meta,
+[data-code-theme="tokyo-night"] .hljs-comment {
+  color: #565f89;
 }
-[data-code-theme="tokyo-night"] .hljs-title,
-[data-code-theme="tokyo-night"] .hljs-title.class_,
-[data-code-theme="tokyo-night"] .hljs-title.function_ {
-  color: #7aa2f7;
+[data-code-theme="tokyo-night"] .hljs-tag,
+[data-code-theme="tokyo-night"] .hljs-doctag,
+[data-code-theme="tokyo-night"] .hljs-selector-id,
+[data-code-theme="tokyo-night"] .hljs-selector-class,
+[data-code-theme="tokyo-night"] .hljs-regexp,
+[data-code-theme="tokyo-night"] .hljs-template-tag,
+[data-code-theme="tokyo-night"] .hljs-selector-pseudo,
+[data-code-theme="tokyo-night"] .hljs-selector-attr,
+[data-code-theme="tokyo-night"] .hljs-variable.language_,
+[data-code-theme="tokyo-night"] .hljs-deletion {
+  color: #f7768e;
 }
-[data-code-theme="tokyo-night"] .hljs-string,
-[data-code-theme="tokyo-night"] .hljs-regexp {
-  color: #9ece6a;
-}
+[data-code-theme="tokyo-night"] .hljs-variable,
+[data-code-theme="tokyo-night"] .hljs-template-variable,
 [data-code-theme="tokyo-night"] .hljs-number,
-[data-code-theme="tokyo-night"] .hljs-literal {
+[data-code-theme="tokyo-night"] .hljs-literal,
+[data-code-theme="tokyo-night"] .hljs-type,
+[data-code-theme="tokyo-night"] .hljs-params,
+[data-code-theme="tokyo-night"] .hljs-link {
   color: #ff9e64;
 }
 [data-code-theme="tokyo-night"] .hljs-built_in,
-[data-code-theme="tokyo-night"] .hljs-type {
-  color: #2ac3de;
-}
-[data-code-theme="tokyo-night"] .hljs-comment,
-[data-code-theme="tokyo-night"] .hljs-quote {
-  color: #565f89;
-  font-style: italic;
-}
-[data-code-theme="tokyo-night"] .hljs-attr,
 [data-code-theme="tokyo-night"] .hljs-attribute {
-  color: #7aa2f7;
-}
-[data-code-theme="tokyo-night"] .hljs-variable,
-[data-code-theme="tokyo-night"] .hljs-template-variable {
-  color: #c0caf5;
-}
-[data-code-theme="tokyo-night"] .hljs-name,
-[data-code-theme="tokyo-night"] .hljs-selector-tag {
-  color: #f7768e;
-}
-[data-code-theme="tokyo-night"] .hljs-tag,
-[data-code-theme="tokyo-night"] .hljs-selector-id,
-[data-code-theme="tokyo-night"] .hljs-selector-class {
-  color: #73daca;
-}
-[data-code-theme="tokyo-night"] .hljs-meta,
-[data-code-theme="tokyo-night"] .hljs-meta .hljs-keyword {
   color: #e0af68;
 }
-[data-code-theme="tokyo-night"] .hljs-symbol,
-[data-code-theme="tokyo-night"] .hljs-bullet {
-  color: #89ddff;
+[data-code-theme="tokyo-night"] .hljs-selector-tag {
+  color: #2ac3de;
 }
+[data-code-theme="tokyo-night"] .hljs-keyword,
+[data-code-theme="tokyo-night"] .hljs-title.function_,
+[data-code-theme="tokyo-night"] .hljs-title,
+[data-code-theme="tokyo-night"] .hljs-title.class_,
+[data-code-theme="tokyo-night"] .hljs-title.class_.inherited__,
+[data-code-theme="tokyo-night"] .hljs-subst,
+[data-code-theme="tokyo-night"] .hljs-property {
+  color: #7dcfff;
+}
+[data-code-theme="tokyo-night"] .hljs-selector-tag {
+  color: #73daca;
+}
+[data-code-theme="tokyo-night"] .hljs-quote,
+[data-code-theme="tokyo-night"] .hljs-string,
+[data-code-theme="tokyo-night"] .hljs-symbol,
+[data-code-theme="tokyo-night"] .hljs-bullet,
+[data-code-theme="tokyo-night"] .hljs-addition {
+  color: #9ece6a;
+}
+[data-code-theme="tokyo-night"] .hljs-code,
+[data-code-theme="tokyo-night"] .hljs-formula,
 [data-code-theme="tokyo-night"] .hljs-section {
   color: #7aa2f7;
-  font-weight: 700;
+}
+[data-code-theme="tokyo-night"] .hljs-name,
+[data-code-theme="tokyo-night"] .hljs-keyword,
+[data-code-theme="tokyo-night"] .hljs-operator,
+[data-code-theme="tokyo-night"] .hljs-char.escape_,
+[data-code-theme="tokyo-night"] .hljs-attr {
+  color: #bb9af7;
+}
+[data-code-theme="tokyo-night"] .hljs-punctuation {
+  color: #c0caf5;
 }
 [data-code-theme="tokyo-night"] .hljs-emphasis {
   font-style: italic;
 }
 [data-code-theme="tokyo-night"] .hljs-strong {
-  font-weight: 700;
-}
-[data-code-theme="tokyo-night"] .hljs-addition {
-  color: #9ece6a;
-  background-color: rgba(158, 206, 106, 0.15);
-}
-[data-code-theme="tokyo-night"] .hljs-deletion {
-  color: #f7768e;
-  background-color: rgba(247, 118, 142, 0.15);
+  font-weight: bold;
 }
 
 /* ==================== One Dark Pro ==================== */
@@ -1210,10 +1304,10 @@ code.hljs {
   background: #fafafa;
 }
 [data-code-theme="dracula"] .code-block {
-  background: #282a36;
+  background: #282936;
 }
 [data-code-theme="dracula"] .code-block code {
-  background: #282a36;
+  background: #282936;
 }
 [data-code-theme="nord"] .code-block {
   background: #2e3440;
@@ -1399,7 +1493,7 @@ body.show-line-numbers [data-code-theme="default-light-modern"] .code-line::befo
   background: #fafafa;
 }
 .code-theme-preview[data-code-theme="dracula"] .preview-code-block code {
-  background: #282a36;
+  background: #282936;
 }
 .code-theme-preview[data-code-theme="nord"] .preview-code-block code {
   background: #2e3440;

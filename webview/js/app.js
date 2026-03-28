@@ -88,6 +88,22 @@
         Renderer.configureHighlight();
         Settings.init();
 
+        // 监听 Mermaid / 数学公式开关变化，触发文档重新渲染
+        Settings.onChange((key, value) => {
+            if (key === 'enableMermaid' || key === 'enableMath' || key === 'reset') {
+                refreshCurrentView();
+            }
+            // 主题变更时重新渲染 Mermaid 图表（Mermaid 使用内置主题系统，需要重新渲染）
+            if (key === 'themeChanged') {
+                Renderer.reinitMermaid();
+                renderMathAndMermaid();
+            }
+            // auto 模式下系统主题变化时，同步更新顶部按钮标签
+            if (key === 'themeChanged' || key === 'reset') {
+                updateThemeButtonLabel(Settings.getSettings().theme);
+            }
+        });
+
         // 初始化工具栏主题按钮标签
         updateThemeButtonLabel(Settings.getSettings().theme);
         // 初始化工具栏目录按钮状态
@@ -284,17 +300,22 @@
             toggleZenMode();
         });
 
-        // 工具栏主题切换按钮（三态切换：light → dark → auto → light）
+        // 工具栏主题切换按钮（仅在亮色/暗色之间切换，跟随系统在设置页配置）
         document.getElementById('btnToggleTheme').addEventListener('click', () => {
             const settings = Settings.getSettings();
-            const themeOrder = ['light', 'dark', 'auto'];
-            const currentIndex = themeOrder.indexOf(settings.theme);
-            const nextTheme = themeOrder[(currentIndex + 1) % themeOrder.length];
+            // 如果当前是 auto 模式，根据实际显示的主题来决定切换方向
+            let nextTheme;
+            if (settings.theme === 'auto') {
+                const isDark = document.body.classList.contains('theme-dark');
+                nextTheme = isDark ? 'light' : 'dark';
+            } else {
+                nextTheme = settings.theme === 'light' ? 'dark' : 'light';
+            }
             Settings.applySettings({ ...settings, theme: nextTheme });
             // 通知 Host 保存设置
             vscode.postMessage({ type: 'saveSettings', payload: { ...settings, theme: nextTheme } });
             updateThemeButtonLabel(nextTheme);
-            // 重新初始化 Mermaid 以适配新主题
+            // 重新渲染 Mermaid 图表以适配新主题（Mermaid 使用内置主题系统，需要重新渲染）
             Renderer.reinitMermaid();
             renderMathAndMermaid();
         });
@@ -1378,13 +1399,17 @@
     function updateThemeButtonLabel(theme) {
         const btn = document.getElementById('btnToggleTheme');
         if (!btn) return;
-        const labels = { light: '亮色', dark: '暗色', auto: '自动' };
+        const labels = { light: '亮色', dark: '暗色' };
         const icons = {
             light: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
-            dark: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M14 9.2A6.5 6.5 0 016.8 2 6 6 0 1014 9.2z" stroke="currentColor" stroke-width="1.3"/></svg>',
-            auto: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 14h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M8 11v3" stroke="currentColor" stroke-width="1.3"/></svg>'
+            dark: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M14 9.2A6.5 6.5 0 016.8 2 6 6 0 1014 9.2z" stroke="currentColor" stroke-width="1.3"/></svg>'
         };
-        btn.innerHTML = (icons[theme] || icons.light) + ' ' + (labels[theme] || '主题');
+        // auto 模式下，根据实际显示的主题来决定图标和标签
+        let displayTheme = theme;
+        if (theme === 'auto') {
+            displayTheme = document.body.classList.contains('theme-dark') ? 'dark' : 'light';
+        }
+        btn.innerHTML = (icons[displayTheme] || icons.light) + ' ' + (labels[displayTheme] || '主题');
     }
 
     // ===== 自动保存调度 =====

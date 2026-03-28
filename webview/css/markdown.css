@@ -136,25 +136,25 @@
 
 /* --- 暗色主题引用 --- */
 .theme-dark .document-content blockquote {
-    border-left-color: #888888;
+    border-left-color: #4a9eff;
     border-left-width: 5px;
     color: #e0e0e0;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(74, 158, 255, 0.08);
 }
 .theme-dark .document-content blockquote:hover {
-    background: rgba(255, 255, 255, 0.07);
+    background: rgba(74, 158, 255, 0.12);
 }
 .theme-dark .document-content blockquote blockquote {
-    border-left-color: #999999;
-    background: rgba(255, 255, 255, 0.05);
+    border-left-color: #6db3ff;
+    background: rgba(74, 158, 255, 0.10);
 }
 .theme-dark .document-content blockquote blockquote blockquote {
-    border-left-color: #aaaaaa;
-    background: rgba(255, 255, 255, 0.06);
+    border-left-color: #90c7ff;
+    background: rgba(74, 158, 255, 0.12);
 }
 .theme-dark .document-content blockquote blockquote blockquote blockquote {
-    border-left-color: #bbbbbb;
-    background: rgba(255, 255, 255, 0.07);
+    border-left-color: #b3dbff;
+    background: rgba(74, 158, 255, 0.14);
 }
 .theme-dark .document-content blockquote strong {
     color: #f0f0f0;
@@ -921,6 +921,11 @@ pre code.language-diff {
     white-space: nowrap;
 }
 
+/* 表格行交错样式（斑马纹） */
+.document-content .table-wrapper tbody tr:nth-child(even) td {
+    background-color: #f6f8fa;
+}
+
 .document-content .table-wrapper tr:hover td {
     background: rgba(234, 238, 242, 0.5);
 }
@@ -935,10 +940,18 @@ pre code.language-diff {
     border-color: #333333;
 }
 .theme-dark .document-content .table-wrapper th {
-    background: linear-gradient(180deg, #2a2a2a 0%, #222222 100%);
-    color: #e0e0e0;
-    border-bottom-color: #444444;
+    background: linear-gradient(180deg, #3a3a3a 0%, #2d2d2d 100%);
+    color: #f0f0f0;
+    border-bottom-color: #555555;
+    border-bottom-width: 2px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
 }
+
+/* 暗色主题表格行交错样式 */
+.theme-dark .document-content .table-wrapper tbody tr:nth-child(even) td {
+    background-color: #262626;
+}
+
 .theme-dark .document-content .table-wrapper tr:hover td {
     background: rgba(255, 255, 255, 0.05);
 }
@@ -1300,6 +1313,21 @@ pre code.language-diff {
    [data-code-theme-mode="dark|light"] 统一控制，确保代码高亮主题
    在任何页面亮暗主题下都能正确显示。
    以下仅作为 fallback（当 data-code-theme-mode 未设置时） */
+
+/* ===== Mermaid 图表 — 主题适配 ===== */
+/* Mermaid 图表使用内置主题系统（通过 mermaid.initialize 的 theme + themeVariables 配置），
+   主题切换时会重新渲染 SVG，无需外部 CSS 覆盖 SVG 内部元素样式。
+   以下仅控制容器级别的样式。 */
+
+/* 暗色主题 — 容器背景和边框 */
+.theme-dark .mermaid-container {
+    background: #1e1e2e;
+    border-color: #333;
+}
+
+.theme-dark .mermaid-rendered svg {
+    background: transparent;
+}
 
 /* ===== 暗色主题 — Mermaid 错误提示 ===== */
 .theme-dark .mermaid-error {

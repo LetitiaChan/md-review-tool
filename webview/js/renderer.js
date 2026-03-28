@@ -1381,16 +1381,46 @@ const Renderer = (() => {
     async function renderMermaid() {
         if (typeof mermaid === 'undefined') return;
 
-        if (!_mermaidInitialized) {
-            const isDark = document.body.classList.contains('theme-dark');
-            mermaid.initialize({
-                startOnLoad: false,
-                theme: isDark ? 'dark' : 'default',
-                securityLevel: 'strict',
-                fontFamily: 'inherit'
-            });
-            _mermaidInitialized = true;
-        }
+        // 每次渲染都重新 initialize，确保主题切换后使用正确的主题配置
+        const isDark = document.body.classList.contains('theme-dark');
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: isDark ? 'dark' : 'default',
+            securityLevel: 'strict',
+            fontFamily: '"Segoe UI", "Microsoft YaHei", sans-serif',
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: true,
+                curve: 'basis',
+            },
+            sequence: {
+                useMaxWidth: false,
+                diagramMarginX: 8,
+                diagramMarginY: 8,
+            },
+            gantt: {
+                useMaxWidth: false,
+            },
+            themeVariables: isDark ? {
+                darkMode: true,
+                background: '#1e1e2e',
+                primaryColor: '#4fc3f7',
+                primaryTextColor: '#e0e0e0',
+                primaryBorderColor: '#4a5568',
+                lineColor: '#718096',
+                secondaryColor: '#2d3748',
+                tertiaryColor: '#374151',
+                textColor: '#e2e8f0',
+                mainBkg: '#2d3748',
+                nodeBorder: '#4a5568',
+                clusterBkg: 'rgba(30, 41, 59, 0.5)',
+                clusterBorder: '#475569',
+                titleColor: '#e2e8f0',
+                edgeLabelBackground: '#1e293b',
+                nodeTextColor: '#e2e8f0',
+            } : {},
+        });
+        _mermaidInitialized = true;
 
         const containers = document.querySelectorAll('.mermaid-container');
         for (const container of containers) {
@@ -1459,9 +1489,29 @@ const Renderer = (() => {
 
     /**
      * 重新初始化 Mermaid（主题切换时调用）
+     * 将已渲染的图表恢复为源码状态，强制重新渲染
      */
     function reinitMermaid() {
         _mermaidInitialized = false;
+        // 将已渲染的图表恢复为源码占位容器，以便重新渲染
+        document.querySelectorAll('.mermaid-container').forEach(container => {
+            container.removeAttribute('data-mermaid-id');
+            const rendered = container.querySelector('.mermaid-rendered');
+            if (rendered && rendered.dataset.source) {
+                // 从 data-source 恢复 base64 编码的源码
+                let code = '';
+                try {
+                    code = decodeURIComponent(escape(atob(rendered.dataset.source)));
+                } catch (e) {
+                    code = '';
+                }
+                if (code) {
+                    container.innerHTML = `<div class="mermaid-source-data" data-source="${rendered.dataset.source}" style="display:none"></div><pre class="mermaid-source">${escapeHtml(code)}</pre>`;
+                }
+            }
+        });
+        // 重置计数器
+        _mermaidCounter = 0;
     }
 
     /**
