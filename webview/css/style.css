@@ -1308,9 +1308,32 @@ body.theme-dark * {
 .apply-summary .stat-icon {
     font-size: 16px;
 }
+.apply-summary .summary-file {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.apply-summary .summary-file code {
+    background: rgba(0,0,0,0.06);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--text);
+}
+.apply-summary .summary-total {
+    font-weight: 600;
+    margin-bottom: 12px;
+}
 .apply-summary .stat-count {
     font-weight: 700;
     color: var(--primary);
+}
+.apply-summary .summary-hint {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #f0f9ff;
+    border-left: 3px solid #6366f1;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #555;
 }
 .apply-warning {
     margin-top: 8px;
@@ -1326,6 +1349,8 @@ body.theme-dark * {
     padding: 1px 5px;
     border-radius: 3px;
     font-size: 12px;
+    color: #78350f;
+    font-weight: 600;
 }
 
 /* ===== 一键AI修复结果 ===== */
@@ -1376,6 +1401,14 @@ body.theme-dark * {
     padding: 1px 5px;
     border-radius: 3px;
     word-break: break-all;
+}
+.apply-result-content .result-ai-hint .ai-hint-label {
+    font-size: 12px;
+    color: #374151;
+}
+.apply-result-content .result-ai-hint .ai-hint-path {
+    color: #1e3a5f;
+    font-weight: 500;
 }
 .btn-copy-ai-instruction {
     display: inline-flex;
@@ -1854,6 +1887,7 @@ body.theme-dark .apply-warning {
 
 body.theme-dark .apply-warning code {
     background: rgba(255, 255, 255, 0.1);
+    color: #fde68a;
 }
 
 body.theme-dark .result-ai-hint {
@@ -1864,6 +1898,13 @@ body.theme-dark .result-ai-hint {
 
 body.theme-dark .result-ai-hint code {
     background: rgba(255, 255, 255, 0.1);
+}
+body.theme-dark .result-ai-hint .ai-hint-label {
+    color: #c4c9d4;
+}
+body.theme-dark .result-ai-hint .ai-hint-path {
+    color: #93c5fd;
+    font-weight: 500;
 }
 
 /* --- AI修复按钮禁用 --- */
@@ -1956,6 +1997,15 @@ body.theme-dark .help-section code {
 /* --- 应用摘要区 --- */
 body.theme-dark .apply-summary {
     background: var(--bg);
+}
+body.theme-dark .apply-summary .summary-file code {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+body.theme-dark .apply-summary .summary-hint {
+    background: rgba(99, 102, 241, 0.12);
+    border-left-color: #818cf8;
+    color: #c4c9d4;
 }
 
 /* ===== 禅模式 ===== */

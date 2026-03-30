@@ -15,6 +15,7 @@
     let tocRefreshTimer = null;
     const TOC_REFRESH_DELAY = 800;
     let zenMode = false;
+    let _ideType = 'codebuddy'; // 默认 CodeBuddy，由 Extension Host 通知实际类型
 
     // ===== postMessage 通信辅助 =====
     const _pendingRequests = new Map();
@@ -66,6 +67,9 @@
             case 'settingsData':
                 Settings.applySettings(message.payload);
                 updateThemeButtonLabel(Settings.getSettings().theme);
+                break;
+            case 'ideType':
+                _ideType = message.payload.ideType || 'codebuddy';
                 break;
         }
     });
@@ -1117,12 +1121,12 @@
 
         const summaryEl = document.getElementById('applySummary');
         summaryEl.innerHTML = `
-            <div style="font-weight:600;margin-bottom:8px;">📄 源文件：<code>${data.fileName}</code></div>
-            <div style="font-weight:600;margin-bottom:12px;">📝 共 <span style="color:var(--primary);font-size:16px;">${data.annotations.length}</span> 条批注</div>
+            <div class="summary-file">📄 源文件：<code>${data.fileName}</code></div>
+            <div class="summary-total">📝 共 <span class="stat-count">${data.annotations.length}</span> 条批注</div>
             ${deleteCount > 0 ? `<div class="summary-stat"><span class="stat-icon">🗑️</span> 删除操作：<span class="stat-count">${deleteCount}</span> 条</div>` : ''}
             ${insertCount > 0 ? `<div class="summary-stat"><span class="stat-icon">➕</span> 插入操作：<span class="stat-count">${insertCount}</span> 条</div>` : ''}
             ${commentCount > 0 ? `<div class="summary-stat"><span class="stat-icon">💬</span> 评论操作：<span class="stat-count">${commentCount}</span> 条</div>` : ''}
-            <div style="margin-top:10px;padding:8px 12px;background:#f0f9ff;border-left:3px solid #6366f1;border-radius:4px;font-size:12px;color:#555;">
+            <div class="summary-hint">
                 💡 所有批注将统一生成 AI 修改指令文件，由 AI 按指令逐条执行修改。
             </div>
         `;
@@ -1180,8 +1184,8 @@
                 html += `<div class="result-ai-hint">
                     🤖 <strong>${needsAi} 条批注</strong>已生成 AI 修改指令文件。<br>
                     <div style="margin-top:6px;">
-                        <span style="font-size:12px;color:#6366f1;">📄 源文件：<code>${escapeHtml(sourceFilePath || '')}</code></span><br>
-                        <span style="font-size:12px;color:#6366f1;">📝 指令文件：<code>${escapeHtml(aiInstructionFilePath || '')}</code></span>
+<span class="ai-hint-label">📄 源文件：<code class="ai-hint-path">${escapeHtml(sourceFilePath || '')}</code></span><br>
+                        <span class="ai-hint-label">📝 指令文件：<code class="ai-hint-path">${escapeHtml(aiInstructionFilePath || '')}</code></span>
                     </div>
                     <button class="btn btn-copy-ai-instruction" id="btnCopyAiInstruction">📋 一键复制指令</button>
                 </div>`;
@@ -1210,6 +1214,11 @@
             // 有AI指令时显示「🚀 确定执行」按钮
             if (executeBtn) {
                 executeBtn.style.display = '';
+            }
+            // VSCode 模式下显示剪贴板粘贴提示
+            const vscodeHint = document.getElementById('vscodeAiHint');
+            if (vscodeHint) {
+                vscodeHint.style.display = (_ideType === 'vscode') ? 'inline' : 'none';
             }
 
             copyBtn.addEventListener('click', function() {
