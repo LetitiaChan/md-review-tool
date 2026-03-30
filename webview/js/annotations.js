@@ -5,11 +5,72 @@
  */
 const Annotations = (() => {
     let currentSelection = null; // { text, blockIndex, startOffset, endOffset, range }
-    let pendingImages = [];
+    let pendingImages = []; // 存储图片路径（如 'images/img_xxx.png'），不再存 Base64
     let selectionTooltip = null;
     let blocks = [];
     let editingAnnotationId = null;
     let currentSortMode = 'time'; // 'position' | 'time'
+    let currentInsertPosition = 'after'; // 'before' | 'after' — 当前插入弹窗的方向
+
+    // 批注图片 URI 缓存：路径 -> webview URI
+    let _annotationImageUriCache = {};
+
+    /**
+     * 判断是否为 Base64 图片数据（用于兼容旧数据）
+     */
+    function isBase64Image(str) {
+        return str && str.startsWith('data:image/');
+    }
+
+    /**
+     * 获取图片的显示 src（兼容 Base64 和路径引用）
+     */
+    function getImageSrc(img) {
+        if (isBase64Image(img)) {
+            return img; // 旧的 Base64 数据直接使用
+        }
+        return _annotationImageUriCache[img] || ''; // 路径引用从缓存获取 URI
+    }
+
+    /**
+     * 向 Extension Host 发送请求并等待响应
+     */
+    function _callHost(type, payload) {
+        return new Promise((resolve, reject) => {
+            const requestId = type + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            const handler = (event) => {
+                const msg = event.data;
+                if (msg.requestId === requestId) {
+                    window.removeEventListener('message', handler);
+                    resolve(msg.payload);
+                }
+            };
+            window.addEventListener('message', handler);
+            vscode.postMessage({ type, payload, requestId });
+            setTimeout(() => {
+                window.removeEventListener('message', handler);
+                reject(new Error('请求超时: ' + type));
+            }, 10000);
+        });
+    }
+
+    /**
+     * 批量解析批注图片路径为 webview URI 并缓存
+     */
+    async function resolveAnnotationImageUris(imagePaths) {
+        if (!imagePaths || imagePaths.length === 0) return;
+        // 过滤掉 Base64 数据和已缓存的路径
+        const needResolve = imagePaths.filter(p => !isBase64Image(p) && !_annotationImageUriCache[p]);
+        if (needResolve.length === 0) return;
+        try {
+            const uriMap = await _callHost('resolveAnnotationImageUris', { imagePaths: needResolve });
+            if (uriMap) {
+                Object.assign(_annotationImageUriCache, uriMap);
+            }
+        } catch (e) {
+            console.warn('[annotations] 解析批注图片 URI 失败:', e);
+        }
+    }
 
     function init(parsedBlocks) {
         blocks = parsedBlocks;
@@ -148,7 +209,8 @@ const Annotations = (() => {
         selectionTooltip.innerHTML = `
             <button data-action="comment">💬 评论</button>
             <button data-action="delete">🗑️ 删除</button>
-            <button data-action="insert">➕ 插入</button>
+            <button data-action="insert">➕ 后插</button>
+            <button data-action="insertBefore">⬆️ 前插</button>
         `;
 
         selectionTooltip.style.left = Math.min(x, window.innerWidth - 250) + 'px';
@@ -175,7 +237,9 @@ const Annotations = (() => {
                 }
                 markDelete();
             } else if (action === 'insert') {
-                openInsertModal();
+                openInsertModal('after');
+            } else if (action === 'insertBefore') {
+                openInsertModal('before');
             }
             hideSelectionTooltip();
         });
@@ -257,7 +321,12 @@ const Annotations = (() => {
 
         document.getElementById('menuAddInsert').addEventListener('click', () => {
             menu.style.display = 'none';
-            openInsertModal();
+            openInsertModal('after');
+        });
+
+        document.getElementById('menuAddInsertBefore').addEventListener('click', () => {
+            menu.style.display = 'none';
+            openInsertModal('before');
         });
     }
 
@@ -271,7 +340,10 @@ const Annotations = (() => {
         document.getElementById('btnCancelComment').addEventListener('click', closeCommentModal);
         document.getElementById('btnSubmitComment').addEventListener('click', submitComment);
 
-        uploadZone.addEventListener('click', () => imageInput.click());
+        uploadZone.addEventListener('click', (e) => {
+            if (e.target === imageInput) return; // 防止 input 的 click 冒泡导致重复打开
+            imageInput.click();
+        });
         uploadZone.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadZone.classList.add('drag-over');
@@ -314,13 +386,18 @@ const Annotations = (() => {
         });
     }
 
-    function openCommentModal(editId) {
+    async function openCommentModal(editId) {
         editingAnnotationId = editId || null;
 
         if (editingAnnotationId) {
             const ann = Store.getAnnotations().find(a => a.id === editingAnnotationId);
             if (!ann) return;
             pendingImages = ann.images ? [...ann.images] : [];
+            // 解析图片路径为 webview URI
+            const pathImages = pendingImages.filter(img => !isBase64Image(img));
+            if (pathImages.length > 0) {
+                await resolveAnnotationImageUris(pathImages);
+            }
             document.getElementById('selectedTextPreview').textContent = ann.selectedText;
             document.getElementById('commentText').value = ann.comment || '';
             document.getElementById('commentModalTitle').textContent = '编辑评论';
@@ -380,9 +457,26 @@ const Annotations = (() => {
             if (!file.type.startsWith('image/')) return;
 
             const reader = new FileReader();
-            reader.onload = (e) => {
-                pendingImages.push(e.target.result);
-                renderImagePreviews();
+            reader.onload = async (e) => {
+                const base64Data = e.target.result;
+                try {
+                    // 将图片保存到文件系统，同时复制到当前 MD 文件所在目录
+                    const sourceDir = Store.getSourceDir();
+                    const result = await _callHost('saveAnnotationImage', { base64Data, sourceDir });
+                    if (result && result.success && result.imagePath) {
+                        pendingImages.push(result.imagePath);
+                        // 解析路径为 webview URI
+                        await resolveAnnotationImageUris([result.imagePath]);
+                        renderImagePreviews();
+                    } else {
+                        console.warn('[annotations] 保存图片失败:', result?.error);
+                    }
+                } catch (err) {
+                    console.warn('[annotations] 保存图片异常:', err);
+                    // 降级：直接使用 Base64（兼容模式）
+                    pendingImages.push(base64Data);
+                    renderImagePreviews();
+                }
             };
             reader.readAsDataURL(file);
         });
@@ -390,12 +484,15 @@ const Annotations = (() => {
 
     function renderImagePreviews() {
         const container = document.getElementById('imagePreviews');
-        container.innerHTML = pendingImages.map((img, i) => `
-            <div class="image-preview-item">
-                <img src="${img}" alt="预览${i}">
-                <button class="remove-image" data-index="${i}">&times;</button>
-            </div>
-        `).join('');
+        container.innerHTML = pendingImages.map((img, i) => {
+            const src = getImageSrc(img);
+            return `
+                <div class="image-preview-item">
+                    <img src="${src}" alt="预览${i}">
+                    <button class="remove-image" data-index="${i}">&times;</button>
+                </div>
+            `;
+        }).join('');
 
         container.querySelectorAll('.remove-image').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -444,9 +541,21 @@ const Annotations = (() => {
 
     let editingInsertId = null;
 
-    function openInsertModal() {
+    function openInsertModal(position) {
         if (!currentSelection) return;
         editingInsertId = null;
+        currentInsertPosition = position || 'after';
+
+        // 更新弹窗标题和位置提示
+        const titleEl = document.getElementById('insertModalTitle');
+        const labelEl = document.getElementById('insertPositionLabel');
+        if (currentInsertPosition === 'before') {
+            titleEl.textContent = '插入内容（在此处之前）';
+            labelEl.textContent = '插入位置（在此内容之前）：';
+        } else {
+            titleEl.textContent = '插入内容（在此处之后）';
+            labelEl.textContent = '插入位置（在此内容之后）：';
+        }
 
         document.getElementById('insertPositionPreview').textContent = currentSelection.text;
         document.getElementById('insertText').value = '';
@@ -460,6 +569,18 @@ const Annotations = (() => {
         const ann = Store.getAnnotations().find(a => a.id === id);
         if (!ann) return;
         editingInsertId = id;
+        currentInsertPosition = ann.insertPosition || 'after';
+
+        // 更新弹窗标题和位置提示
+        const titleEl = document.getElementById('insertModalTitle');
+        const labelEl = document.getElementById('insertPositionLabel');
+        if (currentInsertPosition === 'before') {
+            titleEl.textContent = '插入内容（在此处之前）';
+            labelEl.textContent = '插入位置（在此内容之前）：';
+        } else {
+            titleEl.textContent = '插入内容（在此处之后）';
+            labelEl.textContent = '插入位置（在此内容之后）：';
+        }
 
         document.getElementById('insertPositionPreview').textContent = ann.selectedText;
         document.getElementById('insertText').value = ann.insertContent || '';
@@ -473,6 +594,7 @@ const Annotations = (() => {
         document.getElementById('insertModal').style.display = 'none';
         currentSelection = null;
         editingInsertId = null;
+        currentInsertPosition = 'after';
     }
 
     function submitInsert() {
@@ -490,15 +612,17 @@ const Annotations = (() => {
             });
         } else {
             if (!currentSelection) return;
+            const isBefore = currentInsertPosition === 'before';
             Store.addAnnotation({
                 type: 'insert',
                 selectedText: currentSelection.text,
                 blockIndex: currentSelection.blockIndex,
                 endBlockIndex: currentSelection.endBlockIndex || currentSelection.blockIndex,
-                startOffset: currentSelection.endOffset,
-                endOffset: currentSelection.endOffset,
+                startOffset: isBefore ? currentSelection.startOffset : currentSelection.endOffset,
+                endOffset: isBefore ? currentSelection.startOffset : currentSelection.endOffset,
                 comment: insertReason,
                 insertContent: insertContent,
+                insertPosition: currentInsertPosition,
                 images: []
             });
         }
@@ -527,9 +651,24 @@ const Annotations = (() => {
     }
 
     // ===== 渲染批注列表 =====
-    function renderAnnotationsList() {
+    async function renderAnnotationsList() {
         const list = document.getElementById('annotationsList');
         const annotations = Store.getAnnotations();
+
+        // 先收集所有批注中的图片路径，批量解析 URI
+        const allImagePaths = [];
+        annotations.forEach(ann => {
+            if (ann.images && ann.images.length > 0) {
+                ann.images.forEach(img => {
+                    if (!isBase64Image(img)) {
+                        allImagePaths.push(img);
+                    }
+                });
+            }
+        });
+        if (allImagePaths.length > 0) {
+            await resolveAnnotationImageUris(allImagePaths);
+        }
 
         // 根据当前排序模式排序
         let sortedAnnotations;
@@ -562,9 +701,9 @@ const Annotations = (() => {
         document.getElementById('annotationCount').textContent = `${sortedAnnotations.length} 条批注`;
 
         list.innerHTML = sortedAnnotations.map(ann => {
-            const typeLabel = ann.type === 'comment' ? '评论' : ann.type === 'delete' ? '删除' : '插入';
-            const imagesHtml = (ann.images && ann.images.length > 0)
-                ? `<div class="annotation-images">${ann.images.map(img => `<img src="${img}" alt="附图" data-lightbox>`).join('')}</div>`
+            const typeLabel = ann.type === 'comment' ? '评论' : ann.type === 'delete' ? '删除' : (ann.insertPosition === 'before' ? '前插' : '后插');
+        const imagesHtml = (ann.images && ann.images.length > 0)
+                ? `<div class="annotation-images">${ann.images.map(img => `<img src="${getImageSrc(img)}" alt="附图" data-lightbox>`).join('')}</div>`
                 : '';
             const commentHtml = ann.comment
                 ? `<div class="annotation-comment">${escapeHtml(ann.comment)}</div>`
@@ -582,7 +721,7 @@ const Annotations = (() => {
                         <span class="annotation-type ${ann.type}">#${ann.id} ${typeLabel}</span>
                         <span class="annotation-index">块 ${ann.blockIndex + 1}</span>
                     </div>
-                    <div class="annotation-selected-text">${ann.type === 'insert' ? '📍 在此之后插入：' : ''}${escapeHtml(ann.selectedText)}</div>
+                    <div class="annotation-selected-text">${ann.type === 'insert' ? (ann.insertPosition === 'before' ? '📍 在此之前插入：' : '📍 在此之后插入：') : ''}${escapeHtml(ann.selectedText)}</div>
                     ${commentHtml}
                     ${insertHtml}
                     ${imagesHtml}

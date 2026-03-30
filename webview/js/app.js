@@ -248,6 +248,30 @@
         document.getElementById('btnCloseResultOk').addEventListener('click', () => {
             document.getElementById('applyResultModal').style.display = 'none';
         });
+        // 「🚀 确定执行」按钮：关闭弹窗 + 复制AI指令到剪贴板 + 打开CodeBuddy新对话窗口粘贴执行
+        document.getElementById('btnExecuteAiInstruction').addEventListener('click', () => {
+            document.getElementById('applyResultModal').style.display = 'none';
+            if (_lastAiCopyText) {
+                navigator.clipboard.writeText(_lastAiCopyText).catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = _lastAiCopyText;
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                });
+                vscode.postMessage({
+                    type: 'openCodeBuddyChat',
+                    payload: {
+                        instruction: _lastAiCopyText,
+                        sourceFilePath: _lastAiSourceFilePath,
+                        aiInstructionFilePath: _lastAiInstructionFilePath
+                    }
+                });
+            }
+        });
 
         // 帮助
         document.getElementById('btnHelp').addEventListener('click', () => {
@@ -320,13 +344,22 @@
             renderMathAndMermaid();
         });
 
-        // 回到顶部按钮
-        document.getElementById('btnScrollTop').addEventListener('click', () => {
-            const docContent = document.getElementById('documentContent');
-            if (docContent) {
-                docContent.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        });
+        // 回到顶部悬浮按钮
+        const btnScrollTop = document.getElementById('btnScrollTop');
+        const docContentForScroll = document.getElementById('documentContent');
+        if (btnScrollTop && docContentForScroll) {
+            btnScrollTop.addEventListener('click', () => {
+                docContentForScroll.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+            // 监听文档内容滚动，控制按钮显隐
+            docContentForScroll.addEventListener('scroll', () => {
+                if (docContentForScroll.scrollTop > 300) {
+                    btnScrollTop.classList.add('visible');
+                } else {
+                    btnScrollTop.classList.remove('visible');
+                }
+            });
+        }
 
         // 文档内锚点链接（#hash）点击处理 — 支持中文目录跳转
         document.getElementById('documentContent').addEventListener('click', (e) => {
@@ -460,29 +493,30 @@
                 } else {
                     loadDocument(data.name, data.content, false, undefined, data.docVersion, data.sourceFilePath, data.sourceDir);
                     showNotification('文件已重新加载');
+
+                    // 仅在内容未变化时从磁盘批阅记录恢复批注（确保批注列表与磁盘同步）
+                    // 内容变化时已进入新批阅版本，不应恢复旧批阅记录，否则会覆盖新版本号
+                    try {
+                        const records = await callHost('getReviewRecords', { fileName: data.name });
+                        if (records && records.records && records.records.length > 0) {
+                            const matchedRecord = records.records[0];
+                            if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
+                                Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
+                                const newBlocks = Renderer.parseMarkdown(data.content);
+                                Renderer.renderBlocks(newBlocks, Store.getAnnotations());
+                                renderMathAndMermaid();
+                                Annotations.setBlocks(newBlocks);
+                                Annotations.init(newBlocks);
+                                Annotations.renderAnnotationsList();
+                                Annotations.updateToolbarState();
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[App] 刷新时恢复批阅记录失败:', e);
+                    }
                 }
                 requestImageUris(data.content, data.sourceDir);
                 hideFileChangeBadge();
-
-                // 从磁盘批阅记录恢复批注（确保批注列表与磁盘同步）
-                try {
-                    const records = await callHost('getReviewRecords', { fileName: data.name });
-                    if (records && records.records && records.records.length > 0) {
-                        const matchedRecord = records.records[0];
-                        if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
-                            Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
-                            const newBlocks = Renderer.parseMarkdown(data.content);
-                            Renderer.renderBlocks(newBlocks, Store.getAnnotations());
-                            renderMathAndMermaid();
-                            Annotations.setBlocks(newBlocks);
-                            Annotations.init(newBlocks);
-                            Annotations.renderAnnotationsList();
-                            Annotations.updateToolbarState();
-                        }
-                    }
-                } catch (e) {
-                    console.warn('[App] 刷新时恢复批阅记录失败:', e);
-                }
 
                 // 刷新文件列表
                 loadFileList();
@@ -1127,6 +1161,11 @@
         }
     }
 
+    // 保存最近一次生成的AI指令文本，供确定按钮使用
+    let _lastAiCopyText = '';
+    let _lastAiSourceFilePath = '';
+    let _lastAiInstructionFilePath = '';
+
     function showApplyResult(result, data) {
         const contentEl = document.getElementById('applyResultContent');
         const { needsAi, aiInstructionFile, sourceFilePath, aiInstructionFilePath } = result;
@@ -1154,12 +1193,25 @@
         contentEl.innerHTML = html;
         document.getElementById('applyResultModal').style.display = 'flex';
 
+        // 控制「🚀 确定执行」按钮的显示
+        const executeBtn = document.getElementById('btnExecuteAiInstruction');
+
         const copyBtn = document.getElementById('btnCopyAiInstruction');
         if (copyBtn) {
             const copyText = '请根据评审指令文件修改源文件。\n\n'
                 + '源文件路径：' + (sourceFilePath || '') + '\n'
                 + '评审指令文件：' + (aiInstructionFilePath || '') + '\n\n'
                 + '请先读取评审指令文件了解需要修改的内容，然后按指令逐条修改源文件。';
+            // 保存到模块级变量，供确定按钮使用
+            _lastAiCopyText = copyText;
+            _lastAiSourceFilePath = sourceFilePath || '';
+            _lastAiInstructionFilePath = aiInstructionFilePath || '';
+
+            // 有AI指令时显示「🚀 确定执行」按钮
+            if (executeBtn) {
+                executeBtn.style.display = '';
+            }
+
             copyBtn.addEventListener('click', function() {
                 navigator.clipboard.writeText(copyText).then(() => {
                     this.innerHTML = '✅ 已复制';
@@ -1179,6 +1231,14 @@
                     setTimeout(() => { this.innerHTML = '📋 一键复制指令'; this.classList.remove('copied'); }, 2000);
                 });
             });
+        } else {
+            _lastAiCopyText = '';
+            _lastAiSourceFilePath = '';
+            _lastAiInstructionFilePath = '';
+            // 无AI指令时隐藏「🚀 确定执行」按钮
+            if (executeBtn) {
+                executeBtn.style.display = 'none';
+            }
         }
     }
 

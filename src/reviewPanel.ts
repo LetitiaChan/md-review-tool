@@ -173,6 +173,28 @@ export class ReviewPanel {
                 this.postMessage({ type: 'imageUris', payload: uriMap, requestId });
                 break;
             }
+            case 'saveAnnotationImage': {
+                try {
+                    const result = this._fileService.saveAnnotationImage(payload.base64Data, payload.fileName, payload.sourceDir);
+                    this.postMessage({ type: 'annotationImageSaved', payload: result, requestId });
+                } catch (e: any) {
+                    this.postMessage({ type: 'annotationImageSaved', payload: { success: false, error: e.message }, requestId });
+                }
+                break;
+            }
+            case 'resolveAnnotationImageUris': {
+                const annUriMap = this._fileService.resolveAnnotationImageUris(
+                    payload.imagePaths,
+                    this._panel.webview
+                );
+                this.postMessage({ type: 'annotationImageUris', payload: annUriMap, requestId });
+                break;
+            }
+            case 'deleteAnnotationImage': {
+                const deleted = this._fileService.deleteAnnotationImage(payload.imagePath);
+                this.postMessage({ type: 'annotationImageDeleted', payload: { success: deleted }, requestId });
+                break;
+            }
             case 'getReviewRecords': {
                 const records = this._fileService.getReviewRecords(payload.fileName);
                 this.postMessage({ type: 'reviewRecords', payload: { records }, requestId });
@@ -242,6 +264,106 @@ export class ReviewPanel {
                     this.postMessage({ type: 'settingsSaved', payload: { success: true }, requestId });
                 } catch (e: any) {
                     this.postMessage({ type: 'settingsSaved', payload: { success: false, error: e.message }, requestId });
+                }
+                break;
+            }
+            case 'openCodeBuddyChat': {
+                // 将指令内容发送到 CodeBuddy AI 对话窗口
+                const instruction = payload.instruction || '';
+                try {
+                    const outputChannel = vscode.window.createOutputChannel('MD Review - AI Chat');
+                    outputChannel.clear();
+
+                    // 写入剪贴板作为备份
+                    await vscode.env.clipboard.writeText(instruction);
+                    outputChannel.appendLine(`[AI Chat] 指令已写入剪贴板, 长度: ${instruction.length}`);
+
+                    let succeeded = false;
+
+                    // === 策略1（最佳）: startNewChat + sendMessage 全自动 ===
+                    try {
+                        outputChannel.appendLine('[AI Chat] 策略1: startNewChat + sendMessage...');
+                        // 先开启新对话
+                        await vscode.commands.executeCommand('tencentcloud.codingcopilot.chat.startNewChat');
+                        outputChannel.appendLine('[AI Chat] 策略1: ✅ startNewChat 已执行');
+
+                        await new Promise(resolve => setTimeout(resolve, 800));
+
+                        // 直接发送指令消息
+                        await vscode.commands.executeCommand('tencentcloud.codingcopilot.chat.sendMessage', {
+                            message: instruction
+                        });
+                        outputChannel.appendLine('[AI Chat] 策略1: ✅ sendMessage 已执行');
+
+                        succeeded = true;
+                        outputChannel.show(true);
+                    } catch (e: any) {
+                        outputChannel.appendLine(`[AI Chat] 策略1: ❌ 失败: ${e.message}`);
+                    }
+
+                    // === 策略2: sendToChat 直接发送 ===
+                    if (!succeeded) {
+                        try {
+                            outputChannel.appendLine('[AI Chat] 策略2: sendToChat...');
+                            await vscode.commands.executeCommand('tencentcloud.codingcopilot.sendToChat', {
+                                message: instruction
+                            });
+                            outputChannel.appendLine('[AI Chat] 策略2: ✅ sendToChat 已执行');
+                            succeeded = true;
+                            outputChannel.show(true);
+                        } catch (e: any) {
+                            outputChannel.appendLine(`[AI Chat] 策略2: ❌ 失败: ${e.message}`);
+                        }
+                    }
+
+                    // === 策略3: addToChat ===
+                    if (!succeeded) {
+                        try {
+                            outputChannel.appendLine('[AI Chat] 策略3: addToChat...');
+                            await vscode.commands.executeCommand('tencentcloud.codingcopilot.addToChat', {
+                                message: instruction
+                            });
+                            outputChannel.appendLine('[AI Chat] 策略3: ✅ addToChat 已执行');
+                            succeeded = true;
+                            outputChannel.show(true);
+                        } catch (e: any) {
+                            outputChannel.appendLine(`[AI Chat] 策略3: ❌ 失败: ${e.message}`);
+                        }
+                    }
+
+                    // === 策略4: 打开新对话窗口 + 聚焦面板 + 剪贴板提示 ===
+                    if (!succeeded) {
+                        try {
+                            outputChannel.appendLine('[AI Chat] 策略4: startNewChat + 聚焦面板 + 剪贴板...');
+                            await vscode.commands.executeCommand('tencentcloud.codingcopilot.chat.startNewChat');
+                            outputChannel.appendLine('[AI Chat] 策略4: ✅ startNewChat 已执行');
+
+                            await new Promise(resolve => setTimeout(resolve, 800));
+
+                            // 聚焦对话面板
+                            await vscode.commands.executeCommand('coding-copilot.webviews.chat.focus');
+                            outputChannel.appendLine('[AI Chat] 策略4: ✅ 已聚焦对话面板');
+
+                            vscode.window.showInformationMessage(
+                                '✅ AI 新对话已打开，指令已复制到剪贴板，请按 Ctrl+V 粘贴后回车发送。'
+                            );
+                            succeeded = true;
+                            outputChannel.show(true);
+                        } catch (e: any) {
+                            outputChannel.appendLine(`[AI Chat] 策略4: ❌ 失败: ${e.message}`);
+                        }
+                    }
+
+                    // 所有策略都失败
+                    if (!succeeded) {
+                        outputChannel.appendLine('[AI Chat] ⚠️ 所有策略都失败，请手动操作');
+                        outputChannel.show(true);
+                        vscode.window.showInformationMessage(
+                            '✅ 已复制 AI 指令到剪贴板，请手动打开AI对话窗口并粘贴执行。'
+                        );
+                    }
+                } catch (e: any) {
+                    vscode.window.showErrorMessage('❌ 操作失败: ' + e.message);
                 }
                 break;
             }

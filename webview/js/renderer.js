@@ -1255,6 +1255,8 @@ const Renderer = (() => {
         const afterText = annotation.selectedText;
         if (!afterText) return;
 
+        const isBefore = annotation.insertPosition === 'before';
+
         const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
         const textNodes = [];
         while (walker.nextNode()) { textNodes.push(walker.currentNode); }
@@ -1289,11 +1291,6 @@ const Renderer = (() => {
         const textNode = best.textNode;
         const idx = best.idx;
         const endIdx = idx + afterText.length;
-        const before = textNode.textContent.substring(0, endIdx);
-        const after = textNode.textContent.substring(endIdx);
-
-        const frag = document.createDocumentFragment();
-        if (before) frag.appendChild(document.createTextNode(before));
 
         const marker = document.createElement('span');
         marker.className = 'insert-marker';
@@ -1304,10 +1301,26 @@ const Renderer = (() => {
         indicator.textContent = annotation.id;
         indicator.dataset.annotationId = annotation.id;
         marker.appendChild(indicator);
-        marker.appendChild(document.createTextNode(' 插入内容'));
-        frag.appendChild(marker);
+        const insertText = annotation.insertContent || (isBefore ? '前插内容' : '插入内容');
+        const displayText = insertText.length > 20 ? insertText.substring(0, 20) + '...' : insertText;
+        marker.appendChild(document.createTextNode(' ' + displayText));
 
-        if (after) frag.appendChild(document.createTextNode(after));
+        const frag = document.createDocumentFragment();
+        if (isBefore) {
+            // 前插：标记放在匹配文本之前
+            const before = textNode.textContent.substring(0, idx);
+            const after = textNode.textContent.substring(idx);
+            if (before) frag.appendChild(document.createTextNode(before));
+            frag.appendChild(marker);
+            if (after) frag.appendChild(document.createTextNode(after));
+        } else {
+            // 后插：标记放在匹配文本之后（原有逻辑）
+            const before = textNode.textContent.substring(0, endIdx);
+            const after = textNode.textContent.substring(endIdx);
+            if (before) frag.appendChild(document.createTextNode(before));
+            frag.appendChild(marker);
+            if (after) frag.appendChild(document.createTextNode(after));
+        }
         textNode.parentNode.replaceChild(frag, textNode);
     }
 
