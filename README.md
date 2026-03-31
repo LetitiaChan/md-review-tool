@@ -7,7 +7,7 @@
 
 ## 📺 视频介绍
 
-<video src="images/intro.mp4" controls width="100%"></video>
+[![视频介绍](https://img.youtube.com/vi/o4W217zlQmY/maxresdefault.jpg)](https://youtu.be/o4W217zlQmY)
 
 ---
 
@@ -177,7 +177,7 @@ MIT
 
 ## 📺 Video Introduction
 
-<video src="images/intro.mp4" controls width="100%"></video>
+[![Video Introduction](https://img.youtube.com/vi/o4W217zlQmY/maxresdefault.jpg)](https://youtu.be/o4W217zlQmY)
 
 ---
 

@@ -4,7 +4,7 @@
 
 ## 📺 视频介绍
 
-<video src="images/intro.mp4" controls width="100%"></video>
+▶️ [点击观看视频介绍](https://youtu.be/o4W217zlQmY)
 
 ---
 
