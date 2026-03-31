@@ -4,6 +4,11 @@ src/**
 test/**
 node_modules/**
 .gitignore
+.github/**
 tsconfig.json
 **/*.ts
 **/*.map
+*.vsix
+test_debug.js
+package-lock.json
+CHANGELOG.md

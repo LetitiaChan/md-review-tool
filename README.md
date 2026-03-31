@@ -63,7 +63,7 @@
 
 1. 克隆仓库并安装依赖：
    ```bash
-   git clone https://github.com/your-username/md-review-tool.git
+   git clone https://github.com/LetitiaChan/md-review-tool.git
    cd md-review-tool
    npm install
    ```
@@ -221,7 +221,7 @@ MIT
 
 1. Clone the repository and install dependencies:
    ```bash
-   git clone https://github.com/your-username/md-review-tool.git
+   git clone https://github.com/LetitiaChan/md-review-tool.git
    cd md-review-tool
    npm install
    ```

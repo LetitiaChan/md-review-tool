@@ -4,17 +4,28 @@
   "description": "Markdown 文件批阅工具，支持评论、标记删除、插入内容，导出 AI 可读的结构化修改指令",
   "version": "1.0.0",
   "publisher": "letitia",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LetitiaChan/md-review-tool"
+  },
   "author": {
-    "name": "letitia"
+    "name": "cauchyhe"
   },
   "contributors": [
     {
-      "name": "cauchyhe"
+      "name": "letitia"
     }
   ],
   "engines": {
     "vscode": "^1.74.0"
   },
+  "keywords": [
+    "markdown",
+    "review",
+    "批阅"
+  ],
+  "icon": "images/icon.png",
+  "readme": "MARKETPLACE.md",
   "categories": [
     "Other"
   ],
