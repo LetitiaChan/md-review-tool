@@ -1,9 +1,13 @@
 <a id="chinese"></a>
 # MD 批阅工具
 
-> 一款 VSCode 扩展，像导师批改论文一样批阅 Markdown 文件 —— 支持评论、标记删除、插入内容、所见即所得编辑，并可一键生成 AI 修改指令。
+> 一款 VSCode / CodeBuddy IDE 扩展，像导师批改论文一样批阅 Markdown 文件 —— 支持评论、标记删除、插入内容、所见即所得编辑，并可一键生成 AI 修改指令。
 
 [English](#english)
+
+## 📺 视频介绍
+
+<video src="images/intro.mp4" controls width="100%"></video>
 
 ---
 
@@ -61,6 +65,14 @@
 
 ### 安装
 
+**方式一：从插件市场安装（推荐）**
+
+1. 打开 VSCode 或 CodeBuddy IDE，进入扩展面板（`Ctrl+Shift+X`）
+2. 搜索 **「MD 批阅工具」**
+3. 点击 **安装** 即可
+
+**方式二：从源码安装（开发者）**
+
 1. 克隆仓库并安装依赖：
    ```bash
    git clone https://github.com/LetitiaChan/md-review-tool.git
@@ -73,11 +85,11 @@
    npm run compile
    ```
 
-3. 在 VSCode 中按 `F5` 启动扩展开发宿主进行调试。
+3. 在 VSCode / CodeBuddy IDE 中按 `F5` 启动扩展开发宿主进行调试。
 
 ### 使用
 
-1. 在 VSCode 中打开任意 `.md` 或 `.mdc` 文件
+1. 在 VSCode / CodeBuddy IDE 中打开任意 `.md` 或 `.mdc` 文件
 2. 通过以下方式打开批阅面板：
    - **命令面板**：`Ctrl+Shift+P` → 搜索「MD批阅: 打开批阅面板」
    - **右键菜单**：在编辑器或资源管理器中右键选择
@@ -159,9 +171,13 @@ MIT
 <a id="english"></a>
 # MD Review Tool
 
-> A VSCode extension for reviewing Markdown files like a mentor grading papers — supports comments, deletion marks, content insertion, WYSIWYG editing, and one-click AI instruction generation.
+> A VSCode / CodeBuddy IDE extension for reviewing Markdown files like a mentor grading papers — supports comments, deletion marks, content insertion, WYSIWYG editing, and one-click AI instruction generation.
 
 [中文](#chinese)
+
+## 📺 Video Introduction
+
+<video src="images/intro.mp4" controls width="100%"></video>
 
 ---
 
@@ -219,6 +235,14 @@ MIT
 
 ### Installation
 
+**Option 1: Install from Marketplace (Recommended)**
+
+1. Open VSCode or CodeBuddy IDE, go to Extensions panel (`Ctrl+Shift+X`)
+2. Search for **"MD 批阅工具"**
+3. Click **Install**
+
+**Option 2: Install from Source (Developers)**
+
 1. Clone the repository and install dependencies:
    ```bash
    git clone https://github.com/LetitiaChan/md-review-tool.git
@@ -231,11 +255,11 @@ MIT
    npm run compile
    ```
 
-3. Press `F5` in VSCode to launch the Extension Development Host for debugging.
+3. Press `F5` in VSCode / CodeBuddy IDE to launch the Extension Development Host for debugging.
 
 ### Usage
 
-1. Open any `.md` or `.mdc` file in VSCode
+1. Open any `.md` or `.mdc` file in VSCode / CodeBuddy IDE
 2. Open the review panel via:
    - **Command Palette**: `Ctrl+Shift+P` → Search "MD批阅: 打开批阅面板"
    - **Context Menu**: Right-click in the editor or file explorer

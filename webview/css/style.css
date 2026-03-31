@@ -1506,22 +1506,76 @@ body.theme-dark * {
     transform: translateX(-50%) translateY(-20px);
     background: linear-gradient(135deg, #fef3c7, #fde68a);
     color: #92400e;
-    padding: 10px 20px;
-    border-radius: 8px;
+    padding: 14px 18px;
+    border-radius: 10px;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 400;
     z-index: 5000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
     border: 1px solid #fcd34d;
     opacity: 0;
     transition: all 0.3s ease;
     pointer-events: none;
-    white-space: nowrap;
+    white-space: normal;
+    max-width: 480px;
+    width: max-content;
+    line-height: 1.6;
 }
 
 .mode-edit-tips.show {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+
+.edit-tips-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+    gap: 16px;
+}
+
+.edit-tips-close {
+    background: none;
+    border: none;
+    color: #92400e;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 0 2px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    line-height: 1;
+}
+
+.edit-tips-close:hover {
+    opacity: 1;
+}
+
+.edit-tips-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.edit-tips-item {
+    padding-left: 16px;
+    position: relative;
+    font-size: 12.5px;
+}
+
+.edit-tips-item::before {
+    content: '•';
+    position: absolute;
+    left: 4px;
+    color: #b45309;
+}
+
+.edit-tips-item b {
+    color: #b45309;
+    font-weight: 600;
 }
 
 /* ===== 目录按钮激活状态（使用批注按钮同款胶囊风格） ===== */
@@ -1984,6 +2038,18 @@ body.theme-dark .mode-edit-tips {
     background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(253, 230, 138, 0.1));
     color: #fbbf24;
     border-color: rgba(251, 191, 36, 0.3);
+}
+
+body.theme-dark .edit-tips-close {
+    color: #fbbf24;
+}
+
+body.theme-dark .edit-tips-item::before {
+    color: #f59e0b;
+}
+
+body.theme-dark .edit-tips-item b {
+    color: #f59e0b;
 }
 
 /* --- WYSIWYG编辑 --- */

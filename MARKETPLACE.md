@@ -2,6 +2,10 @@
 
 > 🖊️ 像导师批改论文一样批阅 Markdown —— 评论、删除、插入、所见即所得编辑，一键生成 AI 修改指令。
 
+## 📺 视频介绍
+
+<video src="images/intro.mp4" controls width="100%"></video>
+
 ---
 
 ## ✨ 核心功能
@@ -43,7 +47,7 @@
 
 ## 🚀 使用方法
 
-1. 在 VSCode 中打开任意 `.md` 或 `.mdc` 文件
+1. 在 VSCode 或 CodeBuddy IDE 中打开任意 `.md` 或 `.mdc` 文件
 2. 通过以下方式打开批阅面板：
    - **命令面板**：`Ctrl+Shift+P` → 搜索「MD批阅: 打开批阅面板」
    - **右键菜单**：在编辑器或资源管理器中右键选择
@@ -67,7 +71,7 @@
 
 ## ⚙️ 配置项
 
-在 VSCode 设置中搜索 `mdReview` 即可配置：
+在 VSCode / CodeBuddy IDE 设置中搜索 `mdReview` 即可配置：
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|

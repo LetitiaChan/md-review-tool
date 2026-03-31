@@ -36,6 +36,12 @@ const Renderer = (() => {
     let _refLinkDefs = [];
     // 脚注定义原始行收集（跨块共享，注入每个块以支持 marked-footnote 跨块解析）
     let _footnoteDefs = [];
+    // 编辑模式快照用：保存脚注/引用式链接提取前的原始 blocks（含脚注定义行）
+    let _rawBlocksBeforeExtract = [];
+    // 编辑模式快照用：保存被过滤掉的空块（全是脚注/引用式链接定义）的位置和原始内容
+    let _orphanedDefBlocks = []; // {insertBeforeIndex: number, rawText: string}
+    // 编辑模式快照用：每个非空 block 中被提取的定义行（引用式链接/脚注）
+    let _inlineExtractedDefs = []; // 每个元素是字符串数组，对应 finalBlocks[i] 中被提取的定义行
 
     // ===== HTML 转义辅助 =====
     function escapeHtml(str) {
@@ -326,6 +332,8 @@ const Renderer = (() => {
         const footnoteDefStartRegex = /^\s{0,3}\[\^([^\]\n]+)\]:\s*/;
         _refLinkDefs = [];
         _footnoteDefs = [];
+        // 保存脚注/引用式链接提取前的原始 blocks（编辑模式快照用）
+        const rawBlocksCopy = blocks.map(b => b);
         for (let b = 0; b < blocks.length; b++) {
             const blockLines = blocks[b].split('\n');
             const remaining = [];
@@ -378,8 +386,37 @@ const Renderer = (() => {
             const cleaned = remaining.join('\n').trim();
             blocks[b] = cleaned;
         }
-        // 移除空块
-        const finalBlocks = blocks.filter(b => b.length > 0);
+        // 移除空块，同时保存对应的原始 block（含脚注/引用式链接定义，编辑模式快照用）
+        // 空块（全是脚注/引用式链接定义）单独记录位置和内容，不合并到相邻块
+        const finalBlocks = [];
+        _rawBlocksBeforeExtract = [];
+        _orphanedDefBlocks = []; // {insertBeforeIndex: number, rawText: string}
+        _inlineExtractedDefs = []; // 每个元素对应 finalBlocks[i] 中被提取的定义行
+        let pendingOrphans = []; // 暂存被过滤掉的空块原始内容
+        for (let b = 0; b < blocks.length; b++) {
+            if (blocks[b].length > 0) {
+                // 将之前暂存的空块记录为"插入到当前 finalBlock 索引之前"
+                const currentFinalIndex = finalBlocks.length;
+                for (const orphan of pendingOrphans) {
+                    _orphanedDefBlocks.push({ insertBeforeIndex: currentFinalIndex, rawText: orphan });
+                }
+                pendingOrphans = [];
+                finalBlocks.push(blocks[b]);
+                _rawBlocksBeforeExtract.push(rawBlocksCopy[b]);
+                // 计算该非空块中被提取的定义行（rawBlocksCopy[b] 和 blocks[b] 的差异）
+                const rawLines = rawBlocksCopy[b].split('\n');
+                const cleanedLines = new Set(blocks[b].split('\n'));
+                const extractedLines = rawLines.filter(line => !cleanedLines.has(line));
+                _inlineExtractedDefs.push(extractedLines);
+            } else {
+                // 空块（全是脚注/引用式链接定义），暂存其原始内容
+                pendingOrphans.push(rawBlocksCopy[b]);
+            }
+        }
+        // 如果末尾还有暂存的空块，记录为"插入到最后一个 finalBlock 之后"
+        for (const orphan of pendingOrphans) {
+            _orphanedDefBlocks.push({ insertBeforeIndex: finalBlocks.length, rawText: orphan });
+        }
 
         return finalBlocks;
     }
@@ -1615,5 +1652,5 @@ const Renderer = (() => {
         }
     }
 
-    return { parseMarkdown, renderBlocks, getBlockIndex, setImageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, postprocessHTML, preprocessMath };
+    return { parseMarkdown, renderBlocks, getBlockIndex, setImageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
 })();

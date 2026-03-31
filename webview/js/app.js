@@ -17,6 +17,10 @@
     let zenMode = false;
     let _ideType = 'codebuddy'; // 默认 CodeBuddy，由 Extension Host 通知实际类型
 
+    // ===== 编辑模式快照（方向A：block-level diff，避免 turndown 全量转换） =====
+    let _editSnapshotBlocks = [];  // 进入编辑模式时的原始 Markdown blocks
+    let _editSnapshotHtmls = [];   // 进入编辑模式时每个 md-block 的 innerHTML 快照
+
     // ===== postMessage 通信辅助 =====
     const _pendingRequests = new Map();
 
@@ -237,10 +241,36 @@
             checkboxSpan.style.animation = 'taskCheckPop 0.2s ease';
             setTimeout(() => { checkboxSpan.style.animation = ''; }, 200);
 
-            // 标记为已修改
-            editorDirty = true;
-            updateEditStatus('modified', '● 未保存');
-            scheduleAutoSave();
+            // 直接在 rawMarkdown 中精确修改对应的 checkbox 状态，避免 turndown 全量转换导致内容损失
+            const allTaskItems = document.querySelectorAll('#documentContent .task-list-item');
+            const taskIndex = Array.prototype.indexOf.call(allTaskItems, li);
+            if (taskIndex >= 0) {
+                const data = Store.getData();
+                const taskCheckboxRegex = /^(\s*[-*+]\s+)\[([ xX])\]/gm;
+                let matchCount = 0;
+                const newMarkdown = data.rawMarkdown.replace(taskCheckboxRegex, (match, prefix, checkChar, offset) => {
+                    if (matchCount++ === taskIndex) {
+                        // isChecked 是点击前的状态，取反后就是新状态
+                        return prefix + (isChecked ? '[ ]' : '[x]');
+                    }
+                    return match;
+                });
+                if (newMarkdown !== data.rawMarkdown) {
+                    data.rawMarkdown = newMarkdown;
+                    Store.save();
+
+                    // 同步更新编辑模式快照，避免后续 handleSaveMd 误判该 block 为"已变化"
+                    Renderer.parseMarkdown(newMarkdown); // 重新解析以更新内部状态
+                    _editSnapshotBlocks = Renderer.getRawBlocksBeforeExtract().slice();
+                    _editSnapshotHtmls = Array.from(document.querySelectorAll('#documentContent .md-block:not(.footnotes-block)')).map(el => el.innerHTML);
+
+                    // 异步保存到文件
+                    const filePath = data.sourceFilePath || data.fileName;
+                    callHost('saveFile', { filePath, content: newMarkdown }).catch(e => {
+                        console.error('[App] checkbox 保存失败:', e);
+                    });
+                }
+            }
         });
 
         // WYSIWYG 工具栏
@@ -1150,14 +1180,24 @@
             tips = document.createElement('div');
             tips.id = '_editModeTips';
             tips.className = 'mode-edit-tips';
-            tips.textContent = '⚠️ 编辑模式修改不计入变更历史，推荐使用预览模式批阅';
+            tips.innerHTML = `
+                <div class="edit-tips-header">
+                    <span>⚠️ 编辑模式风险提示</span>
+                    <button class="edit-tips-close" onclick="this.parentElement.parentElement.classList.remove('show')" title="关闭">✕</button>
+                </div>
+                <div class="edit-tips-body">
+                    <div class="edit-tips-item">修改内容后，部分 Markdown 扩展语法可能丢失（如数学公式、Mermaid 图表、GitHub 告警块等）</div>
+                    <div class="edit-tips-item">仅建议用于<b>轻量文本修改</b>（如修正错别字、勾选任务列表等）</div>
+                </div>
+            `;
             document.body.appendChild(tips);
         }
         // 重新触发动画
         tips.classList.remove('show');
         void tips.offsetWidth;
         tips.classList.add('show');
-        setTimeout(() => { tips.classList.remove('show'); }, 4000);
+        // 8秒后自动消失
+        setTimeout(() => { tips.classList.remove('show'); }, 8000);
     }
 
     // ===== 一键AI修复 =====
@@ -1474,6 +1514,11 @@
             docContent.classList.add('wysiwyg-editing');
             editorDirty = false;
             updateEditStatus('', '编辑模式');
+
+            // 保存编辑模式快照：原始 Markdown blocks（含脚注定义） + 每个 md-block 的 HTML 快照
+            _editSnapshotBlocks = Renderer.getRawBlocksBeforeExtract().slice();
+            _editSnapshotHtmls = Array.from(docContent.querySelectorAll('.md-block:not(.footnotes-block)')).map(el => el.innerHTML);
+
             refreshToc();
             restoreScrollAnchor(scrollAnchor);
             // 弹出编辑模式提示
@@ -1546,83 +1591,149 @@
         if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
     }
 
-    // ===== 保存 MD 源文件 =====
+    // ===== 保存 MD 源文件（方向A：block-level diff，仅对变化的 block 使用 turndown） =====
     async function handleSaveMd() {
         const data = Store.getData();
         if (!data.fileName) { showNotification('没有打开的文件'); return; }
 
         const docContent = document.getElementById('documentContent');
+        // 排除脚注 block（footnotes-block），脚注定义已包含在 _editSnapshotBlocks 的原始 blocks 中
+        const currentMdBlocks = docContent.querySelectorAll('.md-block:not(.footnotes-block)');
 
-        const turndownService = new TurndownService({
-            headingStyle: 'atx', hr: '---', bulletListMarker: '-',
-            codeBlockStyle: 'fenced', emDelimiter: '*', strongDelimiter: '**', linkStyle: 'inlined',
-        });
+        // 构建 turndown 服务（仅用于变化的 block）
+        function createTurndownService() {
+            const ts = new TurndownService({
+                headingStyle: 'atx', hr: '---', bulletListMarker: '-',
+                codeBlockStyle: 'fenced', emDelimiter: '*', strongDelimiter: '**', linkStyle: 'inlined',
+            });
 
-        turndownService.addRule('blockquote', {
-            filter: 'blockquote',
-            replacement: function(content) {
-                const lines = content.replace(/^\n+|\n+$/g, '').split('\n');
-                return '\n' + lines.map(line => '> ' + line).join('\n') + '\n';
+            ts.addRule('blockquote', {
+                filter: 'blockquote',
+                replacement: function(content) {
+                    const lines = content.replace(/^\n+|\n+$/g, '').split('\n');
+                    return '\n' + lines.map(line => '> ' + line).join('\n') + '\n';
+                }
+            });
+
+            ts.addRule('table', {
+                filter: 'table',
+                replacement: function(content, node) {
+                    const rows = node.querySelectorAll('tr');
+                    if (rows.length === 0) return content;
+                    const lines = [];
+                    rows.forEach((row, rowIdx) => {
+                        const cells = row.querySelectorAll('th, td');
+                        const cellTexts = Array.from(cells).map(c => c.textContent.trim());
+                        lines.push('| ' + cellTexts.join(' | ') + ' |');
+                        if (rowIdx === 0) lines.push('| ' + cellTexts.map(() => '---').join(' | ') + ' |');
+                    });
+                    return '\n' + lines.join('\n') + '\n';
+                }
+            });
+
+            ts.addRule('imgPlaceholder', {
+                filter: function(node) { return node.classList && node.classList.contains('img-placeholder'); },
+                replacement: function() { return ''; }
+            });
+
+            ts.addRule('taskListItem', {
+                filter: function(node) {
+                    return node.nodeName === 'LI' && node.classList.contains('task-list-item');
+                },
+                replacement: function(content, node, options) {
+                    const isChecked = node.classList.contains('checked');
+                    const checkbox = isChecked ? '[x]' : '[ ]';
+                    const taskText = node.querySelector('.task-text');
+                    const text = taskText ? ts.turndown(taskText.innerHTML).trim() : content.trim();
+                    var prefix = options.bulletListMarker + ' ';
+                    var parent = node.parentNode;
+                    if (parent && parent.nodeName === 'OL') {
+                        var start = parent.getAttribute('start');
+                        var index = Array.prototype.indexOf.call(parent.children, node);
+                        prefix = (start ? Number(start) + index : index + 1) + '. ';
+                    }
+                    return prefix + checkbox + ' ' + text + (node.nextSibling ? '\n' : '');
+                }
+            });
+
+            return ts;
+        }
+
+        // 将单个 md-block 的 HTML 转为 Markdown（用于变化的 block）
+        function blockHtmlToMarkdown(blockEl, turndownService) {
+            const cleanHtml = blockEl.innerHTML
+                .replace(/<span class="annotation-indicator"[^>]*>.*?<\/span>/gi, '')
+                .replace(/<span class="annotation-fallback-marker"[^>]*>.*?<\/span>/gi, '');
+
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = cleanHtml;
+
+            // 移除代码块的 code-header
+            tempDiv.querySelectorAll('.code-header').forEach(header => header.remove());
+
+            // 还原图片路径
+            tempDiv.querySelectorAll('img').forEach(img => {
+                img.removeAttribute('onerror');
+            });
+
+            let md = turndownService.turndown(tempDiv.innerHTML);
+            return md.trim();
+        }
+
+        // 规范化 HTML 用于对比（去除批注标记等不影响内容的差异）
+        function normalizeHtmlForCompare(html) {
+            return html
+                .replace(/<span class="annotation-indicator"[^>]*>.*?<\/span>/gi, '')
+                .replace(/<span class="annotation-fallback-marker"[^>]*>.*?<\/span>/gi, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // Block-level diff：逐块对比，未变化的保持原始 Markdown
+        const resultParts = [];
+        let hasChanges = false;
+        const turndownService = createTurndownService();
+        const inlineExtractedDefs = Renderer.getInlineExtractedDefs();
+
+        for (let i = 0; i < currentMdBlocks.length; i++) {
+            const blockEl = currentMdBlocks[i];
+            const currentHtml = normalizeHtmlForCompare(blockEl.innerHTML);
+            const snapshotHtml = i < _editSnapshotHtmls.length ? normalizeHtmlForCompare(_editSnapshotHtmls[i]) : null;
+
+            if (snapshotHtml !== null && currentHtml === snapshotHtml && i < _editSnapshotBlocks.length) {
+                // Block 未变化 → 保持原始 Markdown（含被提取的定义行）
+                resultParts.push(_editSnapshotBlocks[i]);
+            } else {
+                // Block 有变化 → 使用 turndown 转换
+                hasChanges = true;
+                let converted = blockHtmlToMarkdown(blockEl, turndownService);
+                // 将该 block 中被提取的内联定义行（引用式链接/脚注）追加回去
+                if (i < inlineExtractedDefs.length && inlineExtractedDefs[i].length > 0) {
+                    converted = converted + '\n\n' + inlineExtractedDefs[i].join('\n');
+                }
+                resultParts.push(converted);
             }
-        });
+        }
 
-        turndownService.addRule('table', {
-            filter: 'table',
-            replacement: function(content, node) {
-                const rows = node.querySelectorAll('tr');
-                if (rows.length === 0) return content;
-                const lines = [];
-                rows.forEach((row, rowIdx) => {
-                    const cells = row.querySelectorAll('th, td');
-                    const cellTexts = Array.from(cells).map(c => c.textContent.trim());
-                    lines.push('| ' + cellTexts.join(' | ') + ' |');
-                    if (rowIdx === 0) lines.push('| ' + cellTexts.map(() => '---').join(' | ') + ' |');
-                });
-                return '\n' + lines.join('\n') + '\n';
+        // 处理新增的 block（用户在编辑模式下新增了内容导致 block 数量增加的情况已在上面循环中处理）
+        // 处理删除的 block（当前 block 数量少于快照时，多余的快照 block 自然被忽略）
+
+        // 将被过滤掉的引用式链接/脚注定义块插入到正确的位置
+        const orphanedDefs = Renderer.getOrphanedDefBlocks();
+        const finalParts = [];
+        for (let i = 0; i <= resultParts.length; i++) {
+            // 在索引 i 之前插入所有 insertBeforeIndex === i 的 orphaned def blocks
+            for (const orphan of orphanedDefs) {
+                if (orphan.insertBeforeIndex === i) {
+                    finalParts.push(orphan.rawText);
+                }
             }
-        });
-
-        turndownService.addRule('imgPlaceholder', {
-            filter: function(node) { return node.classList && node.classList.contains('img-placeholder'); },
-            replacement: function() { return ''; }
-        });
-
-        // 自定义 task-list-item 转换规则，确保 checkbox 状态正确转回 - [x] / - [ ]
-        turndownService.addRule('taskListItem', {
-            filter: function(node) {
-                return node.nodeName === 'LI' && node.classList.contains('task-list-item');
-            },
-            replacement: function(content, node) {
-                const isChecked = node.classList.contains('checked');
-                const checkbox = isChecked ? '[x]' : '[ ]';
-                // 去掉 task-checkbox span 产生的内容残留，只保留 task-text 的内容
-                const taskText = node.querySelector('.task-text');
-                const text = taskText ? turndownService.turndown(taskText.innerHTML).trim() : content.trim();
-                return checkbox + ' ' + text + '\n';
+            if (i < resultParts.length) {
+                finalParts.push(resultParts[i]);
             }
-        });
+        }
 
-        const cleanHtml = docContent.innerHTML
-            .replace(/<span class="annotation-indicator"[^>]*>.*?<\/span>/gi, '')
-            .replace(/<span class="annotation-fallback-marker"[^>]*>.*?<\/span>/gi, '');
-
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = cleanHtml;
-
-        tempDiv.querySelectorAll('.md-block').forEach(block => {
-            while (block.firstChild) block.parentNode.insertBefore(block.firstChild, block);
-            block.remove();
-        });
-
-        // 还原图片路径
-        tempDiv.querySelectorAll('img').forEach(img => {
-            const src = img.getAttribute('src') || '';
-            // vscode-webview URIs 需要还原为相对路径（由缓存映射反查）
-            img.removeAttribute('onerror');
-        });
-
-        let newContent = turndownService.turndown(tempDiv.innerHTML);
-        if (!newContent.endsWith('\n')) newContent += '\n';
+        let newContent = finalParts.join('\n\n') + '\n';
 
         if (newContent.trim() === data.rawMarkdown.trim()) {
             editorDirty = false;
@@ -1646,6 +1757,12 @@
                 data.rawMarkdown = newContent;
                 if (result.docVersion) data.docVersion = result.docVersion;
                 Store.save();
+
+                // 更新快照以反映最新保存的状态
+                Renderer.parseMarkdown(newContent); // 重新解析以更新内部状态
+                _editSnapshotBlocks = Renderer.getRawBlocksBeforeExtract().slice();
+                _editSnapshotHtmls = Array.from(docContent.querySelectorAll('.md-block:not(.footnotes-block)')).map(el => el.innerHTML);
+
                 updateEditStatus('saved', '✓ 已保存');
                 setTimeout(() => updateEditStatus('', '编辑模式'), 3000);
                 const versionLabel = data.docVersion ? ` (${data.docVersion})` : '';
