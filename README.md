@@ -160,6 +160,10 @@ npm run compile
 npm run watch
 ```
 
+## 🙏 致谢
+
+本项目的批阅工具原型来源于 [MDReviewTool](https://github.com/hexQQ666/MDReviewTool)（一个基于 Web 的 Markdown 批阅工具）。在此基础上，我将其重构为 VSCode 插件版本，并进行了大量增强：完善了 Markdown 渲染支持（Mermaid 图表、数学公式、代码高亮等）、新增一键 AI 修改功能、丰富了自定义设置项，以及优化了整体交互体验。感谢原作者的创意与开源贡献！
+
 ## 📄 许可证
 
 MIT
@@ -329,6 +333,10 @@ npm run compile
 # Watch mode (recommended for development)
 npm run watch
 ```
+
+## 🙏 Acknowledgements
+
+This project is inspired by [MDReviewTool](https://github.com/hexQQ666/MDReviewTool), a web-based Markdown review tool. Building on that foundation, I rebuilt it as a VSCode extension with significant enhancements: comprehensive Markdown rendering support (Mermaid diagrams, math formulas, code highlighting, etc.), one-click AI-powered editing, extensive customization settings, and an improved overall user experience. Thanks to the original author for the creative idea and open-source contribution!
 
 ## 📄 License
 
