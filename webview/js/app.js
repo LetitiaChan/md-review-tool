@@ -190,6 +190,59 @@
             }
         });
 
+        // 编辑模式下点击 task checkbox 切换勾选状态
+        document.getElementById('documentContent').addEventListener('click', (e) => {
+            if (currentMode !== 'edit') return;
+            const checkboxSpan = e.target.closest('.task-checkbox');
+            if (!checkboxSpan) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const li = checkboxSpan.closest('.task-list-item');
+            if (!li) return;
+
+            const isChecked = checkboxSpan.classList.contains('checked');
+            const input = checkboxSpan.querySelector('input[type="checkbox"]');
+
+            if (isChecked) {
+                // 取消勾选
+                checkboxSpan.classList.remove('checked');
+                li.classList.remove('checked');
+                if (input) input.checked = false;
+                // 移除勾选图标
+                const icon = checkboxSpan.querySelector('.task-check-icon');
+                if (icon) icon.remove();
+            } else {
+                // 勾选
+                checkboxSpan.classList.add('checked');
+                li.classList.add('checked');
+                if (input) input.checked = true;
+                // 添加勾选图标
+                if (!checkboxSpan.querySelector('.task-check-icon')) {
+                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    svg.setAttribute('class', 'task-check-icon');
+                    svg.setAttribute('viewBox', '0 0 16 16');
+                    svg.setAttribute('width', '14');
+                    svg.setAttribute('height', '14');
+                    const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    pathEl.setAttribute('fill', 'currentColor');
+                    pathEl.setAttribute('d', 'M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z');
+                    svg.appendChild(pathEl);
+                    checkboxSpan.appendChild(svg);
+                }
+            }
+
+            // 添加弹出动画
+            checkboxSpan.style.animation = 'taskCheckPop 0.2s ease';
+            setTimeout(() => { checkboxSpan.style.animation = ''; }, 200);
+
+            // 标记为已修改
+            editorDirty = true;
+            updateEditStatus('modified', '● 未保存');
+            scheduleAutoSave();
+        });
+
         // WYSIWYG 工具栏
         document.getElementById('wysiwygToolbar').addEventListener('click', (e) => {
             const btn = e.target.closest('.wysiwyg-btn');
@@ -1532,6 +1585,21 @@
         turndownService.addRule('imgPlaceholder', {
             filter: function(node) { return node.classList && node.classList.contains('img-placeholder'); },
             replacement: function() { return ''; }
+        });
+
+        // 自定义 task-list-item 转换规则，确保 checkbox 状态正确转回 - [x] / - [ ]
+        turndownService.addRule('taskListItem', {
+            filter: function(node) {
+                return node.nodeName === 'LI' && node.classList.contains('task-list-item');
+            },
+            replacement: function(content, node) {
+                const isChecked = node.classList.contains('checked');
+                const checkbox = isChecked ? '[x]' : '[ ]';
+                // 去掉 task-checkbox span 产生的内容残留，只保留 task-text 的内容
+                const taskText = node.querySelector('.task-text');
+                const text = taskText ? turndownService.turndown(taskText.innerHTML).trim() : content.trim();
+                return checkbox + ' ' + text + '\n';
+            }
         });
 
         const cleanHtml = docContent.innerHTML

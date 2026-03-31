@@ -3,7 +3,15 @@
   "displayName": "MD 批阅工具",
   "description": "Markdown 文件批阅工具，支持评论、标记删除、插入内容，导出 AI 可读的结构化修改指令",
   "version": "1.0.0",
-  "publisher": "md-review",
+  "publisher": "letitia",
+  "author": {
+    "name": "letitia"
+  },
+  "contributors": [
+    {
+      "name": "cauchyhe"
+    }
+  ],
   "engines": {
     "vscode": "^1.74.0"
   },

@@ -613,6 +613,15 @@
     100% { transform: scale(1); }
 }
 
+/* 编辑模式下 checkbox 可点击 */
+.document-content.wysiwyg-editing .task-checkbox {
+    cursor: pointer;
+}
+
+.document-content.wysiwyg-editing .task-checkbox:hover {
+    transform: scale(1.1);
+}
+
 /* --- 暗色主题任务列表 --- */
 .theme-dark .document-content .task-list-item:hover {
     background-color: #1a1a1a;
