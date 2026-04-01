@@ -9,7 +9,7 @@
                    script-src 'nonce-${nonce}' ${cspSource}; 
                    img-src ${cspSource} https: http: data:;
                    font-src ${cspSource};">
-    <title>MD 批阅工具</title>
+    <title>MD Review Tool</title>
     <link rel="stylesheet" href="${styleUri}">
     <link rel="stylesheet" href="${markdownCssUri}">
     <link rel="stylesheet" href="${annotationsCssUri}">
@@ -21,7 +21,7 @@
     <!-- 顶部工具栏 -->
     <header class="toolbar">
         <div class="toolbar-left">
-            <h1 class="app-title">MD 批阅工具</h1>
+            <h1 class="app-title">MD Review Tool</h1>
             <button class="btn btn-help" id="btnHelp" title="使用帮助">❓ 帮助</button>
             <div class="file-selector-group" id="fileSelectorGroup" style="display:none;">
                 <select class="file-select" id="fileSelect" title="选择MD文件">
@@ -93,7 +93,7 @@
                     <path d="M36 40l3 3 5-6" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </div>
-            <h2>欢迎使用 MD 批阅工具</h2>
+            <h2>欢迎使用 MD Review Tool</h2>
             <p>打开一个 Markdown 文件，像导师批改论文一样进行批阅</p>
             <div class="welcome-features">
                 <div class="feature">
@@ -401,7 +401,7 @@
                     <h4>🚀 快速开始</h4>
                     <p>在 VSCode 中打开 <code>.md</code> 或 <code>.mdc</code> 文件，通过以下方式打开批阅面板：</p>
                     <ul>
-                        <li><strong>命令面板</strong>：<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> → 搜索「MD批阅: 打开批阅面板」</li>
+                        <li><strong>命令面板</strong>：<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> → 搜索「MD Review Tool: 打开批阅面板」</li>
                         <li><strong>右键菜单</strong>：在编辑器或资源管理器中右键选择</li>
                         <li><strong>编辑器标题栏</strong>：点击标题栏图标按钮</li>
                     </ul>
@@ -510,7 +510,7 @@
                 <div class="settings-header-content">
                     <div>
                         <h2><span class="settings-icon">⚙️</span> 设置</h2>
-                        <div class="settings-subtitle">自定义批阅工具的外观与行为</div>
+                        <div class="settings-subtitle">自定义 MD Review Tool 的外观与行为</div>
                     </div>
                     <button class="settings-close-btn" id="btnCloseSettings">&times;</button>
                 </div>

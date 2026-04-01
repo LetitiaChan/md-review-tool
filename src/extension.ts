@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ReviewPanel } from './reviewPanel';
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('[MD批阅] 插件已激活');
+    console.log('[MD Review Tool] 插件已激活');
 
     context.subscriptions.push(
         vscode.commands.registerCommand('mdReview.openPanel', (uri?: vscode.Uri) => {
@@ -34,5 +34,5 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-    console.log('[MD批阅] 插件已停用');
+    console.log('[MD Review Tool] 插件已停用');
 }

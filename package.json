@@ -1,8 +1,9 @@
 {
   "name": "md-review-tool",
-  "displayName": "MD 批阅工具",
+  "displayName": "MD Review Tool",
   "description": "像导师批改论文一样批阅 Markdown，一键生成 AI 修改指令",
   "version": "1.0.0",
+  "license": "MIT",
   "publisher": "letitia",
   "repository": {
     "type": "git",
@@ -64,12 +65,12 @@
     "commands": [
       {
         "command": "mdReview.openPanel",
-        "title": "MD批阅: 打开批阅面板",
+        "title": "MD Review Tool: 打开批阅面板",
         "icon": "$(edit)"
       },
       {
         "command": "mdReview.exportReview",
-        "title": "MD批阅: 导出批阅记录"
+        "title": "MD Review Tool: 导出批阅记录"
       }
     ],
     "menus": {
@@ -81,6 +82,13 @@
         }
       ],
       "editor/title": [
+        {
+          "command": "mdReview.openPanel",
+          "when": "resourceLangId == markdown || resourceLangId == mdc || resourceExtname == .mdc",
+          "group": "navigation@0"
+        }
+      ],
+      "editor/title/context": [
         {
           "command": "mdReview.openPanel",
           "when": "resourceLangId == markdown || resourceLangId == mdc || resourceExtname == .mdc",
@@ -103,7 +111,7 @@
       }
     ],
     "configuration": {
-      "title": "MD 批阅工具",
+      "title": "MD Review Tool",
       "properties": {
         "mdReview.fontSize": {
           "type": "number",

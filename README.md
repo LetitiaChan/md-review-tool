@@ -1,5 +1,5 @@
 <a id="chinese"></a>
-# MD 批阅工具
+# MD Review Tool
 
 > 一款 VSCode / CodeBuddy IDE 扩展，像导师批改论文一样批阅 Markdown 文件 —— 支持评论、标记删除、插入内容、所见即所得编辑，并可一键生成 AI 修改指令。
 
@@ -61,6 +61,17 @@
 | `Ctrl+Shift+E` | 切换预览/编辑模式 |
 | `ESC` | 关闭弹窗 / 退出禅模式 |
 
+## 🍴 推荐 Fork 定制
+
+本插件的批阅样式、交互逻辑和 AI 指令模板都以源码形式开放，非常适合 **Fork 后打造个人专属版本**。你可以：
+
+- 🎨 调整批阅高亮颜色、评论卡片样式，匹配你的审美偏好
+- 🤖 修改 AI 指令模板，适配你常用的 AI 工具或提示词风格
+- 📐 定制排版参数
+- 🔌 扩展新的批阅操作类型，满足特定工作流需求
+
+> 💡 **快速上手**：Fork → 修改 → `npm run compile` → 按 `F5` 即可在本地调试你的定制版本。也可以打包为 `.vsix` 文件分享给团队使用。
+
 ## 🚀 快速开始
 
 ### 安装
@@ -68,7 +79,7 @@
 **方式一：从插件市场安装（推荐）**
 
 1. 打开 VSCode 或 CodeBuddy IDE，进入扩展面板（`Ctrl+Shift+X`）
-2. 搜索 **「MD 批阅工具」**
+2. 搜索 **「MD Review Tool」**
 3. 点击 **安装** 即可
 
 **方式二：从源码安装（开发者）**
@@ -91,7 +102,7 @@
 
 1. 在 VSCode / CodeBuddy IDE 中打开任意 `.md` 或 `.mdc` 文件
 2. 通过以下方式打开批阅面板：
-   - **命令面板**：`Ctrl+Shift+P` → 搜索「MD批阅: 打开批阅面板」
+   - **命令面板**：`Ctrl+Shift+P` → 搜索「MD Review: 打开批阅面板」
    - **右键菜单**：在编辑器或资源管理器中右键选择
    - **编辑器标题栏**：点击标题栏图标按钮
 3. 选中文字后使用浮层工具条或右键菜单进行批阅操作
@@ -170,6 +181,10 @@ MIT
 
 ---
 
+> 使用过程中如有任何不顺手的地方，欢迎 [Fork 仓库](https://github.com/LetitiaChan/md-review-tool/fork) 打造你的个人定制版（推荐），也可以 [提交 Issue](https://github.com/LetitiaChan/md-review-tool/issues) 反馈给作者，我们会在后续版本中持续优化 🚀
+
+---
+
 ---
 
 <a id="english"></a>
@@ -235,6 +250,17 @@ MIT
 | `Ctrl+Shift+E` | Toggle preview/edit mode |
 | `ESC` | Close modals / Exit Zen Mode |
 
+## 🍴 Fork & Customize
+
+This extension's review styles, interaction logic, and AI instruction templates are fully open-source, making it ideal for **forking and creating your own personalized version**. You can:
+
+- 🎨 Adjust highlight colors and comment card styles to match your preferences
+- 🤖 Modify AI instruction templates to fit your preferred AI tools or prompt styles
+- 📐 Customize typography settings
+- 🔌 Extend new review operation types to suit your specific workflow
+
+> 💡 **Quick Start**: Fork → Modify → `npm run compile` → Press `F5` to debug your custom version locally. You can also package it as a `.vsix` file to share with your team.
+
 ## 🚀 Quick Start
 
 ### Installation
@@ -242,7 +268,7 @@ MIT
 **Option 1: Install from Marketplace (Recommended)**
 
 1. Open VSCode or CodeBuddy IDE, go to Extensions panel (`Ctrl+Shift+X`)
-2. Search for **"MD 批阅工具"**
+2. Search for **"MD Review Tool"**
 3. Click **Install**
 
 **Option 2: Install from Source (Developers)**
@@ -265,7 +291,7 @@ MIT
 
 1. Open any `.md` or `.mdc` file in VSCode / CodeBuddy IDE
 2. Open the review panel via:
-   - **Command Palette**: `Ctrl+Shift+P` → Search "MD批阅: 打开批阅面板"
+   - **Command Palette**: `Ctrl+Shift+P` → Search "MD Review: 打开批阅面板"
    - **Context Menu**: Right-click in the editor or file explorer
    - **Editor Title Bar**: Click the icon button in the title bar
 3. Select text and use the floating toolbar or right-click context menu for review operations
@@ -341,3 +367,7 @@ This project is inspired by [MDReviewTool](https://github.com/hexQQ666/MDReviewT
 ## 📄 License
 
 MIT
+
+---
+
+> If anything feels off during use, feel free to [fork the repo](https://github.com/LetitiaChan/md-review-tool/fork) and build your own customized version (recommended), or [open an issue](https://github.com/LetitiaChan/md-review-tool/issues) to let us know — we'll keep improving in future releases 🚀

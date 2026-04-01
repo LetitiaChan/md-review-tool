@@ -29,7 +29,7 @@ export class ReviewPanel {
 
         const panel = vscode.window.createWebviewPanel(
             ReviewPanel.viewType,
-            'MD 批阅',
+            'MD Review',
             column,
             {
                 enableScripts: true,
