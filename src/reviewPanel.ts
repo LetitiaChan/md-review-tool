@@ -29,13 +29,14 @@ export class ReviewPanel {
 
         const panel = vscode.window.createWebviewPanel(
             ReviewPanel.viewType,
-            'MD Review',
+            'MD Human Review',
             column,
             {
                 enableScripts: true,
                 retainContextWhenHidden: true,
                 localResourceRoots: [
                     vscode.Uri.joinPath(context.extensionUri, 'webview'),
+                    vscode.Uri.joinPath(context.extensionUri, 'assets'),
                     ...(vscode.workspace.workspaceFolders?.map(f => f.uri) || [])
                 ]
             }
@@ -275,7 +276,7 @@ export class ReviewPanel {
                 // 将指令内容发送到 AI 对话窗口
                 const instruction = payload.instruction || '';
                 try {
-                    const outputChannel = vscode.window.createOutputChannel('MD Review - AI Chat');
+const outputChannel = vscode.window.createOutputChannel('MD Human Review - AI Chat');
                     outputChannel.clear();
 
                     // 写入剪贴板作为备份
@@ -450,6 +451,7 @@ export class ReviewPanel {
         const exportUri = webviewUri('js/export.js');
         const settingsUri = webviewUri('js/settings.js');
         const appUri = webviewUri('js/app.js');
+const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'assets', 'icons', 'icon-512x512.png')).toString();
 
         // Read the HTML template
         const htmlPath = path.join(this._extensionUri.fsPath, 'webview', 'index.html');
@@ -477,6 +479,7 @@ export class ReviewPanel {
         html = html.replace(/\$\{exportUri\}/g, exportUri);
         html = html.replace(/\$\{settingsUri\}/g, settingsUri);
         html = html.replace(/\$\{appUri\}/g, appUri);
+        html = html.replace(/\$\{iconUri\}/g, iconUri);
 
         return html;
     }

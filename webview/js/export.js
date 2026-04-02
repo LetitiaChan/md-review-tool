@@ -39,7 +39,7 @@ const Exporter = (() => {
         // 通过 Extension Host 保存
         const saved = await saveViaHost(mdFileName, doc);
         if (saved) {
-            showExportSuccess(`已保存到批阅文件夹：${mdFileName}`);
+showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
             // 只有包含 Base64 图片时才需要额外导出 JSON（路径引用的图片已在文件系统中）
             if (_hasBase64Images(data.annotations)) {
                 const jsonFileName = `批阅数据_${baseName}_v${version}.json`;
@@ -195,7 +195,7 @@ const Exporter = (() => {
             const hasPathImages = data.annotations.some(a => a.images && a.images.some(img => !_isBase64Image(img)));
             lines.push(``);
             if (hasPathImages) {
-                lines.push(`> **注意**：批注中包含图片附件，图片文件存储在批阅文件夹的 images 子目录中。`);
+lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .review 目录的 images 子目录中。`);
             }
             if (hasBase64) {
                 lines.push(`> **注意**：部分批注包含 Base64 图片数据，完整图片数据已同时导出为 JSON 文件，请一并发送给 AI。`);

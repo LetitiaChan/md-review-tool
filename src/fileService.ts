@@ -11,7 +11,7 @@ export class FileService {
     }
 
     private get reviewDir(): string {
-        return path.join(this.workspaceRoot, '批阅文件');
+        return path.join(this.workspaceRoot, '.review');
     }
 
     private ensureReviewDir(): void {
@@ -21,14 +21,14 @@ export class FileService {
     }
 
     /**
-     * 列出工作区所有 .md / .mdc 文件（递归搜索），排除批阅文件目录
+     * 列出工作区所有 .md / .mdc 文件（递归搜索），排除 .review 目录
      */
     async listMdFiles(): Promise<string[]> {
         if (!this.workspaceRoot) { return []; }
-        const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules/**,**/批阅文件/**}');
+const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules/**,**/.review/**}');
         return uris
             .map(u => vscode.workspace.asRelativePath(u))
-            .filter(p => !p.startsWith('批阅文件/') && !p.startsWith('批阅文件\\'))
+.filter(p => !p.startsWith('.review/') && !p.startsWith('.review\\'))
             .sort((a, b) => a.localeCompare(b, 'zh-CN'));
     }
 
@@ -245,7 +245,7 @@ export class FileService {
                     fs.unlinkSync(fullPath);
                     deleted.push(f);
                 } catch (e) {
-                    console.error('删除批阅文件失败:', fullPath, e);
+console.error('删除批阅记录失败:', fullPath, e);
                 }
             }
         }
@@ -254,7 +254,7 @@ export class FileService {
     }
 
     /**
-     * 读取批阅文件夹中的批阅记录
+     * 读取 .review 目录中的批阅记录
      */
     getReviewRecords(fileName: string): any[] {
         if (!fs.existsSync(this.reviewDir)) { return []; }
@@ -307,7 +307,7 @@ export class FileService {
      * @param base64Data Base64 编码的图片数据（含 data:image/xxx;base64, 前缀）
      * @param fileName 可选的文件名，不传则自动生成
      * @param sourceDir 当前 MD 文件所在目录，传入时会将图片同步复制到该目录的 images 子目录
-     * @returns 相对于批阅文件目录的图片路径
+     * @returns 相对于 .review 目录的图片路径
      */
     saveAnnotationImage(base64Data: string, fileName?: string, sourceDir?: string): { success: boolean; imagePath: string } {
         this.ensureImageDir();
@@ -349,7 +349,7 @@ export class FileService {
 
     /**
      * 将批注图片路径解析为 webview URI
-     * @param imagePaths 相对于批阅文件目录的图片路径数组
+     * @param imagePaths 相对于 .review 目录的图片路径数组
      * @param webview Webview 实例
      * @returns 路径到 URI 的映射
      */

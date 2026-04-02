@@ -1,7 +1,7 @@
 {
-  "name": "md-review-tool",
-  "displayName": "MD Review Tool",
-  "description": "像导师批改论文一样批阅 Markdown，一键生成 AI 修改指令",
+  "name": "md-human-review",
+  "displayName": "MD Human Review",
+  "description": "Markdown review & annotation tool — Comment, annotate, WYSIWYG edit, and generate AI fix instructions | 像导师批改论文一样批阅 Markdown，一键生成 AI 修改指令",
   "version": "1.0.0",
   "license": "MIT",
   "publisher": "letitia",
@@ -23,18 +23,17 @@
   "keywords": [
     "markdown",
     "review",
-    "批阅",
     "annotation",
+    "comment",
     "AI"
   ],
-  "icon": "images/icon.png",
+"icon": "assets/icons/icon-128x128.png",
   "galleryBanner": {
     "color": "#1e1e1e",
     "theme": "dark"
   },
-  "readme": "MARKETPLACE.md",
-  "categories": [
-    "Other",
+"categories": [
+    "Education",
     "Visualization"
   ],
   "activationEvents": [
@@ -65,12 +64,12 @@
     "commands": [
       {
         "command": "mdReview.openPanel",
-        "title": "MD Review Tool: 打开批阅面板",
+        "title": "MD Human Review: 打开批阅面板",
         "icon": "$(edit)"
       },
       {
         "command": "mdReview.exportReview",
-        "title": "MD Review Tool: 导出批阅记录"
+        "title": "MD Human Review: 导出批阅记录"
       }
     ],
     "menus": {
@@ -111,7 +110,7 @@
       }
     ],
     "configuration": {
-      "title": "MD Review Tool",
+      "title": "MD Human Review",
       "properties": {
         "mdReview.fontSize": {
           "type": "number",
@@ -258,13 +257,21 @@
   },
   "scripts": {
     "compile": "tsc -p ./",
+    "compile:test": "tsc -p ./test/tsconfig.json",
     "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run compile:test",
+    "test": "node ./out/test/runTest.js",
     "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.6",
     "@types/node": "^18.19.0",
     "@types/vscode": "^1.74.0",
+    "@vscode/test-electron": "^2.3.8",
+    "glob": "^10.3.10",
     "marked": "^15.0.12",
+    "mocha": "^10.2.0",
+    "sharp": "^0.34.5",
     "typescript": "^5.3.3"
   }
 }

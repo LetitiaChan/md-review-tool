@@ -1,7 +1,15 @@
+**/*.mp4
 node_modules/
 out/
 *.vsix
 .vscode-test/
-test/
+.vscode-test-userdata/
 .codebuddy/
 .vscode/
+
+# 测试日志产物
+test-output*.log
+
+# TypeScript 编译产物（src 目录下的 .js 和 .map 应由 tsc 输出到 out/）
+src/**/*.js
+src/**/*.js.map

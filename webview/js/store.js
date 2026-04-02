@@ -207,7 +207,7 @@ const Store = (() => {
             data.nextId = 1;
         }
         save();
-        console.log('[Store] 从批阅文件恢复批阅记录:', fileName, '评审版本:', data.reviewVersion, '批注数:', data.annotations.length);
+        console.log('[Store] 从 .review 恢复批阅记录:', fileName, '评审版本:', data.reviewVersion, '批注数:', data.annotations.length);
     }
 
     return {

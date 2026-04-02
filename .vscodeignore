@@ -1,9 +1,13 @@
 .vscode/**
 .vscode-test/**
+.vscode-test-userdata/**
+.codebuddy/**
 src/**
 test/**
+scripts/**
 node_modules/**
 .gitignore
+.vscodeignore
 .github/**
 tsconfig.json
 **/*.ts

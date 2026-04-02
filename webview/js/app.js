@@ -529,7 +529,7 @@
         }
 
         try {
-            // 先尝试从批阅文件恢复
+            // 先尝试从 .review 恢复
             const records = await callHost('getReviewRecords', { fileName: value });
             if (records && records.records && records.records.length > 0) {
                 const fileData = await callHost('readFile', { filePath: value });
@@ -546,7 +546,7 @@
                         Annotations.init(newBlocks);
                         Annotations.renderAnnotationsList();
                         Annotations.updateToolbarState();
-                        showNotification(`📂 已从批阅文件恢复 ${matchedRecord.annotations.length} 条批注`);
+showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length} 条批注`);
                         return;
                     }
                 }

@@ -1,7 +1,11 @@
 <a id="chinese"></a>
-# MD Review Tool
+# MD Human Review
 
-> 一款 VSCode / CodeBuddy IDE 扩展，像导师批改论文一样批阅 Markdown 文件 —— 支持评论、标记删除、插入内容、所见即所得编辑，并可一键生成 AI 修改指令。
+> A powerful Markdown review & annotation extension for VSCode — comment, mark deletions, insert content, WYSIWYG edit, and generate AI fix instructions with one click.
+>
+> 🖊️ 像导师批改论文一样批阅 Markdown —— 评论、删除、插入、所见即所得编辑，一键生成 AI 修改指令。
+
+**Key Features**: Markdown review, annotation, comment, WYSIWYG editing, AI-powered fix, code highlighting, Mermaid diagrams, KaTeX math, dark/light theme, table of contents, image lightbox, auto-save.
 
 [English](#english)
 
@@ -34,7 +38,7 @@
 
 ### 📤 导出与存储
 - **导出批阅记录** — 生成 AI 可读的结构化 Markdown 修改指令（`Ctrl+E`），指令按从后往前排列确保执行安全
-- **自动保存** — 批注记录自动保存到工作区 `批阅文件/` 目录，批注清空时自动删除记录文件
+- **自动保存** — 批注记录自动保存到工作区 `.review/` 目录，批注清空时自动删除记录文件
 - **版本管理** — 源文件内容变更时自动归档旧版本，创建新批阅版本
 - **图片支持** — 评论中的 Base64 图片会额外导出为 JSON 数据文件，路径引用的图片直接保存到文件系统
 
@@ -79,7 +83,7 @@
 **方式一：从插件市场安装（推荐）**
 
 1. 打开 VSCode 或 CodeBuddy IDE，进入扩展面板（`Ctrl+Shift+X`）
-2. 搜索 **「MD Review Tool」**
+2. 搜索 **「MD Human Review」**
 3. 点击 **安装** 即可
 
 **方式二：从源码安装（开发者）**
@@ -102,7 +106,7 @@
 
 1. 在 VSCode / CodeBuddy IDE 中打开任意 `.md` 或 `.mdc` 文件
 2. 通过以下方式打开批阅面板：
-   - **命令面板**：`Ctrl+Shift+P` → 搜索「MD Review: 打开批阅面板」
+- **命令面板**：`Ctrl+Shift+P` → 搜索「MD Human Review: 打开批阅面板」
    - **右键菜单**：在编辑器或资源管理器中右键选择
    - **编辑器标题栏**：点击标题栏图标按钮
 3. 选中文字后使用浮层工具条或右键菜单进行批阅操作
@@ -188,7 +192,7 @@ MIT
 ---
 
 <a id="english"></a>
-# MD Review Tool
+# MD Human Review
 
 > A VSCode / CodeBuddy IDE extension for reviewing Markdown files like a mentor grading papers — supports comments, deletion marks, content insertion, WYSIWYG editing, and one-click AI instruction generation.
 
@@ -223,7 +227,7 @@ MIT
 
 ### 📤 Export & Storage
 - **Export Review Records** — Generate AI-readable structured Markdown modification instructions (`Ctrl+E`), ordered back-to-front for safe execution
-- **Auto-save** — Annotation records automatically saved to workspace `批阅文件/` directory; empty annotations auto-delete the record file
+- **Auto-save** — Annotation records automatically saved to workspace `.review/` directory; empty annotations auto-delete the record file
 - **Version Management** — Automatically archives old versions when source file content changes, creating new review versions
 - **Image Support** — Base64 images in comments are additionally exported as JSON data files; path-referenced images are stored in the file system
 
@@ -268,7 +272,7 @@ This extension's review styles, interaction logic, and AI instruction templates 
 **Option 1: Install from Marketplace (Recommended)**
 
 1. Open VSCode or CodeBuddy IDE, go to Extensions panel (`Ctrl+Shift+X`)
-2. Search for **"MD Review Tool"**
+2. Search for **"MD Human Review"**
 3. Click **Install**
 
 **Option 2: Install from Source (Developers)**
@@ -291,7 +295,7 @@ This extension's review styles, interaction logic, and AI instruction templates 
 
 1. Open any `.md` or `.mdc` file in VSCode / CodeBuddy IDE
 2. Open the review panel via:
-   - **Command Palette**: `Ctrl+Shift+P` → Search "MD Review: 打开批阅面板"
+- **Command Palette**: `Ctrl+Shift+P` → Search "MD Human Review: 打开批阅面板"
    - **Context Menu**: Right-click in the editor or file explorer
    - **Editor Title Bar**: Click the icon button in the title bar
 3. Select text and use the floating toolbar or right-click context menu for review operations

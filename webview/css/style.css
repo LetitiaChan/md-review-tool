@@ -1779,10 +1779,15 @@ body.theme-dark * {
     border: 1px solid #ccc;
     background: #f5f5f5;
     font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 14px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
     cursor: pointer;
     flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.15s;
 }
 .btn-help:hover {
