@@ -76,28 +76,28 @@
       "editor/context": [
         {
           "command": "mdReview.openPanel",
-          "when": "resourceLangId == markdown || resourceLangId == mdc || resourceExtname == .mdc",
+          "when": "resourceExtname == .md || resourceExtname == .markdown || resourceExtname == .mdc",
           "group": "navigation@0"
         }
       ],
       "editor/title": [
         {
           "command": "mdReview.openPanel",
-          "when": "resourceLangId == markdown || resourceLangId == mdc || resourceExtname == .mdc",
+          "when": "resourceExtname == .md || resourceExtname == .markdown || resourceExtname == .mdc",
           "group": "navigation@0"
         }
       ],
       "editor/title/context": [
         {
           "command": "mdReview.openPanel",
-          "when": "resourceLangId == markdown || resourceLangId == mdc || resourceExtname == .mdc",
+          "when": "resourceExtname == .md || resourceExtname == .markdown || resourceExtname == .mdc",
           "group": "navigation@0"
         }
       ],
       "explorer/context": [
         {
           "command": "mdReview.openPanel",
-          "when": "resourceLangId == markdown || resourceLangId == mdc || resourceExtname == .mdc",
+          "when": "resourceExtname == .md || resourceExtname == .markdown || resourceExtname == .mdc",
           "group": "navigation@0"
         }
       ]
@@ -107,6 +107,11 @@
         "command": "mdReview.exportReview",
         "key": "ctrl+e",
         "when": "mdReviewPanelFocused"
+      },
+      {
+        "command": "mdReview.openPanel",
+        "key": "ctrl+enter",
+        "when": "filesExplorerFocus && resourceExtname =~ /^\\.(md|markdown|mdc)$/"
       }
     ],
     "configuration": {

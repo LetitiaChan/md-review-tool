@@ -5,7 +5,7 @@ export function activate(context: vscode.ExtensionContext) {
     console.log('[MD Human Review] 插件已激活');
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('mdReview.openPanel', (uri?: vscode.Uri) => {
+        vscode.commands.registerCommand('mdReview.openPanel', async (uri?: vscode.Uri) => {
             let filePath: string | undefined;
             if (uri) {
                 filePath = uri.fsPath;
@@ -20,6 +20,24 @@ export function activate(context: vscode.ExtensionContext) {
                     filePath = editor.document.uri.fsPath;
                 }
             }
+
+            // 当通过快捷键触发且无 uri 时，尝试从资源管理器选中项获取
+            if (!filePath) {
+                // 通过剪贴板技巧获取资源管理器选中的文件路径
+                // 先保存当前剪贴板内容，执行复制路径命令，再恢复
+                const originalClipboard = await vscode.env.clipboard.readText();
+                await vscode.commands.executeCommand('copyFilePath');
+                const copiedPath = await vscode.env.clipboard.readText();
+                await vscode.env.clipboard.writeText(originalClipboard);
+
+                if (copiedPath && copiedPath !== originalClipboard) {
+                    const ext = copiedPath.toLowerCase();
+                    if (ext.endsWith('.md') || ext.endsWith('.markdown') || ext.endsWith('.mdc')) {
+                        filePath = copiedPath;
+                    }
+                }
+            }
+
             ReviewPanel.createOrShow(context, filePath);
         })
     );

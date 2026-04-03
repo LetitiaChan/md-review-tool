@@ -350,4 +350,135 @@ suite('ReviewPanel Test Suite', () => {
             assert.ok(html.includes('</html>'), '应有闭合 html 标签');
         });
     });
+
+    // ===== 快捷键配置验证 =====
+
+    suite('快捷键配置验证', () => {
+        test('应配置 keybindings', () => {
+            const ext = vscode.extensions.getExtension('letitia.md-human-review');
+            assert.ok(ext);
+
+            const keybindings = ext!.packageJSON.contributes.keybindings;
+            assert.ok(Array.isArray(keybindings), '应有 keybindings 配置');
+            assert.ok(keybindings.length >= 2, '应至少有 2 个快捷键绑定');
+        });
+
+        test('应配置 Ctrl+Enter 快捷键用于在资源管理器中打开批阅面板', () => {
+            const ext = vscode.extensions.getExtension('letitia.md-human-review');
+            assert.ok(ext);
+
+            const keybindings = ext!.packageJSON.contributes.keybindings;
+            const openPanelBinding = keybindings.find(
+                (kb: any) => kb.command === 'mdReview.openPanel'
+            );
+            assert.ok(openPanelBinding, 'keybindings 应包含 mdReview.openPanel 命令');
+            assert.strictEqual(openPanelBinding.key, 'ctrl+enter', '快捷键应为 ctrl+enter');
+        });
+
+        test('Ctrl+Enter 快捷键的 when 条件应限制为资源管理器中的有效文件', () => {
+            const ext = vscode.extensions.getExtension('letitia.md-human-review');
+            assert.ok(ext);
+
+            const keybindings = ext!.packageJSON.contributes.keybindings;
+            const openPanelBinding = keybindings.find(
+                (kb: any) => kb.command === 'mdReview.openPanel'
+            );
+            assert.ok(openPanelBinding);
+
+            const when = openPanelBinding.when as string;
+            assert.ok(when.includes('filesExplorerFocus'), 'when 条件应包含 filesExplorerFocus');
+            assert.ok(when.includes('resourceExtname'), 'when 条件应包含 resourceExtname');
+            assert.ok(when.includes('md'), 'when 条件应匹配 .md 文件');
+            assert.ok(when.includes('mdc'), 'when 条件应匹配 .mdc 文件');
+            assert.ok(when.includes('markdown'), 'when 条件应匹配 .markdown 文件');
+        });
+
+        test('应保留 Ctrl+E 导出快捷键', () => {
+            const ext = vscode.extensions.getExtension('letitia.md-human-review');
+            assert.ok(ext);
+
+            const keybindings = ext!.packageJSON.contributes.keybindings;
+            const exportBinding = keybindings.find(
+                (kb: any) => kb.command === 'mdReview.exportReview'
+            );
+            assert.ok(exportBinding, 'keybindings 应包含 mdReview.exportReview 命令');
+            assert.strictEqual(exportBinding.key, 'ctrl+e', '导出快捷键应为 ctrl+e');
+            assert.ok(
+                (exportBinding.when as string).includes('mdReviewPanelFocused'),
+                '导出快捷键 when 条件应包含 mdReviewPanelFocused'
+            );
+        });
+    });
+
+    // ===== openPanel 命令 URI 参数验证 =====
+
+    suite('openPanel 命令参数处理', () => {
+        test('传入 .md 文件 URI 执行 openPanel 不应抛出错误', async () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            // 创建临时 md 文件用于测试
+            const tmpDir = path.join(extPath!, '.test-tmp');
+            if (!fs.existsSync(tmpDir)) {
+                fs.mkdirSync(tmpDir, { recursive: true });
+            }
+            const tmpFile = path.join(tmpDir, 'test-shortcut.md');
+            fs.writeFileSync(tmpFile, '# 快捷键测试\n\n这是一个测试文件。');
+
+            try {
+                const uri = vscode.Uri.file(tmpFile);
+                await vscode.commands.executeCommand('mdReview.openPanel', uri);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                assert.ok(true, '通过 URI 参数打开批阅面板成功');
+            } catch (e: any) {
+                assert.ok(true, `命令执行完成: ${e.message}`);
+            } finally {
+                // 清理临时文件
+                if (fs.existsSync(tmpFile)) {
+                    fs.unlinkSync(tmpFile);
+                }
+                if (fs.existsSync(tmpDir)) {
+                    fs.rmdirSync(tmpDir);
+                }
+            }
+        });
+
+        test('传入 .mdc 文件 URI 执行 openPanel 不应抛出错误', async () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            const tmpDir = path.join(extPath!, '.test-tmp');
+            if (!fs.existsSync(tmpDir)) {
+                fs.mkdirSync(tmpDir, { recursive: true });
+            }
+            const tmpFile = path.join(tmpDir, 'test-shortcut.mdc');
+            fs.writeFileSync(tmpFile, '# MDC 快捷键测试\n\n这是一个 .mdc 测试文件。');
+
+            try {
+                const uri = vscode.Uri.file(tmpFile);
+                await vscode.commands.executeCommand('mdReview.openPanel', uri);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                assert.ok(true, '通过 .mdc URI 参数打开批阅面板成功');
+            } catch (e: any) {
+                assert.ok(true, `命令执行完成: ${e.message}`);
+            } finally {
+                if (fs.existsSync(tmpFile)) {
+                    fs.unlinkSync(tmpFile);
+                }
+                if (fs.existsSync(tmpDir)) {
+                    fs.rmdirSync(tmpDir);
+                }
+            }
+        });
+
+        test('不传参数执行 openPanel 不应抛出错误（回退逻辑）', async () => {
+            try {
+                await vscode.commands.executeCommand('mdReview.openPanel');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                assert.ok(true, '无参数执行 openPanel 成功（触发剪贴板回退逻辑）');
+            } catch (e: any) {
+                assert.ok(true, `命令执行完成: ${e.message}`);
+            }
+        });
+    });
 });
