@@ -2,6 +2,8 @@
 .vscode-test/**
 .vscode-test-userdata/**
 .codebuddy/**
+openspec/**
+AGENT-PROGRESS.md
 src/**
 test/**
 scripts/**

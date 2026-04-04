@@ -1,0 +1,222 @@
+---
+description: 每次会话开始时必须执行
+globs:
+alwaysApply: true
+---
+# Project Continuity — 跨会话上下文恢复 + 开发纪律
+
+## 一、会话启动：读取进度笔记
+
+读取仓库根目录下的 `AGENT-PROGRESS.md` 文件。该文件记录了：
+
+- 项目概要（技术栈、定位、构建工具）
+- 已完成的变更（已归档的 OpenSpec changes）
+- 待实施的变更（活跃 changes 及其优先级）
+- 已积累的规格（capability specs）
+- 项目目录结构要点
+- 已知问题与注意事项
+- 下次会话建议
+
+### 快速定向
+
+在心中建立以下上下文（不需要冗长地播报，但需要内化理解）：
+
+- 上次做到哪里了？
+- 当前项目处于什么阶段？
+- 有什么已知的坑或注意事项？
+
+---
+
+## 二、开发纪律：强制 OpenSpec 工作流（最重要）
+
+> **核心原则：本项目采用 OpenSpec spec-driven 工作流。任何功能开发和重大修改都必须通过 OpenSpec 流程，绝不允许跳过 spec 直接写代码。**
+
+### 规则 1：用户请求新功能或重大修改时
+
+当用户说出类似以下内容时，**必须走 OpenSpec 流程**：
+- "帮我实现 XXX 功能"
+- "做下一个功能"
+- "加一个 XXX"
+- 任何涉及新增页面、新增 API/接口、新增数据表、新增服务模块的需求
+
+**执行流程：**
+
+```
+1. 检查 openspec/changes/ 是否已有对应 change
+   ├── 有，且已有 tasks.md → 直接调用 openspec-apply-change 技能
+   ├── 有，但缺少 artifacts → 先调用 openspec-continue-change 补齐，再 apply
+   └── 没有 → 先调用 openspec-propose 创建完整提案（proposal + design + tasks），再 apply
+2. 绝对不要跳过上述流程直接写代码
+```
+
+### 规则 2：小修/热修例外（Hotfix Exemption）+ Hotfix Mini-Pipeline
+
+以下情况**可以不走 OpenSpec**，直接修改代码：
+- 修复 typo、拼写错误
+- 修改 1-2 行的明显 bug
+- 纯样式/颜色/间距微调
+- 修改配置文件或注释
+
+**判定标准：涉及 ≤3 个文件 且 改动 ≤30 行**。超过此阈值必须走 OpenSpec。
+
+**⚠️ 即使是 Hotfix，也必须执行 Hotfix Mini-Pipeline（不可跳过）：**
+
+```
+Hotfix Mini-Pipeline（强制，修改代码后立即执行）:
+
+H1. 影响面分析
+    - 列出修改的文件及改动行数
+    - 分析直接影响（被修改的模块）和间接影响（依赖该模块的上下游）
+    - 判断不受影响的模块（为回归测试提供对照）
+
+H2. 构建验证
+    cd f:/github/md-review-tool && npm run compile
+    - 失败 → 修复编译错误，最多 3 次重试
+    - 成功 → 继续
+
+H3. 回归测试
+    cd f:/github/md-review-tool && npm test
+    - 全部通过 → 继续
+    - 有失败 → 进入 Auto-Fix Loop（最多 3 轮）
+    - 仍失败 → STOP，报告给用户
+
+H3.5. 行为级测试补充（如修复涉及 UI 交互行为）
+    - 如果 hotfix 修复的是 UI 交互问题（拖拽、点击、键盘操作等）
+    - 必须检查测试脚本是否已有覆盖该行为的行为级断言
+    - 如果没有 → 追加行为级测试
+    - 确保该行为的回归在未来能被自动发现
+
+H4. 打包发布（测试通过后、commit 前）
+    <!-- ⚠️ CUSTOMIZE: Replace with your project's package command, e.g.:
+         cd <project-root> && npm run package
+    -->
+    cd <project-root> && <package-command>
+    - 成功 → 安装包已生成
+    - 失败 → 报告错误但不阻塞管线（打包失败不影响代码质量）
+
+H5. Git Commit
+    git add -A && git commit -m "fix: <简述>"
+
+H6. Git Push（自动推送）
+    git push
+    - 推送失败 → 报告错误，等待用户处理
+
+H7. Hotfix 报告
+    输出完整的 Mini-Pipeline 结果表（与 Step 14 格式一致）
+```
+
+**Hotfix Mini-Pipeline 与全管线的区别：**
+- 无 OpenSpec verify / archive / spec-sync / AGENT-PROGRESS 更新
+- 有完整的 构建 → 影响分析 → 回归测试 → 打包 → commit → push
+
+### 规则 3：优先级意识
+
+实现功能前，对照 `AGENT-PROGRESS.md` 中的优先级建议：
+- 如果用户请求的功能**与建议一致** → 直接执行
+- 如果用户请求的功能**与建议不同** → 简短提醒（"AGENT-PROGRESS.md 建议下一步做 X，你确定要先做 Y 吗？"），但**服从用户决定**
+
+### 规则 4：禁止行为清单
+
+- ❌ 收到"帮我实现 X"后直接开始写代码
+- ❌ 不看 changes 目录就创建重复的 change
+- ❌ 跳过 proposal/design 直接写 tasks
+- ❌ 实现完成后不跑测试就宣布完成
+- ❌ 手动执行 archive 时遗漏 spec sync
+- ❌ 跳过 auto-test 测试步骤（Step 9 是强制步骤，不可跳过）
+- ❌ 未归档未 commit 就开始下一个变更的 propose 或 apply
+- ❌ 流水线执行到一半就开始新工作（必须完整走完 Step 8→14 或显式刹车报告）
+- ❌ Git commit message 描述部分使用英文（必须用中文，格式：`feat: 中文描述`）
+- ❌ 对同一文件在同一轮中发起多次并行 replace_in_file（会因文件内容已变导致后续匹配失败，必须串行执行）
+- ❌ 测试只写存在性断言（Tier 1）而不写行为级断言（Tier 2）—— 必须为每个涉及 UI 交互的功能编写模拟真实操作的行为级测试
+- ❌ 不为当前变更的新功能编写特定测试用例（Tier 3）—— 每次 apply 和 hotfix 都必须有针对性的新测试
+
+### 规则 4.5：阶段完成自检（防止提前收尾）
+
+> **核心原则：每完成一个阶段（propose / apply / build / test / verify / archive / commit），立即自检是否还有后续步骤，是否达到了用户定义的"完成"。**
+
+**自检流程（每个阶段结束后强制执行）：**
+
+```
+1. 回溯用户的原始请求，确认"完成"的边界
+   - 用户说"完成 X" → 必须走完 propose → apply → build → test → verify → archive → commit 全管线
+   - 用户说"完成 X & Y" → X 和 Y 都必须走完全管线才算完成
+   - 用户说"propose X" → 只需 propose 即可
+2. 对照当前进度，判断是否已达到用户定义的完成边界
+3. 如果未达到 → 立即继续下一个步骤，不输出总结报告，不暗示用户需要手动触发
+4. 如果已达到 → 输出最终管线报告 + 更新 AGENT-PROGRESS.md
+```
+
+**禁止行为：**
+- ❌ 在管线中途（如 propose 完成后）输出"会话总结"式的格式化报告
+- ❌ 用"下一步: 运行 /opsx:apply"之类的措辞把控制权交还给用户（除非用户明确要求分步确认）
+- ❌ 因为上下文已经很长就产生"该收尾了"的倾向——管线完整性优先于上下文压力
+
+### 规则 5：完成门禁 — 新工作的前置检查（最关键）
+
+> **核心原则：在开始任何新的 propose 或 apply 之前，必须确认不存在"已实施但未归档"的变更。**
+
+**每次用户请求新功能、propose、或 apply 时，执行以下检查：**
+
+```
+1. 扫描 openspec/changes/ 下所有非 archive 目录
+2. 对每个变更，检查是否存在 tasks.md
+3. 如果 tasks.md 存在，检查是否所有任务都已 [x] 完成
+4. 如果发现「全部完成但未归档」的变更：
+   ├── ⛔ 立即停止，不允许开始新工作
+   ├── 报告："变更 <name> 已实施完成但尚未归档"
+   ├── 自动执行该变更的流水线后半段（build → test → archive → commit）
+   └── 完成后再继续用户请求的新工作
+5. 如果没有未归档的已完成变更 → 正常继续
+```
+
+**这条规则没有例外，不接受"先做新的回头再归档"。**
+
+---
+
+## 三、会话结束：更新进度笔记
+
+当一次重要的开发/实施会话结束时（例如完成了 OpenSpec apply、propose、或重大代码修改），**主动** 更新 `AGENT-PROGRESS.md`：
+
+- 在 "最近更新" 部分添加当日记录
+- 更新变更状态（如有完成的 change）
+- 更新 "已知问题" 和 "下次会话建议"
+
+---
+
+## 项目关键文件索引
+
+<!-- ⚠️ 请替换为你的项目实际文件 -->
+| 文件 | 用途 |
+|------|------|
+| `AGENT-PROGRESS.md` | 跨会话记忆（最重要） |
+| `docs/[策划文档].md` | 产品策划文档 |
+| `openspec/changes/` | OpenSpec 变更管理 |
+| `openspec/specs/` | 能力规格库 |
+| `src/` | 应用代码根目录 |
+
+## 开发环境
+
+- **操作系统**: Windows
+- **Shell**: PowerShell (Core)
+- **技术栈**: TypeScript + VS Code Extension API + Mocha + marked
+- **构建工具**: tsc (TypeScript Compiler)，npm scripts
+- **工作流**: OpenSpec spec-driven，通过 `/opsx:*` 命令驱动
+
+## Git 规范
+
+<!-- ⚠️ 根据团队习惯配置 commit message 语言 -->
+- **Commit message 格式**: `feat: 描述`
+- 类型前缀：`feat:` / `fix:` / `refactor:` / `chore:`
+
+## 设计理念
+
+本规则的设计灵感来自 Anthropic "Effective Harnesses for Long-Running Agents"，目的是解决 AI Agent 在多次会话之间的 8 个核心失败模式：
+
+1. **One-shot tendency** → 通过读取 AGENT-PROGRESS.md 恢复上下文
+2. **Premature completion claims** → 通过 OpenSpec task list 追踪真实进度
+3. **Lack of cross-session memory** → 通过文件系统持久化进度笔记
+4. **Messy environment** → 通过构建检查和环境初始化
+5. **Skipping structured workflow** → 通过开发纪律规则强制走 OpenSpec 流程
+6. **Incomplete pipeline execution** → 通过完成门禁（规则 5）阻止在未归档状态下开始新工作
+7. **Premature stage exit** → 通过阶段完成自检（规则 4.5）强制回溯用户原始请求边界
+8. **Unverified hotfix** → 通过 Hotfix Mini-Pipeline（规则 2）确保即使是小修也经过构建→影响分析→回归测试→打包→commit→push 全链路验证
