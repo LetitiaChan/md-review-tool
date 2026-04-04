@@ -431,6 +431,143 @@
     color: #999;
 }
 
+/* ===== PlantUML 图表样式 ===== */
+.plantuml-container {
+    margin: 16px 0;
+    text-align: center;
+}
+
+.plantuml-rendered {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+.plantuml-rendered:hover {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.plantuml-source {
+    background: var(--code-bg, #f6f8fa);
+    border: 1px solid var(--border, #e1e4e8);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-secondary, #666);
+    white-space: pre-wrap;
+    text-align: left;
+}
+
+.plantuml-error {
+    background: #fff3f3;
+    border: 1px solid #ffc9c9;
+    border-radius: 6px;
+    padding: 12px 16px;
+    color: #c92a2a;
+    font-size: 13px;
+    text-align: left;
+    margin-bottom: 8px;
+}
+
+.plantuml-error-icon {
+    margin-right: 4px;
+}
+
+.theme-dark .plantuml-source {
+    background: #2d2d2d;
+    border-color: #444;
+    color: #aaa;
+}
+
+.theme-dark .plantuml-error {
+    background: #3d1f1f;
+    border-color: #6b2c2c;
+    color: #ff8888;
+}
+
+.theme-dark .plantuml-rendered {
+    filter: invert(0.88) hue-rotate(180deg);
+}
+
+/* ===== Graphviz 图表样式 ===== */
+.graphviz-container {
+    margin: 16px 0;
+    text-align: center;
+}
+
+.graphviz-rendered {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+    border-radius: 6px;
+}
+.graphviz-rendered:hover {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.graphviz-rendered svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.graphviz-source {
+    background: var(--code-bg, #f6f8fa);
+    border: 1px solid var(--border, #e1e4e8);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text-secondary, #666);
+    white-space: pre-wrap;
+    text-align: left;
+}
+
+.graphviz-error {
+    background: #fff3f3;
+    border: 1px solid #ffc9c9;
+    border-radius: 6px;
+    padding: 12px 16px;
+    color: #c92a2a;
+    font-size: 13px;
+    text-align: left;
+}
+
+.graphviz-error-icon {
+    margin-right: 4px;
+}
+
+.graphviz-error pre {
+    margin: 8px 0 0;
+    padding: 8px;
+    background: rgba(0,0,0,0.04);
+    border-radius: 4px;
+    font-size: 12px;
+    color: #666;
+    white-space: pre-wrap;
+}
+
+.theme-dark .graphviz-source {
+    background: #2d2d2d;
+    border-color: #444;
+    color: #aaa;
+}
+
+.theme-dark .graphviz-error {
+    background: #3d1f1f;
+    border-color: #6b2c2c;
+    color: #ff8888;
+}
+
+.theme-dark .graphviz-error pre {
+    background: rgba(255,255,255,0.06);
+    color: #999;
+}
+
 /* ===== KaTeX 数学公式样式 ===== */
 .katex-display {
     display: block;

@@ -725,6 +725,26 @@
                         </div>
                         <div class="setting-item">
                             <div class="setting-label">
+                                <div class="label-text">PlantUML 图表渲染</div>
+                                <div class="label-desc">启用 PlantUML 图表渲染（需要网络连接）</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingEnablePlantUML" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">Graphviz 图表渲染</div>
+                                <div class="label-desc">启用 Graphviz DOT 图表渲染</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="settingEnableGraphviz" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
                                 <div class="label-text">显示代码行号</div>
                                 <div class="label-desc">在代码块中显示行号</div>
                             </div>
@@ -790,6 +810,7 @@
     <script src="${turndownUri}"></script>
     <script src="${katexUri}"></script>
     <script src="${mermaidUri}"></script>
+    <script src="${vizUri}"></script>
     <script src="${emojiMapUri}"></script>
     <!-- 初始化 VSCode API -->
     <script nonce="${nonce}">

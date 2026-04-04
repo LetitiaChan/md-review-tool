@@ -7,6 +7,7 @@
 
 ## 最近更新
 
+- **2026-04-05**: 实现 PlantUML 和 Graphviz 图表渲染支持（add-plantuml-graphviz-support）
 - **2026-04-04**: 初始化 OpenSpec Harness Kit
 
 ---
@@ -26,7 +27,9 @@
 
 ## 已完成的变更 (Archived)
 
-<!-- 每完成一个变更，在这里添加记录 -->
+| 变更名 | 描述 | 归档日期 |
+|--------|------|---------|
+| add-plantuml-graphviz-support | 新增 PlantUML（在线服务器渲染）和 Graphviz（Viz.js 本地渲染）图表支持 | 2026-04-05 |
 
 ---
 
@@ -41,10 +44,10 @@
 
 ## 已积累的 Specs
 
-<!-- 列出 openspec/specs/ 下的能力模块 -->
-
 | Spec | 来源 | 说明 |
 |------|------|------|
+| plantuml-rendering | add-plantuml-graphviz-support | PlantUML 代码块渲染、降级、lightbox、设置项 |
+| graphviz-rendering | add-plantuml-graphviz-support | Graphviz DOT 代码块渲染、降级、lightbox、主题适配、延迟加载、设置项 |
 
 ---
 

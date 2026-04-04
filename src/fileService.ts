@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 
 export class FileService {
     private workspaceRoot: string;
@@ -8,6 +9,39 @@ export class FileService {
     constructor() {
         const folders = vscode.workspace.workspaceFolders;
         this.workspaceRoot = folders && folders.length > 0 ? folders[0].uri.fsPath : '';
+    }
+
+    /**
+     * 根据文件的相对路径生成 6 位短哈希，用于区分不同目录下的同名文件。
+     * 仅对含子目录的路径生成哈希，根目录下的文件返回空字符串（向后兼容）。
+     */
+    private pathHash(relPath: string): string {
+        const normalized = relPath.replace(/\\/g, '/');
+        const dir = path.dirname(normalized);
+        if (!dir || dir === '.') { return ''; }
+        return crypto.createHash('md5').update(dir).digest('hex').substring(0, 6);
+    }
+
+    /**
+     * 构建批阅文件名前缀。
+     * 规则：根目录文件 → "README"；子目录文件 → "a3b2c1_README"（hash在前）
+     */
+    private reviewBaseName(fileName: string, relPath?: string): string {
+        const ext = path.extname(fileName);
+        const base = path.basename(fileName).replace(ext, '');
+        if (!relPath) { return base; }
+        const hash = this.pathHash(relPath);
+        return hash ? `${hash}_${base}` : base;
+    }
+
+    /**
+     * 获取文件相对于工作区的路径
+     */
+    private getRelPath(absPath: string): string {
+        if (this.workspaceRoot) {
+            return path.relative(this.workspaceRoot, absPath).replace(/\\/g, '/');
+        }
+        return path.basename(absPath);
     }
 
     private get reviewDir(): string {
@@ -35,19 +69,22 @@ const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules
     /**
      * 读取文件内容
      */
-    readFile(filePath: string): { name: string; content: string; docVersion: string | null; sourceFilePath: string; sourceDir: string } {
+    readFile(filePath: string): { name: string; content: string; docVersion: string | null; sourceFilePath: string; sourceDir: string; relPath: string; pathHash: string } {
         const absPath = path.isAbsolute(filePath) ? filePath : path.join(this.workspaceRoot, filePath);
         if (!fs.existsSync(absPath)) {
             throw new Error('文件不存在: ' + absPath);
         }
         const content = fs.readFileSync(absPath, 'utf-8');
         const docVersion = this.extractDocVersion(content);
+        const relPath = this.getRelPath(absPath);
         return {
             name: path.basename(absPath),
             content,
             docVersion,
             sourceFilePath: absPath.replace(/\\/g, '/'),
-            sourceDir: path.dirname(absPath).replace(/\\/g, '/')
+            sourceDir: path.dirname(absPath).replace(/\\/g, '/'),
+            relPath,
+            pathHash: this.pathHash(relPath)
         };
     }
 
@@ -68,8 +105,8 @@ const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules
         this.ensureReviewDir();
         const safeName = path.basename(absPath);
         const ext = path.extname(safeName);
-        const baseName = safeName.replace(ext, '');
-        const backupName = `${baseName}_编辑前备份_${Date.now()}${ext}`;
+        const rbaseName = this.reviewBaseName(safeName, this.getRelPath(absPath));
+        const backupName = `${rbaseName}_${Date.now()}_backup${ext}`;
         const backupPath = path.join(this.reviewDir, backupName);
         fs.writeFileSync(backupPath, oldContent, 'utf-8');
         fs.writeFileSync(absPath, content, 'utf-8');
@@ -92,10 +129,11 @@ const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules
     /**
      * 生成 AI 修改指令文件
      */
-    applyReview(annotations: any[], sourceFile: string, fileName: string): { success: boolean; needsAi: number; aiInstructionFile?: string; aiInstructionFilePath?: string; sourceFilePath: string; message: string } {
+    applyReview(annotations: any[], sourceFile: string, fileName: string, relPath?: string): { success: boolean; needsAi: number; aiInstructionFile?: string; aiInstructionFilePath?: string; sourceFilePath: string; message: string } {
         this.ensureReviewDir();
         const safeName = path.basename(fileName);
         const sourceFilePath = sourceFile ? sourceFile.replace(/\\/g, '/') : '';
+        const rbaseName = this.reviewBaseName(safeName, relPath);
 
         const validAnnotations = annotations.filter((a: any) =>
             (a.type === 'comment') ||
@@ -214,7 +252,7 @@ const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules
             lines.push('');
         });
 
-        const aiFileName = `AI修改指令_${safeName.replace(/\.(md|mdc)$/, '')}_${Date.now()}.md`;
+        const aiFileName = `${rbaseName}_${Date.now()}_aicmd.md`;
         const aiFilePath = path.join(this.reviewDir, aiFileName);
         fs.writeFileSync(aiFilePath, lines.join('\n'), 'utf-8');
 
@@ -231,15 +269,24 @@ const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules
     /**
      * 删除指定文件的所有批阅记录文件（批阅记录 + 批阅数据 JSON）
      */
-    deleteReviewRecords(fileName: string): { success: boolean; deleted: string[] } {
+    deleteReviewRecords(fileName: string, relPath?: string): { success: boolean; deleted: string[] } {
         if (!fs.existsSync(this.reviewDir)) { return { success: true, deleted: [] }; }
-        const ext = path.extname(fileName);
-        const baseName = path.basename(fileName).replace(ext, '');
+        const rbaseName = this.reviewBaseName(fileName, relPath);
         const allFiles = fs.readdirSync(this.reviewDir);
         const deleted: string[] = [];
 
+        // 同时匹配新格式（带哈希）和旧格式（无哈希），确保向后兼容
+        const ext = path.extname(fileName);
+        const plainBase = path.basename(fileName).replace(ext, '');
+
         for (const f of allFiles) {
-            if (f.startsWith(`批阅记录_${baseName}_v`) || f.startsWith(`批阅数据_${baseName}_v`)) {
+            const matchesNew = f.startsWith(`${rbaseName}_v`) && (f.includes('_record.') || f.includes('_data.'));
+            const matchesOld = rbaseName !== plainBase && (f.startsWith(`批阅记录_${plainBase}_v`) || f.startsWith(`批阅数据_${plainBase}_v`));
+            // 也兼容上一版命名：批阅记录_{rbaseName}_v
+            const matchesPrev = f.startsWith(`批阅记录_${rbaseName}_v`) || f.startsWith(`批阅数据_${rbaseName}_v`)
+                || f.startsWith(`批阅记录_${plainBase}_v`) || f.startsWith(`批阅数据_${plainBase}_v`);
+
+            if (matchesNew || matchesOld || matchesPrev) {
                 const fullPath = path.join(this.reviewDir, f);
                 try {
                     fs.unlinkSync(fullPath);
@@ -256,15 +303,20 @@ console.error('删除批阅记录失败:', fullPath, e);
     /**
      * 读取 .review 目录中的批阅记录
      */
-    getReviewRecords(fileName: string): any[] {
+    getReviewRecords(fileName: string, relPath?: string): any[] {
         if (!fs.existsSync(this.reviewDir)) { return []; }
+        const rbaseName = this.reviewBaseName(fileName, relPath);
         const ext = path.extname(fileName);
-        const baseName = path.basename(fileName).replace(ext, '');
+        const plainBase = path.basename(fileName).replace(ext, '');
         const allFiles = fs.readdirSync(this.reviewDir).filter(f => f.endsWith('.md') || f.endsWith('.mdc'));
         const records: any[] = [];
 
         for (const f of allFiles) {
-            if (f.startsWith(`批阅记录_${baseName}_v`)) {
+            // 新格式：{rbaseName}_v{N}_record.md
+            const matchesNew = f.startsWith(`${rbaseName}_v`) && f.includes('_record.');
+            // 旧格式向后兼容：批阅记录_{baseName}_v{N}.md
+            const matchesOld = f.startsWith(`批阅记录_${rbaseName}_v`) || (rbaseName !== plainBase && f.startsWith(`批阅记录_${plainBase}_v`));
+            if (matchesNew || matchesOld) {
                 const fullPath = path.join(this.reviewDir, f);
                 const content = fs.readFileSync(fullPath, 'utf-8');
                 const reviewVersion = this.extractReviewVersion(f);
@@ -583,7 +635,7 @@ console.error('删除批阅记录失败:', fullPath, e);
     }
 
     private extractReviewVersion(fileName: string): number {
-        const match = fileName.match(/_v(\d+)(?:_|\.md$)/);
+        const match = fileName.match(/_v(\d+)(?:_|\.\w+$)/);
         return match ? parseInt(match[1]) : 1;
     }
 

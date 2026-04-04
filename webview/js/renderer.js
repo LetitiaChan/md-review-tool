@@ -543,6 +543,24 @@ const Renderer = (() => {
                 return `<div class="mermaid-container" data-mermaid-id="${id}"><div class="mermaid-source-data" data-source="${base64Code}" style="display:none"></div><pre class="mermaid-source">${escapeHtml(code)}</pre></div>`;
             }
 
+            // PlantUML 图表：使用在线服务器渲染 SVG
+            if (lang === 'plantuml' || lang === 'puml') {
+                const base64Code = btoa(unescape(encodeURIComponent(code)));
+                const hexCode = plantumlHexEncode(code);
+                const maxLen = 4000;
+                if (code.length > maxLen) {
+                    return `<div class="plantuml-container plantuml-too-long"><div class="plantuml-error"><span class="plantuml-error-icon">⚠️</span> 图表源码过长（${code.length} 字符），无法在线渲染</div><pre class="plantuml-source">${escapeHtml(code)}</pre></div>`;
+                }
+                const svgUrl = 'https://www.plantuml.com/plantuml/svg/~h' + hexCode;
+                return `<div class="plantuml-container"><img class="plantuml-rendered" src="${svgUrl}" alt="PlantUML Diagram" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="plantuml-fallback" style="display:none"><div class="plantuml-error"><span class="plantuml-error-icon">⚠️</span> PlantUML 图表渲染失败（请检查网络连接）</div><pre class="plantuml-source">${escapeHtml(code)}</pre></div><pre class="plantuml-source-data" data-source="${base64Code}" style="display:none">${escapeHtml(code)}</pre></div>`;
+            }
+
+            // Graphviz DOT 图表：使用 Viz.js 本地渲染
+            if (lang === 'dot' || lang === 'graphviz') {
+                const base64Code = btoa(unescape(encodeURIComponent(code)));
+                return `<div class="graphviz-container"><div class="graphviz-source-data" data-source="${base64Code}" style="display:none"></div><pre class="graphviz-source">${escapeHtml(code)}</pre></div>`;
+            }
+
             /**
              * 将高亮后的 HTML 按行包裹 <span class="code-line">
              * 支持 CSS counter 行号 + diff 语言整行背景色
@@ -1652,5 +1670,126 @@ const Renderer = (() => {
         }
     }
 
-    return { parseMarkdown, renderBlocks, getBlockIndex, setImageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
+    /**
+     * PlantUML hex 编码：将源码每个字符转为两位十六进制
+     */
+    function plantumlHexEncode(text) {
+        let hex = '';
+        for (let i = 0; i < text.length; i++) {
+            hex += text.charCodeAt(i).toString(16).padStart(2, '0');
+        }
+        return hex;
+    }
+
+    /**
+     * 渲染 PlantUML 图表（通过在线服务器）
+     * PlantUML 使用 <img> 标签，渲染由浏览器自动完成
+     * 此函数主要处理设置开关和绑定 lightbox
+     */
+    function renderPlantUML() {
+        const containers = document.querySelectorAll('.plantuml-container');
+        if (containers.length === 0) return;
+
+        containers.forEach(container => {
+            const img = container.querySelector('.plantuml-rendered');
+            if (img && img.dataset.lightboxBound) return;
+            if (img) {
+                img.dataset.lightboxBound = 'true';
+                img.title = '点击查看大图';
+                img.style.cursor = 'pointer';
+            }
+        });
+    }
+
+    /**
+     * 渲染 Graphviz DOT 图表（使用 Viz.js）
+     */
+    async function renderGraphviz() {
+        const containers = document.querySelectorAll('.graphviz-container');
+        if (containers.length === 0) return;
+        if (typeof Viz === 'undefined') {
+            console.warn('[Renderer] Viz.js 未加载');
+            return;
+        }
+
+        let vizInstance;
+        try {
+            vizInstance = await Viz.instance();
+        } catch (e) {
+            console.warn('[Renderer] Viz.js 初始化失败:', e);
+            return;
+        }
+
+        const isDark = document.body.classList.contains('theme-dark');
+
+        for (const container of containers) {
+            if (container.querySelector('.graphviz-rendered')) continue;
+
+            const sourceDataEl = container.querySelector('.graphviz-source-data');
+            const sourceEl = container.querySelector('.graphviz-source');
+            let code = '';
+            if (sourceDataEl && sourceDataEl.dataset.source) {
+                try {
+                    code = decodeURIComponent(escape(atob(sourceDataEl.dataset.source)));
+                } catch (e) {
+                    code = sourceEl ? sourceEl.textContent : '';
+                }
+            } else if (sourceEl) {
+                code = sourceEl.textContent;
+            }
+            if (!code) continue;
+
+            // 暗色主题下注入默认样式属性
+            if (isDark) {
+                code = injectGraphvizDarkTheme(code);
+            }
+
+            try {
+                const svg = vizInstance.renderSVGElement(code);
+                const wrapper = document.createElement('div');
+                wrapper.className = 'graphviz-rendered';
+                wrapper.dataset.source = sourceDataEl ? sourceDataEl.dataset.source : '';
+                wrapper.appendChild(svg);
+                container.innerHTML = '';
+                container.appendChild(wrapper);
+
+                // SVG 自适应
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                svg.style.cssText = 'width:100%;height:auto;max-width:100%;';
+            } catch (e) {
+                console.warn('[Renderer] Graphviz 渲染失败:', e);
+                container.innerHTML = `<div class="graphviz-error"><span class="graphviz-error-icon">⚠️</span> Graphviz 图表渲染失败: ${escapeHtml(e.message || '')}<pre>${escapeHtml(code)}</pre></div>`;
+            }
+        }
+    }
+
+    /**
+     * 为 Graphviz DOT 源码注入暗色主题默认属性
+     */
+    function injectGraphvizDarkTheme(code) {
+        // 在 graph/digraph 的第一个 { 后注入默认节点/边样式
+        const darkAttrs = '\n  graph [bgcolor="transparent"]; node [color="#8b949e" fontcolor="#e6edf3" style="filled" fillcolor="#21262d"]; edge [color="#8b949e" fontcolor="#8b949e"];\n';
+        return code.replace(/((?:di)?graph\s+[^{]*\{)/, '$1' + darkAttrs);
+    }
+
+    /**
+     * 重新初始化 Graphviz（主题切换时调用）
+     */
+    function reinitGraphviz() {
+        document.querySelectorAll('.graphviz-container').forEach(container => {
+            const rendered = container.querySelector('.graphviz-rendered');
+            if (rendered && rendered.dataset.source) {
+                let code = '';
+                try {
+                    code = decodeURIComponent(escape(atob(rendered.dataset.source)));
+                } catch (e) { code = ''; }
+                if (code) {
+                    container.innerHTML = `<div class="graphviz-source-data" data-source="${rendered.dataset.source}" style="display:none"></div><pre class="graphviz-source">${escapeHtml(code)}</pre>`;
+                }
+            }
+        });
+    }
+
+    return { parseMarkdown, renderBlocks, getBlockIndex, setImageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
 })();

@@ -13,6 +13,8 @@ const Store = (() => {
         docVersion: '',
         sourceFilePath: '',
         sourceDir: '',
+        relPath: '',
+        pathHash: '',
         annotations: [],
         nextId: 1,
         reviewVersion: 1,
@@ -43,6 +45,8 @@ const Store = (() => {
                 if (!data.docVersion) data.docVersion = '';
                 if (!data.sourceFilePath) data.sourceFilePath = '';
                 if (!data.sourceDir) data.sourceDir = '';
+                if (!data.relPath) data.relPath = '';
+                if (!data.pathHash) data.pathHash = '';
                 if (!data.reviewVersion) data.reviewVersion = 1;
                 if (!data.createdAt) data.createdAt = new Date().toISOString();
             }
@@ -68,6 +72,8 @@ const Store = (() => {
                         if (!data.docVersion) data.docVersion = '';
                         if (!data.sourceFilePath) data.sourceFilePath = '';
                         if (!data.sourceDir) data.sourceDir = '';
+                        if (!data.relPath) data.relPath = '';
+                        if (!data.pathHash) data.pathHash = '';
                         if (!data.reviewVersion) data.reviewVersion = 1;
                         if (!data.createdAt) data.createdAt = new Date().toISOString();
                         vscode.setState({ [STORAGE_KEY]: data });
@@ -93,6 +99,8 @@ const Store = (() => {
             docVersion: '',
             sourceFilePath: '',
             sourceDir: '',
+            relPath: '',
+            pathHash: '',
             annotations: [],
             nextId: 1,
             reviewVersion: 1,
@@ -101,7 +109,7 @@ const Store = (() => {
         save();
     }
 
-    function setFile(name, markdown, fileHash, docVersion, sourceFilePath, sourceDir) {
+    function setFile(name, markdown, fileHash, docVersion, sourceFilePath, sourceDir, relPath, pathHash) {
         const sameFile = data.fileName === name;
         const hashChanged = sameFile && data.fileHash && fileHash && data.fileHash !== fileHash;
         const contentChanged = sameFile && !fileHash && data.rawMarkdown && markdown
@@ -114,6 +122,8 @@ const Store = (() => {
             data.docVersion = docVersion || '';
             data.sourceFilePath = sourceFilePath || data.sourceFilePath || '';
             data.sourceDir = sourceDir || data.sourceDir || '';
+            data.relPath = relPath || data.relPath || '';
+            data.pathHash = pathHash || data.pathHash || '';
             data.annotations = [];
             data.nextId = 1;
             data.reviewVersion = (data.reviewVersion || 1) + 1;
@@ -125,6 +135,8 @@ const Store = (() => {
             data.docVersion = docVersion || '';
             data.sourceFilePath = sourceFilePath || '';
             data.sourceDir = sourceDir || '';
+            data.relPath = relPath || '';
+            data.pathHash = pathHash || '';
             data.annotations = [];
             data.nextId = 1;
             data.reviewVersion = 1;
@@ -135,6 +147,8 @@ const Store = (() => {
             if (docVersion) data.docVersion = docVersion;
             if (sourceFilePath) data.sourceFilePath = sourceFilePath;
             if (sourceDir) data.sourceDir = sourceDir;
+            if (relPath) data.relPath = relPath;
+            if (pathHash) data.pathHash = pathHash;
         }
         save();
     }
@@ -191,6 +205,7 @@ const Store = (() => {
     function setDocVersion(version) { data.docVersion = version || ''; save(); }
     function getSourceFilePath() { return data.sourceFilePath || ''; }
     function getSourceDir() { return data.sourceDir || ''; }
+    function getRelPath() { return data.relPath || ''; }
 
     function restoreFromReviewRecord(record, fileName, markdown, docVersion) {
         data.fileName = fileName;

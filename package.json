@@ -27,12 +27,12 @@
     "comment",
     "AI"
   ],
-"icon": "assets/icons/icon-128x128.png",
+  "icon": "assets/icons/icon-128x128.png",
   "galleryBanner": {
     "color": "#1e1e1e",
     "theme": "dark"
   },
-"categories": [
+  "categories": [
     "Education",
     "Visualization"
   ],
@@ -213,6 +213,16 @@
           "default": true,
           "description": "启用数学公式渲染"
         },
+        "mdReview.enablePlantUML": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用 PlantUML 图表渲染（需要网络连接）"
+        },
+        "mdReview.enableGraphviz": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用 Graphviz 图表渲染"
+        },
         "mdReview.showLineNumbers": {
           "type": "boolean",
           "default": false,
@@ -272,6 +282,7 @@
     "@types/mocha": "^10.0.6",
     "@types/node": "^18.19.0",
     "@types/vscode": "^1.74.0",
+    "@viz-js/viz": "^3.25.0",
     "@vscode/test-electron": "^2.3.8",
     "glob": "^10.3.10",
     "marked": "^15.0.12",

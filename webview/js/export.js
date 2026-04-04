@@ -10,6 +10,16 @@ const Exporter = (() => {
     const AUTO_SAVE_DELAY = 1500;
 
     /**
+     * 构建用于文件名的 reviewBaseName。
+     * pathHash 由 Extension Host 计算（md5）后缓存在 Store 中，确保前后端一致。
+     */
+    function _reviewBaseName(data) {
+        const baseName = data.fileName.replace(/\.(mdc|md)$/, '');
+        const hash = data.pathHash || '';
+        return hash ? `${hash}_${baseName}` : baseName;
+    }
+
+    /**
      * 判断是否为 Base64 图片数据
      */
     function _isBase64Image(str) {
@@ -32,9 +42,9 @@ const Exporter = (() => {
 
         const blocks = Renderer.parseMarkdown(data.rawMarkdown);
         const doc = generateReviewDoc(data, blocks);
-        const baseName = data.fileName.replace(/\.(mdc|md)$/, '');
+        const rbaseName = _reviewBaseName(data);
         const version = data.reviewVersion || 1;
-        const mdFileName = `批阅记录_${baseName}_v${version}.md`;
+        const mdFileName = `${rbaseName}_v${version}_record.md`;
 
         // 通过 Extension Host 保存
         const saved = await saveViaHost(mdFileName, doc);
@@ -42,7 +52,7 @@ const Exporter = (() => {
 showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
             // 只有包含 Base64 图片时才需要额外导出 JSON（路径引用的图片已在文件系统中）
             if (_hasBase64Images(data.annotations)) {
-                const jsonFileName = `批阅数据_${baseName}_v${version}.json`;
+                const jsonFileName = `${rbaseName}_v${version}_data.json`;
                 const json = JSON.stringify({
                     fileName: data.fileName,
                     rawMarkdown: data.rawMarkdown,
@@ -265,7 +275,7 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
         if (!data.annotations.length) {
             try {
                 const requestId = 'delete_review_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-                vscode.postMessage({ type: 'deleteReviewRecords', payload: { fileName: data.fileName }, requestId });
+                vscode.postMessage({ type: 'deleteReviewRecords', payload: { fileName: data.fileName, relPath: data.relPath || '' }, requestId });
                 updateAutoSaveStatus('saved');
             } catch (e) {
                 console.warn('[AutoSave] 删除空批阅记录失败:', e);
@@ -276,16 +286,16 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
         try {
             const blocks = Renderer.parseMarkdown(data.rawMarkdown);
             const doc = generateReviewDoc(data, blocks);
-            const baseName = data.fileName.replace(/\.(mdc|md)$/, '');
+            const rbaseName = _reviewBaseName(data);
             const version = data.reviewVersion || 1;
-            const mdFileName = `批阅记录_${baseName}_v${version}.md`;
+            const mdFileName = `${rbaseName}_v${version}_record.md`;
 
             const saved = await saveViaHost(mdFileName, doc);
             if (saved) {
                 updateAutoSaveStatus('saved');
                 // 只有包含 Base64 图片时才需要额外保存 JSON（路径引用的图片已在文件系统中）
                 if (_hasBase64Images(data.annotations)) {
-                    const jsonFileName = `批阅数据_${baseName}_v${version}.json`;
+                    const jsonFileName = `${rbaseName}_v${version}_data.json`;
                     const json = JSON.stringify({
                         fileName: data.fileName,
                         rawMarkdown: data.rawMarkdown,

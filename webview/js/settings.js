@@ -17,6 +17,8 @@ const Settings = (() => {
         sidebarLayout: 'toc-left',
         enableMermaid: true,
         enableMath: true,
+        enablePlantUML: true,
+        enableGraphviz: true,
         showLineNumbers: false,
         autoSave: true,
         autoSaveDelay: 1500,
@@ -272,6 +274,14 @@ const Settings = (() => {
         const mathSwitch = document.getElementById('settingEnableMath');
         if (mathSwitch) mathSwitch.checked = currentSettings.enableMath;
 
+        // PlantUML
+        const plantumlSwitch = document.getElementById('settingEnablePlantUML');
+        if (plantumlSwitch) plantumlSwitch.checked = currentSettings.enablePlantUML;
+
+        // Graphviz
+        const graphvizSwitch = document.getElementById('settingEnableGraphviz');
+        if (graphvizSwitch) graphvizSwitch.checked = currentSettings.enableGraphviz;
+
         // 代码行号
         const lineNumSwitch = document.getElementById('settingShowLineNumbers');
         if (lineNumSwitch) lineNumSwitch.checked = currentSettings.showLineNumbers;
@@ -483,6 +493,28 @@ const Settings = (() => {
                 applyToDOM();
                 saveSettings();
                 _notifyChange('enableMath', mathSwitch.checked);
+            });
+        }
+
+        // PlantUML 开关
+        const plantumlSwitch = document.getElementById('settingEnablePlantUML');
+        if (plantumlSwitch) {
+            plantumlSwitch.addEventListener('change', () => {
+                currentSettings.enablePlantUML = plantumlSwitch.checked;
+                applyToDOM();
+                saveSettings();
+                _notifyChange('enablePlantUML', plantumlSwitch.checked);
+            });
+        }
+
+        // Graphviz 开关
+        const graphvizSwitch = document.getElementById('settingEnableGraphviz');
+        if (graphvizSwitch) {
+            graphvizSwitch.addEventListener('change', () => {
+                currentSettings.enableGraphviz = graphvizSwitch.checked;
+                applyToDOM();
+                saveSettings();
+                _notifyChange('enableGraphviz', graphvizSwitch.checked);
             });
         }
 

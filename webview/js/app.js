@@ -83,7 +83,7 @@
             showNotification('❌ 加载文件失败: ' + data.error);
             return;
         }
-        loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir);
+        loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
         requestImageUris(data.content, data.sourceDir);
     }
 
@@ -98,12 +98,13 @@
 
         // 监听 Mermaid / 数学公式开关变化，触发文档重新渲染
         Settings.onChange((key, value) => {
-            if (key === 'enableMermaid' || key === 'enableMath' || key === 'reset') {
+            if (key === 'enableMermaid' || key === 'enableMath' || key === 'enablePlantUML' || key === 'enableGraphviz' || key === 'reset') {
                 refreshCurrentView();
             }
             // 主题变更时重新渲染 Mermaid 图表（Mermaid 使用内置主题系统，需要重新渲染）
             if (key === 'themeChanged') {
                 Renderer.reinitMermaid();
+                Renderer.reinitGraphviz();
                 renderMathAndMermaid();
             }
             // auto 模式下系统主题变化时，同步更新顶部按钮标签
@@ -308,12 +309,13 @@
         document.getElementById('btnConfirmClearAll').addEventListener('click', async () => {
             document.getElementById('clearAllModal').style.display = 'none';
             const fileName = Store.getData().fileName;
+            const relPath = Store.getRelPath();
             Store.clearAll();
             Annotations.refreshView();
             // 同时删除磁盘上的批阅记录文件，防止重新打开时恢复
             if (fileName) {
                 try {
-                    await callHost('deleteReviewRecords', { fileName });
+                    await callHost('deleteReviewRecords', { fileName, relPath });
                 } catch (e) {
                     console.warn('[App] 删除批阅记录文件失败:', e);
                 }
@@ -428,6 +430,7 @@
             updateThemeButtonLabel(nextTheme);
             // 重新渲染 Mermaid 图表以适配新主题（Mermaid 使用内置主题系统，需要重新渲染）
             Renderer.reinitMermaid();
+            Renderer.reinitGraphviz();
             renderMathAndMermaid();
         });
 
@@ -530,13 +533,13 @@
 
         try {
             // 先尝试从 .review 恢复
-            const records = await callHost('getReviewRecords', { fileName: value });
+            const records = await callHost('getReviewRecords', { fileName: value, relPath: value });
             if (records && records.records && records.records.length > 0) {
                 const fileData = await callHost('readFile', { filePath: value });
                 if (fileData && !fileData.error) {
                     const matchedRecord = records.records[0];
                     if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
-                        loadDocument(fileData.name, fileData.content, true, undefined, fileData.docVersion, fileData.sourceFilePath, fileData.sourceDir);
+                        loadDocument(fileData.name, fileData.content, true, undefined, fileData.docVersion, fileData.sourceFilePath, fileData.sourceDir, fileData.relPath, fileData.pathHash);
                         requestImageUris(fileData.content, fileData.sourceDir);
                         Store.restoreFromReviewRecord(matchedRecord, fileData.name, fileData.content, fileData.docVersion);
                         const newBlocks = Renderer.parseMarkdown(fileData.content);
@@ -555,7 +558,7 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             // 正常加载
             const data = await callHost('readFile', { filePath: value });
             if (data && !data.error) {
-                loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir);
+                loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
                 requestImageUris(data.content, data.sourceDir);
             }
         } catch (e) {
@@ -575,16 +578,16 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             if (data && !data.error) {
                 const contentChanged = data.content.trim() !== currentData.rawMarkdown.trim();
                 if (contentChanged) {
-                    loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir);
+                    loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
                     showNotification('文件已更新，已创建新的批阅版本');
                 } else {
-                    loadDocument(data.name, data.content, false, undefined, data.docVersion, data.sourceFilePath, data.sourceDir);
+                    loadDocument(data.name, data.content, false, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
                     showNotification('文件已重新加载');
 
                     // 仅在内容未变化时从磁盘批阅记录恢复批注（确保批注列表与磁盘同步）
                     // 内容变化时已进入新批阅版本，不应恢复旧批阅记录，否则会覆盖新版本号
                     try {
-                        const records = await callHost('getReviewRecords', { fileName: data.name });
+                        const records = await callHost('getReviewRecords', { fileName: data.name, relPath: data.relPath || '' });
                         if (records && records.records && records.records.length > 0) {
                             const matchedRecord = records.records[0];
                             if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
@@ -614,9 +617,9 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
     }
 
     // ===== 加载文档 =====
-    function loadDocument(fileName, markdown, isNew, fileHash, docVersion, sourceFilePath, sourceDir) {
+    function loadDocument(fileName, markdown, isNew, fileHash, docVersion, sourceFilePath, sourceDir, relPath, pathHash) {
         if (isNew) {
-            Store.setFile(fileName, markdown, fileHash, docVersion, sourceFilePath, sourceDir);
+            Store.setFile(fileName, markdown, fileHash, docVersion, sourceFilePath, sourceDir, relPath, pathHash);
         }
 
         document.getElementById('welcomeScreen').style.display = 'none';
@@ -670,6 +673,14 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             Renderer.renderMermaid();
             // 渲染完成后绑定大图弹窗事件
             setTimeout(bindMermaidLightbox, 200);
+        }
+        if (settings.enablePlantUML) {
+            Renderer.renderPlantUML();
+        }
+        if (settings.enableGraphviz) {
+            Renderer.renderGraphviz();
+            // 渲染完成后绑定大图弹窗事件（复用 Mermaid lightbox 模式）
+            setTimeout(bindGraphvizLightbox, 200);
         }
         // 绑定代码块复制按钮事件
         bindCodeCopyButtons();
@@ -899,6 +910,21 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             if (el.dataset.lightboxBound) return;
             el.dataset.lightboxBound = 'true';
             el.title = '点击查看大图';
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openMermaidLightbox(el);
+            });
+        });
+    }
+
+    // ===== Graphviz 大图弹窗（复用 Mermaid lightbox） =====
+    function bindGraphvizLightbox() {
+        const rendered = document.querySelectorAll('.graphviz-rendered');
+        rendered.forEach(el => {
+            if (el.dataset.lightboxBound) return;
+            el.dataset.lightboxBound = 'true';
+            el.title = '点击查看大图';
+            el.style.cursor = 'pointer';
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
                 openMermaidLightbox(el);
@@ -1241,7 +1267,8 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             const result = await callHost('applyReview', {
                 fileName: data.fileName,
                 annotations: data.annotations,
-                sourceFile: data.sourceFilePath || ''
+                sourceFile: data.sourceFilePath || '',
+                relPath: data.relPath || ''
             });
 
             if (!result || !result.success) {

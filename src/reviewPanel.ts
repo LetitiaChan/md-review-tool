@@ -153,7 +153,7 @@ export class ReviewPanel {
             }
             case 'applyReview': {
                 try {
-                    const result = this._fileService.applyReview(payload.annotations, payload.sourceFile, payload.fileName);
+                    const result = this._fileService.applyReview(payload.annotations, payload.sourceFile, payload.fileName, payload.relPath);
                     this.postMessage({ type: 'applyResult', payload: result, requestId });
                 } catch (e: any) {
                     this.postMessage({ type: 'applyResult', payload: { success: false, error: e.message }, requestId });
@@ -201,12 +201,12 @@ export class ReviewPanel {
                 break;
             }
             case 'getReviewRecords': {
-                const records = this._fileService.getReviewRecords(payload.fileName);
+                const records = this._fileService.getReviewRecords(payload.fileName, payload.relPath);
                 this.postMessage({ type: 'reviewRecords', payload: { records }, requestId });
                 break;
             }
             case 'deleteReviewRecords': {
-                const delResult = this._fileService.deleteReviewRecords(payload.fileName);
+                const delResult = this._fileService.deleteReviewRecords(payload.fileName, payload.relPath);
                 this.postMessage({ type: 'deleteReviewRecordsResult', payload: delResult, requestId });
                 break;
             }
@@ -240,6 +240,8 @@ export class ReviewPanel {
                     sidebarLayout: config.get<string>('sidebarLayout', 'toc-left'),
                     enableMermaid: config.get<boolean>('enableMermaid', true),
                     enableMath: config.get<boolean>('enableMath', true),
+                    enablePlantUML: config.get<boolean>('enablePlantUML', true),
+                    enableGraphviz: config.get<boolean>('enableGraphviz', true),
                     showLineNumbers: config.get<boolean>('showLineNumbers', false),
                     autoSave: config.get<boolean>('autoSave', true),
                     autoSaveDelay: config.get<number>('autoSaveDelay', 1500),
@@ -262,6 +264,8 @@ export class ReviewPanel {
                     if (payload.sidebarLayout !== undefined) { await config.update('sidebarLayout', payload.sidebarLayout, target); }
                     if (payload.enableMermaid !== undefined) { await config.update('enableMermaid', payload.enableMermaid, target); }
                     if (payload.enableMath !== undefined) { await config.update('enableMath', payload.enableMath, target); }
+                    if (payload.enablePlantUML !== undefined) { await config.update('enablePlantUML', payload.enablePlantUML, target); }
+                    if (payload.enableGraphviz !== undefined) { await config.update('enableGraphviz', payload.enableGraphviz, target); }
                     if (payload.showLineNumbers !== undefined) { await config.update('showLineNumbers', payload.showLineNumbers, target); }
                     if (payload.autoSave !== undefined) { await config.update('autoSave', payload.autoSave, target); }
                     if (payload.autoSaveDelay !== undefined) { await config.update('autoSaveDelay', payload.autoSaveDelay, target); }
@@ -438,6 +442,7 @@ const outputChannel = vscode.window.createOutputChannel('MD Human Review - AI Ch
         const turndownUri = webviewUri('lib/turndown.js');
         const katexUri = webviewUri('lib/katex.min.js');
         const mermaidUri = webviewUri('lib/mermaid.min.js');
+        const vizUri = webviewUri('lib/viz-global.js');
         const emojiMapUri = webviewUri('lib/emoji-map.js');
         const styleUri = webviewUri('css/style.css');
         const markdownCssUri = webviewUri('css/markdown.css');
@@ -466,6 +471,7 @@ const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'as
         html = html.replace(/\$\{turndownUri\}/g, turndownUri);
         html = html.replace(/\$\{katexUri\}/g, katexUri);
         html = html.replace(/\$\{mermaidUri\}/g, mermaidUri);
+        html = html.replace(/\$\{vizUri\}/g, vizUri);
         html = html.replace(/\$\{emojiMapUri\}/g, emojiMapUri);
         html = html.replace(/\$\{styleUri\}/g, styleUri);
         html = html.replace(/\$\{markdownCssUri\}/g, markdownCssUri);
