@@ -227,6 +227,163 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             cleanupAiInstructions();
         });
 
+        test('含 PlantUML 图表的文档 → 读取正常', () => {
+            const content = [
+                '# PlantUML 测试',
+                '',
+                '```plantuml',
+                '@startuml',
+                'Alice -> Bob: 请求',
+                'Bob --> Alice: 响应',
+                '@enduml',
+                '```',
+                '',
+                '以上是时序图。'
+            ].join('\n');
+            const filePath = createTestFile('plantuml-doc.md', content);
+
+            const result = fileService.readFile(filePath);
+            assert.ok(result.content.includes('```plantuml'));
+            assert.ok(result.content.includes('@startuml'));
+            assert.ok(result.content.includes('Alice -> Bob'));
+
+            // 对 PlantUML 后的文本添加批注
+            const annotations = [{
+                type: 'comment',
+                selectedText: '以上是时序图。',
+                comment: '请补充类图',
+                blockIndex: 2,
+                startOffset: 0
+            }];
+
+            const applyResult = fileService.applyReview(annotations, filePath, 'plantuml-doc.md');
+            assert.strictEqual(applyResult.success, true);
+
+            cleanupFile(filePath);
+            cleanupAiInstructions();
+        });
+
+        test('含 Graphviz DOT 图表的文档 → 读取正常', () => {
+            const content = [
+                '# Graphviz 测试',
+                '',
+                '```dot',
+                'digraph G {',
+                '    A -> B;',
+                '    B -> C;',
+                '    C -> A;',
+                '}',
+                '```',
+                '',
+                '以上是有向图。'
+            ].join('\n');
+            const filePath = createTestFile('graphviz-doc.md', content);
+
+            const result = fileService.readFile(filePath);
+            assert.ok(result.content.includes('```dot'));
+            assert.ok(result.content.includes('digraph G'));
+            assert.ok(result.content.includes('A -> B'));
+
+            // 对 Graphviz 后的文本添加批注
+            const annotations = [{
+                type: 'comment',
+                selectedText: '以上是有向图。',
+                comment: '请增加节点说明',
+                blockIndex: 2,
+                startOffset: 0
+            }];
+
+            const applyResult = fileService.applyReview(annotations, filePath, 'graphviz-doc.md');
+            assert.strictEqual(applyResult.success, true);
+
+            cleanupFile(filePath);
+            cleanupAiInstructions();
+        });
+
+        test('含 Graphviz graphviz 语言标识的文档 → 读取正常', () => {
+            const content = [
+                '# Graphviz 语言标识测试',
+                '',
+                '```graphviz',
+                'graph G {',
+                '    A -- B;',
+                '    B -- C;',
+                '}',
+                '```',
+                '',
+                '以上是无向图。'
+            ].join('\n');
+            const filePath = createTestFile('graphviz-lang-doc.md', content);
+
+            const result = fileService.readFile(filePath);
+            assert.ok(result.content.includes('```graphviz'));
+            assert.ok(result.content.includes('graph G'));
+
+            cleanupFile(filePath);
+        });
+
+        test('含 PlantUML puml 语言标识的文档 → 读取正常', () => {
+            const content = [
+                '# PlantUML puml 标识测试',
+                '',
+                '```puml',
+                '@startuml',
+                'class User {',
+                '    +name: String',
+                '    +login(): void',
+                '}',
+                '@enduml',
+                '```',
+                '',
+                '以上是类图。'
+            ].join('\n');
+            const filePath = createTestFile('puml-doc.md', content);
+
+            const result = fileService.readFile(filePath);
+            assert.ok(result.content.includes('```puml'));
+            assert.ok(result.content.includes('@startuml'));
+            assert.ok(result.content.includes('class User'));
+
+            cleanupFile(filePath);
+        });
+
+        test('含混合图表（Mermaid + PlantUML + Graphviz）的文档 → 读取正常', () => {
+            const content = [
+                '# 混合图表测试',
+                '',
+                '## Mermaid',
+                '',
+                '```mermaid',
+                'graph LR',
+                '    A --> B',
+                '```',
+                '',
+                '## PlantUML',
+                '',
+                '```plantuml',
+                '@startuml',
+                'Alice -> Bob: Hello',
+                '@enduml',
+                '```',
+                '',
+                '## Graphviz',
+                '',
+                '```dot',
+                'digraph { A -> B -> C }',
+                '```',
+                '',
+                '以上是三种图表。'
+            ].join('\n');
+            const filePath = createTestFile('mixed-diagrams-doc.md', content);
+
+            const result = fileService.readFile(filePath);
+            assert.ok(result.content.includes('```mermaid'), '应包含 Mermaid 代码块');
+            assert.ok(result.content.includes('```plantuml'), '应包含 PlantUML 代码块');
+            assert.ok(result.content.includes('```dot'), '应包含 Graphviz DOT 代码块');
+
+            cleanupFile(filePath);
+        });
+
         test('含 KaTeX 数学公式的文档 → 读取正常', () => {
             const content = [
                 '# 数学公式测试',
@@ -1193,8 +1350,8 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             const requiredKeys = [
                 'fontSize', 'lineHeight', 'contentMaxWidth', 'fontFamily',
                 'theme', 'showToc', 'showAnnotations', 'sidebarLayout',
-                'enableMermaid', 'enableMath', 'showLineNumbers',
-                'autoSave', 'autoSaveDelay', 'codeTheme'
+                'enableMermaid', 'enableMath', 'enablePlantUML', 'enableGraphviz',
+                'showLineNumbers', 'autoSave', 'autoSaveDelay', 'codeTheme'
             ];
 
             for (const key of requiredKeys) {
@@ -1234,7 +1391,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
 
         test('布尔类型配置应为 boolean', () => {
             const config = vscode.workspace.getConfiguration('mdReview');
-            const boolKeys = ['showToc', 'showAnnotations', 'enableMermaid', 'enableMath', 'showLineNumbers', 'autoSave'];
+            const boolKeys = ['showToc', 'showAnnotations', 'enableMermaid', 'enableMath', 'enablePlantUML', 'enableGraphviz', 'showLineNumbers', 'autoSave'];
 
             for (const key of boolKeys) {
                 const value = config.get(key);

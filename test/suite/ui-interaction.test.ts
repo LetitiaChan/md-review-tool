@@ -205,6 +205,8 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
                 sidebarLayout: config.get<string>('sidebarLayout'),
                 enableMermaid: config.get<boolean>('enableMermaid'),
                 enableMath: config.get<boolean>('enableMath'),
+                enablePlantUML: config.get<boolean>('enablePlantUML'),
+                enableGraphviz: config.get<boolean>('enableGraphviz'),
                 showLineNumbers: config.get<boolean>('showLineNumbers'),
                 autoSave: config.get<boolean>('autoSave'),
                 autoSaveDelay: config.get<number>('autoSaveDelay'),
@@ -221,6 +223,8 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.strictEqual(settings.sidebarLayout, 'toc-left');
             assert.strictEqual(settings.enableMermaid, true);
             assert.strictEqual(settings.enableMath, true);
+            assert.strictEqual(settings.enablePlantUML, true);
+            assert.strictEqual(settings.enableGraphviz, true);
             assert.strictEqual(settings.showLineNumbers, false);
             assert.strictEqual(settings.autoSave, true);
             assert.strictEqual(settings.autoSaveDelay, 1500);
@@ -247,6 +251,8 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(properties['mdReview.codeTheme'], 'codeTheme 应在配置中定义');
             assert.ok(properties['mdReview.enableMermaid'], 'enableMermaid 应在配置中定义');
             assert.ok(properties['mdReview.enableMath'], 'enableMath 应在配置中定义');
+            assert.ok(properties['mdReview.enablePlantUML'], 'enablePlantUML 应在配置中定义');
+            assert.ok(properties['mdReview.enableGraphviz'], 'enableGraphviz 应在配置中定义');
         });
 
         test('theme 配置应有正确的枚举值', () => {
@@ -700,6 +706,12 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             for (const id of modalIds) {
                 assert.ok(html.includes(`id="${id}"`), `应包含弹窗元素 #${id}`);
             }
+
+            // PlantUML/Graphviz 设置面板元素
+            assert.ok(html.includes('id="settingEnablePlantUML"'), '应包含 PlantUML 设置开关');
+            assert.ok(html.includes('id="settingEnableGraphviz"'), '应包含 Graphviz 设置开关');
+            assert.ok(html.includes('PlantUML 图表渲染'), '应包含 PlantUML 设置标签');
+            assert.ok(html.includes('Graphviz 图表渲染'), '应包含 Graphviz 设置标签');
         });
 
         test('index.html 应包含所有 JS 脚本占位符', () => {
@@ -713,6 +725,9 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             for (const ph of jsPlaceholders) {
                 assert.ok(html.includes(ph), `应包含 JS 占位符 ${ph}`);
             }
+
+            // Viz.js 脚本占位符（Graphviz 渲染依赖）
+            assert.ok(html.includes('${vizUri}'), '应包含 Viz.js 脚本占位符');
         });
 
         test('index.html 应包含所有 CSS 样式占位符', () => {
@@ -1126,6 +1141,37 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'settings.css'), 'utf-8');
 
             assert.ok(css.includes('.settings-overlay') || css.includes('#settingsOverlay'), '应有设置面板覆盖层样式');
+        });
+
+        test('markdown.css 应包含 PlantUML 图表样式', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
+
+            assert.ok(css.includes('.plantuml-container'), '应有 PlantUML 容器样式');
+            assert.ok(css.includes('.plantuml-rendered'), '应有 PlantUML 渲染后样式');
+            assert.ok(css.includes('.plantuml-source'), '应有 PlantUML 源码样式');
+            assert.ok(css.includes('.plantuml-error'), '应有 PlantUML 错误提示样式');
+        });
+
+        test('markdown.css 应包含 Graphviz 图表样式', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
+
+            assert.ok(css.includes('.graphviz-container'), '应有 Graphviz 容器样式');
+            assert.ok(css.includes('.graphviz-rendered'), '应有 Graphviz 渲染后样式');
+            assert.ok(css.includes('.graphviz-source'), '应有 Graphviz 源码样式');
+            assert.ok(css.includes('.graphviz-error'), '应有 Graphviz 错误提示样式');
+            assert.ok(css.includes('.graphviz-rendered svg'), '应有 Graphviz SVG 自适应样式');
+        });
+
+        test('markdown.css 应包含 PlantUML/Graphviz 暗色主题适配', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
+
+            assert.ok(css.includes('.theme-dark .plantuml-rendered'), '应有 PlantUML 暗色主题样式');
+            assert.ok(css.includes('.theme-dark .plantuml-source'), '应有 PlantUML 源码暗色样式');
+            assert.ok(css.includes('.theme-dark .graphviz-source'), '应有 Graphviz 源码暗色样式');
+            assert.ok(css.includes('.theme-dark .graphviz-error'), '应有 Graphviz 错误暗色样式');
         });
     });
 

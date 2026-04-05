@@ -547,6 +547,8 @@ suite('E2E Review Flow Test Suite — 完整批阅流程端到端', () => {
             assert.strictEqual(config.get<boolean>('showAnnotations'), true);
             assert.strictEqual(config.get<boolean>('enableMermaid'), true);
             assert.strictEqual(config.get<boolean>('enableMath'), true);
+            assert.strictEqual(config.get<boolean>('enablePlantUML'), true);
+            assert.strictEqual(config.get<boolean>('enableGraphviz'), true);
             assert.strictEqual(config.get<boolean>('showLineNumbers'), false);
             assert.strictEqual(config.get<string>('codeTheme'), 'default-dark-modern');
         });
@@ -564,6 +566,8 @@ suite('E2E Review Flow Test Suite — 完整批阅流程端到端', () => {
                 sidebarLayout: config.get<string>('sidebarLayout', 'toc-left'),
                 enableMermaid: config.get<boolean>('enableMermaid', true),
                 enableMath: config.get<boolean>('enableMath', true),
+                enablePlantUML: config.get<boolean>('enablePlantUML', true),
+                enableGraphviz: config.get<boolean>('enableGraphviz', true),
                 showLineNumbers: config.get<boolean>('showLineNumbers', false),
                 autoSave: config.get<boolean>('autoSave', true),
                 autoSaveDelay: config.get<number>('autoSaveDelay', 1500),
@@ -581,6 +585,8 @@ suite('E2E Review Flow Test Suite — 完整批阅流程端到端', () => {
             assert.strictEqual(typeof settings.sidebarLayout, 'string');
             assert.strictEqual(typeof settings.enableMermaid, 'boolean');
             assert.strictEqual(typeof settings.enableMath, 'boolean');
+            assert.strictEqual(typeof settings.enablePlantUML, 'boolean');
+            assert.strictEqual(typeof settings.enableGraphviz, 'boolean');
             assert.strictEqual(typeof settings.showLineNumbers, 'boolean');
             assert.strictEqual(typeof settings.autoSave, 'boolean');
             assert.strictEqual(typeof settings.autoSaveDelay, 'number');

@@ -233,6 +233,8 @@ suite('ReviewPanel Test Suite', () => {
                 'mdReview.autoSaveDelay',
                 'mdReview.enableMermaid',
                 'mdReview.enableMath',
+                'mdReview.enablePlantUML',
+                'mdReview.enableGraphviz',
                 'mdReview.sidebarLayout',
                 'mdReview.codeTheme'
             ];
@@ -261,6 +263,8 @@ suite('ReviewPanel Test Suite', () => {
             assert.strictEqual(configProps['mdReview.autoSave']?.type, 'boolean', 'autoSave 应为 boolean');
             assert.strictEqual(configProps['mdReview.enableMermaid']?.type, 'boolean', 'enableMermaid 应为 boolean');
             assert.strictEqual(configProps['mdReview.enableMath']?.type, 'boolean', 'enableMath 应为 boolean');
+            assert.strictEqual(configProps['mdReview.enablePlantUML']?.type, 'boolean', 'enablePlantUML 应为 boolean');
+            assert.strictEqual(configProps['mdReview.enableGraphviz']?.type, 'boolean', 'enableGraphviz 应为 boolean');
 
             // 字符串类型
             assert.strictEqual(configProps['mdReview.theme']?.type, 'string', 'theme 应为 string');

@@ -110,6 +110,16 @@ suite('Extension Test Suite', () => {
         assert.strictEqual(config.get<boolean>('enableMath'), true, '默认应启用数学公式');
     });
 
+    test('mdReview 配置应有默认的 enablePlantUML', () => {
+        const config = vscode.workspace.getConfiguration('mdReview');
+        assert.strictEqual(config.get<boolean>('enablePlantUML'), true, '默认应启用 PlantUML');
+    });
+
+    test('mdReview 配置应有默认的 enableGraphviz', () => {
+        const config = vscode.workspace.getConfiguration('mdReview');
+        assert.strictEqual(config.get<boolean>('enableGraphviz'), true, '默认应启用 Graphviz');
+    });
+
     test('mdReview 配置应有默认的 sidebarLayout', () => {
         const config = vscode.workspace.getConfiguration('mdReview');
         assert.strictEqual(config.get<string>('sidebarLayout'), 'toc-left', '默认侧边栏布局应为 toc-left');

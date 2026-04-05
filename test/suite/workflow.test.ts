@@ -96,6 +96,8 @@ suite('Workflow Test Suite — 完整工作流', () => {
             assert.strictEqual(config.get<boolean>('showAnnotations'), true);
             assert.strictEqual(config.get<boolean>('enableMermaid'), true);
             assert.strictEqual(config.get<boolean>('enableMath'), true);
+            assert.strictEqual(config.get<boolean>('enablePlantUML'), true);
+            assert.strictEqual(config.get<boolean>('enableGraphviz'), true);
         });
     });
 

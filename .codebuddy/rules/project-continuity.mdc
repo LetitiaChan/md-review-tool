@@ -80,6 +80,13 @@ H3. 回归测试
     - 有失败 → 进入 Auto-Fix Loop（最多 3 轮）
     - 仍失败 → STOP，报告给用户
 
+H3.3. 测试用例补全（强制，不可跳过）
+    - 检查本次 bugfix 修改的模块/功能是否已有对应的测试用例
+    - 如果没有 → 必须新增针对该 bug 修复的回归测试用例
+    - 如果已有 → 检查是否覆盖了本次修复的具体场景，不足则追加
+    - 新增测试后重新执行 npm run compile && npm test 确认通过
+    - 目标：确保该 bug 一旦回归能被自动测试发现
+
 H3.5. 行为级测试补充（如修复涉及 UI 交互行为）
     - 如果 hotfix 修复的是 UI 交互问题（拖拽、点击、键盘操作等）
     - 必须检查测试脚本是否已有覆盖该行为的行为级断言
@@ -87,10 +94,7 @@ H3.5. 行为级测试补充（如修复涉及 UI 交互行为）
     - 确保该行为的回归在未来能被自动发现
 
 H4. 打包发布（测试通过后、commit 前）
-    <!-- ⚠️ CUSTOMIZE: Replace with your project's package command, e.g.:
-         cd <project-root> && npm run package
-    -->
-    cd <project-root> && <package-command>
+    cd f:/github/md-review-tool && npx vsce package --no-dependencies
     - 成功 → 安装包已生成
     - 失败 → 报告错误但不阻塞管线（打包失败不影响代码质量）
 
