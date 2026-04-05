@@ -1854,25 +1854,15 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
 
         /**
          * 动态判断拖拽方向：
-         * 根据面板的实际定位（left 还是 right）决定拖拽变宽方向。
-         * 面板定位在左侧 → 手柄在右侧 → 向右拖变宽 → side='right'
-         * 面板定位在右侧 → 手柄在左侧 → 向左拖变宽 → side='left'
+         * 根据手柄相对面板的位置决定拖拽变宽方向。
+         * 手柄在面板右侧 → 向右拖变宽 → side='right'
+         * 手柄在面板左侧 → 向左拖变宽 → side='left'
          */
         function getResizeSide() {
-            const style = window.getComputedStyle(panel);
-            // 如果面板的 right 为 auto 或很大值，说明面板在左侧定位
-            const rightVal = style.right;
-            if (rightVal === 'auto' || rightVal === '') {
-                return 'right'; // 面板在左侧，手柄在右侧
-            }
-            const leftVal = style.left;
-            if (leftVal === 'auto' || leftVal === '') {
-                return 'left'; // 面板在右侧，手柄在左侧
-            }
-            // 两侧都有值时，比较哪边更小来判断面板实际位于哪一侧
-            const leftPx = parseFloat(leftVal) || 0;
-            const rightPx = parseFloat(rightVal) || 0;
-            return leftPx <= rightPx ? 'right' : 'left';
+            const panelRect = panel.getBoundingClientRect();
+            const handleRect = handle.getBoundingClientRect();
+            // 手柄中心在面板中心右侧 → 手柄在右边 → 向右拖变宽
+            return handleRect.left > panelRect.left + panelRect.width / 2 ? 'right' : 'left';
         }
 
         function onMouseDown(e) {
