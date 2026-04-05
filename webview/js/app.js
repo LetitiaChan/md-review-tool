@@ -1562,8 +1562,6 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             wysiwygToolbar.classList.add('visible');
             const cleanBlocks = Renderer.parseMarkdown(data.rawMarkdown);
             Renderer.renderBlocks(cleanBlocks, []);
-            // 渲染数学公式和图表（编辑模式下也需要显示渲染后的效果）
-            renderMathAndMermaid();
             docContent.contentEditable = 'true';
             docContent.classList.add('wysiwyg-editing');
             editorDirty = false;
