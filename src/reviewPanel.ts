@@ -40,17 +40,7 @@ export class ReviewPanel {
         }
 
         // 没有任何面板，创建新面板
-        let panelTitle = 'MD Human Review';
-        if (filePath) {
-            const baseName = path.basename(filePath);
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (workspaceFolder) {
-                const relPath = path.relative(workspaceFolder.uri.fsPath, filePath);
-                panelTitle = `${baseName} — ${relPath}`;
-            } else {
-                panelTitle = baseName;
-            }
-        }
+        const panelTitle = filePath ? path.basename(filePath) : 'MD Human Review';
 
         const panel = vscode.window.createWebviewPanel(
             ReviewPanel.viewType,
@@ -115,15 +105,8 @@ export class ReviewPanel {
 
         this._currentFilePath = filePath;
 
-        // 更新面板标题（文件名），tab tooltip 会显示完整标题
-        const baseName = path.basename(filePath);
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        if (workspaceFolder) {
-            const relPath = path.relative(workspaceFolder.uri.fsPath, filePath);
-            this._panel.title = `${baseName} — ${relPath}`;
-        } else {
-            this._panel.title = baseName;
-        }
+        // 更新面板标题
+        this._panel.title = path.basename(filePath);
 
         // 注册到 Map
         const normalizedPath = path.resolve(filePath);
@@ -185,11 +168,7 @@ export class ReviewPanel {
                         ReviewPanel.panels.delete(oldNormalized);
                     }
                     this._currentFilePath = payload.filePath;
-                    const rBaseName = path.basename(payload.filePath);
-                    const rWorkspace = vscode.workspace.workspaceFolders?.[0];
-                    this._panel.title = rWorkspace
-                        ? `${rBaseName} — ${path.relative(rWorkspace.uri.fsPath, payload.filePath)}`
-                        : rBaseName;
+                    this._panel.title = path.basename(payload.filePath);
                     const normalizedPath = path.resolve(payload.filePath);
                     ReviewPanel.panels.set(normalizedPath, this);
                     this.postMessage({ type: 'fileContent', payload: data, requestId });
