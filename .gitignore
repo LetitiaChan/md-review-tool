@@ -16,3 +16,4 @@ src/**/*.js.map
 
 .codebuddy/
 openspec/
+todo.md

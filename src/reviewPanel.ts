@@ -266,9 +266,10 @@ export class ReviewPanel {
             case 'zenModeChanged': {
                 const entering = payload.entering;
                 if (entering) {
-                    // 进入禅模式：隐藏 IDE 左侧栏和右侧栏
+                    // 进入禅模式：隐藏 IDE 左侧栏、右侧栏和下方面板
                     vscode.commands.executeCommand('workbench.action.closeSidebar');
                     vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
+                    vscode.commands.executeCommand('workbench.action.closePanel');
                 } else {
                     // 退出禅模式：恢复 IDE 左侧栏（资源管理器）
                     vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
