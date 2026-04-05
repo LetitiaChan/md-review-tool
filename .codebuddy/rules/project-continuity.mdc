@@ -206,6 +206,10 @@ H7. Hotfix 报告
 - **构建工具**: tsc (TypeScript Compiler)，npm scripts
 - **工作流**: OpenSpec spec-driven，通过 `/opsx:*` 命令驱动
 
+## 命令执行策略
+
+> **所有命令直接执行，无需确认。** 包括但不限于：构建、测试、打包、Git commit/push、安装依赖等操作，一律自动执行，不逐步询问用户确认。
+
 ## Git 规范
 
 <!-- ⚠️ 根据团队习惯配置 commit message 语言 -->
