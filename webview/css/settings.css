@@ -894,62 +894,59 @@ body.theme-dark .slider-row .slider-full {
     font-weight: 600;
 }
 
-/* 面板模式 & 文档对齐按钮 — 带边框风格 */
+/* 面板模式 & 文档对齐按钮 — 复用 sidebar-layout-btn 风格 */
 .setting-btn-group {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    background: var(--border-light);
+    border-radius: 8px;
+    padding: 3px;
     flex-shrink: 0;
 }
 
 .panel-mode-btn,
 .doc-align-btn {
-    padding: 5px 16px;
-    border: 1.5px solid var(--border);
-    border-radius: 4px;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    background: var(--bg-white);
+    background: transparent;
     color: var(--text-secondary);
-    transition: all 0.15s;
+    transition: all 0.2s;
     white-space: nowrap;
 }
 
 .panel-mode-btn:hover,
 .doc-align-btn:hover {
-    border-color: #667eea;
-    color: #667eea;
-    background: rgba(102, 126, 234, 0.04);
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.5);
 }
 
 .panel-mode-btn.active,
 .doc-align-btn.active {
-    border-color: #667eea;
+    background: var(--bg-white);
     color: #667eea;
-    background: rgba(102, 126, 234, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     font-weight: 600;
 }
 
-body.theme-dark .panel-mode-btn,
-body.theme-dark .doc-align-btn {
+body.theme-dark .setting-btn-group {
     background: #1a1a1a;
-    border-color: #333;
-    color: #999;
 }
 
 body.theme-dark .panel-mode-btn:hover,
 body.theme-dark .doc-align-btn:hover {
-    border-color: #818cf8;
-    color: #818cf8;
-    background: rgba(129, 140, 248, 0.08);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
 }
 
 body.theme-dark .panel-mode-btn.active,
 body.theme-dark .doc-align-btn.active {
-    border-color: #818cf8;
+    background: #333333;
     color: #818cf8;
-    background: rgba(129, 140, 248, 0.12);
-    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 /* ===== 全宽滑块行 ===== */
