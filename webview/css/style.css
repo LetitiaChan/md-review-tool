@@ -2252,6 +2252,10 @@ body.panel-embedded .toc-panel {
 body.panel-embedded .document-content {
     flex: 1;
     min-width: 0;
+    max-width: none;
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 /* 批注面板：从悬浮变为嵌入流式布局 */
