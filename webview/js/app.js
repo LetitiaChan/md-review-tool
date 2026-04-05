@@ -1188,6 +1188,8 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             panel.classList.remove('collapsed');
             if (toggleBtn) toggleBtn.classList.remove('panel-hidden');
         } else {
+            // 清除拖拽设置的内联宽度，让 CSS collapsed 的 width:0 生效
+            panel.style.width = '';
             panel.classList.add('collapsed');
             if (toggleBtn) toggleBtn.classList.add('panel-hidden');
         }
@@ -1952,8 +1954,15 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
     function toggleTocPanel(show) {
         const tocPanel = document.getElementById('tocPanel');
         const tocToolbarBtn = document.getElementById('btnToggleToc');
-        if (show) { tocPanel.classList.remove('collapsed'); tocCollapsed = false; }
-        else { tocPanel.classList.add('collapsed'); tocCollapsed = true; }
+        if (show) {
+            tocPanel.classList.remove('collapsed');
+            tocCollapsed = false;
+        } else {
+            // 清除拖拽设置的内联宽度，让 CSS collapsed 的 width:0 生效
+            tocPanel.style.width = '';
+            tocPanel.classList.add('collapsed');
+            tocCollapsed = true;
+        }
         if (tocToolbarBtn) {
             tocToolbarBtn.classList.toggle('toc-active', show);
             tocToolbarBtn.classList.toggle('toc-inactive', !show);
