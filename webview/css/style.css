@@ -2276,6 +2276,34 @@ body.panel-embedded .resize-handle {
     z-index: 10;
 }
 
+/* 嵌入模式下手柄不用负偏移，定位在面板内部边缘 */
+body.panel-embedded .resize-handle-right {
+    right: 0;
+}
+
+body.panel-embedded .resize-handle-left {
+    left: 0;
+}
+
+/* 嵌入+反转布局时交换手柄位置 */
+body.panel-embedded.sidebar-reversed .toc-panel .resize-handle-right {
+    right: auto;
+    left: 0;
+}
+body.panel-embedded.sidebar-reversed .toc-panel .resize-handle-right::after {
+    right: auto;
+    left: 2px;
+}
+
+body.panel-embedded.sidebar-reversed .annotations-panel .resize-handle-left {
+    left: auto;
+    right: 0;
+}
+body.panel-embedded.sidebar-reversed .annotations-panel .resize-handle-left::after {
+    left: auto;
+    right: 2px;
+}
+
 /* 折叠时宽度归零，padding 也归零 */
 body.panel-embedded .toc-panel.collapsed {
     width: 0;
@@ -2300,16 +2328,6 @@ body.panel-embedded.sidebar-reversed .toc-panel {
     order: 1; /* 目录移到右侧 */
 }
 
-/* 目录在右侧时，手柄移到左边 */
-body.panel-embedded.sidebar-reversed .toc-panel .resize-handle-right {
-    right: auto;
-    left: -3px;
-}
-body.panel-embedded.sidebar-reversed .toc-panel .resize-handle-right::after {
-    right: auto;
-    left: 2px;
-}
-
 body.panel-embedded.sidebar-reversed .document-content {
     order: 0; /* 文档内容居中 */
 }
@@ -2318,16 +2336,6 @@ body.panel-embedded.sidebar-reversed .annotations-panel {
     border-left: none;
     border-right: 1px solid var(--border);
     order: -1; /* 批注移到最左侧 */
-}
-
-/* 批注在左侧时，手柄移到右边 */
-body.panel-embedded.sidebar-reversed .annotations-panel .resize-handle-left {
-    left: auto;
-    right: -3px;
-}
-body.panel-embedded.sidebar-reversed .annotations-panel .resize-handle-left::after {
-    left: auto;
-    right: 2px;
 }
 
 body.panel-embedded.sidebar-reversed .document-panel {
