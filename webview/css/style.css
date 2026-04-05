@@ -2271,18 +2271,25 @@ body.panel-embedded .annotations-panel {
     overflow: visible;
 }
 
-/* 嵌入模式下拖拽手柄需要相对于面板边缘定位 */
+/* 嵌入模式下拖拽手柄：完全在面板内部，不使用负偏移 */
 body.panel-embedded .resize-handle {
     z-index: 10;
+    width: 8px;
 }
 
-/* 嵌入模式下手柄不用负偏移，定位在面板内部边缘 */
 body.panel-embedded .resize-handle-right {
     right: 0;
+    left: auto;
 }
 
 body.panel-embedded .resize-handle-left {
     left: 0;
+    right: auto;
+}
+
+/* 嵌入模式下始终显示手柄指示线（不用 hover） */
+body.panel-embedded .resize-handle::after {
+    background: var(--border);
 }
 
 /* 嵌入+反转布局时交换手柄位置 */
@@ -2292,7 +2299,7 @@ body.panel-embedded.sidebar-reversed .toc-panel .resize-handle-right {
 }
 body.panel-embedded.sidebar-reversed .toc-panel .resize-handle-right::after {
     right: auto;
-    left: 2px;
+    left: 3px;
 }
 
 body.panel-embedded.sidebar-reversed .annotations-panel .resize-handle-left {
@@ -2301,7 +2308,7 @@ body.panel-embedded.sidebar-reversed .annotations-panel .resize-handle-left {
 }
 body.panel-embedded.sidebar-reversed .annotations-panel .resize-handle-left::after {
     left: auto;
-    right: 2px;
+    right: 3px;
 }
 
 /* 折叠时宽度归零，padding 也归零 */
