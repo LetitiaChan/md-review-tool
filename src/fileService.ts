@@ -106,7 +106,7 @@ const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules
         const safeName = path.basename(absPath);
         const ext = path.extname(safeName);
         const rbaseName = this.reviewBaseName(safeName, this.getRelPath(absPath));
-        const backupName = `${rbaseName}_${Date.now()}_backup${ext}`;
+        const backupName = `${rbaseName}_${Date.now()}_编辑前备份${ext}`;
         const backupPath = path.join(this.reviewDir, backupName);
         fs.writeFileSync(backupPath, oldContent, 'utf-8');
         fs.writeFileSync(absPath, content, 'utf-8');
@@ -426,8 +426,11 @@ console.error('删除批阅记录失败:', fullPath, e);
      */
     deleteAnnotationImage(imagePath: string): boolean {
         try {
+            if (!imagePath || !imagePath.trim()) {
+                return false;
+            }
             const absolutePath = path.join(this.reviewDir, imagePath);
-            if (fs.existsSync(absolutePath)) {
+            if (fs.existsSync(absolutePath) && fs.statSync(absolutePath).isFile()) {
                 fs.unlinkSync(absolutePath);
                 return true;
             }
