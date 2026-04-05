@@ -1757,6 +1757,13 @@ const Renderer = (() => {
                 container.innerHTML = '';
                 container.appendChild(wrapper);
 
+                // 确保 viewBox 存在（Lightbox 大图弹窗需要用 viewBox 来计算原始尺寸）
+                const rawW = parseFloat(svg.getAttribute('width')) || svg.getBoundingClientRect().width;
+                const rawH = parseFloat(svg.getAttribute('height')) || svg.getBoundingClientRect().height;
+                if (!svg.getAttribute('viewBox') && rawW && rawH) {
+                    svg.setAttribute('viewBox', `0 0 ${rawW} ${rawH}`);
+                }
+
                 // SVG 自适应
                 svg.removeAttribute('width');
                 svg.removeAttribute('height');

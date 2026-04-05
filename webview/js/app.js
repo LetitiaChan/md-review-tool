@@ -678,9 +678,10 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             Renderer.renderPlantUML();
         }
         if (settings.enableGraphviz) {
-            Renderer.renderGraphviz();
-            // 渲染完成后绑定大图弹窗事件（复用 Mermaid lightbox 模式）
-            setTimeout(bindGraphvizLightbox, 200);
+            // renderGraphviz 是 async，等渲染完成后再绑定大图弹窗事件
+            Renderer.renderGraphviz().then(() => {
+                bindGraphvizLightbox();
+            });
         }
         // 绑定代码块复制按钮事件
         bindCodeCopyButtons();
