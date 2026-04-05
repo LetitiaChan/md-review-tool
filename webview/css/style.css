@@ -2248,14 +2248,10 @@ body.panel-embedded .toc-panel {
     overflow: visible;
 }
 
-/* 文档内容区：占满剩余空间 */
+/* 文档内容区：flex 占满剩余空间，保留 max-width 让文档对齐生效 */
 body.panel-embedded .document-content {
     flex: 1;
     min-width: 0;
-    max-width: none;
-    width: 100%;
-    margin-left: 0;
-    margin-right: 0;
 }
 
 /* 批注面板：从悬浮变为嵌入流式布局 */
