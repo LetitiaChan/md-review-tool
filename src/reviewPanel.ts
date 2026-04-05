@@ -18,28 +18,26 @@ export class ReviewPanel {
     private _watcher: vscode.FileSystemWatcher | undefined;
 
     public static createOrShow(context: vscode.ExtensionContext, filePath?: string) {
-        const column = vscode.ViewColumn.One;
+        const column = vscode.ViewColumn.Beside;
 
-        // 如果指定了文件路径，检查是否已有对应面板（多窗口复用）
+        // 如果指定了文件路径，检查是否已有对应面板（同一文件复用同一面板）
         if (filePath) {
             const normalizedPath = path.resolve(filePath);
             const existing = ReviewPanel.panels.get(normalizedPath);
             if (existing) {
                 existing._panel.reveal(column);
+                ReviewPanel.currentPanel = existing;
                 return;
             }
         }
 
-        // 如果有当前面板，复用它（reveal + loadFile）
-        if (ReviewPanel.currentPanel) {
+        // 如果没有指定文件路径，且有当前面板，复用它
+        if (!filePath && ReviewPanel.currentPanel) {
             ReviewPanel.currentPanel._panel.reveal(column);
-            if (filePath) {
-                ReviewPanel.currentPanel.loadFile(filePath);
-            }
             return;
         }
 
-        // 没有任何面板，创建新面板
+        // 为新文件（或无文件）创建新面板 —— 不同文件各自拥有独立面板
         const panelTitle = filePath ? path.basename(filePath) : 'MD Human Review';
 
         const panel = vscode.window.createWebviewPanel(
@@ -82,6 +80,13 @@ export class ReviewPanel {
         );
 
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+        // 追踪活跃面板：当面板获得焦点时更新 currentPanel
+        this._panel.onDidChangeViewState(e => {
+            if (e.webviewPanel.active) {
+                ReviewPanel.currentPanel = this;
+            }
+        }, null, this._disposables);
 
         // 设置文件监听
         this._setupFileWatcher();
@@ -545,7 +550,9 @@ const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'as
             ReviewPanel.panels.delete(normalizedPath);
         }
         if (ReviewPanel.currentPanel === this) {
-            ReviewPanel.currentPanel = undefined;
+            // 切换到另一个存活面板（如有）
+            const remaining = ReviewPanel.panels.values().next().value;
+            ReviewPanel.currentPanel = remaining || undefined;
         }
         this._panel.dispose();
         while (this._disposables.length) {

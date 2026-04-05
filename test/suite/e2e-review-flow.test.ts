@@ -54,7 +54,10 @@ suite('E2E Review Flow Test Suite — 完整批阅流程端到端', () => {
     });
 
     suiteTeardown(() => {
-        // 确保面板关闭
+        // 确保所有面板关闭
+        for (const p of ReviewPanel.panels.values()) {
+            p.dispose();
+        }
         if (ReviewPanel.currentPanel) {
             ReviewPanel.currentPanel.dispose();
         }

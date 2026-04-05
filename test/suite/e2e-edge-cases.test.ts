@@ -59,6 +59,9 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
     });
 
     suiteTeardown(() => {
+        for (const p of ReviewPanel.panels.values()) {
+            p.dispose();
+        }
         if (ReviewPanel.currentPanel) {
             ReviewPanel.currentPanel.dispose();
         }

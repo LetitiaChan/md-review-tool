@@ -74,7 +74,10 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
     suite('1. ReviewPanel 面板生命周期', () => {
         teardown(() => {
-            // 确保每个测试后清理面板
+            // 确保每个测试后清理所有面板
+            for (const p of ReviewPanel.panels.values()) {
+                p.dispose();
+            }
             if (ReviewPanel.currentPanel) {
                 ReviewPanel.currentPanel.dispose();
             }
@@ -86,7 +89,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(ReviewPanel.currentPanel, '应创建面板实例');
         });
 
-        test('重复调用 createOrShow 不应创建新面板', () => {
+        test('重复调用无文件的 createOrShow 不应创建新面板', () => {
             ReviewPanel.createOrShow(mockContext);
             const firstPanel = ReviewPanel.currentPanel;
             ReviewPanel.createOrShow(mockContext);
@@ -117,6 +120,86 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
             ReviewPanel.createOrShow(mockContext);
             assert.ok(ReviewPanel.currentPanel, '应创建新面板');
+        });
+
+        // ===== 多窗口测试 =====
+
+        test('不同文件应创建不同的面板', () => {
+            const file1 = path.join(testDir, 'multi-1.md');
+            const file2 = path.join(testDir, 'multi-2.md');
+            fs.writeFileSync(file1, '# 文件1', 'utf-8');
+            fs.writeFileSync(file2, '# 文件2', 'utf-8');
+
+            ReviewPanel.createOrShow(mockContext, file1);
+            const panel1 = ReviewPanel.currentPanel;
+            assert.ok(panel1, '第一个面板应创建');
+
+            ReviewPanel.createOrShow(mockContext, file2);
+            const panel2 = ReviewPanel.currentPanel;
+            assert.ok(panel2, '第二个面板应创建');
+            assert.notStrictEqual(panel1, panel2, '不同文件应创建不同面板');
+
+            assert.strictEqual(ReviewPanel.panels.size, 2, 'panels Map 应有 2 个面板');
+
+            fs.unlinkSync(file1);
+            fs.unlinkSync(file2);
+        });
+
+        test('同一文件重复打开应复用同一面板', () => {
+            const file1 = path.join(testDir, 'multi-same.md');
+            fs.writeFileSync(file1, '# 同文件测试', 'utf-8');
+
+            ReviewPanel.createOrShow(mockContext, file1);
+            const panel1 = ReviewPanel.currentPanel;
+
+            ReviewPanel.createOrShow(mockContext, file1);
+            const panel2 = ReviewPanel.currentPanel;
+            assert.strictEqual(panel1, panel2, '同一文件应复用同一面板');
+            assert.strictEqual(ReviewPanel.panels.size, 1, 'panels Map 应只有 1 个面板');
+
+            fs.unlinkSync(file1);
+        });
+
+        test('关闭一个面板后另一个面板应仍存在', () => {
+            const file1 = path.join(testDir, 'multi-close-1.md');
+            const file2 = path.join(testDir, 'multi-close-2.md');
+            fs.writeFileSync(file1, '# 文件A', 'utf-8');
+            fs.writeFileSync(file2, '# 文件B', 'utf-8');
+
+            ReviewPanel.createOrShow(mockContext, file1);
+            const panelA = ReviewPanel.currentPanel!;
+
+            ReviewPanel.createOrShow(mockContext, file2);
+
+            // 关闭第一个面板
+            panelA.dispose();
+            assert.strictEqual(ReviewPanel.panels.size, 1, '关闭一个后应剩 1 个面板');
+            // currentPanel 应切换到剩余面板
+            assert.ok(ReviewPanel.currentPanel, 'currentPanel 应指向存活面板');
+
+            fs.unlinkSync(file1);
+            fs.unlinkSync(file2);
+        });
+
+        test('关闭所有面板后 currentPanel 应为 undefined', () => {
+            const file1 = path.join(testDir, 'multi-all-1.md');
+            const file2 = path.join(testDir, 'multi-all-2.md');
+            fs.writeFileSync(file1, '# 全关1', 'utf-8');
+            fs.writeFileSync(file2, '# 全关2', 'utf-8');
+
+            ReviewPanel.createOrShow(mockContext, file1);
+            ReviewPanel.createOrShow(mockContext, file2);
+            assert.strictEqual(ReviewPanel.panels.size, 2);
+
+            // 关闭所有
+            for (const p of Array.from(ReviewPanel.panels.values())) {
+                p.dispose();
+            }
+            assert.strictEqual(ReviewPanel.panels.size, 0, '所有面板关闭后 Map 应为空');
+            assert.strictEqual(ReviewPanel.currentPanel, undefined, '所有面板关闭后 currentPanel 应为 undefined');
+
+            fs.unlinkSync(file1);
+            fs.unlinkSync(file2);
         });
     });
 
