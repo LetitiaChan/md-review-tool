@@ -894,6 +894,64 @@ body.theme-dark .slider-row .slider-full {
     font-weight: 600;
 }
 
+/* 面板模式 & 文档对齐按钮 — 带边框风格 */
+.setting-btn-group {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.panel-mode-btn,
+.doc-align-btn {
+    padding: 5px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--bg-white);
+    color: var(--text-secondary);
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+
+.panel-mode-btn:hover,
+.doc-align-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.04);
+}
+
+.panel-mode-btn.active,
+.doc-align-btn.active {
+    border-color: #667eea;
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.08);
+    font-weight: 600;
+}
+
+body.theme-dark .panel-mode-btn,
+body.theme-dark .doc-align-btn {
+    background: #1a1a1a;
+    border-color: #333;
+    color: #999;
+}
+
+body.theme-dark .panel-mode-btn:hover,
+body.theme-dark .doc-align-btn:hover {
+    border-color: #818cf8;
+    color: #818cf8;
+    background: rgba(129, 140, 248, 0.08);
+}
+
+body.theme-dark .panel-mode-btn.active,
+body.theme-dark .doc-align-btn.active {
+    border-color: #818cf8;
+    color: #818cf8;
+    background: rgba(129, 140, 248, 0.12);
+    font-weight: 600;
+}
+
 /* ===== 全宽滑块行 ===== */
 .slider-row {
     display: flex;
