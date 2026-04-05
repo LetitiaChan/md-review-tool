@@ -2281,15 +2281,25 @@ body.panel-embedded .annotations-panel.collapsed {
     overflow: hidden;
 }
 
-/* 反转布局时的边框方向 */
+/* 反转布局时的边框方向和位置 */
 body.panel-embedded.sidebar-reversed .toc-panel {
     border-right: none;
     border-left: 1px solid var(--border);
+    order: 1; /* 目录移到右侧 */
+}
+
+body.panel-embedded.sidebar-reversed .document-content {
+    order: 0; /* 文档内容居中 */
 }
 
 body.panel-embedded.sidebar-reversed .annotations-panel {
     border-left: none;
     border-right: 1px solid var(--border);
+    order: -1; /* 批注移到最左侧 */
+}
+
+body.panel-embedded.sidebar-reversed .document-panel {
+    order: 1; /* 文档面板（含目录+内容）移到右侧 */
 }
 
 /* WYSIWYG 工具栏在嵌入模式下需要正确定位 */
