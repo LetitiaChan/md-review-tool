@@ -106,15 +106,7 @@ export class ReviewPanel {
         this._currentFilePath = filePath;
 
         // 更新面板标题
-        const baseName = path.basename(filePath);
-        this._panel.title = baseName;
-
-        // 计算相对路径用于 webview tooltip
-        let relPath = filePath;
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        if (workspaceFolder) {
-            relPath = path.relative(workspaceFolder.uri.fsPath, filePath);
-        }
+        this._panel.title = path.basename(filePath);
 
         // 注册到 Map
         const normalizedPath = path.resolve(filePath);

@@ -388,12 +388,14 @@
         });
 
         // 目录面板内隐藏按钮
-        document.getElementById('btnHideToc').addEventListener('click', () => {
+        const btnHideToc = document.getElementById('btnHideToc');
+        if (btnHideToc) btnHideToc.addEventListener('click', () => {
             toggleTocPanel(false);
         });
 
         // 批注面板内隐藏按钮
-        document.getElementById('btnHideAnnotations').addEventListener('click', () => {
+        const btnHideAnnotations = document.getElementById('btnHideAnnotations');
+        if (btnHideAnnotations) btnHideAnnotations.addEventListener('click', () => {
             toggleAnnotationsPanel(false);
         });
 
@@ -639,8 +641,8 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
         const fileNameEl = document.getElementById('fileName');
         fileNameEl.textContent = fileName + versionLabel;
         // 设置 tooltip 为相对路径+文件名
-        const relPath = storeData.relPath || storeData.sourceFilePath || fileName;
-        fileNameEl.title = relPath;
+        const fileRelPath = storeData.relPath || storeData.sourceFilePath || fileName;
+        fileNameEl.title = fileRelPath;
 
         updateFileSelectHighlight(fileName);
 
