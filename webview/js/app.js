@@ -1252,7 +1252,13 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
     }
 
     // ===== 一键AI修复 =====
-    function handleApplyReview() {
+    async function handleApplyReview() {
+        // 如果在编辑模式且有未保存内容，先立即保存
+        if (currentMode === 'edit' && editorDirty) {
+            clearAutoSaveTimer();
+            await handleSaveMd();
+        }
+
         const data = Store.getData();
         if (!data.annotations || data.annotations.length === 0) {
             showNotification('暂无批注');
@@ -1523,14 +1529,14 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
         docContent.scrollTop += (blockRect.top - containerRect.top) - anchor.offsetInView;
     }
 
-    function switchMode(mode) {
+    async function switchMode(mode) {
         if (mode === currentMode) return;
         const data = Store.getData();
         if (!data.fileName) { showNotification('请先打开一个 MD 文件'); return; }
 
         if (currentMode === 'edit' && mode === 'preview' && editorDirty) {
             clearAutoSaveTimer();
-            handleSaveMd();
+            await handleSaveMd();
         }
 
         const scrollAnchor = getScrollAnchor();
