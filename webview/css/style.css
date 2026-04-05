@@ -2225,6 +2225,9 @@ body.zen-mode .annotations-panel {
 /* document-panel 内部改为水平布局（目录在左，文档内容在右） */
 body.panel-embedded .document-panel {
     flex-direction: row;
+    flex: 1;
+    min-width: 0;
+    overflow: visible;
 }
 
 /* 目录面板：从悬浮变为嵌入流式布局 */
@@ -2242,6 +2245,7 @@ body.panel-embedded .toc-panel {
     backdrop-filter: none;
     flex-shrink: 0;
     z-index: auto;
+    overflow: visible;
 }
 
 /* 文档内容区：占满剩余空间 */
@@ -2264,14 +2268,21 @@ body.panel-embedded .annotations-panel {
     background: var(--bg-white);
     flex-shrink: 0;
     z-index: auto;
+    overflow: visible;
 }
 
-/* 折叠时宽度归零 */
+/* 嵌入模式下拖拽手柄需要相对于面板边缘定位 */
+body.panel-embedded .resize-handle {
+    z-index: 10;
+}
+
+/* 折叠时宽度归零，padding 也归零 */
 body.panel-embedded .toc-panel.collapsed {
     width: 0;
     min-width: 0;
     border: none;
     overflow: hidden;
+    padding: 0;
 }
 
 body.panel-embedded .annotations-panel.collapsed {
@@ -2279,6 +2290,7 @@ body.panel-embedded .annotations-panel.collapsed {
     min-width: 0;
     border: none;
     overflow: hidden;
+    padding: 0;
 }
 
 /* 反转布局时的边框方向和位置 */
