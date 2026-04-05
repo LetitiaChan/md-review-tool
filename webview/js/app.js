@@ -1191,6 +1191,12 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             panel.classList.add('collapsed');
             if (toggleBtn) toggleBtn.classList.add('panel-hidden');
         }
+        // 同步设置中的 showAnnotations 状态
+        const settings = Settings.getSettings();
+        if (settings.showAnnotations !== show) {
+            Settings.applySettings({ ...settings, showAnnotations: show });
+            vscode.postMessage({ type: 'saveSettings', payload: { ...settings, showAnnotations: show } });
+        }
     }
 
     // ===== 文件变更提示 =====
@@ -1961,6 +1967,12 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
         if (tocToolbarBtn) {
             tocToolbarBtn.classList.toggle('toc-active', show);
             tocToolbarBtn.classList.toggle('toc-inactive', !show);
+        }
+        // 同步设置中的 showToc 状态
+        const settings = Settings.getSettings();
+        if (settings.showToc !== show) {
+            Settings.applySettings({ ...settings, showToc: show });
+            vscode.postMessage({ type: 'saveSettings', payload: { ...settings, showToc: show } });
         }
     }
 
