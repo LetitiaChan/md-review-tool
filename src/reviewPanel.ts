@@ -18,7 +18,7 @@ export class ReviewPanel {
     private _watcher: vscode.FileSystemWatcher | undefined;
 
     public static createOrShow(context: vscode.ExtensionContext, filePath?: string) {
-        const column = vscode.ViewColumn.Beside;
+        const column = vscode.ViewColumn.Active;
 
         // 如果指定了文件路径，检查是否已有对应面板（同一文件复用同一面板）
         if (filePath) {
