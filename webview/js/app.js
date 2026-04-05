@@ -1762,9 +1762,61 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
                 // Block 未变化 → 保持原始 Markdown（含被提取的定义行）
                 resultParts.push(_editSnapshotBlocks[i]);
             } else {
-                // Block 有变化 → 使用 turndown 转换
+                // Block 有变化 → 优先尝试行级精确替换，fallback 到 turndown
                 hasChanges = true;
-                let converted = blockHtmlToMarkdown(blockEl, turndownService);
+                let converted = null;
+
+                // 尝试行级 diff：如果原始 Markdown 存在且行数相同，逐行对比纯文本
+                if (i < _editSnapshotBlocks.length) {
+                    const origMd = _editSnapshotBlocks[i];
+                    const origLines = origMd.split('\n');
+
+                    // 从当前 DOM 提取纯文本行（用 innerText 保持换行）
+                    const currentText = blockEl.innerText || blockEl.textContent || '';
+                    const currentLines = currentText.split('\n').filter(l => l.trim() !== '' || true);
+
+                    // 从原始 Markdown 提取纯文本（去掉 Markdown 标记）
+                    function stripMdMarkers(line) {
+                        return line
+                            .replace(/^(\s*)([-*+]|\d+\.)\s+(\[[ xX]\]\s*)?/, '') // 列表标记+checkbox
+                            .replace(/^#+\s+/, '')  // 标题
+                            .replace(/^>\s*/, '')    // 引用
+                            .trim();
+                    }
+
+                    // 只在行数相同时尝试行级替换（结构未变）
+                    if (origLines.length === currentLines.length) {
+                        const patchedLines = [];
+                        let canPatch = true;
+                        for (let j = 0; j < origLines.length; j++) {
+                            const origStripped = stripMdMarkers(origLines[j]);
+                            const currStripped = currentLines[j].trim();
+                            if (origStripped === currStripped) {
+                                // 行内容未变 → 保持原始 Markdown 行
+                                patchedLines.push(origLines[j]);
+                            } else {
+                                // 行内容变化 → 替换原始行中的文本部分，保留 Markdown 标记和缩进
+                                const mdPrefix = origLines[j].match(/^(\s*(?:[-*+]|\d+\.)\s+(?:\[[ xX]\]\s*)?|#+\s+|>\s*)/);
+                                if (mdPrefix) {
+                                    patchedLines.push(mdPrefix[0] + currStripped);
+                                } else {
+                                    // 纯文本行，直接用原始缩进+新文本
+                                    const indent = origLines[j].match(/^(\s*)/)[0];
+                                    patchedLines.push(indent + currStripped);
+                                }
+                            }
+                        }
+                        if (canPatch) {
+                            converted = patchedLines.join('\n');
+                        }
+                    }
+                }
+
+                // 行级 diff 失败时 fallback 到 turndown
+                if (converted === null) {
+                    converted = blockHtmlToMarkdown(blockEl, turndownService);
+                }
+
                 // 将该 block 中被提取的内联定义行（引用式链接/脚注）追加回去
                 if (i < inlineExtractedDefs.length && inlineExtractedDefs[i].length > 0) {
                     converted = converted + '\n\n' + inlineExtractedDefs[i].join('\n');
