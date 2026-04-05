@@ -1735,16 +1735,6 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             });
 
             let md = turndownService.turndown(tempDiv.innerHTML);
-
-            // 后处理：将 turndown 默认的列表嵌套缩进（每级2空格/3空格）转为4空格
-            // turndown 对 ul 用 "  "（2空格），对 ol 用 "   "（3空格，因 "1. " 是3字符）
-            // 逐行检测列表行的前导空格，按层级转为4空格倍数
-            md = md.replace(/^( {2,})([-*+]|\d+\.) /gm, function(match, indent, marker) {
-                // 计算原始缩进层级（每2或3空格为一级）
-                const level = Math.round(indent.length / 2);
-                return '    '.repeat(level) + marker + ' ';
-            });
-
             return md.trim();
         }
 
