@@ -2221,16 +2221,19 @@ body.zen-mode .annotations-panel {
 }
 
 /* ===== 面板嵌入模式 ===== */
-body.panel-embedded .editor-container {
-    display: flex;
-    position: relative;
+
+/* document-panel 内部改为水平布局（目录在左，文档内容在右） */
+body.panel-embedded .document-panel {
+    flex-direction: row;
 }
 
+/* 目录面板：从悬浮变为嵌入流式布局 */
 body.panel-embedded .toc-panel {
     position: relative;
     left: auto;
     top: auto;
     bottom: auto;
+    height: auto;
     border-radius: 0;
     box-shadow: none;
     border: none;
@@ -2238,41 +2241,60 @@ body.panel-embedded .toc-panel {
     background: var(--bg-white);
     backdrop-filter: none;
     flex-shrink: 0;
+    z-index: auto;
 }
 
+/* 文档内容区：占满剩余空间 */
+body.panel-embedded .document-content {
+    flex: 1;
+    min-width: 0;
+}
+
+/* 批注面板：从悬浮变为嵌入流式布局 */
 body.panel-embedded .annotations-panel {
     position: relative;
     right: auto;
     top: auto;
     bottom: auto;
+    height: auto;
     border-radius: 0;
     box-shadow: none;
     border: none;
     border-left: 1px solid var(--border);
     background: var(--bg-white);
     flex-shrink: 0;
+    z-index: auto;
 }
 
+/* 折叠时宽度归零 */
 body.panel-embedded .toc-panel.collapsed {
     width: 0;
+    min-width: 0;
     border: none;
+    overflow: hidden;
 }
 
 body.panel-embedded .annotations-panel.collapsed {
     width: 0;
+    min-width: 0;
     border: none;
+    overflow: hidden;
 }
 
+/* 反转布局时的边框方向 */
 body.panel-embedded.sidebar-reversed .toc-panel {
     border-right: none;
     border-left: 1px solid var(--border);
-    right: auto;
 }
 
 body.panel-embedded.sidebar-reversed .annotations-panel {
     border-left: none;
     border-right: 1px solid var(--border);
-    left: auto;
+}
+
+/* WYSIWYG 工具栏在嵌入模式下需要正确定位 */
+body.panel-embedded .wysiwyg-toolbar {
+    z-index: 5;
 }
 
 /* ===== 文档对齐模式 ===== */
