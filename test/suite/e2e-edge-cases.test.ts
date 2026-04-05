@@ -1342,6 +1342,99 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
         });
     });
 
+    // ===== 12.5. PlantUML 延迟渲染机制验证（回归测试） =====
+
+    suite('12.5. PlantUML 延迟渲染机制', () => {
+        test('renderer.js 的 PlantUML code renderer 不应直接生成 img src（延迟渲染）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) {
+                assert.ok(true, '测试环境中扩展路径不可用');
+                return;
+            }
+
+            const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
+            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+
+            // 找到 plantuml/puml 的 code renderer 区域（从 "if (lang === 'plantuml'" 到下一个 return 之后的 "}"）
+            const plantumlBlockMatch = rendererCode.match(/\/\/ PlantUML[\s\S]*?if\s*\(lang\s*===\s*'plantuml'[\s\S]*?return\s*`[^`]*`;[\s\S]*?\}/);
+            assert.ok(plantumlBlockMatch, 'renderer.js 应包含 PlantUML code renderer 逻辑');
+
+            const plantumlBlock = plantumlBlockMatch![0];
+
+            // 关键断言：code renderer 的返回 HTML 模板中不应包含 <img src="https://
+            // 如果包含，说明回退到了旧的直接渲染方式，开关关闭时图片仍会加载
+            assert.ok(
+                !plantumlBlock.includes('img class="plantuml-rendered" src="'),
+                'PlantUML code renderer 不应在 HTML 模板中直接嵌入 <img src>（应使用延迟渲染策略）'
+            );
+
+            // 验证使用了与 Mermaid/Graphviz 一致的 data-source 延迟渲染模式
+            assert.ok(
+                plantumlBlock.includes('plantuml-source-data'),
+                'PlantUML code renderer 应输出 plantuml-source-data 占位元素'
+            );
+            assert.ok(
+                plantumlBlock.includes('data-source'),
+                'PlantUML code renderer 应使用 data-source 属性存储编码后的源码'
+            );
+        });
+
+        test('renderer.js 的 renderPlantUML 函数应从 data-source 动态构建 img', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) {
+                assert.ok(true, '测试环境中扩展路径不可用');
+                return;
+            }
+
+            const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
+            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+
+            // renderPlantUML 函数应包含从 data-source 解码源码的逻辑
+            assert.ok(
+                rendererCode.includes('function renderPlantUML'),
+                'renderer.js 应导出 renderPlantUML 函数'
+            );
+
+            // 应包含 plantumlHexEncode 调用（动态构建 URL）
+            const renderFnMatch = rendererCode.match(/function renderPlantUML\(\)[\s\S]*?^    \}/m);
+            assert.ok(renderFnMatch, '应找到 renderPlantUML 函数体');
+
+            const renderFn = renderFnMatch![0];
+            assert.ok(
+                renderFn.includes('plantumlHexEncode'),
+                'renderPlantUML 应调用 plantumlHexEncode 动态构建图片 URL'
+            );
+            assert.ok(
+                renderFn.includes('plantuml-source-data'),
+                'renderPlantUML 应从 plantuml-source-data 读取源码'
+            );
+        });
+
+        test('app.js 的 renderMathAndMermaid 应只在 enablePlantUML 为 true 时调用 renderPlantUML', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) {
+                assert.ok(true, '测试环境中扩展路径不可用');
+                return;
+            }
+
+            const appPath = path.join(extPath, 'webview', 'js', 'app.js');
+            const appCode = fs.readFileSync(appPath, 'utf-8');
+
+            // 验证 renderPlantUML 的调用被 enablePlantUML 条件包裹
+            assert.ok(
+                appCode.includes('settings.enablePlantUML'),
+                'app.js 应检查 enablePlantUML 设置'
+            );
+
+            // 确保 renderPlantUML 在条件块内
+            const condMatch = appCode.match(/if\s*\(settings\.enablePlantUML\)\s*\{[\s\S]*?Renderer\.renderPlantUML/);
+            assert.ok(
+                condMatch,
+                'renderPlantUML 调用应在 enablePlantUML 条件块内'
+            );
+        });
+    });
+
     // ===== 13. 配置边界 =====
 
     suite('13. 配置边界', () => {

@@ -543,16 +543,10 @@ const Renderer = (() => {
                 return `<div class="mermaid-container" data-mermaid-id="${id}"><div class="mermaid-source-data" data-source="${base64Code}" style="display:none"></div><pre class="mermaid-source">${escapeHtml(code)}</pre></div>`;
             }
 
-            // PlantUML 图表：使用在线服务器渲染 SVG
+            // PlantUML 图表：延迟渲染（与 Mermaid/Graphviz 一致，只存储源码，由 renderPlantUML() 动态构建 <img>）
             if (lang === 'plantuml' || lang === 'puml') {
                 const base64Code = btoa(unescape(encodeURIComponent(code)));
-                const hexCode = plantumlHexEncode(code);
-                const maxLen = 4000;
-                if (code.length > maxLen) {
-                    return `<div class="plantuml-container plantuml-too-long"><div class="plantuml-error"><span class="plantuml-error-icon">⚠️</span> 图表源码过长（${code.length} 字符），无法在线渲染</div><pre class="plantuml-source">${escapeHtml(code)}</pre></div>`;
-                }
-                const svgUrl = 'https://www.plantuml.com/plantuml/svg/~h' + hexCode;
-                return `<div class="plantuml-container"><img class="plantuml-rendered" src="${svgUrl}" alt="PlantUML Diagram" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="plantuml-fallback" style="display:none"><div class="plantuml-error"><span class="plantuml-error-icon">⚠️</span> PlantUML 图表渲染失败（请检查网络连接）</div><pre class="plantuml-source">${escapeHtml(code)}</pre></div><pre class="plantuml-source-data" data-source="${base64Code}" style="display:none">${escapeHtml(code)}</pre></div>`;
+                return `<div class="plantuml-container"><div class="plantuml-source-data" data-source="${base64Code}" style="display:none"></div><pre class="plantuml-source">${escapeHtml(code)}</pre></div>`;
             }
 
             // Graphviz DOT 图表：使用 Viz.js 本地渲染
@@ -1686,17 +1680,52 @@ const Renderer = (() => {
     }
 
     /**
-     * 渲染 PlantUML 图表（通过在线服务器）
-     * PlantUML 使用 <img> 标签，渲染由浏览器自动完成
-     * 此函数主要处理设置开关和绑定 lightbox
+     * 渲染 PlantUML 图表（通过在线服务器，延迟渲染）
+     * 从 data-source 中解码源码，动态构建 <img> 标签
+     * 只在 enablePlantUML 开关打开时由 app.js 调用
      */
     function renderPlantUML() {
         const containers = document.querySelectorAll('.plantuml-container');
         if (containers.length === 0) return;
 
         containers.forEach(container => {
+            // 已渲染则跳过（只绑定 lightbox）
+            if (container.querySelector('.plantuml-rendered')) {
+                const img = container.querySelector('.plantuml-rendered');
+                if (img && !img.dataset.lightboxBound) {
+                    img.dataset.lightboxBound = 'true';
+                    img.title = '点击查看大图';
+                    img.style.cursor = 'pointer';
+                }
+                return;
+            }
+
+            const sourceDataEl = container.querySelector('.plantuml-source-data');
+            if (!sourceDataEl || !sourceDataEl.dataset.source) return;
+
+            let code = '';
+            try {
+                code = decodeURIComponent(escape(atob(sourceDataEl.dataset.source)));
+            } catch (e) {
+                const sourceEl = container.querySelector('.plantuml-source');
+                code = sourceEl ? sourceEl.textContent : '';
+            }
+            if (!code) return;
+
+            const maxLen = 4000;
+            if (code.length > maxLen) {
+                container.innerHTML = `<div class="plantuml-error"><span class="plantuml-error-icon">⚠️</span> 图表源码过长（${code.length} 字符），无法在线渲染</div><pre class="plantuml-source">${escapeHtml(code)}</pre>`;
+                container.classList.add('plantuml-too-long');
+                return;
+            }
+
+            const hexCode = plantumlHexEncode(code);
+            const svgUrl = 'https://www.plantuml.com/plantuml/svg/~h' + hexCode;
+
+            // 动态构建 <img>，保留 source-data 用于主题切换时重渲染
+            container.innerHTML = `<img class="plantuml-rendered" src="${svgUrl}" alt="PlantUML Diagram" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="plantuml-fallback" style="display:none"><div class="plantuml-error"><span class="plantuml-error-icon">⚠️</span> PlantUML 图表渲染失败（请检查网络连接）</div><pre class="plantuml-source">${escapeHtml(code)}</pre></div><pre class="plantuml-source-data" data-source="${sourceDataEl.dataset.source}" style="display:none"></pre>`;
+
             const img = container.querySelector('.plantuml-rendered');
-            if (img && img.dataset.lightboxBound) return;
             if (img) {
                 img.dataset.lightboxBound = 'true';
                 img.title = '点击查看大图';
