@@ -1810,13 +1810,17 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
                 if (result.docVersion) data.docVersion = result.docVersion;
                 Store.save();
 
+                // 重新解析并渲染 DOM（修复编辑后公式/图表丢失问题）
+                const newBlocks = Renderer.parseMarkdown(newContent);
+                Renderer.renderBlocks(newBlocks, []);  // 编辑模式下不显示批注标记
+                renderMathAndMermaid();
+
                 // 更新快照以反映最新保存的状态
-                Renderer.parseMarkdown(newContent); // 重新解析以更新内部状态
                 _editSnapshotBlocks = Renderer.getRawBlocksBeforeExtract().slice();
                 _editSnapshotHtmls = Array.from(docContent.querySelectorAll('.md-block:not(.footnotes-block)')).map(el => el.innerHTML);
 
-                // 重新渲染数学公式和图表（修复编辑后公式/图表丢失问题）
-                renderMathAndMermaid();
+                // 保持 contenteditable 状态
+                docContent.contentEditable = 'true';
 
                 updateEditStatus('saved', '✓ 已保存');
                 setTimeout(() => updateEditStatus('', '编辑模式'), 3000);
