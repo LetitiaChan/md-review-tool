@@ -122,6 +122,12 @@ const Settings = (() => {
                 tocPanel2.classList.remove('collapsed');
             }
         }
+        // 同步工具栏目录按钮状态
+        const btnToggleToc = document.getElementById('btnToggleToc');
+        if (btnToggleToc) {
+            btnToggleToc.classList.toggle('toc-active', currentSettings.showToc);
+            btnToggleToc.classList.toggle('toc-inactive', !currentSettings.showToc);
+        }
 
         // 批注列表
         const annotationsPanel = document.getElementById('annotationsPanel');
@@ -131,6 +137,11 @@ const Settings = (() => {
             } else {
                 annotationsPanel.classList.remove('collapsed');
             }
+        }
+        // 同步工具栏批注按钮状态
+        const btnToggleAnnotations = document.getElementById('btnToggleAnnotations');
+        if (btnToggleAnnotations) {
+            btnToggleAnnotations.classList.toggle('panel-hidden', !currentSettings.showAnnotations);
         }
 
         // 侧边栏布局
