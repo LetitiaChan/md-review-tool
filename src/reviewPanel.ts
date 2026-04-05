@@ -63,6 +63,44 @@ export class ReviewPanel {
             const normalizedPath = path.resolve(filePath);
             ReviewPanel.panels.set(normalizedPath, reviewPanel);
         }
+
+        // 刷新所有面板标题（处理同名文件区分）
+        ReviewPanel._refreshAllTitles();
+    }
+
+    /**
+     * 生成智能标题：同名文件加父目录区分
+     * 例如：两个 README.md → "README.md — docs" 和 "README.md — src"
+     */
+    private static _refreshAllTitles() {
+        // 统计每个 basename 出现的次数
+        const nameCount = new Map<string, string[]>();
+        for (const [filePath] of ReviewPanel.panels) {
+            const base = path.basename(filePath);
+            const arr = nameCount.get(base) || [];
+            arr.push(filePath);
+            nameCount.set(base, arr);
+        }
+
+        // 更新有重名的面板标题
+        for (const [base, paths] of nameCount) {
+            if (paths.length > 1) {
+                // 有同名文件，加父目录
+                for (const fp of paths) {
+                    const panel = ReviewPanel.panels.get(fp);
+                    if (panel) {
+                        const parentDir = path.basename(path.dirname(fp));
+                        panel._panel.title = `${base} — ${parentDir}`;
+                    }
+                }
+            } else {
+                // 唯一的，用纯文件名
+                const panel = ReviewPanel.panels.get(paths[0]);
+                if (panel) {
+                    panel._panel.title = base;
+                }
+            }
+        }
     }
 
     private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, filePath?: string) {
@@ -110,12 +148,12 @@ export class ReviewPanel {
 
         this._currentFilePath = filePath;
 
-        // 更新面板标题
-        this._panel.title = path.basename(filePath);
-
         // 注册到 Map
         const normalizedPath = path.resolve(filePath);
         ReviewPanel.panels.set(normalizedPath, this);
+
+        // 刷新所有面板标题（处理同名文件区分）
+        ReviewPanel._refreshAllTitles();
 
         try {
             const data = this._fileService.readFile(filePath);
@@ -167,15 +205,15 @@ export class ReviewPanel {
             case 'readFile': {
                 try {
                     const data = this._fileService.readFile(payload.filePath);
-                    // 更新 panels Map 和 panel title（与 loadFile 保持一致）
+                    // 更新 panels Map（与 loadFile 保持一致）
                     if (this._currentFilePath) {
                         const oldNormalized = path.resolve(this._currentFilePath);
                         ReviewPanel.panels.delete(oldNormalized);
                     }
                     this._currentFilePath = payload.filePath;
-                    this._panel.title = path.basename(payload.filePath);
                     const normalizedPath = path.resolve(payload.filePath);
                     ReviewPanel.panels.set(normalizedPath, this);
+                    ReviewPanel._refreshAllTitles();
                     this.postMessage({ type: 'fileContent', payload: data, requestId });
                 } catch (e: any) {
                     this.postMessage({ type: 'fileContent', payload: { error: e.message }, requestId });
@@ -560,5 +598,7 @@ const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'as
             const d = this._disposables.pop();
             if (d) { d.dispose(); }
         }
+        // 刷新剩余面板标题（同名文件可能恢复为纯文件名）
+        ReviewPanel._refreshAllTitles();
     }
 }
