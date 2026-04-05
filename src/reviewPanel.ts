@@ -5,6 +5,7 @@ import { FileService } from './fileService';
 import { StateService } from './stateService';
 
 export class ReviewPanel {
+    public static panels: Map<string, ReviewPanel> = new Map();
     public static currentPanel: ReviewPanel | undefined;
     private static readonly viewType = 'mdReview';
 
@@ -19,17 +20,28 @@ export class ReviewPanel {
     public static createOrShow(context: vscode.ExtensionContext, filePath?: string) {
         const column = vscode.ViewColumn.One;
 
-        if (ReviewPanel.currentPanel) {
-            ReviewPanel.currentPanel._panel.reveal(column);
-            if (filePath) {
-                ReviewPanel.currentPanel.loadFile(filePath);
+        // 如果指定了文件路径，检查是否已有对应面板
+        if (filePath) {
+            const normalizedPath = path.resolve(filePath);
+            const existing = ReviewPanel.panels.get(normalizedPath);
+            if (existing) {
+                existing._panel.reveal(column);
+                return;
             }
+        }
+
+        // 没有指定文件路径时，如果有当前面板就复用
+        if (!filePath && ReviewPanel.currentPanel) {
+            ReviewPanel.currentPanel._panel.reveal(column);
             return;
         }
 
+        // 计算面板标题
+        const panelTitle = filePath ? path.basename(filePath) : 'MD Human Review';
+
         const panel = vscode.window.createWebviewPanel(
             ReviewPanel.viewType,
-            'MD Human Review',
+            panelTitle,
             column,
             {
                 enableScripts: true,
@@ -42,7 +54,14 @@ export class ReviewPanel {
             }
         );
 
-        ReviewPanel.currentPanel = new ReviewPanel(panel, context, filePath);
+        const reviewPanel = new ReviewPanel(panel, context, filePath);
+        ReviewPanel.currentPanel = reviewPanel;
+
+        // 注册到面板 Map
+        if (filePath) {
+            const normalizedPath = path.resolve(filePath);
+            ReviewPanel.panels.set(normalizedPath, reviewPanel);
+        }
     }
 
     private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, filePath?: string) {
@@ -75,7 +94,29 @@ export class ReviewPanel {
     }
 
     public loadFile(filePath: string) {
+        // 从旧路径的 Map 中移除
+        if (this._currentFilePath) {
+            const oldNormalized = path.resolve(this._currentFilePath);
+            ReviewPanel.panels.delete(oldNormalized);
+        }
+
         this._currentFilePath = filePath;
+
+        // 更新面板标题
+        const baseName = path.basename(filePath);
+        this._panel.title = baseName;
+
+        // 计算相对路径用于 webview tooltip
+        let relPath = filePath;
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (workspaceFolder) {
+            relPath = path.relative(workspaceFolder.uri.fsPath, filePath);
+        }
+
+        // 注册到 Map
+        const normalizedPath = path.resolve(filePath);
+        ReviewPanel.panels.set(normalizedPath, this);
+
         try {
             const data = this._fileService.readFile(filePath);
             this.postMessage({
@@ -238,6 +279,8 @@ export class ReviewPanel {
                     showToc: config.get<boolean>('showToc', true),
                     showAnnotations: config.get<boolean>('showAnnotations', true),
                     sidebarLayout: config.get<string>('sidebarLayout', 'toc-left'),
+                    panelMode: config.get<string>('panelMode', 'floating'),
+                    documentAlign: config.get<string>('documentAlign', 'center'),
                     enableMermaid: config.get<boolean>('enableMermaid', true),
                     enableMath: config.get<boolean>('enableMath', true),
                     enablePlantUML: config.get<boolean>('enablePlantUML', true),
@@ -262,6 +305,8 @@ export class ReviewPanel {
                     if (payload.showToc !== undefined) { await config.update('showToc', payload.showToc, target); }
                     if (payload.showAnnotations !== undefined) { await config.update('showAnnotations', payload.showAnnotations, target); }
                     if (payload.sidebarLayout !== undefined) { await config.update('sidebarLayout', payload.sidebarLayout, target); }
+                    if (payload.panelMode !== undefined) { await config.update('panelMode', payload.panelMode, target); }
+                    if (payload.documentAlign !== undefined) { await config.update('documentAlign', payload.documentAlign, target); }
                     if (payload.enableMermaid !== undefined) { await config.update('enableMermaid', payload.enableMermaid, target); }
                     if (payload.enableMath !== undefined) { await config.update('enableMath', payload.enableMath, target); }
                     if (payload.enablePlantUML !== undefined) { await config.update('enablePlantUML', payload.enablePlantUML, target); }
@@ -491,7 +536,14 @@ const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'as
     }
 
     public dispose() {
-        ReviewPanel.currentPanel = undefined;
+        // 从 Map 中移除
+        if (this._currentFilePath) {
+            const normalizedPath = path.resolve(this._currentFilePath);
+            ReviewPanel.panels.delete(normalizedPath);
+        }
+        if (ReviewPanel.currentPanel === this) {
+            ReviewPanel.currentPanel = undefined;
+        }
         this._panel.dispose();
         while (this._disposables.length) {
             const d = this._disposables.pop();

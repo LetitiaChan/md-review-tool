@@ -38,12 +38,7 @@
         <div class="toolbar-right">
             <!-- 自动保存状态 -->
             <span class="auto-save-status" id="autoSaveStatus"></span>
-            <!-- n条批注 -->
-            <button class="btn-toggle-annotations" id="btnToggleAnnotations" title="展开/收起批注列表">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                <span class="toggle-annotations-count" id="annotationCount">0 条批注</span>
-            </button>
-            <!-- 目录（胶囊风格，和批注按钮一致） -->
+            <!-- 目录（胶囊风格） -->
             <button class="btn-toggle-annotations" id="btnToggleToc" title="展开/收起目录导航">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 7h8M2 11h10M2 15h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                 <span class="toggle-annotations-count">目录</span>
@@ -63,6 +58,11 @@
                 <svg class="mode-icon mode-icon-preview" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3C4 3 1 8 1 8s3 5 7 5 7-5 7-5-3-5-7-5z" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
                 <svg class="mode-icon mode-icon-edit" width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:none;"><path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
                 <span class="mode-toggle-label">预览</span>
+            </button>
+            <!-- n条批注（移至一键AI修复左侧） -->
+            <button class="btn-toggle-annotations" id="btnToggleAnnotations" title="展开/收起批注列表">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <span class="toggle-annotations-count" id="annotationCount">0 条批注</span>
             </button>
             <!-- 一键AI修复 -->
             <button class="btn btn-apply" id="btnApplyReview" disabled title="根据批阅记录一键AI修复源文件">
@@ -131,6 +131,10 @@
                     <div class="resize-handle resize-handle-right" id="tocResizeHandle"></div>
                     <div class="toc-header">
                         <span class="toc-title">目录</span>
+                        <div class="toc-header-actions">
+                        <button class="panel-hide-btn" id="btnHideToc" title="隐藏目录面板">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        </button>
                         <div class="toc-menu-wrapper">
                             <button class="toc-menu-btn" id="btnTocMenu" title="更多操作">
                                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="3" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="13" cy="8" r="1.3" fill="currentColor"/></svg>
@@ -145,6 +149,7 @@
                                     展开全部
                                 </div>
                             </div>
+                        </div>
                         </div>
                     </div>
                     <div class="toc-list" id="tocList">
@@ -201,6 +206,9 @@
                 <div class="panel-header">
                     <span>批注列表</span>
                     <div class="panel-header-actions">
+                        <button class="panel-hide-btn" id="btnHideAnnotations" title="隐藏批注面板">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        </button>
                         <button class="btn btn-header-save" id="btnExport" disabled title="保存批阅记录">
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v8m0 0l-3-3m3 3l3-3M2 12v1h12v-1" stroke="currentColor" stroke-width="1.5"/></svg>
                             保存
@@ -701,6 +709,27 @@
                             <div class="font-button-group">
                                 <button class="sidebar-layout-btn active" data-layout="toc-left">目录左 批注右</button>
                                 <button class="sidebar-layout-btn" data-layout="toc-right">批注左 目录右</button>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">面板模式</div>
+                                <div class="label-desc">选择侧边面板的显示模式</div>
+                            </div>
+                            <div class="font-button-group">
+                                <button class="panel-mode-btn active" data-mode="floating">悬浮</button>
+                                <button class="panel-mode-btn" data-mode="embedded">嵌入</button>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">文档对齐</div>
+                                <div class="label-desc">设置主文档的对齐方式</div>
+                            </div>
+                            <div class="font-button-group">
+                                <button class="doc-align-btn" data-align="left">靠左</button>
+                                <button class="doc-align-btn active" data-align="center">居中</button>
+                                <button class="doc-align-btn" data-align="right">靠右</button>
                             </div>
                         </div>
                         <div class="setting-item">

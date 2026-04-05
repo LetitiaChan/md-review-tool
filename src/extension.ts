@@ -44,8 +44,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('mdReview.exportReview', () => {
-            if (ReviewPanel.currentPanel) {
-                ReviewPanel.currentPanel.postMessage({ type: 'triggerExport' });
+            // 优先使用当前活跃面板，否则取 Map 中的最后一个
+            const panel = ReviewPanel.currentPanel || ReviewPanel.panels.values().next().value;
+            if (panel) {
+                panel.postMessage({ type: 'triggerExport' });
             }
         })
     );

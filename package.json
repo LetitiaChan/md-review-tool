@@ -203,6 +203,34 @@
           ],
           "description": "侧边栏布局方式"
         },
+        "mdReview.panelMode": {
+          "type": "string",
+          "default": "floating",
+          "enum": [
+            "floating",
+            "embedded"
+          ],
+          "enumDescriptions": [
+            "悬浮模式（面板覆盖在文档上方）",
+            "嵌入模式（面板占据固定宽度）"
+          ],
+          "description": "侧边面板显示模式"
+        },
+        "mdReview.documentAlign": {
+          "type": "string",
+          "default": "center",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "enumDescriptions": [
+            "靠左对齐",
+            "居中对齐",
+            "靠右对齐"
+          ],
+          "description": "主文档对齐方式"
+        },
         "mdReview.enableMermaid": {
           "type": "boolean",
           "default": true,

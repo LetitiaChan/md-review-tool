@@ -736,11 +736,9 @@
     min-width: 0;
 }
 
-/* 已完成的任务文本 - 删除线 + 淡化 */
+/* 已完成的任务文本 - 仅淡化，不加删除线 */
 .document-content .task-list-item.checked .task-text {
-    text-decoration: line-through;
     color: #57606a;
-    text-decoration-color: #57606a;
 }
 
 /* 勾选弹出动画 */
@@ -785,7 +783,6 @@
 
 .theme-dark .document-content .task-list-item.checked .task-text {
     color: #6b6b6b;
-    text-decoration-color: #6b6b6b;
 }
 
 /* ===== GitHub 风格告警块 ===== */

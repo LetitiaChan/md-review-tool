@@ -15,6 +15,8 @@ const Settings = (() => {
         showToc: true,
         showAnnotations: true,
         sidebarLayout: 'toc-left',
+        panelMode: 'floating',
+        documentAlign: 'center',
         enableMermaid: true,
         enableMath: true,
         enablePlantUML: true,
@@ -145,6 +147,16 @@ const Settings = (() => {
             document.body.classList.remove('show-line-numbers');
         }
 
+        // 面板模式
+        if (currentSettings.panelMode === 'embedded') {
+            document.body.classList.add('panel-embedded');
+        } else {
+            document.body.classList.remove('panel-embedded');
+        }
+
+        // 文档对齐
+        document.body.setAttribute('data-doc-align', currentSettings.documentAlign || 'center');
+
         // 代码高亮主题
         applyCodeTheme(currentSettings.codeTheme);
     }
@@ -264,6 +276,16 @@ const Settings = (() => {
         // 侧边栏布局
         document.querySelectorAll('.sidebar-layout-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.layout === currentSettings.sidebarLayout);
+        });
+
+        // 面板模式
+        document.querySelectorAll('.panel-mode-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === currentSettings.panelMode);
+        });
+
+        // 文档对齐
+        document.querySelectorAll('.doc-align-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.align === currentSettings.documentAlign);
         });
 
         // Mermaid
@@ -468,6 +490,28 @@ const Settings = (() => {
             btn.addEventListener('click', () => {
                 currentSettings.sidebarLayout = btn.dataset.layout;
                 document.querySelectorAll('.sidebar-layout-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applyToDOM();
+                saveSettings();
+            });
+        });
+
+        // 面板模式按钮组
+        document.querySelectorAll('.panel-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentSettings.panelMode = btn.dataset.mode;
+                document.querySelectorAll('.panel-mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applyToDOM();
+                saveSettings();
+            });
+        });
+
+        // 文档对齐按钮组
+        document.querySelectorAll('.doc-align-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentSettings.documentAlign = btn.dataset.align;
+                document.querySelectorAll('.doc-align-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 applyToDOM();
                 saveSettings();

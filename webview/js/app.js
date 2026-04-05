@@ -387,6 +387,16 @@
             toggleTocPanel(isCollapsed);
         });
 
+        // 目录面板内隐藏按钮
+        document.getElementById('btnHideToc').addEventListener('click', () => {
+            toggleTocPanel(false);
+        });
+
+        // 批注面板内隐藏按钮
+        document.getElementById('btnHideAnnotations').addEventListener('click', () => {
+            toggleAnnotationsPanel(false);
+        });
+
         // 目录头部...菜单
         document.getElementById('btnTocMenu').addEventListener('click', (e) => {
             e.stopPropagation();
@@ -626,7 +636,11 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
         document.getElementById('editorContainer').style.display = 'flex';
         const storeData = Store.getData();
         const versionLabel = storeData.docVersion ? ` (${storeData.docVersion})` : '';
-        document.getElementById('fileName').textContent = fileName + versionLabel;
+        const fileNameEl = document.getElementById('fileName');
+        fileNameEl.textContent = fileName + versionLabel;
+        // 设置 tooltip 为相对路径+文件名
+        const relPath = storeData.relPath || storeData.sourceFilePath || fileName;
+        fileNameEl.title = relPath;
 
         updateFileSelectHighlight(fileName);
 
@@ -1790,6 +1804,9 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
                 Renderer.parseMarkdown(newContent); // 重新解析以更新内部状态
                 _editSnapshotBlocks = Renderer.getRawBlocksBeforeExtract().slice();
                 _editSnapshotHtmls = Array.from(docContent.querySelectorAll('.md-block:not(.footnotes-block)')).map(el => el.innerHTML);
+
+                // 重新渲染数学公式和图表（修复编辑后公式/图表丢失问题）
+                renderMathAndMermaid();
 
                 updateEditStatus('saved', '✓ 已保存');
                 setTimeout(() => updateEditStatus('', '编辑模式'), 3000);
