@@ -266,12 +266,14 @@ export class ReviewPanel {
             case 'zenModeChanged': {
                 const entering = payload.entering;
                 if (entering) {
-                    // 进入禅模式：隐藏 IDE 左侧栏、右侧栏和下方面板
+                    // 进入禅模式：隐藏所有辅助面板并最大化当前编辑器
                     vscode.commands.executeCommand('workbench.action.closeSidebar');
                     vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
                     vscode.commands.executeCommand('workbench.action.closePanel');
+                    vscode.commands.executeCommand('workbench.action.maximizeEditorHideSidebar');
                 } else {
-                    // 退出禅模式：恢复 IDE 左侧栏（资源管理器）
+                    // 退出禅模式：恢复布局
+                    vscode.commands.executeCommand('workbench.action.evenEditorWidths');
                     vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
                     vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
                 }
