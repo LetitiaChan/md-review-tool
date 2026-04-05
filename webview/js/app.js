@@ -1696,11 +1696,11 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
 
             // 自定义 listItem 规则：使用 4 空格缩进嵌套列表（保持原始缩进风格）
             ts.addRule('listItem', {
-                filter: 'li',
+                filter: function(node) {
+                    // 只处理非 task-list-item 的 li（task-list-item 由专门规则处理）
+                    return node.nodeName === 'LI' && !(node.classList && node.classList.contains('task-list-item'));
+                },
                 replacement: function(content, node, options) {
-                    // 跳过 task-list-item（由专门的 taskListItem 规则处理）
-                    if (node.classList && node.classList.contains('task-list-item')) return;
-
                     content = content
                         .replace(/^\n+/, '')
                         .replace(/\n+$/, '\n')
