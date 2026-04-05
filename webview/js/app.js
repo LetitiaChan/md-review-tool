@@ -1688,6 +1688,29 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
                 replacement: function() { return ''; }
             });
 
+            // 自定义 listItem 规则：使用 4 空格缩进嵌套列表（保持原始缩进风格）
+            ts.addRule('listItem', {
+                filter: 'li',
+                replacement: function(content, node, options) {
+                    // 跳过 task-list-item（由专门的 taskListItem 规则处理）
+                    if (node.classList && node.classList.contains('task-list-item')) return;
+
+                    content = content
+                        .replace(/^\n+/, '')
+                        .replace(/\n+$/, '\n')
+                        .replace(/\n/gm, '\n    '); // 4 空格缩进
+
+                    var prefix = options.bulletListMarker + ' ';
+                    var parent = node.parentNode;
+                    if (parent && parent.nodeName === 'OL') {
+                        var start = parent.getAttribute('start');
+                        var index = Array.prototype.indexOf.call(parent.children, node);
+                        prefix = (start ? Number(start) + index : index + 1) + '. ';
+                    }
+                    return prefix + content + (node.nextSibling && !/\n$/.test(content) ? '\n' : '');
+                }
+            });
+
             ts.addRule('taskListItem', {
                 filter: function(node) {
                     return node.nodeName === 'LI' && node.classList.contains('task-list-item');
@@ -1704,7 +1727,9 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
                         var index = Array.prototype.indexOf.call(parent.children, node);
                         prefix = (start ? Number(start) + index : index + 1) + '. ';
                     }
-                    return prefix + checkbox + ' ' + text + (node.nextSibling ? '\n' : '');
+                    // 处理嵌套内容的缩进（4 空格）
+                    var processedText = text.replace(/\n/gm, '\n    ');
+                    return prefix + checkbox + ' ' + processedText + (node.nextSibling ? '\n' : '');
                 }
             });
 
