@@ -1671,12 +1671,16 @@ const Renderer = (() => {
     }
 
     /**
-     * PlantUML hex 编码：将源码每个字符转为两位十六进制
+     * PlantUML hex 编码：将源码转为 UTF-8 字节的十六进制表示
+     * PlantUML 服务器 ~h 模式要求 UTF-8 字节 hex，而非 Unicode 码点 hex
      */
     function plantumlHexEncode(text) {
+        // 先将文本编码为 UTF-8 字节序列
+        const encoder = new TextEncoder();
+        const bytes = encoder.encode(text);
         let hex = '';
-        for (let i = 0; i < text.length; i++) {
-            hex += text.charCodeAt(i).toString(16).padStart(2, '0');
+        for (let i = 0; i < bytes.length; i++) {
+            hex += bytes[i].toString(16).padStart(2, '0');
         }
         return hex;
     }

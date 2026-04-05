@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'none'; 
                    style-src ${cspSource} 'unsafe-inline'; 
-                   script-src 'nonce-${nonce}' ${cspSource}; 
+                   script-src 'nonce-${nonce}' ${cspSource} 'wasm-unsafe-eval'; 
                    img-src ${cspSource} https: http: data:;
                    font-src ${cspSource};">
     <title>MD Human Review</title>
