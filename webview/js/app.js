@@ -1694,29 +1694,6 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
                 replacement: function() { return ''; }
             });
 
-            // 自定义 listItem 规则：使用 4 空格缩进嵌套列表（保持原始缩进风格）
-            ts.addRule('listItem', {
-                filter: function(node) {
-                    // 只处理非 task-list-item 的 li（task-list-item 由专门规则处理）
-                    return node.nodeName === 'LI' && !(node.classList && node.classList.contains('task-list-item'));
-                },
-                replacement: function(content, node, options) {
-                    content = content
-                        .replace(/^\n+/, '')
-                        .replace(/\n+$/, '\n')
-                        .replace(/\n/gm, '\n    '); // 4 空格缩进
-
-                    var prefix = options.bulletListMarker + ' ';
-                    var parent = node.parentNode;
-                    if (parent && parent.nodeName === 'OL') {
-                        var start = parent.getAttribute('start');
-                        var index = Array.prototype.indexOf.call(parent.children, node);
-                        prefix = (start ? Number(start) + index : index + 1) + '. ';
-                    }
-                    return prefix + content + (node.nextSibling && !/\n$/.test(content) ? '\n' : '');
-                }
-            });
-
             ts.addRule('taskListItem', {
                 filter: function(node) {
                     return node.nodeName === 'LI' && node.classList.contains('task-list-item');
@@ -1733,9 +1710,7 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
                         var index = Array.prototype.indexOf.call(parent.children, node);
                         prefix = (start ? Number(start) + index : index + 1) + '. ';
                     }
-                    // 处理嵌套内容的缩进（4 空格）
-                    var processedText = text.replace(/\n/gm, '\n    ');
-                    return prefix + checkbox + ' ' + processedText + (node.nextSibling ? '\n' : '');
+                    return prefix + checkbox + ' ' + text + (node.nextSibling ? '\n' : '');
                 }
             });
 
@@ -1760,6 +1735,16 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             });
 
             let md = turndownService.turndown(tempDiv.innerHTML);
+
+            // 后处理：将 turndown 默认的列表嵌套缩进（每级2空格/3空格）转为4空格
+            // turndown 对 ul 用 "  "（2空格），对 ol 用 "   "（3空格，因 "1. " 是3字符）
+            // 逐行检测列表行的前导空格，按层级转为4空格倍数
+            md = md.replace(/^( {2,})([-*+]|\d+\.) /gm, function(match, indent, marker) {
+                // 计算原始缩进层级（每2或3空格为一级）
+                const level = Math.round(indent.length / 2);
+                return '    '.repeat(level) + marker + ' ';
+            });
+
             return md.trim();
         }
 
