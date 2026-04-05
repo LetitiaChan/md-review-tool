@@ -20,7 +20,7 @@ export class ReviewPanel {
     public static createOrShow(context: vscode.ExtensionContext, filePath?: string) {
         const column = vscode.ViewColumn.One;
 
-        // 如果指定了文件路径，检查是否已有对应面板
+        // 如果指定了文件路径，检查是否已有对应面板（多窗口复用）
         if (filePath) {
             const normalizedPath = path.resolve(filePath);
             const existing = ReviewPanel.panels.get(normalizedPath);
@@ -30,13 +30,16 @@ export class ReviewPanel {
             }
         }
 
-        // 没有指定文件路径时，如果有当前面板就复用
-        if (!filePath && ReviewPanel.currentPanel) {
+        // 如果有当前面板，复用它（reveal + loadFile）
+        if (ReviewPanel.currentPanel) {
             ReviewPanel.currentPanel._panel.reveal(column);
+            if (filePath) {
+                ReviewPanel.currentPanel.loadFile(filePath);
+            }
             return;
         }
 
-        // 计算面板标题
+        // 没有任何面板，创建新面板
         const panelTitle = filePath ? path.basename(filePath) : 'MD Human Review';
 
         const panel = vscode.window.createWebviewPanel(
