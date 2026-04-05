@@ -217,7 +217,7 @@ suite('Workflow Test Suite — 完整工作流', () => {
             assert.strictEqual(result.success, true);
             assert.strictEqual(result.changed, true);
             assert.ok(result.backupFile, '应生成备份文件');
-            assert.ok(result.backupFile!.includes('编辑前备份'), '备份文件名应包含"编辑前备份"');
+            assert.ok(result.backupFile!.includes('_backup'), '备份文件名应包含"_backup"');
             assert.strictEqual(result.docVersion, 'v1.1.0');
 
             // 验证文件内容已更新

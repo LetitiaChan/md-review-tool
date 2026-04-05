@@ -506,7 +506,7 @@ suite('E2E Review Flow Test Suite — 完整批阅流程端到端', () => {
 
             assert.strictEqual(result.changed, true);
             assert.ok(result.backupFile, '应生成备份文件');
-            assert.ok(result.backupFile!.includes('编辑前备份'), '备份文件名应包含"编辑前备份"');
+            assert.ok(result.backupFile!.includes('_backup'), '备份文件名应包含"_backup"');
         });
 
         test('保存相同内容 → 不触发备份', () => {

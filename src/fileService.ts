@@ -106,7 +106,7 @@ const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules
         const safeName = path.basename(absPath);
         const ext = path.extname(safeName);
         const rbaseName = this.reviewBaseName(safeName, this.getRelPath(absPath));
-        const backupName = `${rbaseName}_${Date.now()}_编辑前备份${ext}`;
+        const backupName = `${rbaseName}_${Date.now()}_backup${ext}`;
         const backupPath = path.join(this.reviewDir, backupName);
         fs.writeFileSync(backupPath, oldContent, 'utf-8');
         fs.writeFileSync(absPath, content, 'utf-8');
