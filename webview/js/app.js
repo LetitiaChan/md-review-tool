@@ -581,6 +581,9 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
 
     // ===== 刷新 =====
     async function handleRefresh() {
+        // 刷新时同步设置（其他面板可能已修改设置）
+        vscode.postMessage({ type: 'getSettings' });
+
         const currentData = Store.getData();
         if (!currentData.fileName) return;
 
