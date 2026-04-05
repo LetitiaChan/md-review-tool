@@ -167,7 +167,15 @@ export class ReviewPanel {
             case 'readFile': {
                 try {
                     const data = this._fileService.readFile(payload.filePath);
+                    // 更新 panels Map 和 panel title（与 loadFile 保持一致）
+                    if (this._currentFilePath) {
+                        const oldNormalized = path.resolve(this._currentFilePath);
+                        ReviewPanel.panels.delete(oldNormalized);
+                    }
                     this._currentFilePath = payload.filePath;
+                    this._panel.title = path.basename(payload.filePath);
+                    const normalizedPath = path.resolve(payload.filePath);
+                    ReviewPanel.panels.set(normalizedPath, this);
                     this.postMessage({ type: 'fileContent', payload: data, requestId });
                 } catch (e: any) {
                     this.postMessage({ type: 'fileContent', payload: { error: e.message }, requestId });
