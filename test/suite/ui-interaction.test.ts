@@ -1001,6 +1001,23 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             }
         });
 
+        test('VSCode 模式提示文本应显示 VSCode 而非 CodeBuddy', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+            const i18nJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'i18n.js'), 'utf-8');
+
+            // vscodeAiHint 默认文本应包含 VSCode 而非 CodeBuddy
+            assert.ok(html.includes('id="vscodeAiHint"'), 'vscodeAiHint 元素应存在');
+            assert.ok(!html.includes('粘贴到CodeBuddy对话发送'), 'vscodeAiHint 默认文本不应包含 CodeBuddy');
+            assert.ok(html.includes('粘贴到VSCode AI对话发送'), 'vscodeAiHint 默认文本应包含 VSCode');
+
+            // i18n 中文翻译应包含 VSCode
+            const zhMatch = i18nJs.match(/'modal\.ai_result\.vscode_hint':\s*'([^']+)'/);
+            assert.ok(zhMatch, 'i18n 中应有 vscode_hint 翻译');
+            assert.ok(!zhMatch![1].includes('CodeBuddy'), 'vscode_hint 中文翻译不应包含 CodeBuddy');
+            assert.ok(zhMatch![1].includes('VSCode'), 'vscode_hint 中文翻译应包含 VSCode');
+        });
+
         test('评论弹窗应使用 data-i18n 属性适配多语言', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');

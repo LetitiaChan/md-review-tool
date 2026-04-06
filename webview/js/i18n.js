@@ -143,7 +143,7 @@ window.I18n = (() => {
             // ===== AI结果弹窗 =====
             'modal.ai_result.title': '📋 AI 指令生成',
             'modal.ai_result.close': '关闭',
-            'modal.ai_result.vscode_hint': '⚠️ 指令已在剪贴板，请Ctrl+V粘贴到CodeBuddy对话发送',
+'modal.ai_result.vscode_hint': '⚠️ 指令已在剪贴板，请Ctrl+V粘贴到VSCode AI对话发送',
             'modal.ai_result.execute': '🚀 确定执行',
             'modal.ai_result.header_success': '✅ AI 指令已生成',
             'modal.ai_result.count': '共 {count} 条指令已生成',
@@ -587,7 +587,7 @@ window.I18n = (() => {
             // ===== AI Result Modal =====
             'modal.ai_result.title': '📋 AI Instructions Generated',
             'modal.ai_result.close': 'Close',
-            'modal.ai_result.vscode_hint': '⚠️ Instructions copied to clipboard. Paste with Ctrl+V into CodeBuddy chat.',
+'modal.ai_result.vscode_hint': '⚠️ Instructions copied to clipboard. Paste with Ctrl+V into VSCode AI chat.',
             'modal.ai_result.execute': '🚀 Execute',
             'modal.ai_result.header_success': '✅ AI Instructions Generated',
             'modal.ai_result.count': '{count} instructions generated',
