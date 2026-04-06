@@ -857,9 +857,10 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
             // settings.js 语言切换应触发 languageChanged 通知
             assert.ok(settingsJs.includes("_notifyChange('languageChanged'"), '语言切换后应发出 languageChanged 通知');
-            // app.js 应监听 languageChanged 事件并刷新主题按钮标签
+            // app.js 应监听 languageChanged 事件并刷新主题按钮标签和禅模式按钮标签
             assert.ok(appJs.includes("'languageChanged'"), 'app.js 应监听 languageChanged 事件');
             assert.ok(appJs.includes('updateThemeButtonLabel'), 'app.js 应有 updateThemeButtonLabel 函数调用');
+            assert.ok(appJs.includes('updateZenButtonLabel'), 'app.js 应有 updateZenButtonLabel 函数调用');
         });
 
         test('i18n 字典应包含主题按钮标签的中英文翻译', () => {
