@@ -1236,12 +1236,12 @@ showNotification(t('notification.restored', { count: matchedRecord.annotations.l
             tips.className = 'mode-edit-tips';
             tips.innerHTML = `
                 <div class="edit-tips-header">
-                    <span>⚠️ 编辑模式风险提示</span>
-                    <button class="edit-tips-close" onclick="this.parentElement.parentElement.classList.remove('show')" title="关闭">✕</button>
+                    <span>⚠️ ${t('editor.tips_title')}</span>
+                    <button class="edit-tips-close" onclick="this.parentElement.parentElement.classList.remove('show')" title="${t('editor.tips_close')}">✕</button>
                 </div>
                 <div class="edit-tips-body">
-                    <div class="edit-tips-item">修改内容后，部分 Markdown 扩展语法可能丢失（如数学公式、Mermaid 图表、GitHub 告警块等）</div>
-                    <div class="edit-tips-item">仅建议用于<b>轻量文本修改</b>（如修正错别字、勾选任务列表等）</div>
+                    <div class="edit-tips-item">${t('editor.tips_warning1')}</div>
+                    <div class="edit-tips-item">${t('editor.tips_warning2')}</div>
                 </div>
             `;
             document.body.appendChild(tips);
@@ -1987,14 +1987,14 @@ showNotification(t('notification.restored', { count: matchedRecord.annotations.l
 
             body.classList.add('zen-mode');
             zenBtn.classList.add('zen-active');
-            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M4 4h8v8H4z" fill="currentColor" opacity="0.3"/><path d="M1.5 1.5l13 13M14.5 1.5l-13 13" stroke="currentColor" stroke-width="0.6" opacity="0.4"/></svg> 退出禅模式';
+            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M4 4h8v8H4z" fill="currentColor" opacity="0.3"/><path d="M1.5 1.5l13 13M14.5 1.5l-13 13" stroke="currentColor" stroke-width="0.6" opacity="0.4"/></svg> ' + t('toolbar.exit_zen');
 
             // 通知 Extension Host 隐藏 IDE 侧边栏
             vscode.postMessage({ type: 'zenModeChanged', payload: { entering: true } });
         } else {
             body.classList.remove('zen-mode');
             zenBtn.classList.remove('zen-active');
-            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><rect x="4" y="4" width="8" height="8" rx="1" fill="currentColor" opacity="0.15" stroke="currentColor" stroke-width="0.8"/></svg> 禅模式';
+            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><rect x="4" y="4" width="8" height="8" rx="1" fill="currentColor" opacity="0.15" stroke="currentColor" stroke-width="0.8"/></svg> ' + t('toolbar.zen');
 
             // 通知 Extension Host 恢复 IDE 侧边栏
             vscode.postMessage({ type: 'zenModeChanged', payload: { entering: false } });

@@ -20,6 +20,7 @@ window.I18n = (() => {
             'toolbar.toc': '目录',
             'toolbar.zen_title': '禅模式：隐藏侧栏，专注阅读 (Alt+Z)',
             'toolbar.zen': '禅模式',
+            'toolbar.exit_zen': '退出禅模式',
             'toolbar.theme_title': '切换亮色/暗色主题',
             'toolbar.theme': '主题',
             'toolbar.mode_title': '切换预览/编辑模式',
@@ -65,6 +66,10 @@ window.I18n = (() => {
             'editor.hr_title': '分隔线',
             'editor.undo_title': '撤销 (Ctrl+Z)',
             'editor.redo_title': '重做 (Ctrl+Y)',
+            'editor.tips_title': '编辑模式风险提示',
+            'editor.tips_close': '关闭',
+            'editor.tips_warning1': '修改内容后，部分 Markdown 扩展语法可能丢失（如数学公式、Mermaid 图表、GitHub 告警块等）',
+            'editor.tips_warning2': '仅建议用于<b>轻量文本修改</b>（如修正错别字、勾选任务列表等）',
 
             // ===== 批注面板 =====
             'annotations.title': '批注列表',
@@ -441,6 +446,7 @@ window.I18n = (() => {
             'toolbar.toc': 'TOC',
             'toolbar.zen_title': 'Zen mode: hide sidebars, focus on reading (Alt+Z)',
             'toolbar.zen': 'Zen',
+            'toolbar.exit_zen': 'Exit Zen',
             'toolbar.theme_title': 'Toggle light/dark theme',
             'toolbar.theme': 'Theme',
             'toolbar.mode_title': 'Toggle preview/edit mode',
@@ -486,6 +492,10 @@ window.I18n = (() => {
             'editor.hr_title': 'Horizontal rule',
             'editor.undo_title': 'Undo (Ctrl+Z)',
             'editor.redo_title': 'Redo (Ctrl+Y)',
+            'editor.tips_title': 'Edit Mode Warning',
+            'editor.tips_close': 'Close',
+            'editor.tips_warning1': 'After editing, some Markdown extended syntax may be lost (e.g., math formulas, Mermaid diagrams, GitHub alert blocks, etc.)',
+            'editor.tips_warning2': 'Recommended for <b>lightweight text edits</b> only (e.g., fixing typos, checking task lists, etc.)',
 
             // ===== Annotations Panel =====
             'annotations.title': 'Annotations',
