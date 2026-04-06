@@ -58,6 +58,7 @@
 - **Rich Typography Settings** — Customizable font size, line height, content width, and font style with live preview
 - **Sidebar Layout** — Swappable positions for TOC and annotations panels (TOC left/right)
 - **Panel Resize** — Drag to adjust TOC and annotations panel widths
+- **Multi-Window Support** — Open multiple Markdown files simultaneously, each in its own independent review panel with separate annotations and state; smart titles auto-append parent directory for same-name files (e.g. `README.md — docs`)
 - **File Selector** — Dropdown to quickly switch between workspace Markdown files
 - **File Change Detection** — Shows "File Updated" badge when source file changes; click refresh to reload
 - **Back to Top** — Floating button to quickly scroll to the top of the document
@@ -272,6 +273,7 @@ MIT
 - **丰富的排版设置** — 字体大小、行高、内容宽度、字体风格均可自定义，实时预览
 - **侧边栏布局** — 目录与批注面板位置可互换（目录在左/右）
 - **面板拖拽** — 目录和批注面板宽度可拖拽调整
+- **多窗口支持** — 可同时打开多个 Markdown 文件，每个文件拥有独立的批阅面板、批注和状态；同名文件自动在标题中追加父目录区分（如 `README.md — docs`）
 - **文件选择器** — 工作区内 Markdown 文件下拉框快速切换
 - **文件变更检测** — 源文件修改后显示「文件已更新」徽章，点击刷新按钮重载
 - **回到顶部** — 悬浮按钮快速回到文档顶部
