@@ -7,6 +7,8 @@
 
 ## 最近更新
 
+- **2026-04-06**: 🚀 发布 v1.1.0 到 VS Code Marketplace（含 PlantUML/Graphviz 支持、多窗口、UI 增强、字体设置、截图替换视频等全部更新）
+- **2026-04-06**: README 视频介绍替换为亮色/暗色主题截图、补充多窗口支持功能描述
 - **2026-04-05**: UI 增强批次1（ui-enhancements-batch-1）：移除任务列表删除线、工具栏按钮重排、面板内隐藏按钮、多窗口支持、面板标题动态化、悬浮/嵌入模式、文档对齐、编辑后公式图表渲染修复
 - **2026-04-05**: 实现 PlantUML 和 Graphviz 图表渲染支持（add-plantuml-graphviz-support）
 - **2026-04-04**: 初始化 OpenSpec Harness Kit
