@@ -240,11 +240,13 @@ body {
 }
 
 .btn-primary {
-    background: var(--primary);
-    color: white;
+    background: linear-gradient(135deg, #34d399, #5eead4);
+    color: #064e3b;
+    font-weight: 600;
 }
 .btn-primary:hover:not(:disabled) {
-    background: var(--primary-hover);
+    background: linear-gradient(135deg, #2cc38a, #4dd9c3);
+    box-shadow: 0 2px 8px rgba(52, 211, 153, 0.35);
 }
 
 .btn-secondary {
@@ -1312,16 +1314,16 @@ body.theme-dark * {
 
 /* ===== 一键AI修复按钮 ===== */
 .btn-apply {
-    background: linear-gradient(135deg, #7c3aed, #4f46e5);
-    color: white;
+    background: linear-gradient(135deg, #34d399, #5eead4);
+    color: #064e3b;
     border: none;
     font-weight: 600;
     position: relative;
     overflow: hidden;
 }
 .btn-apply:hover:not(:disabled) {
-    background: linear-gradient(135deg, #6d28d9, #4338ca);
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+    background: linear-gradient(135deg, #2cc38a, #4dd9c3);
+    box-shadow: 0 2px 8px rgba(52, 211, 153, 0.4);
 }
 .btn-apply:disabled {
     background: #d1d5db;
