@@ -2,7 +2,9 @@
 # MD Human Review
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/letitia.md-human-review?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
-[![Rating](https://img.shields.io/visual-studio-marketplace/r/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > A powerful Markdown review & annotation extension for VSCode — comment, mark deletions, insert content, WYSIWYG edit, and generate AI fix instructions with one click.
 >
@@ -36,6 +38,8 @@
 - **Code Highlighting** — 15 code themes (GitHub, Monokai, Dracula, Nord, Tokyo Night, One Dark Pro, etc.)
 - **Mermaid Diagrams** — Flowcharts, sequence diagrams, Gantt charts, pie charts, Git graphs, etc. Click to enlarge with zoom controls
 - **Math Formulas** — KaTeX-based inline and block formula rendering
+- **PlantUML Diagrams** — UML class diagrams, sequence diagrams, activity diagrams, etc. Rendered via online PlantUML server; click to enlarge
+- **Graphviz Diagrams** — DOT language graph rendering via local Viz.js engine; click to enlarge with zoom controls
 - **Task Lists** — Directly toggle checkboxes in edit mode
 - Tables, footnotes, definition lists, Emoji, superscript/subscript, collapsible content, GFM alert blocks, and more
 
@@ -48,7 +52,7 @@
 ### 🖥️ Interface & Experience
 - **Table of Contents** — Auto-generated document TOC with collapse/expand all, quick navigation, and scroll-synced active section highlighting
 - **Annotations Panel** — Side annotation list with sorting by time or text position, navigation, editing, and deletion
-- **Image Lightbox** — Click images to enlarge with scroll-wheel zoom, drag-to-pan, and double-click to reset
+- **Image Lightbox** — Click images to enlarge with scroll-wheel zoom, drag-to-pan, double-click to reset (`+`/`-` zoom, `0` fit window, `R` reset)
 - **Zen Mode** — Hide sidebars for focused reading (`Alt+Z`), also hides IDE sidebars
 - **Light/Dark Theme** — One-click toolbar toggle or follow system preference
 - **Rich Typography Settings** — Customizable font size, line height, content width, and font style with live preview
@@ -66,6 +70,7 @@
 | `Ctrl+E` | Export review records |
 | `Ctrl+S` | Save edits to source file |
 | `Ctrl+Shift+E` | Toggle preview/edit mode |
+| `Ctrl+Enter` | Open review panel from Explorer |
 | `ESC` | Close modals / Exit Zen Mode |
 
 ## 🍴 Fork & Customize
@@ -247,6 +252,8 @@ MIT
 - **代码高亮** — 15 种代码主题（GitHub、Monokai、Dracula、Nord、Tokyo Night、One Dark Pro 等）
 - **Mermaid 图表** — 流程图、时序图、甘特图、饼图、Git 图等，点击可放大查看（支持缩放控制条）
 - **数学公式** — 基于 KaTeX 的行内公式与块级公式渲染
+- **PlantUML 图表** — UML 类图、时序图、活动图等，通过在线 PlantUML 服务器渲染，点击可放大查看
+- **Graphviz 图表** — DOT 语言图形渲染，基于本地 Viz.js 引擎，点击可放大查看（支持缩放控制条）
 - **任务列表** — 编辑模式下可直接勾选切换
 - 表格、脚注、定义列表、Emoji、上下标、折叠内容、GFM 告警块等
 
@@ -259,7 +266,7 @@ MIT
 ### 🖥️ 界面与体验
 - **目录导航** — 自动生成文档目录，支持折叠/展开全部、快速跳转、滚动高亮当前章节
 - **批注面板** — 侧边批注列表，支持按时间或文本位置排序、定位、编辑、删除
-- **图片灯箱** — 点击文档中的图片放大预览，支持滚轮缩放、拖拽平移、双击还原
+- **图片灯箱** — 点击文档中的图片放大预览，支持滚轮缩放、拖拽平移、双击还原（`+`/`-` 缩放，`0` 适应窗口，`R` 重置）
 - **禅模式** — 隐藏侧栏，专注阅读（`Alt+Z`），同时隐藏 IDE 侧边栏
 - **亮色/暗色主题** — 工具栏一键切换或跟随系统
 - **丰富的排版设置** — 字体大小、行高、内容宽度、字体风格均可自定义，实时预览
@@ -277,6 +284,7 @@ MIT
 | `Ctrl+E` | 导出批阅记录 |
 | `Ctrl+S` | 保存编辑内容到源文件 |
 | `Ctrl+Shift+E` | 切换预览/编辑模式 |
+| `Ctrl+Enter` | 在资源管理器中打开批阅面板 |
 | `ESC` | 关闭弹窗 / 退出禅模式 |
 
 ## 🍴 推荐 Fork 定制
