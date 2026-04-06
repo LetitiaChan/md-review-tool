@@ -2,7 +2,6 @@
 # MD Human Review
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/letitia.md-human-review?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
 [![Rating](https://img.shields.io/visual-studio-marketplace/r/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -14,9 +13,11 @@
 
 [中文](#chinese)
 
-## 📺 Video Introduction
+## 📸 Screenshots
 
-[![Video Introduction](https://img.youtube.com/vi/o4W217zlQmY/maxresdefault.jpg)](https://youtu.be/o4W217zlQmY)
+| Light Theme | Dark Theme |
+|:-----------:|:----------:|
+| ![Light Theme](assets/main_page_light.png) | ![Dark Theme](assets/main_page_dark.png) |
 
 ---
 
@@ -229,9 +230,11 @@ MIT
 
 [English](#english)
 
-## 📺 视频介绍
+## 📸 截图预览
 
-[![视频介绍](https://img.youtube.com/vi/o4W217zlQmY/maxresdefault.jpg)](https://youtu.be/o4W217zlQmY)
+| 亮色主题 | 暗色主题 |
+|:--------:|:--------:|
+| ![亮色主题](assets/main_page_light.png) | ![暗色主题](assets/main_page_dark.png) |
 
 ---
 
