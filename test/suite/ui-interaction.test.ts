@@ -946,6 +946,61 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(i18nJs.includes("'theme.dark'"), '应有 theme.dark 翻译 key');
         });
 
+        test('AI一键修复确认弹窗应使用 data-i18n 属性适配多语言', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+
+            // applyConfirmModal 弹窗标题
+            assert.ok(html.includes('data-i18n="modal.ai.title"'), 'AI修复确认弹窗标题应有 data-i18n 属性');
+            // 警告文本
+            assert.ok(html.includes('data-i18n-html="modal.ai.warning"'), 'AI修复确认弹窗警告应有 data-i18n-html 属性');
+            // 取消按钮
+            assert.ok(html.includes('data-i18n="modal.ai.cancel"'), 'AI修复确认弹窗取消按钮应有 data-i18n 属性');
+            // 确认按钮
+            assert.ok(html.includes('data-i18n="modal.ai.confirm"'), 'AI修复确认弹窗确认按钮应有 data-i18n 属性');
+        });
+
+        test('AI弹窗动态内容应使用 t() 函数而非硬编码中文', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // showApplyConfirm 中的动态内容
+            assert.ok(appJs.includes("t('modal.ai.no_annotations')"), '暂无批注提示应使用 t() 函数');
+            assert.ok(appJs.includes("t('modal.ai.source_file')"), '源文件标签应使用 t() 函数');
+            assert.ok(appJs.includes("t('modal.ai.total_annotations'"), '批注总数应使用 t() 函数');
+            assert.ok(appJs.includes("t('modal.ai.summary_hint')"), '摘要提示应使用 t() 函数');
+
+            // showApplyResult 中的动态内容
+            assert.ok(appJs.includes("t('modal.ai_result.header_success')"), 'AI指令成功标题应使用 t() 函数');
+            assert.ok(appJs.includes("t('modal.ai_result.count'"), '指令数量应使用 t() 函数');
+            assert.ok(appJs.includes("t('modal.ai_result.copy_btn')"), '复制按钮应使用 t() 函数');
+            assert.ok(appJs.includes("t('modal.ai_result.header_empty')"), '无效指令标题应使用 t() 函数');
+            assert.ok(appJs.includes("t('modal.ai_result.copy_text'"), '复制文本应使用 t() 函数');
+        });
+
+        test('i18n 字典应包含 AI 弹窗动态内容的中英文翻译', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const i18nJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'i18n.js'), 'utf-8');
+
+            // 验证新增的 AI 弹窗翻译 key 都有中英文两套
+            const keysToCheck = [
+                'modal.ai.no_annotations',
+                'modal.ai.source_file',
+                'modal.ai.total_annotations',
+                'modal.ai.summary_hint',
+                'modal.ai_result.header_success',
+                'modal.ai_result.count',
+                'modal.ai_result.copy_btn',
+                'modal.ai_result.header_empty',
+                'modal.ai_result.copy_text'
+            ];
+            for (const key of keysToCheck) {
+                const regex = new RegExp(`'${key.replace(/\./g, '\\.')}':`, 'g');
+                const matches = i18nJs.match(regex);
+                assert.ok(matches && matches.length >= 2, `${key} 应有中英文两套翻译`);
+            }
+        });
+
         test('表格编辑右键菜单应存在', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');

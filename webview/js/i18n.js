@@ -132,12 +132,28 @@ window.I18n = (() => {
             'modal.ai.warning': '此操作将生成 AI 修改指令文件，保存到工作区 <code>.review/</code> 目录。',
             'modal.ai.cancel': '取消',
             'modal.ai.confirm': '生成AI指令',
+            'modal.ai.no_annotations': '暂无批注',
+            'modal.ai.source_file': '📄 源文件：',
+            'modal.ai.total_annotations': '📝 共 {count} 条批注',
+            'modal.ai.delete_count': '🗑️ 删除操作：{count} 条',
+            'modal.ai.insert_count': '➕ 插入操作：{count} 条',
+            'modal.ai.comment_count': '💬 评论操作：{count} 条',
+            'modal.ai.summary_hint': '💡 所有批注将统一生成 AI 修改指令文件，由 AI 按指令逐条执行修改。',
 
             // ===== AI结果弹窗 =====
             'modal.ai_result.title': '📋 AI 指令生成',
             'modal.ai_result.close': '关闭',
             'modal.ai_result.vscode_hint': '⚠️ 指令已在剪贴板，请Ctrl+V粘贴到CodeBuddy对话发送',
             'modal.ai_result.execute': '🚀 确定执行',
+            'modal.ai_result.header_success': '✅ AI 指令已生成',
+            'modal.ai_result.count': '共 {count} 条指令已生成',
+            'modal.ai_result.hint_annotations': '🤖 <strong>{count} 条批注</strong>已生成 AI 修改指令文件。',
+            'modal.ai_result.source_label': '📄 源文件：',
+            'modal.ai_result.instruction_label': '📝 指令文件：',
+            'modal.ai_result.copy_btn': '📋 一键复制指令',
+            'modal.ai_result.copied': '✅ 已复制',
+            'modal.ai_result.header_empty': '⚠️ 无有效指令',
+            'modal.ai_result.copy_text': '请根据评审指令文件修改源文件。\n\n源文件路径：{source}\n评审指令文件：{instruction}\n\n请先读取评审指令文件了解需要修改的内容，然后按指令逐条修改源文件。',
 
             // ===== 帮助弹窗 =====
             'help.title': '📖 使用帮助',
@@ -560,12 +576,28 @@ window.I18n = (() => {
             'modal.ai.warning': 'This will generate AI instruction files and save them to the workspace <code>.review/</code> directory.',
             'modal.ai.cancel': 'Cancel',
             'modal.ai.confirm': 'Generate AI Instructions',
+            'modal.ai.no_annotations': 'No annotations yet',
+            'modal.ai.source_file': '📄 Source file: ',
+            'modal.ai.total_annotations': '📝 Total {count} annotations',
+            'modal.ai.delete_count': '🗑️ Delete: {count}',
+            'modal.ai.insert_count': '➕ Insert: {count}',
+            'modal.ai.comment_count': '💬 Comment: {count}',
+            'modal.ai.summary_hint': '💡 All annotations will be compiled into an AI instruction file for AI to execute modifications one by one.',
 
             // ===== AI Result Modal =====
             'modal.ai_result.title': '📋 AI Instructions Generated',
             'modal.ai_result.close': 'Close',
             'modal.ai_result.vscode_hint': '⚠️ Instructions copied to clipboard. Paste with Ctrl+V into CodeBuddy chat.',
             'modal.ai_result.execute': '🚀 Execute',
+            'modal.ai_result.header_success': '✅ AI Instructions Generated',
+            'modal.ai_result.count': '{count} instructions generated',
+            'modal.ai_result.hint_annotations': '🤖 <strong>{count} annotations</strong> compiled into AI instruction file.',
+            'modal.ai_result.source_label': '📄 Source file: ',
+            'modal.ai_result.instruction_label': '📝 Instruction file: ',
+            'modal.ai_result.copy_btn': '📋 Copy Instructions',
+            'modal.ai_result.copied': '✅ Copied',
+            'modal.ai_result.header_empty': '⚠️ No valid instructions',
+            'modal.ai_result.copy_text': 'Please modify the source file according to the review instruction file.\n\nSource file: {source}\nInstruction file: {instruction}\n\nPlease read the instruction file first, then apply modifications one by one.'
 
             // ===== Help Modal =====
             'help.title': '📖 User Guide',

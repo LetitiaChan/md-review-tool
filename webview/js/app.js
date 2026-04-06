@@ -1273,7 +1273,7 @@ showNotification(t('notification.restored', { count: matchedRecord.annotations.l
 
         const data = Store.getData();
         if (!data.annotations || data.annotations.length === 0) {
-            showNotification('暂无批注');
+            showNotification(t('modal.ai.no_annotations'));
             return;
         }
 
@@ -1283,13 +1283,13 @@ showNotification(t('notification.restored', { count: matchedRecord.annotations.l
 
         const summaryEl = document.getElementById('applySummary');
         summaryEl.innerHTML = `
-            <div class="summary-file">📄 源文件：<code>${data.fileName}</code></div>
-            <div class="summary-total">📝 共 <span class="stat-count">${data.annotations.length}</span> 条批注</div>
-            ${deleteCount > 0 ? `<div class="summary-stat"><span class="stat-icon">🗑️</span> 删除操作：<span class="stat-count">${deleteCount}</span> 条</div>` : ''}
-            ${insertCount > 0 ? `<div class="summary-stat"><span class="stat-icon">➕</span> 插入操作：<span class="stat-count">${insertCount}</span> 条</div>` : ''}
-            ${commentCount > 0 ? `<div class="summary-stat"><span class="stat-icon">💬</span> 评论操作：<span class="stat-count">${commentCount}</span> 条</div>` : ''}
+            <div class="summary-file">${t('modal.ai.source_file')}<code>${data.fileName}</code></div>
+            <div class="summary-total">${t('modal.ai.total_annotations', { count: data.annotations.length })}</div>
+            ${deleteCount > 0 ? `<div class="summary-stat">${t('modal.ai.delete_count', { count: deleteCount })}</div>` : ''}
+            ${insertCount > 0 ? `<div class="summary-stat">${t('modal.ai.insert_count', { count: insertCount })}</div>` : ''}
+            ${commentCount > 0 ? `<div class="summary-stat">${t('modal.ai.comment_count', { count: commentCount })}</div>` : ''}
             <div class="summary-hint">
-                💡 所有批注将统一生成 AI 修改指令文件，由 AI 按指令逐条执行修改。
+                ${t('modal.ai.summary_hint')}
             </div>
         `;
 
@@ -1339,22 +1339,22 @@ showNotification(t('notification.restored', { count: matchedRecord.annotations.l
 
         let html = '';
         if (needsAi > 0) {
-            html += `<div class="result-header">✅ AI 指令已生成</div>`;
-            html += `<div style="margin-bottom:12px;">共 ${needsAi} 条指令已生成</div>`;
+            html += `<div class="result-header">${t('modal.ai_result.header_success')}</div>`;
+            html += `<div style="margin-bottom:12px;">${t('modal.ai_result.count', { count: needsAi })}</div>`;
 
             if (aiInstructionFile) {
                 function escapeHtml(str) { return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
                 html += `<div class="result-ai-hint">
-                    🤖 <strong>${needsAi} 条批注</strong>已生成 AI 修改指令文件。<br>
+                    ${t('modal.ai_result.hint_annotations', { count: needsAi })}<br>
                     <div style="margin-top:6px;">
-<span class="ai-hint-label">📄 源文件：<code class="ai-hint-path">${escapeHtml(sourceFilePath || '')}</code></span><br>
-                        <span class="ai-hint-label">📝 指令文件：<code class="ai-hint-path">${escapeHtml(aiInstructionFilePath || '')}</code></span>
+<span class="ai-hint-label">${t('modal.ai_result.source_label')}<code class="ai-hint-path">${escapeHtml(sourceFilePath || '')}</code></span><br>
+                        <span class="ai-hint-label">${t('modal.ai_result.instruction_label')}<code class="ai-hint-path">${escapeHtml(aiInstructionFilePath || '')}</code></span>
                     </div>
-                    <button class="btn btn-copy-ai-instruction" id="btnCopyAiInstruction">📋 一键复制指令</button>
+                    <button class="btn btn-copy-ai-instruction" id="btnCopyAiInstruction">${t('modal.ai_result.copy_btn')}</button>
                 </div>`;
             }
         } else {
-            html += `<div class="result-header">⚠️ 无有效指令</div>`;
+            html += `<div class="result-header">${t('modal.ai_result.header_empty')}</div>`;
         }
 
         contentEl.innerHTML = html;
@@ -1365,10 +1365,7 @@ showNotification(t('notification.restored', { count: matchedRecord.annotations.l
 
         const copyBtn = document.getElementById('btnCopyAiInstruction');
         if (copyBtn) {
-            const copyText = '请根据评审指令文件修改源文件。\n\n'
-                + '源文件路径：' + (sourceFilePath || '') + '\n'
-                + '评审指令文件：' + (aiInstructionFilePath || '') + '\n\n'
-                + '请先读取评审指令文件了解需要修改的内容，然后按指令逐条修改源文件。';
+            const copyText = t('modal.ai_result.copy_text', { source: sourceFilePath || '', instruction: aiInstructionFilePath || '' });
             // 保存到模块级变量，供确定按钮使用
             _lastAiCopyText = copyText;
             _lastAiSourceFilePath = sourceFilePath || '';
@@ -1386,9 +1383,9 @@ showNotification(t('notification.restored', { count: matchedRecord.annotations.l
 
             copyBtn.addEventListener('click', function() {
                 navigator.clipboard.writeText(copyText).then(() => {
-                    this.innerHTML = '✅ 已复制';
+this.innerHTML = t('modal.ai_result.copied');
                     this.classList.add('copied');
-                    setTimeout(() => { this.innerHTML = '📋 一键复制指令'; this.classList.remove('copied'); }, 2000);
+                    setTimeout(() => { this.innerHTML = t('modal.ai_result.copy_btn'); this.classList.remove('copied'); }, 2000);
                 }).catch(() => {
                     const ta = document.createElement('textarea');
                     ta.value = copyText;
@@ -1398,9 +1395,9 @@ showNotification(t('notification.restored', { count: matchedRecord.annotations.l
                     ta.select();
                     document.execCommand('copy');
                     document.body.removeChild(ta);
-                    this.innerHTML = '✅ 已复制';
+this.innerHTML = t('modal.ai_result.copied');
                     this.classList.add('copied');
-                    setTimeout(() => { this.innerHTML = '📋 一键复制指令'; this.classList.remove('copied'); }, 2000);
+                    setTimeout(() => { this.innerHTML = t('modal.ai_result.copy_btn'); this.classList.remove('copied'); }, 2000);
                 });
             });
         } else {

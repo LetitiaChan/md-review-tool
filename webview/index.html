@@ -357,18 +357,18 @@
     <div class="modal-overlay" id="applyConfirmModal" style="display:none;">
         <div class="modal">
             <div class="modal-header">
-                <h3>🤖 一键AI修复确认</h3>
+                <h3 data-i18n="modal.ai.title">🤖 一键AI修复确认</h3>
                 <button class="btn-close" id="btnCloseApplyConfirm">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="apply-summary" id="applySummary"></div>
                 <div class="apply-warning">
-                    <p>⚠️ 此操作将生成 AI 修改指令文件，保存到工作区 <code>.review/</code> 目录。</p>
+                    <p data-i18n-html="modal.ai.warning">⚠️ 此操作将生成 AI 修改指令文件，保存到工作区 <code>.review/</code> 目录。</p>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" id="btnCancelApply">取消</button>
-                <button class="btn btn-apply" id="btnConfirmApply">生成AI指令</button>
+                <button class="btn btn-outline" id="btnCancelApply" data-i18n="modal.ai.cancel">取消</button>
+                <button class="btn btn-apply" id="btnConfirmApply" data-i18n="modal.ai.confirm">生成AI指令</button>
             </div>
         </div>
     </div>
