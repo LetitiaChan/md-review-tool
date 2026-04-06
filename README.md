@@ -1,11 +1,16 @@
 <a id="chinese"></a>
 # MD Human Review
 
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/letitia.md-human-review?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > A powerful Markdown review & annotation extension for VSCode — comment, mark deletions, insert content, WYSIWYG edit, and generate AI fix instructions with one click.
 >
 > 🖊️ 像导师批改论文一样批阅 Markdown —— 评论、删除、插入、所见即所得编辑，一键生成 AI 修改指令。
 
-**Key Features**: Markdown review, annotation, comment, WYSIWYG editing, AI-powered fix, code highlighting, Mermaid diagrams, KaTeX math, dark/light theme, table of contents, image lightbox, auto-save.
+**Key Features**: Markdown review, annotation, comment, WYSIWYG editing, AI-powered fix, code highlighting, Mermaid diagrams, KaTeX math, PlantUML, Graphviz, dark/light theme, table of contents, image lightbox, auto-save.
 
 [English](#english)
 
@@ -174,6 +179,23 @@ npm run compile
 # 监听模式（开发时推荐）
 npm run watch
 ```
+
+## ❓ 常见问题（FAQ）
+
+### 这个插件和 VS Code 内置 Markdown 预览有什么区别？
+内置预览只能查看，MD Human Review 支持在渲染后的文档上直接批注（评论、删除标记、插入内容），并能一键生成 AI 修改指令。
+
+### 支持哪些图表格式？
+Mermaid（流程图、时序图、甘特图等）、KaTeX（数学公式）、PlantUML（通过在线服务器渲染）、Graphviz（DOT 语言，本地 Viz.js 渲染）。
+
+### 如何与 AI 工具配合使用？
+批阅完成后点击「🤖 一键 AI 修复」，会生成结构化的修改指令文件，可直接发送到 ChatGPT、CodeBuddy、Copilot 等 AI 工具执行。也可以按 `Ctrl+E` 导出批阅记录后手动粘贴。
+
+### 批注数据保存在哪里？
+批注自动保存到工作区的 `.review/` 目录下，以 JSON 格式存储。源文件内容变更时会自动归档旧版本。
+
+### 支持哪些文件格式？
+`.md`、`.markdown`、`.mdc`（Markdown Cursor）文件。
 
 ## 🙏 致谢
 
@@ -363,6 +385,23 @@ npm run compile
 # Watch mode (recommended for development)
 npm run watch
 ```
+
+## ❓ FAQ
+
+### How is this different from VS Code's built-in Markdown preview?
+The built-in preview is read-only. MD Human Review lets you annotate rendered documents with comments, deletion marks, and content insertions — then generate AI fix instructions with one click.
+
+### What diagram formats are supported?
+Mermaid (flowcharts, sequence diagrams, Gantt charts, etc.), KaTeX (math formulas), PlantUML (online server rendering), and Graphviz (DOT language, local Viz.js rendering).
+
+### How does it work with AI tools?
+After reviewing, click "🤖 One-click AI Fix" to generate structured modification instructions. These can be sent directly to ChatGPT, CodeBuddy, Copilot, or any AI tool. You can also press `Ctrl+E` to export and manually paste.
+
+### Where are annotations stored?
+Annotations are auto-saved to the `.review/` directory in your workspace as JSON files. Old versions are automatically archived when source file content changes.
+
+### What file formats are supported?
+`.md`, `.markdown`, and `.mdc` (Markdown Cursor) files.
 
 ## 🙏 Acknowledgements
 

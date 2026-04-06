@@ -1,0 +1,47 @@
+# MD Human Review
+
+> A VS Code / CodeBuddy IDE extension for reviewing and annotating Markdown documents — like a mentor grading papers, with one-click AI fix instruction generation.
+
+## What it does
+
+MD Human Review is a Markdown review & annotation tool built as a VS Code extension. It allows users to:
+
+- **Review Markdown files** with comments, deletion marks, and content insertions
+- **WYSIWYG edit** rendered Markdown documents directly (bold, italic, headings, lists, tables, etc.)
+- **Generate AI fix instructions** from all annotations with one click — send to ChatGPT, CodeBuddy, Copilot, or any AI tool
+- **Render rich content**: Mermaid diagrams, KaTeX math formulas, PlantUML, Graphviz (DOT), 15+ code highlighting themes
+- **Auto-save** annotations to workspace `.review/` directory with version management
+- **Export** structured modification instructions as Markdown files
+
+## Key differentiators vs other Markdown tools
+
+1. **Annotation system**: Unlike simple Markdown previewers, MD Human Review provides a full annotation workflow — comments with image attachments, deletion marks with strikethrough, and content insertion with before/after positioning.
+2. **One-click AI fix**: Generates structured AI modification instructions from all annotations, ordered back-to-front for safe execution. Can be sent directly to AI chat windows.
+3. **Full diagram support**: Mermaid, PlantUML (online rendering), Graphviz (local Viz.js rendering), KaTeX math — all in one extension.
+4. **WYSIWYG editing**: Edit rendered Markdown directly with a rich toolbar, including table row/column operations.
+5. **Zen mode, image lightbox, TOC navigation, dark/light themes** — a complete reading and reviewing experience.
+
+## Use cases
+
+- Technical document review and feedback
+- Academic paper annotation and revision
+- Team Markdown content review workflow
+- AI-assisted document editing and fixing
+- Markdown presentation and reading
+
+## Installation
+
+Search **"MD Human Review"** in VS Code or CodeBuddy IDE extension marketplace, or install from:
+- VS Code Marketplace: https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review
+
+## Links
+
+- GitHub Repository: https://github.com/LetitiaChan/md-review-tool
+- Video Introduction: https://youtu.be/o4W217zlQmY
+- License: MIT
+
+## Technical details
+
+- Built with: TypeScript, VS Code Extension API, marked (Markdown parser)
+- Supported file types: `.md`, `.markdown`, `.mdc`
+- Platforms: Windows, macOS, Linux (anywhere VS Code runs)

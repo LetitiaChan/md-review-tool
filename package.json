@@ -1,7 +1,7 @@
 {
   "name": "md-human-review",
   "displayName": "MD Human Review",
-  "description": "Markdown review & annotation tool — Comment, annotate, WYSIWYG edit, and generate AI fix instructions | 像导师批改论文一样批阅 Markdown，一键生成 AI 修改指令",
+  "description": "Markdown review & annotation tool — Comment, highlight, WYSIWYG edit, Mermaid/KaTeX/PlantUML preview, and generate AI fix instructions. Document reviewer for technical writing | Markdown 批阅批注工具，支持评论、删除标记、所见即所得编辑，一键生成 AI 修改指令",
   "version": "1.0.0",
   "license": "MIT",
   "publisher": "letitia",
@@ -24,7 +24,7 @@
     "markdown",
     "review",
     "annotation",
-    "comment",
+    "WYSIWYG",
     "AI"
   ],
   "icon": "assets/icons/icon-128x128.png",
@@ -34,7 +34,8 @@
   },
   "categories": [
     "Education",
-    "Visualization"
+    "Visualization",
+    "Other"
   ],
   "activationEvents": [
     "onCommand:mdReview.openPanel"

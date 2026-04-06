@@ -2,6 +2,32 @@
 
 所有重要的版本变更都将记录在此文件中。
 
+## [1.2.0] - 2025-04-05
+
+### ✨ 新增
+- 支持 PlantUML 图表渲染（通过在线服务器渲染，需网络连接）
+- 支持 Graphviz（DOT 语言）图表渲染（基于 Viz.js 本地渲染）
+- PlantUML / Graphviz 图表支持点击放大查看（Lightbox）
+- 新增 `mdReview.enablePlantUML` 和 `mdReview.enableGraphviz` 设置项
+
+### 🎨 UI 增强
+- 工具栏按钮重新排列，操作更直观
+- 新增悬浮模式 / 嵌入模式切换（`mdReview.panelMode`）
+- 新增文档对齐方式设置（靠左 / 居中 / 靠右，`mdReview.documentAlign`）
+- 面板标题动态显示当前文件名
+- 面板内新增隐藏按钮
+- 支持多窗口同时打开不同文件
+
+### 🐛 修复
+- 修复编辑模式下保存后 Mermaid / KaTeX 公式不重新渲染的问题
+- 移除任务列表的删除线样式干扰
+
+## [1.1.0] - 2025-04-04
+
+### ✨ 新增
+- 初始化 OpenSpec Harness Kit 开发工作流
+- 支持 `.mdc`（Markdown Cursor）文件格式的语法高亮
+
 ## [1.0.0] - 2025-03-31
 
 ### 🎉 首次发布
