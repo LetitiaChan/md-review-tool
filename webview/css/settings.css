@@ -1079,6 +1079,6 @@ body.theme-dark .doc-align-btn.active {
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 0.9em;
-    font-family: 'Fira Code', 'Consolas', monospace;
+    font-family: var(--code-font-family, 'Fira Code', 'Consolas', monospace);
     color: var(--danger);
 }

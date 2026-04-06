@@ -1889,7 +1889,7 @@ body.theme-dark * {
     display: inline-block;
     padding: 2px 6px;
     font-size: 11px;
-    font-family: 'Fira Code', 'Consolas', monospace;
+    font-family: var(--code-font-family, 'Fira Code', 'Consolas', monospace);
     line-height: 1.4;
     color: #24292f;
     vertical-align: middle;

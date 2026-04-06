@@ -112,14 +112,6 @@ const Settings = (() => {
             } else {
                 docContent.style.fontFamily = '';
             }
-            // 代码块字体通过 CSS 变量应用
-            docContent.querySelectorAll('pre code, code').forEach(el => {
-                if (codeFontVal) {
-                    el.style.fontFamily = "'" + codeFontVal + "', 'Fira Code', Consolas, 'Courier New', monospace";
-                } else {
-                    el.style.fontFamily = '';
-                }
-            });
         }
 
         // 主题
