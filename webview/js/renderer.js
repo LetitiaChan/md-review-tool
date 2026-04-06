@@ -1815,5 +1815,53 @@ const Renderer = (() => {
         });
     }
 
-    return { parseMarkdown, renderBlocks, getBlockIndex, setImageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
+    /**
+     * 将 DOM 中的数学公式占位符还原为原始公式文本（编辑模式专用）
+     * 在编辑模式下，用户需要看到并编辑原始的 $...$ / $$...$$ 文本，而非占位符
+     */
+    function restoreMathPlaceholders() {
+        if (_mathExpressions.length === 0) return;
+
+        const container = document.getElementById('documentContent');
+        if (!container) return;
+
+        const walker = document.createTreeWalker(
+            container,
+            NodeFilter.SHOW_TEXT,
+            null,
+            false
+        );
+
+        const textNodes = [];
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.textContent.includes(MATH_PLACEHOLDER_PREFIX)) {
+                textNodes.push(node);
+            }
+        }
+
+        const placeholderRegex = new RegExp(
+            MATH_PLACEHOLDER_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+            '(\\d+)' +
+            MATH_PLACEHOLDER_SUFFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+            'g'
+        );
+
+        for (const textNode of textNodes) {
+            const text = textNode.textContent;
+            const restored = text.replace(placeholderRegex, (match, indexStr) => {
+                const exprIndex = parseInt(indexStr);
+                const expr = _mathExpressions[exprIndex];
+                if (expr) {
+                    return expr.displayMode ? `$$${expr.formula}$$` : `$${expr.formula}$`;
+                }
+                return match;
+            });
+            if (restored !== text) {
+                textNode.textContent = restored;
+            }
+        }
+    }
+
+    return { parseMarkdown, renderBlocks, getBlockIndex, setImageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, restoreMathPlaceholders, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
 })();

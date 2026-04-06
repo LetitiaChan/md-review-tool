@@ -1577,6 +1577,8 @@ this.innerHTML = t('modal.ai_result.copied');
             wysiwygToolbar.classList.add('visible');
             const cleanBlocks = Renderer.parseMarkdown(data.rawMarkdown);
             Renderer.renderBlocks(cleanBlocks, []);
+            // 编辑模式下将数学公式占位符还原为原始文本（$...$），方便用户编辑
+            Renderer.restoreMathPlaceholders();
             docContent.contentEditable = 'true';
             docContent.classList.add('wysiwyg-editing');
             editorDirty = false;
