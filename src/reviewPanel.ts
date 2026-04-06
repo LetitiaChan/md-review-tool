@@ -322,6 +322,7 @@ export class ReviewPanel {
                     lineHeight: config.get<number>('lineHeight', 1.8),
                     contentMaxWidth: config.get<number>('contentMaxWidth', 1200),
                     fontFamily: config.get<string>('fontFamily', ''),
+                    codeFontFamily: config.get<string>('codeFontFamily', ''),
                     theme: config.get<string>('theme', 'light'),
                     showToc: config.get<boolean>('showToc', true),
                     showAnnotations: config.get<boolean>('showAnnotations', true),
@@ -348,6 +349,7 @@ export class ReviewPanel {
                     if (payload.lineHeight !== undefined) { await config.update('lineHeight', payload.lineHeight, target); }
                     if (payload.contentMaxWidth !== undefined) { await config.update('contentMaxWidth', payload.contentMaxWidth, target); }
                     if (payload.fontFamily !== undefined) { await config.update('fontFamily', payload.fontFamily, target); }
+                    if (payload.codeFontFamily !== undefined) { await config.update('codeFontFamily', payload.codeFontFamily, target); }
                     if (payload.theme !== undefined) { await config.update('theme', payload.theme, target); }
                     if (payload.showToc !== undefined) { await config.update('showToc', payload.showToc, target); }
                     if (payload.showAnnotations !== undefined) { await config.update('showAnnotations', payload.showAnnotations, target); }

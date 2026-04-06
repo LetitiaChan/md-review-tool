@@ -833,7 +833,62 @@ body.theme-dark .slider-row .slider-full {
     border-color: rgba(255, 255, 255, 0.1);
 }
 
-/* ===== 字体按钮组 ===== */
+/* ===== 字体下拉选择 ===== */
+.font-select-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+    min-width: 180px;
+}
+
+.font-select {
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--bg-white);
+    color: var(--text);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: auto;
+}
+
+.font-select:hover,
+.font-select:focus {
+    border-color: #667eea;
+}
+
+.font-custom-input {
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    background: var(--bg-white);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.font-custom-input:focus {
+    border-color: #667eea;
+}
+
+body.theme-dark .font-select {
+    background: #1a1a1a;
+    border-color: #333;
+    color: #e0e0e0;
+}
+
+body.theme-dark .font-custom-input {
+    background: #1a1a1a;
+    border-color: #333;
+    color: #e0e0e0;
+}
+
+/* ===== 字体按钮组（保留向后兼容） ===== */
 .font-button-group {
     display: flex;
     gap: 6px;

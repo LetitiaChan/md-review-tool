@@ -141,17 +141,12 @@
         "mdReview.fontFamily": {
           "type": "string",
           "default": "",
-          "enum": [
-            "",
-            "serif",
-            "monospace"
-          ],
-          "enumDescriptions": [
-            "系统默认",
-            "衬线体",
-            "等宽字体"
-          ],
-          "description": "文档正文字体风格"
+          "description": "文档正文字体（留空使用系统默认，可输入字体名如 'Microsoft YaHei'）"
+        },
+        "mdReview.codeFontFamily": {
+          "type": "string",
+          "default": "",
+          "description": "代码块字体（留空使用默认等宽字体，可输入字体名如 'Fira Code'）"
         },
         "mdReview.theme": {
           "type": "string",

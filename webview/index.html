@@ -609,12 +609,57 @@
                         <div class="setting-item">
                             <div class="setting-label">
                                 <div class="label-text">🔤 正文字体</div>
-                                <div class="label-desc">选择 Markdown 正文的显示字体</div>
+                                <div class="label-desc">选择或输入 Markdown 正文的显示字体</div>
                             </div>
-                            <div class="font-button-group">
-                                <button class="font-btn active" data-font="">系统默认</button>
-                                <button class="font-btn" data-font="serif">衬线体</button>
-                                <button class="font-btn" data-font="monospace">等宽字体</button>
+                            <div class="font-select-group">
+                                <select id="settingFontFamily" class="font-select">
+                                    <option value="">系统默认</option>
+                                    <optgroup label="无衬线">
+                                        <option value="Microsoft YaHei">微软雅黑</option>
+                                        <option value="PingFang SC">苹方</option>
+                                        <option value="Noto Sans SC">思源黑体</option>
+                                        <option value="Helvetica Neue">Helvetica Neue</option>
+                                        <option value="Arial">Arial</option>
+                                        <option value="Segoe UI">Segoe UI</option>
+                                    </optgroup>
+                                    <optgroup label="衬线">
+                                        <option value="serif">衬线体（通用）</option>
+                                        <option value="SimSun">宋体</option>
+                                        <option value="Noto Serif SC">思源宋体</option>
+                                        <option value="Georgia">Georgia</option>
+                                        <option value="Times New Roman">Times New Roman</option>
+                                    </optgroup>
+                                    <optgroup label="其他">
+                                        <option value="__custom__">自定义...</option>
+                                    </optgroup>
+                                </select>
+                                <input type="text" id="settingFontFamilyCustom" class="font-custom-input" placeholder="输入字体名称，如 'LXGW WenKai'" style="display:none;">
+                            </div>
+                        </div>
+                        <!-- 代码字体 -->
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">💻 代码字体</div>
+                                <div class="label-desc">选择或输入代码块的显示字体</div>
+                            </div>
+                            <div class="font-select-group">
+                                <select id="settingCodeFontFamily" class="font-select">
+                                    <option value="">默认等宽</option>
+                                    <optgroup label="等宽字体">
+                                        <option value="Fira Code">Fira Code</option>
+                                        <option value="JetBrains Mono">JetBrains Mono</option>
+                                        <option value="Cascadia Code">Cascadia Code</option>
+                                        <option value="Consolas">Consolas</option>
+                                        <option value="Source Code Pro">Source Code Pro</option>
+                                        <option value="Monaco">Monaco</option>
+                                        <option value="Menlo">Menlo</option>
+                                        <option value="Ubuntu Mono">Ubuntu Mono</option>
+                                    </optgroup>
+                                    <optgroup label="其他">
+                                        <option value="__custom__">自定义...</option>
+                                    </optgroup>
+                                </select>
+                                <input type="text" id="settingCodeFontFamilyCustom" class="font-custom-input" placeholder="输入字体名称，如 'Hack'" style="display:none;">
                             </div>
                         </div>
                         <!-- 字体大小 -->

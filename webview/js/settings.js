@@ -11,6 +11,7 @@ const Settings = (() => {
         lineHeight: 1.8,
         contentMaxWidth: 1200,
         fontFamily: '',
+        codeFontFamily: '',
         theme: 'light',
         showToc: true,
         showAnnotations: true,
@@ -80,17 +81,22 @@ const Settings = (() => {
         // 最大宽度
         root.style.setProperty('--doc-max-width', currentSettings.contentMaxWidth + 'px');
 
-        // 字体
-        if (currentSettings.fontFamily === 'serif') {
-            const serifFont = "Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif";
-            root.style.setProperty('--doc-font-family', serifFont);
-        } else if (currentSettings.fontFamily === 'monospace') {
-            const monoFont = "'Fira Code', Consolas, 'Courier New', monospace";
-            root.style.setProperty('--doc-font-family', monoFont);
-        } else if (currentSettings.fontFamily) {
-            root.style.setProperty('--doc-font-family', currentSettings.fontFamily);
+        // 正文字体
+        const fontVal = currentSettings.fontFamily;
+        if (fontVal === 'serif') {
+            root.style.setProperty('--doc-font-family', "Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif");
+        } else if (fontVal) {
+            root.style.setProperty('--doc-font-family', "'" + fontVal + "', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif");
         } else {
             root.style.removeProperty('--doc-font-family');
+        }
+
+        // 代码字体
+        const codeFontVal = currentSettings.codeFontFamily;
+        if (codeFontVal) {
+            root.style.setProperty('--code-font-family', "'" + codeFontVal + "', 'Fira Code', Consolas, 'Courier New', monospace");
+        } else {
+            root.style.removeProperty('--code-font-family');
         }
 
         // 应用到文档内容区
@@ -99,15 +105,21 @@ const Settings = (() => {
             docContent.style.fontSize = currentSettings.fontSize + 'px';
             docContent.style.lineHeight = String(currentSettings.lineHeight);
             docContent.style.maxWidth = currentSettings.contentMaxWidth + 'px';
-            if (currentSettings.fontFamily === 'serif') {
+            if (fontVal === 'serif') {
                 docContent.style.fontFamily = "Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif";
-            } else if (currentSettings.fontFamily === 'monospace') {
-                docContent.style.fontFamily = "'Fira Code', Consolas, 'Courier New', monospace";
-            } else if (currentSettings.fontFamily) {
-                docContent.style.fontFamily = currentSettings.fontFamily + ", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+            } else if (fontVal) {
+                docContent.style.fontFamily = "'" + fontVal + "', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
             } else {
                 docContent.style.fontFamily = '';
             }
+            // 代码块字体通过 CSS 变量应用
+            docContent.querySelectorAll('pre code, code').forEach(el => {
+                if (codeFontVal) {
+                    el.style.fontFamily = "'" + codeFontVal + "', 'Fira Code', Consolas, 'Courier New', monospace";
+                } else {
+                    el.style.fontFamily = '';
+                }
+            });
         }
 
         // 主题
@@ -259,10 +271,33 @@ const Settings = (() => {
         if (widthSlider) widthSlider.value = currentSettings.contentMaxWidth;
         if (widthValue) widthValue.textContent = currentSettings.contentMaxWidth + 'px';
 
-        // 字体按钮组
-        document.querySelectorAll('.font-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.font === currentSettings.fontFamily);
-        });
+        // 正文字体下拉框
+        const fontSelect = document.getElementById('settingFontFamily');
+        const fontCustom = document.getElementById('settingFontFamilyCustom');
+        if (fontSelect) {
+            const isPreset = Array.from(fontSelect.options).some(o => o.value === currentSettings.fontFamily);
+            if (isPreset || !currentSettings.fontFamily) {
+                fontSelect.value = currentSettings.fontFamily;
+                if (fontCustom) fontCustom.style.display = 'none';
+            } else {
+                fontSelect.value = '__custom__';
+                if (fontCustom) { fontCustom.style.display = ''; fontCustom.value = currentSettings.fontFamily; }
+            }
+        }
+
+        // 代码字体下拉框
+        const codeFontSelect = document.getElementById('settingCodeFontFamily');
+        const codeFontCustom = document.getElementById('settingCodeFontFamilyCustom');
+        if (codeFontSelect) {
+            const isPreset = Array.from(codeFontSelect.options).some(o => o.value === currentSettings.codeFontFamily);
+            if (isPreset || !currentSettings.codeFontFamily) {
+                codeFontSelect.value = currentSettings.codeFontFamily;
+                if (codeFontCustom) codeFontCustom.style.display = 'none';
+            } else {
+                codeFontSelect.value = '__custom__';
+                if (codeFontCustom) { codeFontCustom.style.display = ''; codeFontCustom.value = currentSettings.codeFontFamily; }
+            }
+        }
 
         // 主题
         document.querySelectorAll('.theme-btn').forEach(btn => {
@@ -353,10 +388,11 @@ const Settings = (() => {
         preview.style.fontSize = currentSettings.fontSize + 'px';
         preview.style.lineHeight = String(currentSettings.lineHeight);
         preview.style.maxWidth = currentSettings.contentMaxWidth + 'px';
-        if (currentSettings.fontFamily === 'serif') {
+        const fv = currentSettings.fontFamily;
+        if (fv === 'serif') {
             preview.style.fontFamily = "Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif";
-        } else if (currentSettings.fontFamily === 'monospace') {
-            preview.style.fontFamily = "'Fira Code', Consolas, 'Courier New', monospace";
+        } else if (fv) {
+            preview.style.fontFamily = "'" + fv + "', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
         } else {
             preview.style.fontFamily = '';
         }
@@ -404,17 +440,53 @@ const Settings = (() => {
             });
         }
 
-        // 字体按钮组
-        document.querySelectorAll('.font-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                currentSettings.fontFamily = btn.dataset.font;
-                document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+        // 正文字体下拉框
+        const fontFamilySelect = document.getElementById('settingFontFamily');
+        const fontFamilyCustom = document.getElementById('settingFontFamilyCustom');
+        if (fontFamilySelect) {
+            fontFamilySelect.addEventListener('change', () => {
+                if (fontFamilySelect.value === '__custom__') {
+                    if (fontFamilyCustom) { fontFamilyCustom.style.display = ''; fontFamilyCustom.focus(); }
+                } else {
+                    if (fontFamilyCustom) fontFamilyCustom.style.display = 'none';
+                    currentSettings.fontFamily = fontFamilySelect.value;
+                    applyToDOM();
+                    updateTypographyPreview();
+                    saveSettings();
+                }
+            });
+        }
+        if (fontFamilyCustom) {
+            fontFamilyCustom.addEventListener('change', () => {
+                currentSettings.fontFamily = fontFamilyCustom.value.trim();
                 applyToDOM();
                 updateTypographyPreview();
                 saveSettings();
             });
-        });
+        }
+
+        // 代码字体下拉框
+        const codeFontSelect = document.getElementById('settingCodeFontFamily');
+        const codeFontCustom = document.getElementById('settingCodeFontFamilyCustom');
+        if (codeFontSelect) {
+            codeFontSelect.addEventListener('change', () => {
+                if (codeFontSelect.value === '__custom__') {
+                    if (codeFontCustom) { codeFontCustom.style.display = ''; codeFontCustom.focus(); }
+                } else {
+                    if (codeFontCustom) codeFontCustom.style.display = 'none';
+                    currentSettings.codeFontFamily = codeFontSelect.value;
+                    applyToDOM();
+                    saveSettings();
+                }
+            });
+        }
+        if (codeFontCustom) {
+            codeFontCustom.addEventListener('change', () => {
+                currentSettings.codeFontFamily = codeFontCustom.value.trim();
+                applyToDOM();
+                saveSettings();
+            });
+        }
 
         // 字体大小滑块
         const fontSizeSlider = document.getElementById('settingFontSize');
