@@ -426,6 +426,9 @@ const Settings = (() => {
                 applyToDOM();
                 saveSettings();
                 // 通知外部模块主题已变更（用于 Mermaid 重新渲染等）
+                _notifyChange('themeChanged', btn.dataset.theme);
+            });
+        });
 
         // 语言切换下拉框
         const langSelect = document.getElementById('settingLanguage');
@@ -438,9 +441,6 @@ const Settings = (() => {
                 saveSettings();
             });
         }
-                _notifyChange('themeChanged', btn.dataset.theme);
-            });
-        });
 
         // 代码高亮主题下拉框
         const codeThemeSelect = document.getElementById('settingCodeTheme');
