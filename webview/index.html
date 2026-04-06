@@ -204,23 +204,23 @@
             <div class="annotations-panel" id="annotationsPanel">
                 <div class="resize-handle resize-handle-left" id="annotationsResizeHandle"></div>
                 <div class="panel-header">
-                    <span>批注列表</span>
+                    <span data-i18n="annotations.title">批注列表</span>
                     <div class="panel-header-actions">
-                        <button class="btn btn-header-save" id="btnExport" disabled title="保存批阅记录">
+                        <button class="btn btn-header-save" id="btnExport" disabled data-i18n-title="annotations.save_title" title="保存批阅记录">
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v8m0 0l-3-3m3 3l3-3M2 12v1h12v-1" stroke="currentColor" stroke-width="1.5"/></svg>
-                            保存
+                            <span data-i18n="annotations.save">保存</span>
                         </button>
-                        <button class="btn btn-header-clear" id="btnClearAll" disabled title="清除所有批注">
+                        <button class="btn btn-header-clear" id="btnClearAll" disabled data-i18n-title="annotations.clear_title" title="清除所有批注">
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 4h10M6 4V3h4v1M5 4v8.5a.5.5 0 00.5.5h5a.5.5 0 00.5-.5V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            清除
+                            <span data-i18n="annotations.clear">清除</span>
                         </button>
                         <div class="sort-controls">
-                            <select class="sort-select" id="sortSelect" title="排序方式">
-                                <option value="time">按批阅时间 ↓</option>
-                                <option value="position">按文本位置</option>
+                            <select class="sort-select" id="sortSelect" data-i18n-title="annotations.sort_title" title="排序方式">
+                                <option value="time" data-i18n="annotations.sort_time">按批阅时间 ↓</option>
+                                <option value="position" data-i18n="annotations.sort_position">按文本位置</option>
                             </select>
                         </div>
-                        <button class="panel-hide-btn" id="btnHideAnnotations" title="隐藏批注面板">
+                        <button class="panel-hide-btn" id="btnHideAnnotations" data-i18n-title="annotations.hide_title" title="隐藏批注面板">
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                         </button>
                     </div>

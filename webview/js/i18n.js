@@ -329,6 +329,8 @@ window.I18n = (() => {
             'annotation.insert_before_label': '📍 在此之前插入：',
             'annotation.insert_after_label': '📍 在此之后插入：',
             'annotation.edit': '编辑',
+            'annotation.block_index': '块 {index}',
+            'annotation.image_alt': '附图',
             'annotation.preview_alt': '预览{index}',
 
             // ===== AI 修复 =====
@@ -755,6 +757,8 @@ window.I18n = (() => {
             'annotation.insert_before_label': '📍 Insert before:',
             'annotation.insert_after_label': '📍 Insert after:',
             'annotation.edit': 'Edit',
+            'annotation.block_index': 'Block {index}',
+            'annotation.image_alt': 'Image',
             'annotation.preview_alt': 'Preview {index}',
 
             // ===== AI Fix =====

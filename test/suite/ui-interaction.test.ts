@@ -883,6 +883,60 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(appJs.includes('data-i18n="toolbar.file_select_default"'), '动态生成的默认 option 应带有 data-i18n 属性');
         });
 
+        test('批注面板 header 应使用 data-i18n 属性适配多语言', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+
+            // 批注面板标题
+            assert.ok(html.includes('data-i18n="annotations.title"'), '批注面板标题应有 data-i18n 属性');
+            // 保存按钮
+            assert.ok(html.includes('data-i18n="annotations.save"'), '保存按钮应有 data-i18n 属性');
+            assert.ok(html.includes('data-i18n-title="annotations.save_title"'), '保存按钮 title 应有 data-i18n-title 属性');
+            // 清除按钮
+            assert.ok(html.includes('data-i18n="annotations.clear"'), '清除按钮应有 data-i18n 属性');
+            assert.ok(html.includes('data-i18n-title="annotations.clear_title"'), '清除按钮 title 应有 data-i18n-title 属性');
+            // 排序选项
+            assert.ok(html.includes('data-i18n="annotations.sort_time"'), '排序选项"按批阅时间"应有 data-i18n 属性');
+            assert.ok(html.includes('data-i18n="annotations.sort_position"'), '排序选项"按文本位置"应有 data-i18n 属性');
+            assert.ok(html.includes('data-i18n-title="annotations.sort_title"'), '排序下拉框 title 应有 data-i18n-title 属性');
+            // 隐藏按钮
+            assert.ok(html.includes('data-i18n-title="annotations.hide_title"'), '隐藏按钮 title 应有 data-i18n-title 属性');
+        });
+
+        test('批注卡片渲染应使用 t() 函数而非硬编码中文', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const annotationsJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'annotations.js'), 'utf-8');
+
+            // 空状态应使用 t() 函数
+            assert.ok(annotationsJs.includes("t('annotations.empty')"), '空状态文本应使用 t() 函数');
+            assert.ok(annotationsJs.includes("t('annotations.empty_hint')"), '空状态提示应使用 t() 函数');
+            // 块索引应使用 t() 函数
+            assert.ok(annotationsJs.includes("t('annotation.block_index'"), '块索引应使用 t() 函数');
+            // 图片 alt 应使用 t() 函数
+            assert.ok(annotationsJs.includes("t('annotation.image_alt')"), '图片 alt 应使用 t() 函数');
+        });
+
+        test('语言切换应刷新批注列表', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // languageChanged 回调中应调用 Annotations.renderAnnotationsList
+            const langChangedIdx = appJs.indexOf("'languageChanged'");
+            const afterLangChanged = appJs.substring(langChangedIdx, langChangedIdx + 500);
+            assert.ok(afterLangChanged.includes('renderAnnotationsList'), '语言切换回调中应调用 renderAnnotationsList 刷新批注列表');
+        });
+
+        test('i18n 字典应包含批注卡片的中英文翻译', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const i18nJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'i18n.js'), 'utf-8');
+
+            // 验证 annotation.block_index 和 annotation.image_alt 的中英文翻译都存在
+            const zhMatch = i18nJs.match(/'annotation\.block_index':\s*'[^']+'/g);
+            assert.ok(zhMatch && zhMatch.length >= 2, 'annotation.block_index 应有中英文两套翻译');
+            const altMatch = i18nJs.match(/'annotation\.image_alt':\s*'[^']+'/g);
+            assert.ok(altMatch && altMatch.length >= 2, 'annotation.image_alt 应有中英文两套翻译');
+        });
+
         test('i18n 字典应包含主题按钮标签的中英文翻译', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const i18nJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'i18n.js'), 'utf-8');

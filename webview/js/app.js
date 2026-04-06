@@ -115,6 +115,10 @@
             if (key === 'languageChanged') {
                 updateZenButtonLabel();
                 updateServerFileSelect();
+                // 刷新批注列表中的动态文本（类型标签、日期格式、按钮文本等）
+                if (typeof Annotations !== 'undefined' && Annotations.renderAnnotationsList) {
+                    Annotations.renderAnnotationsList();
+                }
             }
         });
 
