@@ -944,10 +944,16 @@ window.I18n = (() => {
      * 扫描 DOM 中带有 data-i18n 属性的元素并填充翻译文本
      */
     function applyToDOM() {
-        // data-i18n: textContent
+        // data-i18n: textContent（optgroup 特殊处理，设置 label 属性）
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
-            if (key) { el.textContent = t(key); }
+            if (key) {
+                if (el.tagName === 'OPTGROUP') {
+                    el.label = t(key);
+                } else {
+                    el.textContent = t(key);
+                }
+            }
         });
         // data-i18n-html: innerHTML
         document.querySelectorAll('[data-i18n-html]').forEach(el => {

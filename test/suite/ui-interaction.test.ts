@@ -883,6 +883,32 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(appJs.includes('data-i18n="toolbar.file_select_default"'), '动态生成的默认 option 应带有 data-i18n 属性');
         });
 
+        test('applyToDOM 应对 optgroup 设置 label 属性而非 textContent（防止清空子选项）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const i18nJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'i18n.js'), 'utf-8');
+
+            // 回归测试：applyToDOM 中 data-i18n 处理应对 OPTGROUP 特殊处理
+            // 如果对 optgroup 使用 textContent 会清空其所有子 option 元素
+            assert.ok(i18nJs.includes("el.tagName === 'OPTGROUP'"), 'applyToDOM 应检测 OPTGROUP 标签');
+            assert.ok(i18nJs.includes('el.label = t(key)'), 'applyToDOM 应对 OPTGROUP 设置 label 属性');
+        });
+
+        test('index.html 中带 data-i18n 的 optgroup 应包含完整的子 option', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+
+            // 代码高亮主题 optgroup 应包含所有 15 个主题选项
+            const lightThemes = ['default-light-modern', 'github', 'atom-one-light', 'solarized-light'];
+            const darkThemes = ['default-dark-modern', 'github-dark', 'monokai', 'vs2015', 'atom-one-dark', 'one-dark-pro', 'dracula', 'nord', 'solarized-dark', 'tokyo-night'];
+            // 验证 optgroup 上有 data-i18n 属性（这些 optgroup 曾因 textContent 被清空子选项）
+            assert.ok(html.includes('optgroup data-i18n="settings.code_theme_light"'), '亮色主题 optgroup 应有 data-i18n 属性');
+            assert.ok(html.includes('optgroup data-i18n="settings.code_theme_dark"'), '暗色主题 optgroup 应有 data-i18n 属性');
+            // 验证所有主题选项都存在
+            for (const theme of [...lightThemes, ...darkThemes]) {
+                assert.ok(html.includes(`value="${theme}"`), `主题选项 ${theme} 应存在于 HTML 中`);
+            }
+        });
+
         test('批注面板 header 应使用 data-i18n 属性适配多语言', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
