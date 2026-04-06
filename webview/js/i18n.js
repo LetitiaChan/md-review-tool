@@ -920,6 +920,115 @@ window.I18n = (() => {
         });
         // Inject CSS custom properties for i18n
         document.documentElement.style.setProperty('--i18n-placeholder-edit', JSON.stringify(t('css.placeholder_edit')));
+
+        // Dynamic help content
+        const helpEl = document.getElementById('helpContent');
+        if (helpEl) {
+            helpEl.innerHTML = _buildHelpHTML();
+        }
+    }
+
+    function _buildHelpHTML() {
+        const _t = t;
+        return `
+<section class="help-section">
+    <h4>${_t('help.quick_start_title')}</h4>
+    <p>${_t('help.quick_start_intro')}</p>
+    <ul>
+        <li>${_t('help.quick_start_command')}</li>
+        <li>${_t('help.quick_start_context')}</li>
+        <li>${_t('help.quick_start_titlebar')}</li>
+    </ul>
+</section>
+<section class="help-section">
+    <h4>${_t('help.comment_title')}</h4>
+    <ol>
+        <li>${_t('help.comment_1')}</li>
+        <li>${_t('help.comment_2')}</li>
+        <li>${_t('help.comment_3')}</li>
+        <li>${_t('help.comment_4')}</li>
+    </ol>
+    <p class="help-hint">${_t('help.comment_hint')}</p>
+</section>
+<section class="help-section">
+    <h4>${_t('help.delete_title')}</h4>
+    <ol>
+        <li>${_t('help.delete_1')}</li>
+        <li>${_t('help.delete_2')}</li>
+    </ol>
+    <p class="help-hint">${_t('help.delete_hint')}</p>
+</section>
+<section class="help-section">
+    <h4>${_t('help.insert_title')}</h4>
+    <ol>
+        <li>${_t('help.insert_1')}</li>
+        <li>${_t('help.insert_2')}</li>
+        <li>${_t('help.insert_3')}</li>
+    </ol>
+</section>
+<section class="help-section">
+    <h4>${_t('help.edit_title')}</h4>
+    <ol>
+        <li>${_t('help.edit_1')}</li>
+        <li>${_t('help.edit_2')}</li>
+        <li>${_t('help.edit_3')}</li>
+        <li>${_t('help.edit_4')}</li>
+    </ol>
+</section>
+<section class="help-section">
+    <h4>${_t('help.ai_title')}</h4>
+    <ol>
+        <li>${_t('help.ai_1')}</li>
+        <li>${_t('help.ai_2')}</li>
+        <li>${_t('help.ai_3')}</li>
+        <li>${_t('help.ai_4')}</li>
+    </ol>
+</section>
+<section class="help-section">
+    <h4>${_t('help.export_title')}</h4>
+    <ul>
+        <li>${_t('help.export_1')}</li>
+        <li>${_t('help.export_2')}</li>
+        <li>${_t('help.export_3')}</li>
+    </ul>
+</section>
+<section class="help-section">
+    <h4>${_t('help.ui_title')}</h4>
+    <ul>
+        <li>${_t('help.ui_toc')}</li>
+        <li>${_t('help.ui_annotations')}</li>
+        <li>${_t('help.ui_lightbox')}</li>
+        <li>${_t('help.ui_mermaid')}</li>
+        <li>${_t('help.ui_zen')}</li>
+        <li>${_t('help.ui_theme')}</li>
+        <li>${_t('help.ui_file_select')}</li>
+        <li>${_t('help.ui_file_change')}</li>
+        <li>${_t('help.ui_resize')}</li>
+    </ul>
+</section>
+<section class="help-section">
+    <h4>${_t('help.shortcut_title')}</h4>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tr><td style="padding:4px 8px;"><kbd>Alt</kbd>+<kbd>Z</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_zen')}</td></tr>
+        <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_export')}</td></tr>
+        <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_save')}</td></tr>
+        <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_mode')}</td></tr>
+        <tr><td style="padding:4px 8px;"><kbd>ESC</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_esc')}</td></tr>
+    </table>
+</section>
+<section class="help-section help-links">
+    <div style="display:flex;align-items:center;justify-content:center;gap:24px;padding:4px 0;">
+        <a href="https://github.com/LetitiaChan/md-review-tool" target="_blank" class="help-link-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 .5A7.5 7.5 0 0 0 5.63 15.13c.37.07.51-.16.51-.36v-1.24c-2.1.46-2.54-1.01-2.54-1.01a2 2 0 0 0-.84-1.1c-.69-.47.05-.46.05-.46a1.58 1.58 0 0 1 1.15.78 1.6 1.6 0 0 0 2.19.62 1.6 1.6 0 0 1 .48-1c-1.68-.19-3.44-.84-3.44-3.74a2.93 2.93 0 0 1 .78-2.03 2.72 2.72 0 0 1 .07-2s.64-.2 2.08.78a7.17 7.17 0 0 1 3.78 0c1.44-.99 2.08-.78 2.08-.78a2.72 2.72 0 0 1 .07 2 2.93 2.93 0 0 1 .78 2.03c0 2.91-1.77 3.55-3.45 3.74a1.8 1.8 0 0 1 .51 1.39v2.06c0 .2.14.44.52.36A7.5 7.5 0 0 0 8 .5z" fill="currentColor"/></svg>
+            <span>GitHub</span>
+        </a>
+        <span style="color:var(--text-light);">·</span>
+        <a href="https://github.com/LetitiaChan/md-review-tool/issues" target="_blank" class="help-link-item">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 4.5v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11" r="0.75" fill="currentColor"/></svg>
+            <span>${_t('help.feedback')}</span>
+        </a>
+    </div>
+</section>`;
     }
 
     return {

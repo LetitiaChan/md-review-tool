@@ -839,10 +839,15 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
 
-            assert.ok(html.includes('使用帮助'), '应有帮助标题');
-            assert.ok(html.includes('快速开始'), '应有快速开始章节');
-            assert.ok(html.includes('添加评论'), '应有添加评论说明');
-            assert.ok(html.includes('标记删除'), '应有标记删除说明');
+            assert.ok(html.includes('id="helpContent"'), '应有帮助内容容器');
+            assert.ok(html.includes('data-i18n="help.title"'), '应有帮助标题 i18n 标记');
+            assert.ok(html.includes('id="btnCloseHelpOk"'), '应有关闭帮助按钮');
+
+            // 验证 i18n.js 中包含帮助翻译 key
+            const i18nJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'i18n.js'), 'utf-8');
+            assert.ok(i18nJs.includes("'help.quick_start_title'"), '应有快速开始翻译 key');
+            assert.ok(i18nJs.includes("'help.comment_title'"), '应有添加评论翻译 key');
+            assert.ok(i18nJs.includes("'help.delete_title'"), '应有标记删除翻译 key');
         });
 
         test('表格编辑右键菜单应存在', () => {
