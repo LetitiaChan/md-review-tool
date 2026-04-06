@@ -547,55 +547,6 @@
                     </div>
                 </div>
 
-                <!-- 代码高亮主题卡片 -->
-                <div class="settings-card">
-                    <div class="settings-card-header">
-                        <div class="card-icon code-theme">✏️</div>
-                        <div>
-                            <h3>代码高亮主题</h3>
-                            <div class="card-desc">选择代码块的高亮配色方案</div>
-                        </div>
-                    </div>
-                    <div class="settings-card-body">
-                        <div class="setting-item">
-                            <div class="setting-label">
-                                <div class="label-text">代码高亮主题</div>
-                                <div class="label-desc">选择代码块的高亮配色方案</div>
-                            </div>
-                            <select class="setting-select" id="settingCodeTheme">
-                                <optgroup label="🔆 亮色主题">
-                                    <option value="default-light-modern">Default Light Modern</option>
-                                    <option value="github">GitHub</option>
-                                    <option value="atom-one-light">Atom One Light</option>
-                                    <option value="solarized-light">Solarized Light</option>
-                                </optgroup>
-                                <optgroup label="🌙 暗色主题">
-                                    <option value="default-dark-modern">Default Dark Modern</option>
-                                    <option value="github-dark">GitHub Dark</option>
-                                    <option value="monokai">Monokai</option>
-                                    <option value="vs2015">VS 2015</option>
-                                    <option value="atom-one-dark">Atom One Dark</option>
-                                    <option value="one-dark-pro">One Dark Pro</option>
-                                    <option value="dracula">Dracula</option>
-                                    <option value="nord">Nord</option>
-                                    <option value="solarized-dark">Solarized Dark</option>
-                                    <option value="tokyo-night">Tokyo Night</option>
-                                </optgroup>
-                            </select>
-                        </div>
-                        <!-- 代码预览区（预渲染 hljs 高亮标签，切换主题只需改 data-code-theme 属性） -->
-                        <div class="code-theme-preview" id="codeThemePreview">
-                            <pre class="preview-code-block"><div class="preview-code-header"><span class="preview-code-lang">javascript</span></div><code class="hljs" id="codePreviewContent"><span class="hljs-keyword">function</span> <span class="hljs-title function_">fibonacci</span>(<span class="hljs-params">n</span>) {
-  <span class="hljs-comment">// 递归实现斐波那契数列</span>
-  <span class="hljs-keyword">if</span> (n &lt;= <span class="hljs-number">1</span>) <span class="hljs-keyword">return</span> n;
-  <span class="hljs-keyword">return</span> <span class="hljs-title function_">fibonacci</span>(n - <span class="hljs-number">1</span>) + <span class="hljs-title function_">fibonacci</span>(n - <span class="hljs-number">2</span>);
-}
-<span class="hljs-keyword">const</span> result = <span class="hljs-title function_">fibonacci</span>(<span class="hljs-number">10</span>);
-<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`Result: <span class="hljs-subst">${result}</span>`</span>);</code></pre>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- 排版设置卡片 -->
                 <div class="settings-card">
                     <div class="settings-card-header">
@@ -713,6 +664,55 @@
                                 <p>这是一段预览文本，用于展示当前排版设置的效果。The quick brown fox jumps over the lazy dog.</p>
                                 <p>支持渲染 <code>Mermaid</code> 图表和代码高亮，让 Markdown 阅读体验更加出色。</p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 代码高亮主题卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <div class="card-icon code-theme">✏️</div>
+                        <div>
+                            <h3>代码高亮主题</h3>
+                            <div class="card-desc">选择代码块的高亮配色方案</div>
+                        </div>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <div class="label-text">代码高亮主题</div>
+                                <div class="label-desc">选择代码块的高亮配色方案</div>
+                            </div>
+                            <select class="setting-select" id="settingCodeTheme">
+                                <optgroup label="🔆 亮色主题">
+                                    <option value="default-light-modern">Default Light Modern</option>
+                                    <option value="github">GitHub</option>
+                                    <option value="atom-one-light">Atom One Light</option>
+                                    <option value="solarized-light">Solarized Light</option>
+                                </optgroup>
+                                <optgroup label="🌙 暗色主题">
+                                    <option value="default-dark-modern">Default Dark Modern</option>
+                                    <option value="github-dark">GitHub Dark</option>
+                                    <option value="monokai">Monokai</option>
+                                    <option value="vs2015">VS 2015</option>
+                                    <option value="atom-one-dark">Atom One Dark</option>
+                                    <option value="one-dark-pro">One Dark Pro</option>
+                                    <option value="dracula">Dracula</option>
+                                    <option value="nord">Nord</option>
+                                    <option value="solarized-dark">Solarized Dark</option>
+                                    <option value="tokyo-night">Tokyo Night</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <!-- 代码预览区 -->
+                        <div class="code-theme-preview" id="codeThemePreview">
+                            <pre class="preview-code-block"><div class="preview-code-header"><span class="preview-code-lang">javascript</span></div><code class="hljs" id="codePreviewContent"><span class="hljs-keyword">function</span> <span class="hljs-title function_">fibonacci</span>(<span class="hljs-params">n</span>) {
+  <span class="hljs-comment">// 递归实现斐波那契数列</span>
+  <span class="hljs-keyword">if</span> (n &lt;= <span class="hljs-number">1</span>) <span class="hljs-keyword">return</span> n;
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">fibonacci</span>(n - <span class="hljs-number">1</span>) + <span class="hljs-title function_">fibonacci</span>(n - <span class="hljs-number">2</span>);
+}
+<span class="hljs-keyword">const</span> result = <span class="hljs-title function_">fibonacci</span>(<span class="hljs-number">10</span>);
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`Result: <span class="hljs-subst">${result}</span>`</span>);</code></pre>
                         </div>
                     </div>
                 </div>
