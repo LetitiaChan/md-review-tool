@@ -280,23 +280,23 @@
     <div class="modal-overlay" id="commentModal" style="display:none;">
         <div class="modal">
             <div class="modal-header">
-                <h3 id="commentModalTitle">添加评论</h3>
+                <h3 id="commentModalTitle" data-i18n="modal.comment.title">添加评论</h3>
                 <button class="btn-close" id="btnCloseModal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="selected-text-preview">
-                    <label>选中的文本：</label>
+                    <label data-i18n="modal.comment.selected_text">选中的文本：</label>
                     <div class="preview-text" id="selectedTextPreview"></div>
                 </div>
                 <div class="comment-input-area">
-                    <label>评论内容：</label>
-                    <textarea id="commentText" placeholder="输入你的评论..." rows="4"></textarea>
+                    <label data-i18n="modal.comment.content">评论内容：</label>
+                    <textarea id="commentText" data-i18n-placeholder="modal.comment.placeholder" placeholder="输入你的评论..." rows="4"></textarea>
                 </div>
                 <div class="image-upload-area">
-                    <label>插入图片（可选）：</label>
+                    <label data-i18n="modal.comment.image_label">插入图片（可选）：</label>
                     <div class="image-upload-zone" id="imageUploadZone">
                         <input type="file" id="imageInput" accept="image/*" multiple style="display:none;">
-                        <p>点击、拖拽或 Ctrl+V 粘贴图片</p>
+                        <p data-i18n="modal.comment.image_hint">点击、拖拽或 Ctrl+V 粘贴图片</p>
                     </div>
                     <div class="image-previews" id="imagePreviews"></div>
                 </div>
@@ -312,26 +312,26 @@
     <div class="modal-overlay" id="insertModal" style="display:none;">
         <div class="modal">
             <div class="modal-header">
-                <h3 id="insertModalTitle">插入内容</h3>
+                <h3 id="insertModalTitle" data-i18n="modal.insert.title_after">插入内容</h3>
                 <button class="btn-close" id="btnCloseInsertModal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="selected-text-preview">
-                    <label id="insertPositionLabel">插入位置（在此内容之后）：</label>
+                    <label id="insertPositionLabel" data-i18n="modal.insert.position_after">插入位置（在此内容之后）：</label>
                     <div class="preview-text" id="insertPositionPreview"></div>
                 </div>
                 <div class="comment-input-area">
-                    <label>要插入的内容：</label>
-                    <textarea id="insertText" placeholder="输入要插入的内容（支持Markdown格式）..." rows="6"></textarea>
+                    <label data-i18n="modal.insert.content">要插入的内容：</label>
+                    <textarea id="insertText" data-i18n-placeholder="modal.insert.content_placeholder" placeholder="输入要插入的内容（支持Markdown格式）..." rows="6"></textarea>
                 </div>
                 <div class="comment-input-area">
-                    <label>插入说明（可选）：</label>
-                    <textarea id="insertReason" placeholder="说明插入原因..." rows="2"></textarea>
+                    <label data-i18n="modal.insert.reason">插入说明（可选）：</label>
+                    <textarea id="insertReason" data-i18n-placeholder="modal.insert.reason_placeholder" placeholder="说明插入原因..." rows="2"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" id="btnCancelInsert">取消</button>
-                <button class="btn btn-primary" id="btnSubmitInsert">确认插入</button>
+                <button class="btn btn-outline" id="btnCancelInsert" data-i18n="modal.insert.cancel">取消</button>
+                <button class="btn btn-primary" id="btnSubmitInsert" data-i18n="modal.insert.submit">确认插入</button>
             </div>
         </div>
     </div>

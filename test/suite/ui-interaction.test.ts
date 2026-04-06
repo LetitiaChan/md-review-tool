@@ -1001,6 +1001,61 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             }
         });
 
+        test('评论弹窗应使用 data-i18n 属性适配多语言', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+
+            // 评论弹窗标题
+            assert.ok(html.includes('data-i18n="modal.comment.title"'), '评论弹窗标题应有 data-i18n 属性');
+            // 选中文本标签
+            assert.ok(html.includes('data-i18n="modal.comment.selected_text"'), '选中文本标签应有 data-i18n 属性');
+            // 评论内容标签
+            assert.ok(html.includes('data-i18n="modal.comment.content"'), '评论内容标签应有 data-i18n 属性');
+            // 评论输入框 placeholder
+            assert.ok(html.includes('data-i18n-placeholder="modal.comment.placeholder"'), '评论输入框应有 data-i18n-placeholder 属性');
+            // 插入图片标签
+            assert.ok(html.includes('data-i18n="modal.comment.image_label"'), '插入图片标签应有 data-i18n 属性');
+            // 图片上传提示
+            assert.ok(html.includes('data-i18n="modal.comment.image_hint"'), '图片上传提示应有 data-i18n 属性');
+        });
+
+        test('插入弹窗应使用 data-i18n 属性适配多语言', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+
+            // 插入弹窗标题
+            assert.ok(html.includes('data-i18n="modal.insert.title_after"'), '插入弹窗标题应有 data-i18n 属性');
+            // 插入位置标签
+            assert.ok(html.includes('data-i18n="modal.insert.position_after"'), '插入位置标签应有 data-i18n 属性');
+            // 要插入的内容标签
+            assert.ok(html.includes('data-i18n="modal.insert.content"'), '插入内容标签应有 data-i18n 属性');
+            // 插入内容 placeholder
+            assert.ok(html.includes('data-i18n-placeholder="modal.insert.content_placeholder"'), '插入内容输入框应有 data-i18n-placeholder 属性');
+            // 插入说明标签
+            assert.ok(html.includes('data-i18n="modal.insert.reason"'), '插入说明标签应有 data-i18n 属性');
+            // 插入说明 placeholder
+            assert.ok(html.includes('data-i18n-placeholder="modal.insert.reason_placeholder"'), '插入说明输入框应有 data-i18n-placeholder 属性');
+            // 取消按钮
+            assert.ok(html.includes('data-i18n="modal.insert.cancel"'), '插入弹窗取消按钮应有 data-i18n 属性');
+            // 确认按钮
+            assert.ok(html.includes('data-i18n="modal.insert.submit"'), '插入弹窗确认按钮应有 data-i18n 属性');
+        });
+
+        test('插入弹窗动态内容应使用 t() 函数而非硬编码中文', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const annotationsJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'annotations.js'), 'utf-8');
+
+            // openInsertModal 中的动态标题和标签
+            assert.ok(annotationsJs.includes("t('modal.insert.title_before')"), '前插标题应使用 t() 函数');
+            assert.ok(annotationsJs.includes("t('modal.insert.title_after')"), '后插标题应使用 t() 函数');
+            assert.ok(annotationsJs.includes("t('modal.insert.position_before')"), '前插位置标签应使用 t() 函数');
+            assert.ok(annotationsJs.includes("t('modal.insert.position_after')"), '后插位置标签应使用 t() 函数');
+
+            // 不应有硬编码中文弹窗标题
+            assert.ok(!annotationsJs.includes("textContent = '插入内容（在此处之前）'"), '不应有硬编码的前插标题');
+            assert.ok(!annotationsJs.includes("textContent = '插入内容（在此处之后）'"), '不应有硬编码的后插标题');
+        });
+
         test('表格编辑右键菜单应存在', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');

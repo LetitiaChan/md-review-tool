@@ -550,11 +550,11 @@ const Annotations = (() => {
         const titleEl = document.getElementById('insertModalTitle');
         const labelEl = document.getElementById('insertPositionLabel');
         if (currentInsertPosition === 'before') {
-            titleEl.textContent = '插入内容（在此处之前）';
-            labelEl.textContent = '插入位置（在此内容之前）：';
+            titleEl.textContent = t('modal.insert.title_before');
+            labelEl.textContent = t('modal.insert.position_before');
         } else {
-            titleEl.textContent = '插入内容（在此处之后）';
-            labelEl.textContent = '插入位置（在此内容之后）：';
+            titleEl.textContent = t('modal.insert.title_after');
+            labelEl.textContent = t('modal.insert.position_after');
         }
 
         document.getElementById('insertPositionPreview').textContent = currentSelection.text;
