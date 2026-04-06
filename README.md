@@ -2,8 +2,8 @@
 # MD Human Review
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/letitia.md-human-review?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
-[![Rating](https://img.shields.io/visual-studio-marketplace/r/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > A powerful Markdown review & annotation extension for VSCode — comment, mark deletions, insert content, WYSIWYG edit, and generate AI fix instructions with one click.
 >
@@ -120,18 +120,23 @@ This extension's review styles, interaction logic, and AI instruction templates 
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `mdReview.fontSize` | number | 16 | Document body font size (12-24 px) |
-| `mdReview.lineHeight` | number | 1.6 | Document body line height (1.2-2) |
-| `mdReview.contentMaxWidth` | number | 1200 | Max width of document content area (600-1400 px) |
-| `mdReview.fontFamily` | string | `""` | Font style (default / serif / monospace) |
+| `mdReview.fontSize` | number | 18 | Document body font size (12-24 px) |
+| `mdReview.lineHeight` | number | 1.8 | Document body line height (1.2-2.4) |
+| `mdReview.contentMaxWidth` | number | 1200 | Max width of document content area (600-1800 px) |
+| `mdReview.fontFamily` | string | `""` | Document body font (empty for system default, e.g. 'Microsoft YaHei') |
+| `mdReview.codeFontFamily` | string | `""` | Code block font (empty for default monospace, e.g. 'Fira Code') |
 | `mdReview.theme` | string | `"light"` | UI theme (light / dark / auto) |
 | `mdReview.showToc` | boolean | true | Show TOC navigation by default |
 | `mdReview.showAnnotations` | boolean | true | Show annotations panel by default |
 | `mdReview.sidebarLayout` | string | `"toc-left"` | Sidebar layout (toc-left / toc-right) |
+| `mdReview.panelMode` | string | `"floating"` | Side panel display mode (floating / embedded) |
+| `mdReview.documentAlign` | string | `"center"` | Document alignment (left / center / right) |
 | `mdReview.autoSave` | boolean | true | Enable auto-save for annotations |
 | `mdReview.autoSaveDelay` | number | 1500 | Auto-save delay (500-10000 ms) |
 | `mdReview.enableMermaid` | boolean | true | Enable Mermaid diagram rendering |
 | `mdReview.enableMath` | boolean | true | Enable math formula rendering |
+| `mdReview.enablePlantUML` | boolean | true | Enable PlantUML diagram rendering (requires network) |
+| `mdReview.enableGraphviz` | boolean | true | Enable Graphviz diagram rendering |
 | `mdReview.showLineNumbers` | boolean | false | Show line numbers in code blocks |
 | `mdReview.codeTheme` | string | `"default-dark-modern"` | Code highlighting theme (15 options) |
 
@@ -326,18 +331,23 @@ MIT
 
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
-| `mdReview.fontSize` | number | 16 | 文档正文字体大小（12-24 px） |
-| `mdReview.lineHeight` | number | 1.6 | 文档正文行高（1.2-2） |
-| `mdReview.contentMaxWidth` | number | 1200 | 文档内容区最大宽度（600-1400 px） |
-| `mdReview.fontFamily` | string | `""` | 字体风格（系统默认 / 衬线体 / 等宽字体） |
+| `mdReview.fontSize` | number | 18 | 文档正文字体大小（12-24 px） |
+| `mdReview.lineHeight` | number | 1.8 | 文档正文行高（1.2-2.4） |
+| `mdReview.contentMaxWidth` | number | 1200 | 文档内容区最大宽度（600-1800 px） |
+| `mdReview.fontFamily` | string | `""` | 文档正文字体（留空使用系统默认，可输入字体名如 'Microsoft YaHei'） |
+| `mdReview.codeFontFamily` | string | `""` | 代码块字体（留空使用默认等宽字体，可输入字体名如 'Fira Code'） |
 | `mdReview.theme` | string | `"light"` | 界面主题（light / dark / auto） |
 | `mdReview.showToc` | boolean | true | 默认显示目录导航栏 |
 | `mdReview.showAnnotations` | boolean | true | 默认显示批注列表面板 |
 | `mdReview.sidebarLayout` | string | `"toc-left"` | 侧边栏布局（toc-left / toc-right） |
+| `mdReview.panelMode` | string | `"floating"` | 侧边面板显示模式（floating 悬浮 / embedded 嵌入） |
+| `mdReview.documentAlign` | string | `"center"` | 主文档对齐方式（left / center / right） |
 | `mdReview.autoSave` | boolean | true | 启用批注自动保存 |
 | `mdReview.autoSaveDelay` | number | 1500 | 自动保存延迟（500-10000 毫秒） |
 | `mdReview.enableMermaid` | boolean | true | 启用 Mermaid 图表渲染 |
 | `mdReview.enableMath` | boolean | true | 启用数学公式渲染 |
+| `mdReview.enablePlantUML` | boolean | true | 启用 PlantUML 图表渲染（需要网络连接） |
+| `mdReview.enableGraphviz` | boolean | true | 启用 Graphviz 图表渲染 |
 | `mdReview.showLineNumbers` | boolean | false | 代码块中显示行号 |
 | `mdReview.codeTheme` | string | `"default-dark-modern"` | 代码高亮主题（15 种可选） |
 
