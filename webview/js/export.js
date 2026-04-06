@@ -36,7 +36,7 @@ const Exporter = (() => {
     async function exportReviewDocument() {
         const data = Store.getData();
         if (!data.annotations.length) {
-            alert('暂无批注可导出');
+            alert(t('notification.export_empty'));
             return;
         }
 
@@ -82,29 +82,29 @@ showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
 
     function generateReviewDoc(data, blocks) {
         const lines = [];
-        const docVersion = data.docVersion || '未知';
+        const docVersion = data.docVersion || t('export.unknown');
 
-        lines.push(`# 批阅记录`);
+        lines.push(`# ${t('export.title')}`);
         lines.push(``);
-        lines.push(`- **源文件**：${data.fileName}`);
+        lines.push(`- **${t('export.source_file')}**：${data.fileName}`);
         if (data.sourceFilePath) {
-            lines.push(`- **源文件路径**：${data.sourceFilePath}`);
+            lines.push(`- **${t('export.source_path')}**：${data.sourceFilePath}`);
         }
-        lines.push(`- **源文件版本**：${docVersion}`);
-        lines.push(`- **批阅时间**：${formatDate()}`);
-        lines.push(`- **批阅版本**：v${data.reviewVersion || 1}`);
-        lines.push(`- **批注数量**：${data.annotations.length} 条`);
-        lines.push(`  - 评论：${data.annotations.filter(a => a.type === 'comment').length} 条`);
-        lines.push(`  - 删除：${data.annotations.filter(a => a.type === 'delete').length} 条`);
-        lines.push(`  - 后插：${data.annotations.filter(a => a.type === 'insert' && a.insertPosition !== 'before').length} 条`);
-        lines.push(`  - 前插：${data.annotations.filter(a => a.type === 'insert' && a.insertPosition === 'before').length} 条`);
+        lines.push(`- **${t('export.source_version')}**：${docVersion}`);
+        lines.push(`- **${t('export.review_time')}**：${formatDate()}`);
+        lines.push(`- **${t('export.review_version')}**：v${data.reviewVersion || 1}`);
+        lines.push(`- **${t('export.annotation_count')}**：${data.annotations.length}`);
+        lines.push(`  - ${t('export.type_comment')}：${data.annotations.filter(a => a.type === 'comment').length}`);
+        lines.push(`  - ${t('export.type_delete')}：${data.annotations.filter(a => a.type === 'delete').length}`);
+        lines.push(`  - ${t('export.type_insert_after')}：${data.annotations.filter(a => a.type === 'insert' && a.insertPosition !== 'before').length}`);
+        lines.push(`  - ${t('export.type_insert_before')}：${data.annotations.filter(a => a.type === 'insert' && a.insertPosition === 'before').length}`);
         lines.push(``);
         lines.push(`---`);
         lines.push(``);
-        lines.push(`## 操作指令`);
+        lines.push(`## ${t('export.section_instructions')}`);
         lines.push(``);
-        lines.push(`> 指令已按**从后往前**排列（倒序），请严格按照顺序从上到下逐条执行。`);
-        lines.push(`> 每条指令提供了「文本锚点」用于精确定位，请优先通过锚点文本匹配来确认目标位置，blockIndex 仅作辅助参考。`);
+        lines.push(`> ${t('export.instruction_order_hint')}`);
+        lines.push(`> ${t('export.instruction_anchor_hint')}`);
         lines.push(``);
 
         // 按 blockIndex 倒序排列（从文档末尾到开头），同一块内按 startOffset 倒序
@@ -320,7 +320,7 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
             indicator.textContent = '✓ 已自动保存';
             indicator.className = 'auto-save-status saved';
         } else if (status === 'error') {
-            indicator.textContent = '✗ 保存失败';
+            indicator.textContent = t('notification.auto_save_failed');
             indicator.className = 'auto-save-status error';
         }
         setTimeout(() => {

@@ -4,6 +4,27 @@ import * as fs from 'fs';
 import { FileService } from './fileService';
 import { StateService } from './stateService';
 
+const _hostMessages: Record<string, Record<string, string>> = {
+    'zh-CN': {
+        'ai.chat_success_codebuddy': '✅ AI 新对话已打开，指令已复制到剪贴板，请按 Ctrl+V 粘贴后回车发送。',
+        'ai.chat_success_vscode': '✅ AI 对话已打开，指令已复制到剪贴板，请按 Ctrl+V 粘贴后回车发送。',
+        'ai.chat_fallback': '✅ 已复制 AI 指令到剪贴板，请手动打开AI对话窗口并粘贴执行。',
+        'ai.chat_error': '❌ 操作失败: ',
+    },
+    'en': {
+        'ai.chat_success_codebuddy': '✅ New AI chat opened. Instructions copied to clipboard. Press Ctrl+V to paste and send.',
+        'ai.chat_success_vscode': '✅ AI chat opened. Instructions copied to clipboard. Press Ctrl+V to paste and send.',
+        'ai.chat_fallback': '✅ AI instructions copied to clipboard. Please open AI chat manually and paste.',
+        'ai.chat_error': '❌ Operation failed: ',
+    }
+};
+
+function _hostT(key: string): string {
+    const lang = vscode.workspace.getConfiguration('mdReview').get<string>('language', 'zh-CN');
+    const dict = _hostMessages[lang] || _hostMessages['zh-CN'];
+    return dict[key] || _hostMessages['zh-CN'][key] || key;
+}
+
 export class ReviewPanel {
     public static panels: Map<string, ReviewPanel> = new Map();
     public static currentPanel: ReviewPanel | undefined;
@@ -336,7 +357,8 @@ export class ReviewPanel {
                     showLineNumbers: config.get<boolean>('showLineNumbers', false),
                     autoSave: config.get<boolean>('autoSave', true),
                     autoSaveDelay: config.get<number>('autoSaveDelay', 1500),
-                    codeTheme: config.get<string>('codeTheme', 'default-dark-modern')
+                    codeTheme: config.get<string>('codeTheme', 'default-dark-modern'),
+                    language: config.get<string>('language', 'zh-CN')
                 };
                 this.postMessage({ type: 'settingsData', payload: settings, requestId });
                 break;
@@ -364,6 +386,7 @@ export class ReviewPanel {
                     if (payload.autoSave !== undefined) { await config.update('autoSave', payload.autoSave, target); }
                     if (payload.autoSaveDelay !== undefined) { await config.update('autoSaveDelay', payload.autoSaveDelay, target); }
                     if (payload.codeTheme !== undefined) { await config.update('codeTheme', payload.codeTheme, target); }
+                    if (payload.language !== undefined) { await config.update('language', payload.language, target); }
                     this.postMessage({ type: 'settingsSaved', payload: { success: true }, requestId });
                 } catch (e: any) {
                     this.postMessage({ type: 'settingsSaved', payload: { success: false, error: e.message }, requestId });
@@ -506,7 +529,7 @@ const outputChannel = vscode.window.createOutputChannel('MD Human Review - AI Ch
                         );
                     }
                 } catch (e: any) {
-                    vscode.window.showErrorMessage('❌ 操作失败: ' + e.message);
+                    vscode.window.showErrorMessage(_hostT('ai.chat_error') + e.message);
                 }
                 break;
             }
@@ -545,6 +568,7 @@ const outputChannel = vscode.window.createOutputChannel('MD Human Review - AI Ch
         const highlightThemesCssUri = webviewUri('css/highlight-themes.css');
         const katexCssUri = webviewUri('css/katex.min.css');
         const storeUri = webviewUri('js/store.js');
+        const i18nUri = webviewUri('js/i18n.js');
         const rendererUri = webviewUri('js/renderer.js');
         const annotationsUri = webviewUri('js/annotations.js');
         const exportUri = webviewUri('js/export.js');
@@ -574,6 +598,7 @@ const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'as
         html = html.replace(/\$\{highlightThemesCssUri\}/g, highlightThemesCssUri);
         html = html.replace(/\$\{katexCssUri\}/g, katexCssUri);
         html = html.replace(/\$\{storeUri\}/g, storeUri);
+        html = html.replace(/\$\{i18nUri\}/g, i18nUri);
         html = html.replace(/\$\{rendererUri\}/g, rendererUri);
         html = html.replace(/\$\{annotationsUri\}/g, annotationsUri);
         html = html.replace(/\$\{exportUri\}/g, exportUri);

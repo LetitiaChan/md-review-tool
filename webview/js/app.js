@@ -80,7 +80,7 @@
 
     function handleFileContentPush(data) {
         if (data.error) {
-            showNotification('❌ 加载文件失败: ' + data.error);
+            showNotification(t('notification.load_error', { error: data.error }));
             return;
         }
         loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
@@ -166,7 +166,7 @@
     // ===== 文件选择下拉框 =====
     function updateServerFileSelect() {
         const select = document.getElementById('fileSelect');
-        select.innerHTML = '<option value="">-- 选择文件 --</option>';
+        select.innerHTML = '<option value="">' + t('toolbar.file_select_default') + '</option>';
         serverFileList.forEach((name) => {
             const opt = document.createElement('option');
             opt.value = name;
@@ -189,7 +189,7 @@
         document.getElementById('documentContent').addEventListener('input', () => {
             if (currentMode === 'edit') {
                 editorDirty = true;
-                updateEditStatus('modified', '● 未保存');
+                updateEditStatus('modified', t('notification.unsaved'));
                 scheduleAutoSave();
                 scheduleTocRefresh();
             }
@@ -561,7 +561,7 @@
                         Annotations.init(newBlocks);
                         Annotations.renderAnnotationsList();
                         Annotations.updateToolbarState();
-showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length} 条批注`);
+showNotification(t('notification.restored', { count: matchedRecord.annotations.length }));
                         return;
                     }
                 }
@@ -575,7 +575,7 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             }
         } catch (e) {
             console.error('[App] 加载文件失败:', e);
-            showNotification('加载文件失败');
+            showNotification(t('notification.load_failed'));
         }
     }
 
@@ -1293,7 +1293,7 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
         const btn = document.getElementById('btnApplyReview');
         const originalText = btn.innerHTML;
         btn.classList.add('loading');
-        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" stroke-dasharray="28" stroke-dashoffset="8"><animateTransform attributeName="transform" type="rotate" from="0 8 8" to="360 8 8" dur="0.8s" repeatCount="indefinite"/></circle></svg> 更新中...';
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" stroke-dasharray="28" stroke-dashoffset="8"><animateTransform attributeName="transform" type="rotate" from="0 8 8" to="360 8 8" dur="0.8s" repeatCount="indefinite"/></circle></svg> ' + t('notification.updating');
 
         const data = Store.getData();
 
@@ -1306,13 +1306,13 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             });
 
             if (!result || !result.success) {
-                showNotification('❌ 更新失败: ' + (result?.error || '未知错误'));
+                showNotification(t('notification.update_failed', { error: result?.error || 'unknown' }));
                 return;
             }
 
             showApplyResult(result, data);
         } catch (e) {
-            showNotification('❌ 请求失败: ' + e.message);
+            showNotification(t('notification.request_failed', { error: e.message }));
         } finally {
             btn.classList.remove('loading');
             btn.innerHTML = originalText;
@@ -1502,7 +1502,7 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
 
     function markTableEdited() {
         editorDirty = true;
-        updateEditStatus('modified', '● 未保存');
+        updateEditStatus('modified', t('notification.unsaved'));
         scheduleAutoSave();
     }
 
@@ -1627,7 +1627,7 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
     function updateThemeButtonLabel(theme) {
         const btn = document.getElementById('btnToggleTheme');
         if (!btn) return;
-        const labels = { light: '亮色', dark: '暗色' };
+        const labels = { light: t('theme.light'), dark: t('theme.dark') };
         const icons = {
             light: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
             dark: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M14 9.2A6.5 6.5 0 016.8 2 6 6 0 1014 9.2z" stroke="currentColor" stroke-width="1.3"/></svg>'
@@ -1655,7 +1655,7 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
     // ===== 保存 MD 源文件（方向A：block-level diff，仅对变化的 block 使用 turndown） =====
     async function handleSaveMd() {
         const data = Store.getData();
-        if (!data.fileName) { showNotification('没有打开的文件'); return; }
+        if (!data.fileName) { showNotification(t('notification.no_open_file')); return; }
 
         const docContent = document.getElementById('documentContent');
         // 排除脚注 block（footnotes-block），脚注定义已包含在 _editSnapshotBlocks 的原始 blocks 中
@@ -1862,7 +1862,7 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
             const result = await callHost('saveFile', { filePath, content: newContent });
 
             if (!result || !result.success) {
-                throw new Error(result?.error || '保存失败');
+                throw new Error(result?.error || t('notification.save_failed'));
             }
 
             editorDirty = false;
@@ -1876,8 +1876,8 @@ showNotification(`📂 已从 .review 恢复 ${matchedRecord.annotations.length}
                 _editSnapshotBlocks = Renderer.getRawBlocksBeforeExtract().slice();
                 _editSnapshotHtmls = Array.from(docContent.querySelectorAll('.md-block:not(.footnotes-block)')).map(el => el.innerHTML);
 
-                updateEditStatus('saved', '✓ 已保存');
-                setTimeout(() => updateEditStatus('', '编辑模式'), 3000);
+                updateEditStatus('saved', t('notification.saved'));
+                setTimeout(() => updateEditStatus('', t('notification.edit_mode')), 3000);
                 const versionLabel = data.docVersion ? ` (${data.docVersion})` : '';
                 document.getElementById('fileName').textContent = data.fileName + versionLabel;
             } else {

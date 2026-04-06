@@ -3,6 +3,55 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
+const _aiLabels: Record<string, Record<string, string>> = {
+    'zh-CN': {
+        title: 'AI 修改指令',
+        hint: '以下批注需要 AI 按指令逐条修改源文件',
+        source_path: '源文件路径',
+        order_hint: '⚠️ 指令已按**从后往前**排列（倒序），请严格按照顺序从上到下逐条执行。',
+        anchor_hint: '每条指令提供了「文本锚点」用于精确定位，请优先通过锚点文本匹配来确认目标位置，blockIndex 仅作辅助参考。',
+        instruction: '指令',
+        label_modify: '（修改）', label_delete: '（删除）', label_insert_before: '（前插）', label_insert_after: '（后插）',
+        op_delete: '删除以下文本', op_insert_before: '在指定位置前插入新内容', op_insert_after: '在指定位置后插入新内容', op_modify: '根据评论修改内容',
+        field_op: '操作', field_block: '定位块', field_block_n: '第 {n} 块',
+        field_anchor: '文本锚点', field_offset: '块内偏移', field_offset_n: '第 {n} 个字符处（startOffset={n}）',
+        field_delete_text: '要删除的文本', field_insert_pos_before: '插入位置（在此文本之前）', field_insert_pos_after: '插入位置（在此文本之后）',
+        field_insert_content: '要插入的内容', field_insert_reason: '插入说明',
+        field_target: '目标文本', field_comment: '评论内容', field_images: '附图', field_images_n: '共 {n} 张', field_image_n: '图片{n}：', field_image_alt: '附图{n}',
+        no_valid: '无有效指令', generated: '共 {n} 条指令已生成 AI 修改文件',
+        file_not_found: '文件不存在: ', invalid_image: '无效的图片数据格式',
+    },
+    'en': {
+        title: 'AI Modification Instructions',
+        hint: 'The following annotations require AI to modify the source file instruction by instruction',
+        source_path: 'Source file path',
+        order_hint: '⚠️ Instructions are listed in **reverse order** (bottom-up). Please execute them strictly from top to bottom.',
+        anchor_hint: 'Each instruction provides a "Text Anchor" for precise positioning. Please match the anchor text first; blockIndex is for reference only.',
+        instruction: 'Instruction',
+        label_modify: ' (Modify)', label_delete: ' (Delete)', label_insert_before: ' (Insert Before)', label_insert_after: ' (Insert After)',
+        op_delete: 'Delete the following text', op_insert_before: 'Insert new content before the specified position', op_insert_after: 'Insert new content after the specified position', op_modify: 'Modify content according to comment',
+        field_op: 'Operation', field_block: 'Block', field_block_n: 'Block {n}',
+        field_anchor: 'Text Anchor', field_offset: 'Block Offset', field_offset_n: 'At character {n} (startOffset={n})',
+        field_delete_text: 'Text to Delete', field_insert_pos_before: 'Insert Position (before this text)', field_insert_pos_after: 'Insert Position (after this text)',
+        field_insert_content: 'Content to Insert', field_insert_reason: 'Insert Reason',
+        field_target: 'Target Text', field_comment: 'Comment', field_images: 'Images', field_images_n: '{n} image(s)', field_image_n: 'Image {n}:', field_image_alt: 'Image {n}',
+        no_valid: 'No valid instructions', generated: '{n} instructions generated for AI modification',
+        file_not_found: 'File not found: ', invalid_image: 'Invalid image data format',
+    }
+};
+
+function _aiT(key: string, params?: Record<string, any>): string {
+    const lang = vscode.workspace.getConfiguration('mdReview').get<string>('language', 'zh-CN');
+    const dict = _aiLabels[lang] || _aiLabels['zh-CN'];
+    let text = dict[key] || _aiLabels['zh-CN'][key] || key;
+    if (params) {
+        Object.keys(params).forEach(k => {
+            text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), String(params[k]));
+        });
+    }
+    return text;
+}
+
 export class FileService {
     private workspaceRoot: string;
 
@@ -143,7 +192,7 @@ const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules
 
 
         if (validAnnotations.length === 0) {
-            return { success: true, needsAi: 0, sourceFilePath, message: '无有效指令' };
+            return { success: true, needsAi: 0, sourceFilePath, message: _aiT('no_valid') };
         }
 
         // 读取源文件内容并按空行分割为块，用于生成文本锚点指纹
@@ -166,85 +215,84 @@ const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules
         });
 
         const lines: string[] = [];
-        lines.push('# AI 修改指令');
+        lines.push(`# ${_aiT('title')}`);
         lines.push('');
-        lines.push(`> 以下批注需要 AI 按指令逐条修改源文件 \`${safeName}\``);
-        lines.push(`> 源文件路径：${sourceFilePath}`);
+        lines.push(`> ${_aiT('hint')} \`${safeName}\``);
+        lines.push(`> ${_aiT('source_path')}：${sourceFilePath}`);
         lines.push('');
-        lines.push('> ⚠️ 指令已按**从后往前**排列（倒序），请严格按照顺序从上到下逐条执行。');
-        lines.push('> 每条指令提供了「文本锚点」用于精确定位，请优先通过锚点文本匹配来确认目标位置，blockIndex 仅作辅助参考。');
+        lines.push(`> ${_aiT('order_hint')}`);
+        lines.push(`> ${_aiT('anchor_hint')}`);
         lines.push('');
 
         sortedAnnotations.forEach((ann: any, i: number) => {
             const blockContent = (ann.blockIndex != null && blocks[ann.blockIndex]) ? blocks[ann.blockIndex] : '';
             const blockFingerprint = blockContent.substring(0, 80).replace(/\n/g, ' ');
 
-            const insertLabel = ann.type === 'insert' ? (ann.insertPosition === 'before' ? '（前插）' : '（后插）') : '';
-            lines.push(`## 指令 ${i + 1}${ann.type === 'comment' ? '（修改）' : ann.type === 'delete' ? '（删除）' : insertLabel}`);
+            const insertLabel = ann.type === 'insert' ? (ann.insertPosition === 'before' ? _aiT('label_insert_before') : _aiT('label_insert_after')) : '';
+            lines.push(`## ${_aiT('instruction')} ${i + 1}${ann.type === 'comment' ? _aiT('label_modify') : ann.type === 'delete' ? _aiT('label_delete') : insertLabel}`);
             lines.push('');
             if (ann.type === 'delete') {
-                lines.push('- **操作**：删除以下文本');
+                lines.push(`- **${_aiT('field_op')}**：${_aiT('op_delete')}`);
                 if (ann.blockIndex != null) {
-                    lines.push(`- **定位块**：第 ${ann.blockIndex + 1} 块`);
+                    lines.push(`- **${_aiT('field_block')}**：${_aiT('field_block_n', { n: ann.blockIndex + 1 })}`);
                 }
                 if (blockFingerprint) {
-                    lines.push(`- **文本锚点**：\`${blockFingerprint}\``);
+                    lines.push(`- **${_aiT('field_anchor')}**：\`${blockFingerprint}\``);
                 }
                 if (ann.startOffset != null) {
-                    lines.push(`- **块内偏移**：第 ${ann.startOffset} 个字符处（startOffset=${ann.startOffset}）`);
+                    lines.push(`- **${_aiT('field_offset')}**：${_aiT('field_offset_n', { n: ann.startOffset })}`);
                 }
-                lines.push('- **要删除的文本**：');
+                lines.push(`- **${_aiT('field_delete_text')}**：`);
                 lines.push('```');
                 lines.push(ann.selectedText || '');
                 lines.push('```');
             } else if (ann.type === 'insert') {
                 const isBefore = ann.insertPosition === 'before';
-                lines.push(`- **操作**：在指定位置${isBefore ? '前' : '后'}插入新内容`);
+                lines.push(`- **${_aiT('field_op')}**：${isBefore ? _aiT('op_insert_before') : _aiT('op_insert_after')}`);
                 if (ann.blockIndex != null) {
-                    lines.push(`- **定位块**：第 ${ann.blockIndex + 1} 块`);
+                    lines.push(`- **${_aiT('field_block')}**：${_aiT('field_block_n', { n: ann.blockIndex + 1 })}`);
                 }
                 if (blockFingerprint) {
-                    lines.push(`- **文本锚点**：\`${blockFingerprint}\``);
+                    lines.push(`- **${_aiT('field_anchor')}**：\`${blockFingerprint}\``);
                 }
                 if (ann.startOffset != null) {
-                    lines.push(`- **块内偏移**：第 ${ann.startOffset} 个字符处（startOffset=${ann.startOffset}）`);
+                    lines.push(`- **${_aiT('field_offset')}**：${_aiT('field_offset_n', { n: ann.startOffset })}`);
                 }
-                lines.push(`- **插入位置（在此文本之${isBefore ? '前' : '后'}）**：`);
+                lines.push(`- **${isBefore ? _aiT('field_insert_pos_before') : _aiT('field_insert_pos_after')}**：`);
                 lines.push('```');
                 lines.push(ann.selectedText || '');
                 lines.push('```');
-                lines.push('- **要插入的内容**：');
+                lines.push(`- **${_aiT('field_insert_content')}**：`);
                 lines.push('```');
                 lines.push(ann.insertContent || '');
                 lines.push('```');
                 if (ann.comment) {
-                    lines.push(`- **插入说明**：${ann.comment}`);
+                    lines.push(`- **${_aiT('field_insert_reason')}**：${ann.comment}`);
                 }
             } else if (ann.type === 'comment') {
-                lines.push('- **操作**：根据评论修改内容');
+                lines.push(`- **${_aiT('field_op')}**：${_aiT('op_modify')}`);
                 if (ann.blockIndex != null) {
-                    lines.push(`- **定位块**：第 ${ann.blockIndex + 1} 块`);
+                    lines.push(`- **${_aiT('field_block')}**：${_aiT('field_block_n', { n: ann.blockIndex + 1 })}`);
                 }
                 if (blockFingerprint) {
-                    lines.push(`- **文本锚点**：\`${blockFingerprint}\``);
+                    lines.push(`- **${_aiT('field_anchor')}**：\`${blockFingerprint}\``);
                 }
                 if (ann.startOffset != null) {
-                    lines.push(`- **块内偏移**：第 ${ann.startOffset} 个字符处（startOffset=${ann.startOffset}）`);
+                    lines.push(`- **${_aiT('field_offset')}**：${_aiT('field_offset_n', { n: ann.startOffset })}`);
                 }
-                lines.push('- **目标文本**：');
+                lines.push(`- **${_aiT('field_target')}**：`);
                 lines.push('```');
                 lines.push(ann.selectedText || '');
                 lines.push('```');
-                lines.push(`- **评论内容**：${ann.comment || ''}`);
+                lines.push(`- **${_aiT('field_comment')}**：${ann.comment || ''}`);
                 if (ann.images && ann.images.length > 0) {
-                    lines.push(`- **附图**：共 ${ann.images.length} 张`);
+                    lines.push(`- **${_aiT('field_images')}**：${_aiT('field_images_n', { n: ann.images.length })}`);
                     ann.images.forEach((img: string, j: number) => {
-                        lines.push(`  - 图片${j + 1}：`);
-                        // 路径引用的图片使用相对路径，Base64 图片保持原样
+                        lines.push(`  - ${_aiT('field_image_n', { n: j + 1 })}`);
                         if (img.startsWith('data:image/')) {
-                            lines.push(`  ![附图${j + 1}](${img})`);
+                            lines.push(`  ![${_aiT('field_image_alt', { n: j + 1 })}](${img})`);
                         } else {
-                            lines.push(`  ![附图${j + 1}](${img})`);
+                            lines.push(`  ![${_aiT('field_image_alt', { n: j + 1 })}](${img})`);
                         }
                     });
                 }
@@ -262,7 +310,7 @@ const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules
             aiInstructionFile: aiFileName,
             aiInstructionFilePath: aiFilePath.replace(/\\/g, '/'),
             sourceFilePath,
-            message: `共 ${validAnnotations.length} 条指令已生成 AI 修改文件`
+            message: _aiT('generated', { n: validAnnotations.length })
         };
     }
 

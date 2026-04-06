@@ -25,7 +25,8 @@ const Settings = (() => {
         showLineNumbers: false,
         autoSave: true,
         autoSaveDelay: 1500,
-        codeTheme: 'default-dark-modern'
+        codeTheme: 'default-dark-modern',
+        language: 'zh-CN'
     };
 
     // 暗色代码主题列表
@@ -62,6 +63,10 @@ const Settings = (() => {
      */
     function applySettings(settings) {
         currentSettings = { ...DEFAULTS, ...settings };
+        // 应用语言设置
+        if (currentSettings.language && window.I18n) {
+            window.I18n.setLocale(currentSettings.language);
+        }
         applyToDOM();
         updatePanelUI();
     }
@@ -296,6 +301,11 @@ const Settings = (() => {
             btn.classList.toggle('active', btn.dataset.theme === currentSettings.theme);
         });
 
+        // 语言
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.lang === currentSettings.language);
+        });
+
         // 代码高亮主题
         const codeThemeSelect = document.getElementById('settingCodeTheme');
         if (codeThemeSelect) codeThemeSelect.value = currentSettings.codeTheme;
@@ -417,6 +427,19 @@ const Settings = (() => {
                 applyToDOM();
                 saveSettings();
                 // 通知外部模块主题已变更（用于 Mermaid 重新渲染等）
+
+        // 语言切换按钮组
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentSettings.language = btn.dataset.lang;
+                document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                if (window.I18n) {
+                    window.I18n.setLocale(currentSettings.language);
+                }
+                saveSettings();
+            });
+        });
                 _notifyChange('themeChanged', btn.dataset.theme);
             });
         });
@@ -717,7 +740,7 @@ const Settings = (() => {
             toast.className = 'toast-notification';
             document.body.appendChild(toast);
         }
-        toast.textContent = '✅ 设置已自动保存';
+        toast.textContent = typeof t === 'function' ? t('settings.saved_toast') : '✅ 设置已自动保存';
         toast.classList.add('show');
         setTimeout(() => { toast.classList.remove('show'); }, 2000);
     }

@@ -600,7 +600,7 @@ const Renderer = (() => {
             const codeContent = highlighted || escapeHtml(code);
             const hljsClass = highlighted ? ` hljs language-${langLabel}` : '';
 
-            return `<div class="code-block"><div class="code-header"><span class="code-lang">${escapeHtml(langLabel)}</span><button class="code-copy-btn" title="复制代码">📋 复制</button></div><pre><code class="${hljsClass}">${wrapLines(codeContent, lang)}</code></pre></div>`;
+            return `<div class="code-block"><div class="code-header"><span class="code-lang">${escapeHtml(langLabel)}</span><button class="code-copy-btn" title="${typeof t === 'function' ? t('notification.copy') : '📋 复制'}">${typeof t === 'function' ? t('renderer.copy_code') : '📋 复制'}</button></div><pre><code class="${hljsClass}">${wrapLines(codeContent, lang)}</code></pre></div>`;
         };
 
         // ===== 自定义标题渲染 — 生成 GitHub 风格的 slug id，支持中文锚点跳转 =====
@@ -692,11 +692,11 @@ const Renderer = (() => {
             }
 
             const alertTypes = {
-                'NOTE':      { icon: 'ℹ️', label: '注意', cls: 'alert-note' },
-                'TIP':       { icon: '💡', label: '提示', cls: 'alert-tip' },
-                'IMPORTANT': { icon: '❗', label: '重要', cls: 'alert-important' },
-                'WARNING':   { icon: '⚠️', label: '警告', cls: 'alert-warning' },
-                'CAUTION':   { icon: '🔴', label: '注意', cls: 'alert-caution' }
+                'NOTE':      { icon: 'ℹ️', label: (typeof t === 'function' ? t('renderer.alert_note') : 'Note'), cls: 'alert-note' },
+                'TIP':       { icon: '💡', label: (typeof t === 'function' ? t('renderer.alert_tip') : 'Tip'), cls: 'alert-tip' },
+                'IMPORTANT': { icon: '❗', label: (typeof t === 'function' ? t('renderer.alert_important') : 'Important'), cls: 'alert-important' },
+                'WARNING':   { icon: '⚠️', label: (typeof t === 'function' ? t('renderer.alert_warning') : 'Warning'), cls: 'alert-warning' },
+                'CAUTION':   { icon: '🔴', label: (typeof t === 'function' ? t('renderer.alert_caution') : 'Caution'), cls: 'alert-caution' }
             };
 
             // 在渲染后的 HTML 中匹配 [!TYPE] 语法
@@ -1350,7 +1350,7 @@ const Renderer = (() => {
         indicator.textContent = annotation.id;
         indicator.dataset.annotationId = annotation.id;
         marker.appendChild(indicator);
-        const insertText = annotation.insertContent || (isBefore ? '前插内容' : '插入内容');
+        const insertText = annotation.insertContent || (isBefore ? (typeof t === 'function' ? t('renderer.insert_before_text') : '前插内容') : (typeof t === 'function' ? t('renderer.insert_after_text') : '插入内容'));
         const displayText = insertText.length > 20 ? insertText.substring(0, 20) + '...' : insertText;
         marker.appendChild(document.createTextNode(' ' + displayText));
 

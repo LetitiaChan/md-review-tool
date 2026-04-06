@@ -207,10 +207,10 @@ const Annotations = (() => {
         selectionTooltip = document.createElement('div');
         selectionTooltip.className = 'selection-tooltip';
         selectionTooltip.innerHTML = `
-            <button data-action="comment">💬 评论</button>
-            <button data-action="delete">🗑️ 删除</button>
-            <button data-action="insert">➕ 后插</button>
-            <button data-action="insertBefore">⬆️ 前插</button>
+            <button data-action="comment">${t('float.comment')}</button>
+            <button data-action="delete">${t('float.delete')}</button>
+            <button data-action="insert">${t('float.insert_after')}</button>
+            <button data-action="insertBefore">${t('float.insert_before')}</button>
         `;
 
         selectionTooltip.style.left = Math.min(x, window.innerWidth - 250) + 'px';
@@ -400,13 +400,13 @@ const Annotations = (() => {
             }
             document.getElementById('selectedTextPreview').textContent = ann.selectedText;
             document.getElementById('commentText').value = ann.comment || '';
-            document.getElementById('commentModalTitle').textContent = '编辑评论';
+            document.getElementById('commentModalTitle').textContent = t('modal.comment.edit_title');
         } else {
             if (!currentSelection) return;
             pendingImages = [];
             document.getElementById('selectedTextPreview').textContent = currentSelection.text;
             document.getElementById('commentText').value = '';
-            document.getElementById('commentModalTitle').textContent = '添加评论';
+            document.getElementById('commentModalTitle').textContent = t('modal.comment.title');
         }
 
         renderImagePreviews();
@@ -575,11 +575,11 @@ const Annotations = (() => {
         const titleEl = document.getElementById('insertModalTitle');
         const labelEl = document.getElementById('insertPositionLabel');
         if (currentInsertPosition === 'before') {
-            titleEl.textContent = '插入内容（在此处之前）';
-            labelEl.textContent = '插入位置（在此内容之前）：';
+            titleEl.textContent = t('modal.insert.title_before');
+            labelEl.textContent = t('modal.insert.position_before');
         } else {
-            titleEl.textContent = '插入内容（在此处之后）';
-            labelEl.textContent = '插入位置（在此内容之后）：';
+            titleEl.textContent = t('modal.insert.title_after');
+            labelEl.textContent = t('modal.insert.position_after');
         }
 
         document.getElementById('insertPositionPreview').textContent = ann.selectedText;
@@ -694,14 +694,14 @@ const Annotations = (() => {
                     <p class="hint">选中文本后即可添加批注</p>
                 </div>
             `;
-            document.getElementById('annotationCount').textContent = '0 条批注';
+            document.getElementById('annotationCount').textContent = t('toolbar.annotations_zero');
             return;
         }
 
-        document.getElementById('annotationCount').textContent = `${sortedAnnotations.length} 条批注`;
+        document.getElementById('annotationCount').textContent = t('toolbar.annotations_count', { count: sortedAnnotations.length });
 
         list.innerHTML = sortedAnnotations.map(ann => {
-            const typeLabel = ann.type === 'comment' ? '评论' : ann.type === 'delete' ? '删除' : (ann.insertPosition === 'before' ? '前插' : '后插');
+            const typeLabel = ann.type === 'comment' ? t('annotation.type_comment') : ann.type === 'delete' ? t('annotation.type_delete') : (ann.insertPosition === 'before' ? t('annotation.type_insert_before') : t('annotation.type_insert_after'));
         const imagesHtml = (ann.images && ann.images.length > 0)
                 ? `<div class="annotation-images">${ann.images.map(img => `<img src="${getImageSrc(img)}" alt="附图" data-lightbox>`).join('')}</div>`
                 : '';
@@ -721,15 +721,15 @@ const Annotations = (() => {
                         <span class="annotation-type ${ann.type}">#${ann.id} ${typeLabel}</span>
                         <span class="annotation-index">块 ${ann.blockIndex + 1}</span>
                     </div>
-                    <div class="annotation-selected-text">${ann.type === 'insert' ? (ann.insertPosition === 'before' ? '📍 在此之前插入：' : '📍 在此之后插入：') : ''}${escapeHtml(ann.selectedText)}</div>
+                    <div class="annotation-selected-text">${ann.type === 'insert' ? (ann.insertPosition === 'before' ? t('annotation.insert_before_label') : t('annotation.insert_after_label')) : ''}${escapeHtml(ann.selectedText)}</div>
                     ${commentHtml}
                     ${insertHtml}
                     ${imagesHtml}
                     <div class="annotation-card-footer">
                         <span class="annotation-time">${time}</span>
                         <div class="annotation-actions">
-                            ${ann.type !== 'delete' ? `<button data-edit="${ann.id}">编辑</button>` : ''}
-                            <button data-remove="${ann.id}">删除</button>
+                            ${ann.type !== 'delete' ? `<button data-edit="${ann.id}">${t('annotation.edit')}</button>` : ''}
+                            <button data-remove="${ann.id}">${t('annotation.type_delete')}</button>
                         </div>
                     </div>
                 </div>

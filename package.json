@@ -65,12 +65,12 @@
     "commands": [
       {
         "command": "mdReview.openPanel",
-        "title": "MD Human Review: 打开批阅面板",
+        "title": "%command.openPanel%",
         "icon": "$(edit)"
       },
       {
         "command": "mdReview.exportReview",
-        "title": "MD Human Review: 导出批阅记录"
+        "title": "%command.exportReview%"
       }
     ],
     "menus": {
@@ -123,31 +123,31 @@
           "default": 18,
           "minimum": 12,
           "maximum": 24,
-          "description": "文档正文字体大小（px）"
+          "description": "%config.fontSize.description%"
         },
         "mdReview.lineHeight": {
           "type": "number",
           "default": 1.8,
           "minimum": 1.2,
           "maximum": 2.4,
-          "description": "文档正文行高"
+          "description": "%config.lineHeight.description%"
         },
         "mdReview.contentMaxWidth": {
           "type": "number",
           "default": 1200,
           "minimum": 600,
           "maximum": 1800,
-          "description": "文档内容区最大宽度（px）"
+          "description": "%config.contentMaxWidth.description%"
         },
         "mdReview.fontFamily": {
           "type": "string",
           "default": "",
-          "description": "文档正文字体（留空使用系统默认，可输入字体名如 'Microsoft YaHei'）"
+          "description": "%config.fontFamily.description%"
         },
         "mdReview.codeFontFamily": {
           "type": "string",
           "default": "",
-          "description": "代码块字体（留空使用默认等宽字体，可输入字体名如 'Fira Code'）"
+          "description": "%config.codeFontFamily.description%"
         },
         "mdReview.theme": {
           "type": "string",
@@ -158,33 +158,33 @@
             "auto"
           ],
           "enumDescriptions": [
-            "亮色主题",
-            "暗色主题",
-            "跟随系统"
+            "%config.theme.light%",
+            "%config.theme.dark%",
+            "%config.theme.auto%"
           ],
-          "description": "界面主题"
+          "description": "%config.theme.description%"
         },
         "mdReview.showToc": {
           "type": "boolean",
           "default": true,
-          "description": "默认显示目录导航栏"
+          "description": "%config.showToc.description%"
         },
         "mdReview.autoSave": {
           "type": "boolean",
           "default": true,
-          "description": "启用批注自动保存"
+          "description": "%config.autoSave.description%"
         },
         "mdReview.autoSaveDelay": {
           "type": "number",
           "default": 1500,
           "minimum": 500,
           "maximum": 10000,
-          "description": "自动保存延迟（毫秒）"
+          "description": "%config.autoSaveDelay.description%"
         },
         "mdReview.showAnnotations": {
           "type": "boolean",
           "default": true,
-          "description": "默认显示批注列表面板"
+          "description": "%config.showAnnotations.description%"
         },
         "mdReview.sidebarLayout": {
           "type": "string",
@@ -194,10 +194,10 @@
             "toc-right"
           ],
           "enumDescriptions": [
-            "目录在左，批注在右",
-            "批注在左，目录在右"
+            "%config.sidebarLayout.tocLeft%",
+            "%config.sidebarLayout.tocRight%"
           ],
-          "description": "侧边栏布局方式"
+          "description": "%config.sidebarLayout.description%"
         },
         "mdReview.panelMode": {
           "type": "string",
@@ -207,10 +207,10 @@
             "embedded"
           ],
           "enumDescriptions": [
-            "悬浮模式（面板覆盖在文档上方）",
-            "嵌入模式（面板占据固定宽度）"
+            "%config.panelMode.floating%",
+            "%config.panelMode.embedded%"
           ],
-          "description": "侧边面板显示模式"
+          "description": "%config.panelMode.description%"
         },
         "mdReview.documentAlign": {
           "type": "string",
@@ -221,36 +221,49 @@
             "right"
           ],
           "enumDescriptions": [
-            "靠左对齐",
-            "居中对齐",
-            "靠右对齐"
+            "%config.documentAlign.left%",
+            "%config.documentAlign.center%",
+            "%config.documentAlign.right%"
           ],
-          "description": "主文档对齐方式"
+          "description": "%config.documentAlign.description%"
         },
         "mdReview.enableMermaid": {
           "type": "boolean",
           "default": true,
-          "description": "启用 Mermaid 图表渲染"
+          "description": "%config.enableMermaid.description%"
         },
         "mdReview.enableMath": {
           "type": "boolean",
           "default": true,
-          "description": "启用数学公式渲染"
+          "description": "%config.enableMath.description%"
         },
         "mdReview.enablePlantUML": {
           "type": "boolean",
           "default": true,
-          "description": "启用 PlantUML 图表渲染（需要网络连接）"
+          "description": "%config.enablePlantUML.description%"
         },
         "mdReview.enableGraphviz": {
           "type": "boolean",
           "default": true,
-          "description": "启用 Graphviz 图表渲染"
+          "description": "%config.enableGraphviz.description%"
         },
         "mdReview.showLineNumbers": {
           "type": "boolean",
           "default": false,
-          "description": "在代码块中显示行号"
+          "description": "%config.showLineNumbers.description%"
+        },
+        "mdReview.language": {
+          "type": "string",
+          "default": "zh-CN",
+          "enum": [
+            "zh-CN",
+            "en"
+          ],
+          "enumDescriptions": [
+            "中文",
+            "English"
+          ],
+          "description": "%config.language.description%"
         },
         "mdReview.codeTheme": {
           "type": "string",
@@ -273,7 +286,7 @@
             "default-dark-modern"
           ],
           "enumDescriptions": [
-            "自动（跟随界面主题）",
+            "%config.codeTheme.auto%",
             "GitHub Light",
             "GitHub Dark",
             "Monokai",
@@ -289,7 +302,7 @@
             "Default Light Modern",
             "Default Dark Modern"
           ],
-          "description": "代码高亮主题"
+          "description": "%config.codeTheme.description%"
         }
       }
     }

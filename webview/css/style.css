@@ -1660,7 +1660,7 @@ body.theme-dark * {
 
 /* 编辑模式下空段落的占位 */
 .document-content.wysiwyg-editing .md-block:empty::before {
-    content: '点击此处输入内容...';
+    content: var(--i18n-placeholder-edit, '点击此处输入内容...');
     color: var(--text-light);
     font-style: italic;
 }
