@@ -29,6 +29,7 @@
 - **➕ Insert Content** — Select anchor text to insert new content (supports Markdown), with before/after insertion options
 - **✏️ WYSIWYG Editing** — Switch to edit mode to modify content directly on the rendered document, with a toolbar (bold, italic, strikethrough, headings, lists, blockquote, horizontal rule, undo/redo)
 - **📊 Table Editing** — Right-click tables in edit mode to insert/delete rows and columns
+- **🔄 Smart Edit Preservation** — Editing blockquotes, GitHub alert blocks, code blocks, math formulas, and diagrams preserves their original Markdown structure
 
 ### 🤖 AI Integration
 - **One-click AI Fix** — Generate structured AI modification instruction files from all annotations, send directly to CodeBuddy or Gongfeng Copilot chat
@@ -49,6 +50,10 @@
 - **Auto-save** — Annotation records automatically saved to workspace `.review/` directory; empty annotations auto-delete the record file
 - **Version Management** — Automatically archives old versions when source file content changes, creating new review versions
 - **Image Support** — Base64 images in comments are additionally exported as JSON data files; path-referenced images are stored in the file system
+
+### 🌐 Internationalization
+- **Multi-language Support** — Chinese and English UI, switchable in settings
+- **Auto Language Detection** — Defaults to VS Code's display language
 
 ### 🖥️ Interface & Experience
 - **Table of Contents** — Auto-generated document TOC with collapse/expand all, quick navigation, and scroll-synced active section highlighting
@@ -144,6 +149,7 @@ This extension's review styles, interaction logic, and AI instruction templates 
 | `mdReview.enablePlantUML` | boolean | true | Enable PlantUML diagram rendering (requires network) |
 | `mdReview.enableGraphviz` | boolean | true | Enable Graphviz diagram rendering |
 | `mdReview.showLineNumbers` | boolean | false | Show line numbers in code blocks |
+| `mdReview.language` | string | `"zh-CN"` | UI language (zh-CN / en) |
 | `mdReview.codeTheme` | string | `"default-dark-modern"` | Code highlighting theme (15 options) |
 
 ## 📁 Project Structure
@@ -246,6 +252,7 @@ MIT
 - **➕ 插入内容** — 选中锚点文字后插入新内容（支持 Markdown 格式），可选择在锚点之前或之后插入
 - **✏️ 所见即所得编辑** — 切换编辑模式，直接在渲染后的文档上修改内容，支持 WYSIWYG 工具栏（加粗、斜体、删除线、标题、列表、引用、分隔线、撤销/重做）
 - **📊 表格编辑** — 编辑模式下右键表格可插入/删除行列
+- **🔄 智能编辑保护** — 编辑引用块、GitHub 告警块、代码块、数学公式和图表时，保留原始 Markdown 结构不被破坏
 
 ### 🤖 AI 集成
 - **一键 AI 修复** — 将所有批注生成结构化 AI 修改指令文件，一键发送到 CodeBuddy 或工蜂 Copilot 对话窗口执行
@@ -266,6 +273,10 @@ MIT
 - **自动保存** — 批注记录自动保存到工作区 `.review/` 目录，批注清空时自动删除记录文件
 - **版本管理** — 源文件内容变更时自动归档旧版本，创建新批阅版本
 - **图片支持** — 评论中的 Base64 图片会额外导出为 JSON 数据文件，路径引用的图片直接保存到文件系统
+
+### 🌐 国际化
+- **多语言支持** — 中文和英文界面，可在设置中切换
+- **自动语言检测** — 默认跟随 VS Code 显示语言
 
 ### 🖥️ 界面与体验
 - **目录导航** — 自动生成文档目录，支持折叠/展开全部、快速跳转、滚动高亮当前章节
@@ -361,6 +372,7 @@ MIT
 | `mdReview.enablePlantUML` | boolean | true | 启用 PlantUML 图表渲染（需要网络连接） |
 | `mdReview.enableGraphviz` | boolean | true | 启用 Graphviz 图表渲染 |
 | `mdReview.showLineNumbers` | boolean | false | 代码块中显示行号 |
+| `mdReview.language` | string | `"zh-CN"` | 界面语言（zh-CN / en） |
 | `mdReview.codeTheme` | string | `"default-dark-modern"` | 代码高亮主题（15 种可选） |
 
 ## 📁 项目结构
