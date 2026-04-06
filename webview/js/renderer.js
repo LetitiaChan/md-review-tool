@@ -1753,8 +1753,6 @@ const Renderer = (() => {
             return;
         }
 
-        const isDark = document.body.classList.contains('theme-dark');
-
         for (const container of containers) {
             if (container.querySelector('.graphviz-rendered')) continue;
 
@@ -1771,11 +1769,6 @@ const Renderer = (() => {
                 code = sourceEl.textContent;
             }
             if (!code) continue;
-
-            // 暗色主题下注入默认样式属性
-            if (isDark) {
-                code = injectGraphvizDarkTheme(code);
-            }
 
             try {
                 const svg = vizInstance.renderSVGElement(code);
@@ -1802,15 +1795,6 @@ const Renderer = (() => {
                 container.innerHTML = `<div class="graphviz-error"><span class="graphviz-error-icon">⚠️</span> Graphviz 图表渲染失败: ${escapeHtml(e.message || '')}<pre>${escapeHtml(code)}</pre></div>`;
             }
         }
-    }
-
-    /**
-     * 为 Graphviz DOT 源码注入暗色主题默认属性
-     */
-    function injectGraphvizDarkTheme(code) {
-        // 在 graph/digraph 的第一个 { 后注入默认节点/边样式
-        const darkAttrs = '\n  graph [bgcolor="transparent"]; node [color="#8b949e" fontcolor="#e6edf3" style="filled" fillcolor="#21262d"]; edge [color="#8b949e" fontcolor="#8b949e"];\n';
-        return code.replace(/((?:di)?graph\s+[^{]*\{)/, '$1' + darkAttrs);
     }
 
     /**

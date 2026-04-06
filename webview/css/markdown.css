@@ -551,6 +551,10 @@
     white-space: pre-wrap;
 }
 
+.theme-dark .graphviz-rendered svg {
+    filter: invert(0.88) hue-rotate(180deg);
+}
+
 .theme-dark .graphviz-source {
     background: #2d2d2d;
     border-color: #444;
