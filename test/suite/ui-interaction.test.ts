@@ -850,6 +850,27 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(i18nJs.includes("'help.delete_title'"), '应有标记删除翻译 key');
         });
 
+        test('语言切换应通知外部模块刷新动态文本（如主题按钮标签）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const settingsJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'settings.js'), 'utf-8');
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // settings.js 语言切换应触发 languageChanged 通知
+            assert.ok(settingsJs.includes("_notifyChange('languageChanged'"), '语言切换后应发出 languageChanged 通知');
+            // app.js 应监听 languageChanged 事件并刷新主题按钮标签
+            assert.ok(appJs.includes("'languageChanged'"), 'app.js 应监听 languageChanged 事件');
+            assert.ok(appJs.includes('updateThemeButtonLabel'), 'app.js 应有 updateThemeButtonLabel 函数调用');
+        });
+
+        test('i18n 字典应包含主题按钮标签的中英文翻译', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const i18nJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'i18n.js'), 'utf-8');
+
+            // 验证 theme.light 和 theme.dark 的中英文翻译都存在
+            assert.ok(i18nJs.includes("'theme.light'"), '应有 theme.light 翻译 key');
+            assert.ok(i18nJs.includes("'theme.dark'"), '应有 theme.dark 翻译 key');
+        });
+
         test('表格编辑右键菜单应存在', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');

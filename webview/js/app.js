@@ -108,7 +108,7 @@
                 renderMathAndMermaid();
             }
             // auto 模式下系统主题变化时，同步更新顶部按钮标签
-            if (key === 'themeChanged' || key === 'reset') {
+            if (key === 'themeChanged' || key === 'reset' || key === 'languageChanged') {
                 updateThemeButtonLabel(Settings.getSettings().theme);
             }
         });

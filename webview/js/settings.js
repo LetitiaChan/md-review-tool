@@ -439,6 +439,8 @@ const Settings = (() => {
                     window.I18n.setLocale(currentSettings.language);
                 }
                 saveSettings();
+                // 通知外部模块语言已变更（用于刷新动态生成的文本，如顶部主题按钮标签）
+                _notifyChange('languageChanged', currentSettings.language);
             });
         }
 
