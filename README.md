@@ -2,7 +2,6 @@
 # MD Human Review
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/letitia.md-human-review?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
 [![Rating](https://img.shields.io/visual-studio-marketplace/r/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > A powerful Markdown review & annotation extension for VSCode — comment, mark deletions, insert content, WYSIWYG edit, and generate AI fix instructions with one click.

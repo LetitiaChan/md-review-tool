@@ -85,7 +85,7 @@
         <!-- 欢迎页 -->
         <div class="welcome" id="welcomeScreen">
             <div class="welcome-icon">
-<img src="${iconUri}" alt="MD Human Review" width="388" height="388" />
+<img src="${iconUri}" alt="MD Human Review" width="140" height="140" />
             </div>
             <h2>欢迎使用 MD Human Review</h2>
             <p>打开一个 Markdown 文件，像导师批改论文一样进行批阅</p>
@@ -116,8 +116,8 @@
                 </div>
             </div>
             <div class="welcome-folder-hint" id="welcomeFolderHint">
-                <p>💡 在 VSCode 中打开 <code>.md</code> 文件后，通过命令面板或右键菜单启动批阅面板</p>
-                <p style="margin-top:6px;color:#999;font-size:13px;">批阅记录会自动保存到工作区 <code>批阅文件/</code> 目录</p>
+                <p>💡 打开 <code>.md</code> 文件后，通过命令面板或右键菜单<code>打开批阅面板</code></p>
+                <p style="margin-top:6px;color:#999;font-size:13px;">批阅记录会自动保存到工作区 <code>.review/</code> 目录</p>
             </div>
         </div>
 
@@ -363,7 +363,7 @@
             <div class="modal-body">
                 <div class="apply-summary" id="applySummary"></div>
                 <div class="apply-warning">
-                    <p>⚠️ 此操作将生成 AI 修改指令文件，保存到工作区 <code>批阅文件/</code> 目录。</p>
+                    <p>⚠️ 此操作将生成 AI 修改指令文件，保存到工作区 <code>.review/</code> 目录。</p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -447,7 +447,7 @@
                     <h4>🤖 一键 AI 修复</h4>
                     <ol>
                         <li>完成批阅后，点击工具栏 <strong>「一键AI修复」</strong> 按钮</li>
-                        <li>确认后生成结构化 AI 修改指令文件，保存到 <code>批阅文件/</code> 目录</li>
+                        <li>确认后生成结构化 AI 修改指令文件，保存到 <code>.review/</code> 目录</li>
                         <li>点击 <strong>「🚀 确定执行」</strong> 自动发送指令到 CodeBuddy / 工蜂 Copilot 对话窗口</li>
                         <li>也可点击 <strong>「📋 一键复制指令」</strong> 手动粘贴到任意 AI 工具</li>
                     </ol>
@@ -520,7 +520,8 @@
 
             <!-- 设置内容 -->
             <div class="settings-body">
-                <div class="settings-live-hint">调整设置后可实时预览效果</div>
+
+
 
                 <!-- 外观设置卡片 -->
                 <div class="settings-card">
