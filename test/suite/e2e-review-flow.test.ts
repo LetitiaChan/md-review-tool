@@ -541,8 +541,8 @@ suite('E2E Review Flow Test Suite — 完整批阅流程端到端', () => {
         test('应能读取所有默认设置', () => {
             const config = vscode.workspace.getConfiguration('mdReview');
 
-            assert.strictEqual(config.get<number>('fontSize'), 16);
-            assert.strictEqual(config.get<number>('lineHeight'), 1.6);
+            assert.strictEqual(config.get<number>('fontSize'), 18);
+            assert.strictEqual(config.get<number>('lineHeight'), 1.8);
             assert.strictEqual(config.get<string>('theme'), 'light');
             assert.strictEqual(config.get<boolean>('autoSave'), true);
             assert.strictEqual(config.get<number>('autoSaveDelay'), 1500);
@@ -559,8 +559,8 @@ suite('E2E Review Flow Test Suite — 完整批阅流程端到端', () => {
         test('设置对象应包含所有必要字段', () => {
             const config = vscode.workspace.getConfiguration('mdReview');
             const settings = {
-                fontSize: config.get<number>('fontSize', 16),
-                lineHeight: config.get<number>('lineHeight', 1.6),
+                fontSize: config.get<number>('fontSize', 18),
+                lineHeight: config.get<number>('lineHeight', 1.8),
                 contentMaxWidth: config.get<number>('contentMaxWidth', 1200),
                 fontFamily: config.get<string>('fontFamily', ''),
                 theme: config.get<string>('theme', 'light'),

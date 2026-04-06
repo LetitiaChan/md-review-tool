@@ -7,8 +7,8 @@ const Settings = (() => {
 
     // 默认设置
     const DEFAULTS = {
-        fontSize: 16,
-        lineHeight: 1.6,
+        fontSize: 18,
+        lineHeight: 1.8,
         contentMaxWidth: 1200,
         fontFamily: '',
         theme: 'light',

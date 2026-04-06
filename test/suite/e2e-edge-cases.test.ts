@@ -1459,10 +1459,10 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
         test('数值类型配置应为合理范围', () => {
             const config = vscode.workspace.getConfiguration('mdReview');
 
-            const fontSize = config.get<number>('fontSize', 16);
+            const fontSize = config.get<number>('fontSize', 18);
             assert.ok(fontSize >= 8 && fontSize <= 72, `fontSize ${fontSize} 应在 8-72 范围内`);
 
-            const lineHeight = config.get<number>('lineHeight', 1.6);
+            const lineHeight = config.get<number>('lineHeight', 1.8);
             assert.ok(lineHeight >= 1.0 && lineHeight <= 3.0, `lineHeight ${lineHeight} 应在 1.0-3.0 范围内`);
 
             const autoSaveDelay = config.get<number>('autoSaveDelay', 1500);

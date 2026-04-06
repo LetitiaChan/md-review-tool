@@ -101,8 +101,8 @@ suite('Message Communication Test Suite — 消息通信集成', () => {
             case 'getSettings': {
                 const config = vscode.workspace.getConfiguration('mdReview');
                 const settings = {
-                    fontSize: config.get<number>('fontSize', 16),
-                    lineHeight: config.get<number>('lineHeight', 1.6),
+                    fontSize: config.get<number>('fontSize', 18),
+                    lineHeight: config.get<number>('lineHeight', 1.8),
                     contentMaxWidth: config.get<number>('contentMaxWidth', 1200),
                     theme: config.get<string>('theme', 'light'),
                     showToc: config.get<boolean>('showToc', true),

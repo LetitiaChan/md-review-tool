@@ -318,8 +318,8 @@ export class ReviewPanel {
             case 'getSettings': {
                 const config = vscode.workspace.getConfiguration('mdReview');
                 const settings = {
-                    fontSize: config.get<number>('fontSize', 16),
-                    lineHeight: config.get<number>('lineHeight', 1.6),
+                    fontSize: config.get<number>('fontSize', 18),
+                    lineHeight: config.get<number>('lineHeight', 1.8),
                     contentMaxWidth: config.get<number>('contentMaxWidth', 1200),
                     fontFamily: config.get<string>('fontFamily', ''),
                     theme: config.get<string>('theme', 'light'),
