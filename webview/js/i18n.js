@@ -597,7 +597,7 @@ window.I18n = (() => {
             'modal.ai_result.copy_btn': '📋 Copy Instructions',
             'modal.ai_result.copied': '✅ Copied',
             'modal.ai_result.header_empty': '⚠️ No valid instructions',
-            'modal.ai_result.copy_text': 'Please modify the source file according to the review instruction file.\n\nSource file: {source}\nInstruction file: {instruction}\n\nPlease read the instruction file first, then apply modifications one by one.'
+            'modal.ai_result.copy_text': 'Please modify the source file according to the review instruction file.\n\nSource file: {source}\nInstruction file: {instruction}\n\nPlease read the instruction file first, then apply modifications one by one.',
 
             // ===== Help Modal =====
             'help.title': '📖 User Guide',
