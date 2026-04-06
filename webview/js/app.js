@@ -1690,8 +1690,111 @@ this.innerHTML = t('modal.ai_result.copied');
             ts.addRule('blockquote', {
                 filter: 'blockquote',
                 replacement: function(content) {
-                    const lines = content.replace(/^\n+|\n+$/g, '').split('\n');
+                    // 去掉首尾空行，给每行加 > 前缀
+                    const trimmed = content.replace(/^\n+|\n+$/g, '');
+                    const lines = trimmed.split('\n');
+                    // 避免产生 "> > " 双重引用前缀（turndown 递归处理嵌套 blockquote 时可能出现）
+                    return '\n' + lines.map(line => {
+                        return '> ' + line;
+                    }).join('\n') + '\n';
+                }
+            });
+
+            // GitHub 告警块（div.gh-alert）→ 还原为 > [!TYPE] 语法
+            ts.addRule('ghAlert', {
+                filter: function(node) {
+                    return node.nodeName === 'DIV' && node.classList && node.classList.contains('gh-alert');
+                },
+                replacement: function(content, node) {
+                    // 从 class 中提取告警类型
+                    const typeMap = { 'alert-note': 'NOTE', 'alert-tip': 'TIP', 'alert-important': 'IMPORTANT', 'alert-warning': 'WARNING', 'alert-caution': 'CAUTION', 'alert-blank': 'BLANK' };
+                    let alertType = '';
+                    for (const [cls, type] of Object.entries(typeMap)) {
+                        if (node.classList.contains(cls)) { alertType = type; break; }
+                    }
+                    // 提取内容区域的文本
+                    const contentEl = node.querySelector('.gh-alert-content');
+                    const contentText = contentEl ? ts.turndown(contentEl.innerHTML).trim() : content.trim();
+                    const lines = contentText.split('\n');
+                    if (alertType && alertType !== 'BLANK') {
+                        return '\n> [!' + alertType + ']\n' + lines.map(line => '> ' + line).join('\n') + '\n';
+                    } else if (alertType === 'BLANK') {
+                        return '\n> [!BLANK]\n' + lines.map(line => '> ' + line).join('\n') + '\n';
+                    }
+                    // fallback：当作普通引用
                     return '\n' + lines.map(line => '> ' + line).join('\n') + '\n';
+                }
+            });
+
+            // 代码块（div.code-block > pre > code）→ 还原为 fenced code block
+            ts.addRule('codeBlock', {
+                filter: function(node) {
+                    return node.nodeName === 'DIV' && node.classList && node.classList.contains('code-block');
+                },
+                replacement: function(content, node) {
+                    const codeEl = node.querySelector('pre code');
+                    if (!codeEl) return content;
+                    const code = codeEl.textContent || '';
+                    const className = codeEl.getAttribute('class') || '';
+                    const language = (className.match(/language-(\S+)/) || [null, ''])[1];
+                    return '\n\n```' + language + '\n' + code.replace(/\n$/, '') + '\n```\n\n';
+                }
+            });
+
+            // Mermaid 容器 → 还原为 ```mermaid 代码块
+            ts.addRule('mermaidContainer', {
+                filter: function(node) {
+                    return node.nodeName === 'DIV' && node.classList && node.classList.contains('mermaid-container');
+                },
+                replacement: function(content, node) {
+                    const sourceEl = node.querySelector('.mermaid-source-data');
+                    if (sourceEl && sourceEl.dataset.source) {
+                        try {
+                            const code = decodeURIComponent(escape(atob(sourceEl.dataset.source)));
+                            return '\n\n```mermaid\n' + code + '\n```\n\n';
+                        } catch (e) { /* fallback */ }
+                    }
+                    const preEl = node.querySelector('pre.mermaid-source');
+                    if (preEl) return '\n\n```mermaid\n' + preEl.textContent + '\n```\n\n';
+                    return content;
+                }
+            });
+
+            // PlantUML 容器 → 还原为 ```plantuml 代码块
+            ts.addRule('plantumlContainer', {
+                filter: function(node) {
+                    return node.nodeName === 'DIV' && node.classList && node.classList.contains('plantuml-container');
+                },
+                replacement: function(content, node) {
+                    const sourceEl = node.querySelector('.plantuml-source-data');
+                    if (sourceEl && sourceEl.dataset.source) {
+                        try {
+                            const code = decodeURIComponent(escape(atob(sourceEl.dataset.source)));
+                            return '\n\n```plantuml\n' + code + '\n```\n\n';
+                        } catch (e) { /* fallback */ }
+                    }
+                    const preEl = node.querySelector('pre.plantuml-source');
+                    if (preEl) return '\n\n```plantuml\n' + preEl.textContent + '\n```\n\n';
+                    return content;
+                }
+            });
+
+            // Graphviz 容器 → 还原为 ```dot 代码块
+            ts.addRule('graphvizContainer', {
+                filter: function(node) {
+                    return node.nodeName === 'DIV' && node.classList && node.classList.contains('graphviz-container');
+                },
+                replacement: function(content, node) {
+                    const sourceEl = node.querySelector('.graphviz-source-data');
+                    if (sourceEl && sourceEl.dataset.source) {
+                        try {
+                            const code = decodeURIComponent(escape(atob(sourceEl.dataset.source)));
+                            return '\n\n```dot\n' + code + '\n```\n\n';
+                        } catch (e) { /* fallback */ }
+                    }
+                    const preEl = node.querySelector('pre.graphviz-source');
+                    if (preEl) return '\n\n```dot\n' + preEl.textContent + '\n```\n\n';
+                    return content;
                 }
             });
 
@@ -1748,8 +1851,18 @@ this.innerHTML = t('modal.ai_result.copied');
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = cleanHtml;
 
-            // 移除代码块的 code-header
+            // 移除代码块的 code-header（turndown 规则直接从 pre>code 提取内容）
             tempDiv.querySelectorAll('.code-header').forEach(header => header.remove());
+
+            // 移除代码块中的行号包裹 span.code-line，只保留文本内容
+            tempDiv.querySelectorAll('.code-block pre code').forEach(codeEl => {
+                const codeLines = codeEl.querySelectorAll('.code-line');
+                if (codeLines.length > 0) {
+                    // 提取每行纯文本，重建 code 内容
+                    const plainCode = Array.from(codeLines).map(line => line.textContent).join('\n');
+                    codeEl.textContent = plainCode;
+                }
+            });
 
             // 还原图片路径
             tempDiv.querySelectorAll('img').forEach(img => {
@@ -1789,7 +1902,10 @@ this.innerHTML = t('modal.ai_result.copied');
                 let converted = null;
 
                 // 尝试行级 diff：如果原始 Markdown 存在且行数相同，逐行对比纯文本
-                if (i < _editSnapshotBlocks.length) {
+                // 注意：对于包含引用块、告警块、代码块等复杂结构的 block，
+                // innerText 行数与原始 Markdown 行数可能不一致，直接跳过行级 diff
+                const hasComplexStructure = blockEl.querySelector('blockquote, .gh-alert, .code-block, .mermaid-container, .plantuml-container, .graphviz-container, pre > code');
+                if (!hasComplexStructure && i < _editSnapshotBlocks.length) {
                     const origMd = _editSnapshotBlocks[i];
                     const origLines = origMd.split('\n');
 

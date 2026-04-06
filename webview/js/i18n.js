@@ -68,7 +68,7 @@ window.I18n = (() => {
             'editor.redo_title': '重做 (Ctrl+Y)',
             'editor.tips_title': '编辑模式风险提示',
             'editor.tips_close': '关闭',
-            'editor.tips_warning1': '修改内容后，部分 Markdown 扩展语法可能丢失（如数学公式、Mermaid 图表、GitHub 告警块等）',
+            'editor.tips_warning1': '修改内容后，部分 Markdown 扩展语法可能丢失（如图表、GitHub 告警块等）',
             'editor.tips_warning2': '仅建议用于<b>轻量文本修改</b>（如修正错别字、勾选任务列表等）',
 
             // ===== 批注面板 =====

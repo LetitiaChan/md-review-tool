@@ -1495,4 +1495,94 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
         });
     });
+
+    // ===== 14. 编辑模式 turndown 规则完整性 =====
+
+    suite('14. 编辑模式 turndown 规则完整性', () => {
+        let appCode: string;
+
+        suiteSetup(() => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { throw new Error('扩展路径未找到'); }
+            const appJsPath = path.join(extPath, 'webview', 'js', 'app.js');
+            appCode = fs.readFileSync(appJsPath, 'utf-8');
+        });
+
+        test('createTurndownService 应包含 GitHub 告警块（gh-alert）的 turndown 规则', () => {
+            assert.ok(
+                appCode.includes("ts.addRule('ghAlert'"),
+                'app.js 应包含 ghAlert turndown 规则'
+            );
+            assert.ok(
+                appCode.includes('gh-alert'),
+                'ghAlert 规则应匹配 gh-alert class'
+            );
+            // 验证告警类型映射完整
+            for (const type of ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION', 'BLANK']) {
+                assert.ok(
+                    appCode.includes(`'${type}'`) || appCode.includes(`"${type}"`),
+                    `ghAlert 规则应包含 ${type} 类型映射`
+                );
+            }
+        });
+
+        test('createTurndownService 应包含代码块（code-block）的 turndown 规则', () => {
+            assert.ok(
+                appCode.includes("ts.addRule('codeBlock'"),
+                'app.js 应包含 codeBlock turndown 规则'
+            );
+            assert.ok(
+                appCode.includes('code-block'),
+                'codeBlock 规则应匹配 code-block class'
+            );
+        });
+
+        test('createTurndownService 应包含 Mermaid 容器的 turndown 规则', () => {
+            assert.ok(
+                appCode.includes("ts.addRule('mermaidContainer'"),
+                'app.js 应包含 mermaidContainer turndown 规则'
+            );
+        });
+
+        test('createTurndownService 应包含 PlantUML 容器的 turndown 规则', () => {
+            assert.ok(
+                appCode.includes("ts.addRule('plantumlContainer'"),
+                'app.js 应包含 plantumlContainer turndown 规则'
+            );
+        });
+
+        test('createTurndownService 应包含 Graphviz 容器的 turndown 规则', () => {
+            assert.ok(
+                appCode.includes("ts.addRule('graphvizContainer'"),
+                'app.js 应包含 graphvizContainer turndown 规则'
+            );
+        });
+
+        test('行级 diff 应跳过包含复杂结构的 block', () => {
+            // 验证行级 diff 中有复杂结构检测逻辑
+            assert.ok(
+                appCode.includes('hasComplexStructure'),
+                'app.js 应包含 hasComplexStructure 检测变量'
+            );
+            // 验证检测了所有复杂结构类型
+            for (const selector of ['blockquote', '.gh-alert', '.code-block', '.mermaid-container', '.plantuml-container', '.graphviz-container']) {
+                assert.ok(
+                    appCode.includes(selector),
+                    `hasComplexStructure 检测应包含 ${selector}`
+                );
+            }
+        });
+
+        test('blockHtmlToMarkdown 应清理代码块行号包裹', () => {
+            // 验证 blockHtmlToMarkdown 中有清理 code-line span 的逻辑
+            assert.ok(
+                appCode.includes('.code-block pre code'),
+                'blockHtmlToMarkdown 应处理 .code-block pre code 中的行号包裹'
+            );
+            assert.ok(
+                appCode.includes('.code-line'),
+                'blockHtmlToMarkdown 应清理 .code-line span'
+            );
+        });
+    });
 });
