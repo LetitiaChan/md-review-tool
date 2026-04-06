@@ -1,8 +1,7 @@
-<a id="chinese"></a>
+<a id="english"></a>
 # MD Human Review
 
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/letitia.md-human-review?label=VS%20Code%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
 [![Rating](https://img.shields.io/visual-studio-marketplace/r/letitia.md-human-review)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -11,212 +10,6 @@
 > 🖊️ 像导师批改论文一样批阅 Markdown —— 评论、删除、插入、所见即所得编辑，一键生成 AI 修改指令。
 
 **Key Features**: Markdown review, annotation, comment, WYSIWYG editing, AI-powered fix, code highlighting, Mermaid diagrams, KaTeX math, PlantUML, Graphviz, dark/light theme, table of contents, image lightbox, auto-save.
-
-[English](#english)
-
-## 📺 视频介绍
-
-[![视频介绍](https://img.youtube.com/vi/o4W217zlQmY/maxresdefault.jpg)](https://youtu.be/o4W217zlQmY)
-
----
-
-## ✨ 功能特性
-
-### 📝 批阅模式
-- **💬 添加评论** — 选中文字后添加评论，支持在评论中插入图片（点击、拖拽或 Ctrl+V 粘贴）
-- **🗑️ 标记删除** — 选中文字标记为待删除，以删除线样式展示
-- **➕ 插入内容** — 选中锚点文字后插入新内容（支持 Markdown 格式），可选择在锚点之前或之后插入
-- **✏️ 所见即所得编辑** — 切换编辑模式，直接在渲染后的文档上修改内容，支持 WYSIWYG 工具栏（加粗、斜体、删除线、标题、列表、引用、分隔线、撤销/重做）
-- **📊 表格编辑** — 编辑模式下右键表格可插入/删除行列
-
-### 🤖 AI 集成
-- **一键 AI 修复** — 将所有批注生成结构化 AI 修改指令文件，一键发送到 CodeBuddy 或工蜂 Copilot 对话窗口执行
-- **📋 一键复制指令** — 复制 AI 指令到剪贴板，方便手动粘贴到任意 AI 工具
-
-### 🎨 Markdown 渲染
-- 完整的 GFM（GitHub Flavored Markdown）语法支持
-- **代码高亮** — 15 种代码主题（GitHub、Monokai、Dracula、Nord、Tokyo Night、One Dark Pro 等）
-- **Mermaid 图表** — 流程图、时序图、甘特图、饼图、Git 图等，点击可放大查看（支持缩放控制条）
-- **数学公式** — 基于 KaTeX 的行内公式与块级公式渲染
-- **任务列表** — 编辑模式下可直接勾选切换
-- 表格、脚注、定义列表、Emoji、上下标、折叠内容、GFM 告警块等
-
-### 📤 导出与存储
-- **导出批阅记录** — 生成 AI 可读的结构化 Markdown 修改指令（`Ctrl+E`），指令按从后往前排列确保执行安全
-- **自动保存** — 批注记录自动保存到工作区 `.review/` 目录，批注清空时自动删除记录文件
-- **版本管理** — 源文件内容变更时自动归档旧版本，创建新批阅版本
-- **图片支持** — 评论中的 Base64 图片会额外导出为 JSON 数据文件，路径引用的图片直接保存到文件系统
-
-### 🖥️ 界面与体验
-- **目录导航** — 自动生成文档目录，支持折叠/展开全部、快速跳转、滚动高亮当前章节
-- **批注面板** — 侧边批注列表，支持按时间或文本位置排序、定位、编辑、删除
-- **图片灯箱** — 点击文档中的图片放大预览，支持滚轮缩放、拖拽平移、双击还原
-- **禅模式** — 隐藏侧栏，专注阅读（`Alt+Z`），同时隐藏 IDE 侧边栏
-- **亮色/暗色主题** — 工具栏一键切换或跟随系统
-- **丰富的排版设置** — 字体大小、行高、内容宽度、字体风格均可自定义，实时预览
-- **侧边栏布局** — 目录与批注面板位置可互换（目录在左/右）
-- **面板拖拽** — 目录和批注面板宽度可拖拽调整
-- **文件选择器** — 工作区内 Markdown 文件下拉框快速切换
-- **文件变更检测** — 源文件修改后显示「文件已更新」徽章，点击刷新按钮重载
-- **回到顶部** — 悬浮按钮快速回到文档顶部
-
-### ⌨️ 快捷键
-
-| 快捷键 | 功能 |
-|--------|------|
-| `Alt+Z` | 切换禅模式 |
-| `Ctrl+E` | 导出批阅记录 |
-| `Ctrl+S` | 保存编辑内容到源文件 |
-| `Ctrl+Shift+E` | 切换预览/编辑模式 |
-| `ESC` | 关闭弹窗 / 退出禅模式 |
-
-## 🍴 推荐 Fork 定制
-
-本插件的批阅样式、交互逻辑和 AI 指令模板都以源码形式开放，非常适合 **Fork 后打造个人专属版本**。你可以：
-
-- 🎨 调整批阅高亮颜色、评论卡片样式，匹配你的审美偏好
-- 🤖 修改 AI 指令模板，适配你常用的 AI 工具或提示词风格
-- 📐 定制排版参数
-- 🔌 扩展新的批阅操作类型，满足特定工作流需求
-
-> 💡 **快速上手**：Fork → 修改 → `npm run compile` → 按 `F5` 即可在本地调试你的定制版本。也可以打包为 `.vsix` 文件分享给团队使用。
-
-## 🚀 快速开始
-
-### 安装
-
-**方式一：从插件市场安装（推荐）**
-
-1. 打开 VSCode 或 CodeBuddy IDE，进入扩展面板（`Ctrl+Shift+X`）
-2. 搜索 **「MD Human Review」**
-3. 点击 **安装** 即可
-
-**方式二：从源码安装（开发者）**
-
-1. 克隆仓库并安装依赖：
-   ```bash
-   git clone https://github.com/LetitiaChan/md-review-tool.git
-   cd md-review-tool
-   npm install
-   ```
-
-2. 编译 TypeScript：
-   ```bash
-   npm run compile
-   ```
-
-3. 在 VSCode / CodeBuddy IDE 中按 `F5` 启动扩展开发宿主进行调试。
-
-### 使用
-
-1. 在 VSCode / CodeBuddy IDE 中打开任意 `.md` 或 `.mdc` 文件
-2. 通过以下方式打开批阅面板：
-- **命令面板**：`Ctrl+Shift+P` → 搜索「MD Human Review: 打开批阅面板」
-   - **右键菜单**：在编辑器或资源管理器中右键选择
-   - **编辑器标题栏**：点击标题栏图标按钮
-3. 选中文字后使用浮层工具条或右键菜单进行批阅操作
-4. 批阅完成后点击「🤖 一键AI修复」生成指令，或按 `Ctrl+E` 导出批阅记录
-
-## ⚙️ 配置项
-
-| 配置项 | 类型 | 默认值 | 说明 |
-|--------|------|--------|------|
-| `mdReview.fontSize` | number | 16 | 文档正文字体大小（12-24 px） |
-| `mdReview.lineHeight` | number | 1.6 | 文档正文行高（1.2-2） |
-| `mdReview.contentMaxWidth` | number | 1200 | 文档内容区最大宽度（600-1400 px） |
-| `mdReview.fontFamily` | string | `""` | 字体风格（系统默认 / 衬线体 / 等宽字体） |
-| `mdReview.theme` | string | `"light"` | 界面主题（light / dark / auto） |
-| `mdReview.showToc` | boolean | true | 默认显示目录导航栏 |
-| `mdReview.showAnnotations` | boolean | true | 默认显示批注列表面板 |
-| `mdReview.sidebarLayout` | string | `"toc-left"` | 侧边栏布局（toc-left / toc-right） |
-| `mdReview.autoSave` | boolean | true | 启用批注自动保存 |
-| `mdReview.autoSaveDelay` | number | 1500 | 自动保存延迟（500-10000 毫秒） |
-| `mdReview.enableMermaid` | boolean | true | 启用 Mermaid 图表渲染 |
-| `mdReview.enableMath` | boolean | true | 启用数学公式渲染 |
-| `mdReview.showLineNumbers` | boolean | false | 代码块中显示行号 |
-| `mdReview.codeTheme` | string | `"default-dark-modern"` | 代码高亮主题（15 种可选） |
-
-## 📁 项目结构
-
-```
-md-review-tool/
-├── src/                        # 扩展后端（TypeScript）
-│   ├── extension.ts            # 扩展入口，注册命令
-│   ├── reviewPanel.ts          # WebView 面板管理、消息处理
-│   ├── fileService.ts          # 文件读写、批阅记录管理
-│   └── stateService.ts         # 状态管理
-├── webview/                    # 前端界面
-│   ├── index.html              # 主页面（工具栏、弹窗、设置面板）
-│   ├── css/
-│   │   ├── style.css           # 主样式（布局、工具栏、面板）
-│   │   ├── markdown.css        # Markdown 渲染样式、图片灯箱
-│   │   ├── annotations.css     # 批注高亮与卡片样式
-│   │   ├── settings.css        # 设置面板样式
-│   │   ├── highlight-themes.css # 代码高亮主题集合
-│   │   ├── katex.min.css       # KaTeX 数学公式样式
-│   │   └── fonts/              # KaTeX 字体文件
-│   └── js/
-│       ├── app.js              # 主应用逻辑（初始化、事件、模式切换）
-│       ├── renderer.js         # Markdown 渲染引擎（解析、Mermaid、KaTeX）
-│       ├── annotations.js      # 批注系统（高亮、卡片、交互）
-│       ├── export.js           # 导出模块（批阅记录生成、自动保存）
-│       ├── store.js            # 数据存储（批注数据、版本管理）
-│       └── settings.js         # 设置管理（读取、应用、同步）
-├── syntaxes/                   # .mdc 语法高亮定义
-├── package.json                # 扩展清单
-└── tsconfig.json               # TypeScript 配置
-```
-
-## 🔧 开发
-
-```bash
-# 安装依赖
-npm install
-
-# 编译
-npm run compile
-
-# 监听模式（开发时推荐）
-npm run watch
-```
-
-## ❓ 常见问题（FAQ）
-
-### 这个插件和 VS Code 内置 Markdown 预览有什么区别？
-内置预览只能查看，MD Human Review 支持在渲染后的文档上直接批注（评论、删除标记、插入内容），并能一键生成 AI 修改指令。
-
-### 支持哪些图表格式？
-Mermaid（流程图、时序图、甘特图等）、KaTeX（数学公式）、PlantUML（通过在线服务器渲染）、Graphviz（DOT 语言，本地 Viz.js 渲染）。
-
-### 如何与 AI 工具配合使用？
-批阅完成后点击「🤖 一键 AI 修复」，会生成结构化的修改指令文件，可直接发送到 ChatGPT、CodeBuddy、Copilot 等 AI 工具执行。也可以按 `Ctrl+E` 导出批阅记录后手动粘贴。
-
-### 批注数据保存在哪里？
-批注自动保存到工作区的 `.review/` 目录下，以 JSON 格式存储。源文件内容变更时会自动归档旧版本。
-
-### 支持哪些文件格式？
-`.md`、`.markdown`、`.mdc`（Markdown Cursor）文件。
-
-## 🙏 致谢
-
-本项目的批阅工具原型来源于 [MDReviewTool](https://github.com/hexQQ666/MDReviewTool)（一个基于 Web 的 Markdown 批阅工具）。在此基础上，我将其重构为 VSCode 插件版本，并进行了大量增强：完善了 Markdown 渲染支持（Mermaid 图表、数学公式、代码高亮等）、新增一键 AI 修改功能、丰富了自定义设置项，以及优化了整体交互体验。感谢原作者的创意与开源贡献！
-
-## 📄 许可证
-
-MIT
-
----
-
-> 使用过程中如有任何不顺手的地方，欢迎 [Fork 仓库](https://github.com/LetitiaChan/md-review-tool/fork) 打造你的个人定制版（推荐），也可以 [提交 Issue](https://github.com/LetitiaChan/md-review-tool/issues) 反馈给作者，我们会在后续版本中持续优化 🚀
-
----
-
----
-
-<a id="english"></a>
-# MD Human Review
-
-> A VSCode / CodeBuddy IDE extension for reviewing Markdown files like a mentor grading papers — supports comments, deletion marks, content insertion, WYSIWYG editing, and one-click AI instruction generation.
 
 [中文](#chinese)
 
@@ -414,3 +207,209 @@ MIT
 ---
 
 > If anything feels off during use, feel free to [fork the repo](https://github.com/LetitiaChan/md-review-tool/fork) and build your own customized version (recommended), or [open an issue](https://github.com/LetitiaChan/md-review-tool/issues) to let us know — we'll keep improving in future releases 🚀
+
+---
+
+---
+
+<a id="chinese"></a>
+# MD Human Review
+
+> 🖊️ 像导师批改论文一样批阅 Markdown —— 评论、删除、插入、所见即所得编辑，一键生成 AI 修改指令。
+
+[English](#english)
+
+## 📺 视频介绍
+
+[![视频介绍](https://img.youtube.com/vi/o4W217zlQmY/maxresdefault.jpg)](https://youtu.be/o4W217zlQmY)
+
+---
+
+## ✨ 功能特性
+
+### 📝 批阅模式
+- **💬 添加评论** — 选中文字后添加评论，支持在评论中插入图片（点击、拖拽或 Ctrl+V 粘贴）
+- **🗑️ 标记删除** — 选中文字标记为待删除，以删除线样式展示
+- **➕ 插入内容** — 选中锚点文字后插入新内容（支持 Markdown 格式），可选择在锚点之前或之后插入
+- **✏️ 所见即所得编辑** — 切换编辑模式，直接在渲染后的文档上修改内容，支持 WYSIWYG 工具栏（加粗、斜体、删除线、标题、列表、引用、分隔线、撤销/重做）
+- **📊 表格编辑** — 编辑模式下右键表格可插入/删除行列
+
+### 🤖 AI 集成
+- **一键 AI 修复** — 将所有批注生成结构化 AI 修改指令文件，一键发送到 CodeBuddy 或工蜂 Copilot 对话窗口执行
+- **📋 一键复制指令** — 复制 AI 指令到剪贴板，方便手动粘贴到任意 AI 工具
+
+### 🎨 Markdown 渲染
+- 完整的 GFM（GitHub Flavored Markdown）语法支持
+- **代码高亮** — 15 种代码主题（GitHub、Monokai、Dracula、Nord、Tokyo Night、One Dark Pro 等）
+- **Mermaid 图表** — 流程图、时序图、甘特图、饼图、Git 图等，点击可放大查看（支持缩放控制条）
+- **数学公式** — 基于 KaTeX 的行内公式与块级公式渲染
+- **任务列表** — 编辑模式下可直接勾选切换
+- 表格、脚注、定义列表、Emoji、上下标、折叠内容、GFM 告警块等
+
+### 📤 导出与存储
+- **导出批阅记录** — 生成 AI 可读的结构化 Markdown 修改指令（`Ctrl+E`），指令按从后往前排列确保执行安全
+- **自动保存** — 批注记录自动保存到工作区 `.review/` 目录，批注清空时自动删除记录文件
+- **版本管理** — 源文件内容变更时自动归档旧版本，创建新批阅版本
+- **图片支持** — 评论中的 Base64 图片会额外导出为 JSON 数据文件，路径引用的图片直接保存到文件系统
+
+### 🖥️ 界面与体验
+- **目录导航** — 自动生成文档目录，支持折叠/展开全部、快速跳转、滚动高亮当前章节
+- **批注面板** — 侧边批注列表，支持按时间或文本位置排序、定位、编辑、删除
+- **图片灯箱** — 点击文档中的图片放大预览，支持滚轮缩放、拖拽平移、双击还原
+- **禅模式** — 隐藏侧栏，专注阅读（`Alt+Z`），同时隐藏 IDE 侧边栏
+- **亮色/暗色主题** — 工具栏一键切换或跟随系统
+- **丰富的排版设置** — 字体大小、行高、内容宽度、字体风格均可自定义，实时预览
+- **侧边栏布局** — 目录与批注面板位置可互换（目录在左/右）
+- **面板拖拽** — 目录和批注面板宽度可拖拽调整
+- **文件选择器** — 工作区内 Markdown 文件下拉框快速切换
+- **文件变更检测** — 源文件修改后显示「文件已更新」徽章，点击刷新按钮重载
+- **回到顶部** — 悬浮按钮快速回到文档顶部
+
+### ⌨️ 快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| `Alt+Z` | 切换禅模式 |
+| `Ctrl+E` | 导出批阅记录 |
+| `Ctrl+S` | 保存编辑内容到源文件 |
+| `Ctrl+Shift+E` | 切换预览/编辑模式 |
+| `ESC` | 关闭弹窗 / 退出禅模式 |
+
+## 🍴 推荐 Fork 定制
+
+本插件的批阅样式、交互逻辑和 AI 指令模板都以源码形式开放，非常适合 **Fork 后打造个人专属版本**。你可以：
+
+- 🎨 调整批阅高亮颜色、评论卡片样式，匹配你的审美偏好
+- 🤖 修改 AI 指令模板，适配你常用的 AI 工具或提示词风格
+- 📐 定制排版参数
+- 🔌 扩展新的批阅操作类型，满足特定工作流需求
+
+> 💡 **快速上手**：Fork → 修改 → `npm run compile` → 按 `F5` 即可在本地调试你的定制版本。也可以打包为 `.vsix` 文件分享给团队使用。
+
+## 🚀 快速开始
+
+### 安装
+
+**方式一：从插件市场安装（推荐）**
+
+1. 打开 VSCode 或 CodeBuddy IDE，进入扩展面板（`Ctrl+Shift+X`）
+2. 搜索 **「MD Human Review」**
+3. 点击 **安装** 即可
+
+**方式二：从源码安装（开发者）**
+
+1. 克隆仓库并安装依赖：
+   ```bash
+   git clone https://github.com/LetitiaChan/md-review-tool.git
+   cd md-review-tool
+   npm install
+   ```
+
+2. 编译 TypeScript：
+   ```bash
+   npm run compile
+   ```
+
+3. 在 VSCode / CodeBuddy IDE 中按 `F5` 启动扩展开发宿主进行调试。
+
+### 使用
+
+1. 在 VSCode / CodeBuddy IDE 中打开任意 `.md` 或 `.mdc` 文件
+2. 通过以下方式打开批阅面板：
+- **命令面板**：`Ctrl+Shift+P` → 搜索「MD Human Review: 打开批阅面板」
+   - **右键菜单**：在编辑器或资源管理器中右键选择
+   - **编辑器标题栏**：点击标题栏图标按钮
+3. 选中文字后使用浮层工具条或右键菜单进行批阅操作
+4. 批阅完成后点击「🤖 一键AI修复」生成指令，或按 `Ctrl+E` 导出批阅记录
+
+## ⚙️ 配置项
+
+| 配置项 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `mdReview.fontSize` | number | 16 | 文档正文字体大小（12-24 px） |
+| `mdReview.lineHeight` | number | 1.6 | 文档正文行高（1.2-2） |
+| `mdReview.contentMaxWidth` | number | 1200 | 文档内容区最大宽度（600-1400 px） |
+| `mdReview.fontFamily` | string | `""` | 字体风格（系统默认 / 衬线体 / 等宽字体） |
+| `mdReview.theme` | string | `"light"` | 界面主题（light / dark / auto） |
+| `mdReview.showToc` | boolean | true | 默认显示目录导航栏 |
+| `mdReview.showAnnotations` | boolean | true | 默认显示批注列表面板 |
+| `mdReview.sidebarLayout` | string | `"toc-left"` | 侧边栏布局（toc-left / toc-right） |
+| `mdReview.autoSave` | boolean | true | 启用批注自动保存 |
+| `mdReview.autoSaveDelay` | number | 1500 | 自动保存延迟（500-10000 毫秒） |
+| `mdReview.enableMermaid` | boolean | true | 启用 Mermaid 图表渲染 |
+| `mdReview.enableMath` | boolean | true | 启用数学公式渲染 |
+| `mdReview.showLineNumbers` | boolean | false | 代码块中显示行号 |
+| `mdReview.codeTheme` | string | `"default-dark-modern"` | 代码高亮主题（15 种可选） |
+
+## 📁 项目结构
+
+```
+md-review-tool/
+├── src/                        # 扩展后端（TypeScript）
+│   ├── extension.ts            # 扩展入口，注册命令
+│   ├── reviewPanel.ts          # WebView 面板管理、消息处理
+│   ├── fileService.ts          # 文件读写、批阅记录管理
+│   └── stateService.ts         # 状态管理
+├── webview/                    # 前端界面
+│   ├── index.html              # 主页面（工具栏、弹窗、设置面板）
+│   ├── css/
+│   │   ├── style.css           # 主样式（布局、工具栏、面板）
+│   │   ├── markdown.css        # Markdown 渲染样式、图片灯箱
+│   │   ├── annotations.css     # 批注高亮与卡片样式
+│   │   ├── settings.css        # 设置面板样式
+│   │   ├── highlight-themes.css # 代码高亮主题集合
+│   │   ├── katex.min.css       # KaTeX 数学公式样式
+│   │   └── fonts/              # KaTeX 字体文件
+│   └── js/
+│       ├── app.js              # 主应用逻辑（初始化、事件、模式切换）
+│       ├── renderer.js         # Markdown 渲染引擎（解析、Mermaid、KaTeX）
+│       ├── annotations.js      # 批注系统（高亮、卡片、交互）
+│       ├── export.js           # 导出模块（批阅记录生成、自动保存）
+│       ├── store.js            # 数据存储（批注数据、版本管理）
+│       └── settings.js         # 设置管理（读取、应用、同步）
+├── syntaxes/                   # .mdc 语法高亮定义
+├── package.json                # 扩展清单
+└── tsconfig.json               # TypeScript 配置
+```
+
+## 🔧 开发
+
+```bash
+# 安装依赖
+npm install
+
+# 编译
+npm run compile
+
+# 监听模式（开发时推荐）
+npm run watch
+```
+
+## ❓ 常见问题（FAQ）
+
+### 这个插件和 VS Code 内置 Markdown 预览有什么区别？
+内置预览只能查看，MD Human Review 支持在渲染后的文档上直接批注（评论、删除标记、插入内容），并能一键生成 AI 修改指令。
+
+### 支持哪些图表格式？
+Mermaid（流程图、时序图、甘特图等）、KaTeX（数学公式）、PlantUML（通过在线服务器渲染）、Graphviz（DOT 语言，本地 Viz.js 渲染）。
+
+### 如何与 AI 工具配合使用？
+批阅完成后点击「🤖 一键 AI 修复」，会生成结构化的修改指令文件，可直接发送到 ChatGPT、CodeBuddy、Copilot 等 AI 工具执行。也可以按 `Ctrl+E` 导出批阅记录后手动粘贴。
+
+### 批注数据保存在哪里？
+批注自动保存到工作区的 `.review/` 目录下，以 JSON 格式存储。源文件内容变更时会自动归档旧版本。
+
+### 支持哪些文件格式？
+`.md`、`.markdown`、`.mdc`（Markdown Cursor）文件。
+
+## 🙏 致谢
+
+本项目的批阅工具原型来源于 [MDReviewTool](https://github.com/hexQQ666/MDReviewTool)（一个基于 Web 的 Markdown 批阅工具）。在此基础上，我将其重构为 VSCode 插件版本，并进行了大量增强：完善了 Markdown 渲染支持（Mermaid 图表、数学公式、代码高亮等）、新增一键 AI 修改功能、丰富了自定义设置项，以及优化了整体交互体验。感谢原作者的创意与开源贡献！
+
+## 📄 许可证
+
+MIT
+
+---
+
+> 使用过程中如有任何不顺手的地方，欢迎 [Fork 仓库](https://github.com/LetitiaChan/md-review-tool/fork) 打造你的个人定制版（推荐），也可以 [提交 Issue](https://github.com/LetitiaChan/md-review-tool/issues) 反馈给作者，我们会在后续版本中持续优化 🚀
