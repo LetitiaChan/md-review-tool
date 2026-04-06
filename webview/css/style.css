@@ -5,9 +5,9 @@ html:has(.theme-dark) {
 
 /* ===== 全局重置与变量 ===== */
 :root {
-    --primary: #4f46e5;
-    --primary-hover: #4338ca;
-    --primary-light: #eef2ff;
+    --primary: #059669;
+    --primary-hover: #047857;
+    --primary-light: #ecfdf5;
     --danger: #ef4444;
     --danger-hover: #dc2626;
     --danger-light: #fef2f2;
@@ -105,7 +105,7 @@ body {
 
 .file-select:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1);
 }
 
 .btn-icon {
@@ -482,7 +482,7 @@ body.sidebar-reversed .annotations-panel .resize-handle-left::after {
 
 .resize-handle:hover,
 .resize-handle.dragging {
-    background: rgba(79, 70, 229, 0.08);
+    background: rgba(5, 150, 105, 0.08);
 }
 
 .resize-handle-right {
@@ -723,7 +723,7 @@ body.theme-dark .toc-menu-dropdown {
 }
 
 .toc-arrow:hover {
-    background: rgba(79, 70, 229, 0.12);
+    background: rgba(5, 150, 105, 0.12);
     color: var(--primary);
 }
 
@@ -857,7 +857,7 @@ body.theme-dark .toc-menu-dropdown {
 .btn-toggle-annotations:hover {
     background: var(--primary);
     color: #fff;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
 }
 
 .btn-toggle-annotations.panel-hidden {
@@ -925,7 +925,7 @@ body.theme-dark .toc-menu-dropdown {
     background: var(--primary);
     color: #fff;
     border-color: var(--primary);
-    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.35);
+    box-shadow: 0 4px 16px rgba(5, 150, 105, 0.35);
     transform: translateY(-2px);
 }
 
@@ -1078,7 +1078,7 @@ textarea {
 textarea:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
 }
 
 /* ===== 图片上传区 ===== */
@@ -1384,7 +1384,7 @@ body.theme-dark * {
     margin-top: 10px;
     padding: 8px 12px;
     background: #f0f9ff;
-    border-left: 3px solid #6366f1;
+    border-left: 3px solid #10b981;
     border-radius: 4px;
     font-size: 12px;
     color: #555;
@@ -1448,7 +1448,7 @@ body.theme-dark * {
     border: 1px solid #c7d2fe;
     border-radius: var(--radius);
     font-size: 13px;
-    color: #4338ca;
+    color: #047857;
 }
 .apply-result-content .result-ai-hint code {
     background: rgba(0,0,0,0.06);
@@ -1470,7 +1470,7 @@ body.theme-dark * {
     gap: 4px;
     margin-top: 10px;
     padding: 6px 16px;
-    background: #6366f1;
+    background: #10b981;
     color: #fff;
     border: none;
     border-radius: 6px;
@@ -1480,7 +1480,7 @@ body.theme-dark * {
     transition: background 0.2s, transform 0.1s;
 }
 .btn-copy-ai-instruction:hover {
-    background: #4f46e5;
+    background: #059669;
     transform: translateY(-1px);
 }
 .btn-copy-ai-instruction:active {
@@ -1638,13 +1638,13 @@ body.theme-dark * {
     outline: none;
     border: 2px solid var(--primary);
     border-radius: var(--radius);
-    box-shadow: var(--shadow), 0 0 0 3px rgba(79, 70, 229, 0.1);
+    box-shadow: var(--shadow), 0 0 0 3px rgba(5, 150, 105, 0.1);
     background: #fffef8;
     min-height: 400px;
 }
 
 .document-content.wysiwyg-editing:focus {
-    box-shadow: var(--shadow), 0 0 0 3px rgba(79, 70, 229, 0.18);
+    box-shadow: var(--shadow), 0 0 0 3px rgba(5, 150, 105, 0.18);
 }
 
 /* 编辑模式下的段落间距优化 */
@@ -1655,7 +1655,7 @@ body.theme-dark * {
 }
 
 .document-content.wysiwyg-editing .md-block:hover {
-    background: rgba(79, 70, 229, 0.04);
+    background: rgba(5, 150, 105, 0.04);
 }
 
 /* 编辑模式下空段落的占位 */
@@ -1680,14 +1680,14 @@ body.theme-dark * {
 
 .document-content.wysiwyg-editing td:hover,
 .document-content.wysiwyg-editing th:hover {
-    background: rgba(79, 70, 229, 0.06);
+    background: rgba(5, 150, 105, 0.06);
 }
 
 .document-content.wysiwyg-editing td:focus,
 .document-content.wysiwyg-editing th:focus {
     outline: 2px solid var(--primary);
     outline-offset: -2px;
-    background: rgba(79, 70, 229, 0.04);
+    background: rgba(5, 150, 105, 0.04);
 }
 
 /* ===== WYSIWYG 编辑工具栏 ===== */
@@ -1742,7 +1742,7 @@ body.theme-dark * {
 }
 
 .wysiwyg-btn:active {
-    background: rgba(79, 70, 229, 0.15);
+    background: rgba(5, 150, 105, 0.15);
 }
 
 .wysiwyg-btn.active {
@@ -1933,9 +1933,9 @@ body.theme-dark * {
 
 /* ===== 暗色主题 ===== */
 body.theme-dark {
-    --primary: #818cf8;
-    --primary-hover: #6366f1;
-    --primary-light: rgba(99, 102, 241, 0.15);
+    --primary: #34d399;
+    --primary-hover: #6ee7b7;
+    --primary-light: rgba(52, 211, 153, 0.15);
     --danger: #f87171;
     --danger-hover: #ef4444;
     --danger-light: rgba(239, 68, 68, 0.15);
@@ -1986,7 +1986,7 @@ body.theme-dark .toc-item:hover {
 }
 
 body.theme-dark .toc-item.active {
-    background: rgba(129, 140, 248, 0.15);
+    background: rgba(110, 231, 183, 0.15);
 }
 
 body.theme-dark .toc-item[data-level="1"] {
@@ -2039,8 +2039,8 @@ body.theme-dark .apply-warning code {
 }
 
 body.theme-dark .result-ai-hint {
-    background: rgba(129, 140, 248, 0.12);
-    border-color: rgba(129, 140, 248, 0.3);
+    background: rgba(110, 231, 183, 0.12);
+    border-color: rgba(110, 231, 183, 0.3);
     color: #a5b4fc;
 }
 
@@ -2098,17 +2098,17 @@ body.theme-dark .document-content.wysiwyg-editing {
 }
 
 body.theme-dark .document-content.wysiwyg-editing .md-block:hover {
-    background: rgba(129, 140, 248, 0.06);
+    background: rgba(110, 231, 183, 0.06);
 }
 
 body.theme-dark .document-content.wysiwyg-editing td:hover,
 body.theme-dark .document-content.wysiwyg-editing th:hover {
-    background: rgba(129, 140, 248, 0.08);
+    background: rgba(110, 231, 183, 0.08);
 }
 
 body.theme-dark .document-content.wysiwyg-editing td:focus,
 body.theme-dark .document-content.wysiwyg-editing th:focus {
-    background: rgba(129, 140, 248, 0.06);
+    background: rgba(110, 231, 183, 0.06);
 }
 
 /* --- 选中提示浮层 --- */
@@ -2135,7 +2135,7 @@ body.theme-dark .image-upload-zone {
 body.theme-dark .image-upload-zone:hover,
 body.theme-dark .image-upload-zone.drag-over {
     border-color: var(--primary);
-    background: rgba(129, 140, 248, 0.08);
+    background: rgba(110, 231, 183, 0.08);
 }
 
 /* --- 欢迎页卡片 --- */
@@ -2169,8 +2169,8 @@ body.theme-dark .apply-summary .summary-file code {
     color: #e2e8f0;
 }
 body.theme-dark .apply-summary .summary-hint {
-    background: rgba(99, 102, 241, 0.12);
-    border-left-color: #818cf8;
+    background: rgba(52, 211, 153, 0.12);
+    border-left-color: #34d399;
     color: #c4c9d4;
 }
 

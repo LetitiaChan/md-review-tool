@@ -127,7 +127,7 @@
 .document-content blockquote a {
     color: var(--primary);
     text-decoration: underline;
-    text-decoration-color: rgba(79, 70, 229, 0.3);
+    text-decoration-color: rgba(5, 150, 105, 0.3);
     text-underline-offset: 2px;
 }
 .document-content blockquote a:hover {
@@ -256,12 +256,12 @@
 }
 
 .document-content .md-block:hover {
-    background: rgba(79, 70, 229, 0.03);
+    background: rgba(5, 150, 105, 0.03);
 }
 
 /* ===== 高亮标记样式 ===== */
 .highlight-comment {
-    background: rgba(79, 70, 229, 0.15);
+    background: rgba(5, 150, 105, 0.15);
     border-bottom: 2px solid var(--primary);
     cursor: pointer;
     border-radius: 2px;
@@ -270,7 +270,7 @@
 }
 
 .highlight-comment:hover {
-    background: rgba(79, 70, 229, 0.25);
+    background: rgba(5, 150, 105, 0.25);
 }
 
 .highlight-comment .annotation-indicator {
@@ -768,13 +768,13 @@
 }
 
 .theme-dark .document-content .task-list-item:hover .task-checkbox:not(.checked) {
-    border-color: #818cf8;
-    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.1);
+    border-color: #34d399;
+    box-shadow: 0 0 0 3px rgba(110, 231, 183, 0.1);
 }
 
 .theme-dark .document-content .task-checkbox.checked {
-    background: #818cf8;
-    border-color: #818cf8;
+    background: #34d399;
+    border-color: #34d399;
 }
 
 .theme-dark .document-content .task-check-icon {
@@ -1187,7 +1187,7 @@ pre code.language-diff {
 }
 
 .theme-dark .document-content details summary:hover {
-    color: #818cf8;
+    color: #34d399;
 }
 
 /* ===== 图片增强（span 容器 + 图注） ===== */
@@ -1440,7 +1440,7 @@ pre code.language-diff {
 
 /* ===== 暗色主题 — 行内代码（排除代码块内的 code.hljs） ===== */
 .theme-dark .document-content code:not(.hljs) {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(52, 211, 153, 0.15);
     color: #f472b6;
 }
 
