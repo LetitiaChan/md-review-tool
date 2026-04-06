@@ -302,9 +302,8 @@ const Settings = (() => {
         });
 
         // 语言
-        document.querySelectorAll('.lang-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.lang === currentSettings.language);
-        });
+        const langSel = document.getElementById('settingLanguage');
+        if (langSel) langSel.value = currentSettings.language || 'zh-CN';
 
         // 代码高亮主题
         const codeThemeSelect = document.getElementById('settingCodeTheme');
@@ -428,18 +427,17 @@ const Settings = (() => {
                 saveSettings();
                 // 通知外部模块主题已变更（用于 Mermaid 重新渲染等）
 
-        // 语言切换按钮组
-        document.querySelectorAll('.lang-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                currentSettings.language = btn.dataset.lang;
-                document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+        // 语言切换下拉框
+        const langSelect = document.getElementById('settingLanguage');
+        if (langSelect) {
+            langSelect.addEventListener('change', () => {
+                currentSettings.language = langSelect.value;
                 if (window.I18n) {
                     window.I18n.setLocale(currentSettings.language);
                 }
                 saveSettings();
             });
-        });
+        }
                 _notifyChange('themeChanged', btn.dataset.theme);
             });
         });
