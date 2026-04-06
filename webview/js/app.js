@@ -114,6 +114,7 @@
             // 语言变更时刷新禅模式按钮等动态文本
             if (key === 'languageChanged') {
                 updateZenButtonLabel();
+                updateServerFileSelect();
             }
         });
 
@@ -170,7 +171,7 @@
     // ===== 文件选择下拉框 =====
     function updateServerFileSelect() {
         const select = document.getElementById('fileSelect');
-        select.innerHTML = '<option value="">' + t('toolbar.file_select_default') + '</option>';
+        select.innerHTML = '<option value="" data-i18n="toolbar.file_select_default">' + t('toolbar.file_select_default') + '</option>';
         serverFileList.forEach((name) => {
             const opt = document.createElement('option');
             opt.value = name;

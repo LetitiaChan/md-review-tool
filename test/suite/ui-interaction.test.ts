@@ -863,6 +863,26 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(appJs.includes('updateZenButtonLabel'), 'app.js 应有 updateZenButtonLabel 函数调用');
         });
 
+        test('语言切换应刷新文件选择下拉框默认文本', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // app.js 在 languageChanged 回调中应调用 updateServerFileSelect 刷新下拉框
+            assert.ok(appJs.includes('updateServerFileSelect'), 'app.js 应有 updateServerFileSelect 函数');
+            // 验证 languageChanged 分支中包含 updateServerFileSelect 调用
+            const langChangedIdx = appJs.indexOf("'languageChanged'");
+            const afterLangChanged = appJs.substring(langChangedIdx, langChangedIdx + 300);
+            assert.ok(afterLangChanged.includes('updateServerFileSelect'), '语言切换回调中应调用 updateServerFileSelect 刷新文件选择下拉框');
+        });
+
+        test('updateServerFileSelect 生成的默认 option 应带有 data-i18n 属性', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // 动态生成的默认 option 应包含 data-i18n 属性，以便 applyToDOM 能刷新
+            assert.ok(appJs.includes('data-i18n="toolbar.file_select_default"'), '动态生成的默认 option 应带有 data-i18n 属性');
+        });
+
         test('i18n 字典应包含主题按钮标签的中英文翻译', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const i18nJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'i18n.js'), 'utf-8');
