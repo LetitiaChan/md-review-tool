@@ -1659,4 +1659,163 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             fs.unlinkSync(testFile);
         });
     });
+
+    // ===== 17. 搜索功能 UI 存在性与行为验证 =====
+
+    suite('17. 搜索功能 UI 存在性与行为验证', () => {
+        let html: string;
+        let appJs: string;
+        let annotationsJs: string;
+        let styleCss: string;
+        let annotationsCss: string;
+        let i18nJs: string;
+
+        suiteSetup(() => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+            appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+            annotationsJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'annotations.js'), 'utf-8');
+            styleCss = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
+            annotationsCss = fs.readFileSync(path.join(extPath, 'webview', 'css', 'annotations.css'), 'utf-8');
+            i18nJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'i18n.js'), 'utf-8');
+        });
+
+        // --- Tier 1: 存在性断言 ---
+
+        test('BT-1.1 index.html 应包含正文搜索栏 HTML', () => {
+            assert.ok(html.includes('id="searchBar"'), '应有搜索栏容器');
+            assert.ok(html.includes('id="searchInput"'), '应有搜索输入框');
+            assert.ok(html.includes('id="searchCount"'), '应有搜索计数');
+            assert.ok(html.includes('id="searchPrev"'), '应有上一个按钮');
+            assert.ok(html.includes('id="searchNext"'), '应有下一个按钮');
+            assert.ok(html.includes('id="searchClose"'), '应有关闭按钮');
+        });
+
+        test('BT-1.2 index.html 应包含目录搜索框 HTML', () => {
+            assert.ok(html.includes('id="tocSearch"'), '应有目录搜索容器');
+            assert.ok(html.includes('id="tocSearchInput"'), '应有目录搜索输入框');
+            assert.ok(html.includes('id="tocSearchClear"'), '应有目录搜索清除按钮');
+        });
+
+        test('BT-1.3 index.html 应包含批注搜索框 HTML', () => {
+            assert.ok(html.includes('id="annotationSearch"'), '应有批注搜索容器');
+            assert.ok(html.includes('id="annotationSearchInput"'), '应有批注搜索输入框');
+            assert.ok(html.includes('id="annotationSearchClear"'), '应有批注搜索清除按钮');
+        });
+
+        test('BT-1.4 style.css 应包含正文搜索栏样式', () => {
+            assert.ok(styleCss.includes('.search-bar'), '应有搜索栏样式');
+            assert.ok(styleCss.includes('.search-input'), '应有搜索输入框样式');
+            assert.ok(styleCss.includes('.search-highlight'), '应有搜索高亮样式');
+            assert.ok(styleCss.includes('.search-current'), '应有当前匹配高亮样式');
+            assert.ok(styleCss.includes('.search-nav-btn'), '应有导航按钮样式');
+            assert.ok(styleCss.includes('.no-match'), '应有无匹配状态样式');
+        });
+
+        test('BT-1.5 style.css 应包含目录搜索框样式', () => {
+            assert.ok(styleCss.includes('.toc-search'), '应有目录搜索容器样式');
+            assert.ok(styleCss.includes('.toc-search-input'), '应有目录搜索输入框样式');
+            assert.ok(styleCss.includes('.toc-search-clear'), '应有目录搜索清除按钮样式');
+            assert.ok(styleCss.includes('.toc-no-results'), '应有目录无结果提示样式');
+        });
+
+        test('BT-1.6 annotations.css 应包含批注搜索框样式', () => {
+            assert.ok(annotationsCss.includes('.annotation-search'), '应有批注搜索容器样式');
+            assert.ok(annotationsCss.includes('.annotation-search-input'), '应有批注搜索输入框样式');
+            assert.ok(annotationsCss.includes('.annotation-search-clear'), '应有批注搜索清除按钮样式');
+            assert.ok(annotationsCss.includes('.annotation-no-results'), '应有批注无结果提示样式');
+        });
+
+        // --- Tier 2: 行为级断言 ---
+
+        test('BT-2.1 app.js 应实现 Ctrl+F 搜索拦截', () => {
+            assert.ok(appJs.includes("e.key === 'f'") || appJs.includes("e.key === 'F'"), '应监听 Ctrl+F 键盘事件');
+            assert.ok(appJs.includes('openContentSearch'), '应有打开搜索栏函数');
+            assert.ok(appJs.includes('closeContentSearch'), '应有关闭搜索栏函数');
+        });
+
+        test('BT-2.2 app.js 应实现 TreeWalker 文本搜索', () => {
+            assert.ok(appJs.includes('createTreeWalker'), '应使用 TreeWalker 遍历文本节点');
+            assert.ok(appJs.includes('search-highlight'), '应使用 search-highlight 类名标记匹配');
+            assert.ok(appJs.includes('search-current'), '应使用 search-current 类名标记当前匹配');
+        });
+
+        test('BT-2.3 app.js 应实现搜索导航', () => {
+            assert.ok(appJs.includes('navigateSearch'), '应有搜索导航函数');
+            assert.ok(appJs.includes('searchCurrentIndex'), '应维护当前匹配索引');
+            assert.ok(appJs.includes('scrollIntoView'), '应滚动到匹配项');
+        });
+
+        test('BT-2.4 app.js 应实现搜索高亮清除', () => {
+            assert.ok(appJs.includes('clearSearchHighlights'), '应有清除搜索高亮函数');
+            assert.ok(appJs.includes('normalize'), '应调用 normalize 合并文本节点');
+        });
+
+        test('BT-2.5 app.js 应实现目录搜索过滤', () => {
+            assert.ok(appJs.includes('performTocSearch'), '应有目录搜索函数');
+            assert.ok(appJs.includes('clearTocSearch'), '应有清除目录搜索函数');
+            assert.ok(appJs.includes('tocPreSearchCollapsedSet'), '应保存搜索前折叠状态');
+        });
+
+        test('BT-2.6 app.js 目录搜索应保持层级结构', () => {
+            assert.ok(appJs.includes('allVisible') || appJs.includes('visibleIndices'), '应有层级保持逻辑');
+            assert.ok(appJs.includes('dataset.level') || appJs.includes('.level'), '应使用 level 属性判断层级');
+        });
+
+        test('BT-2.7 annotations.js 应实现批注搜索过滤', () => {
+            assert.ok(annotationsJs.includes('annotationSearchQuery'), '应有批注搜索关键词变量');
+            assert.ok(annotationsJs.includes('setupAnnotationSearch'), '应有批注搜索初始化函数');
+            assert.ok(annotationsJs.includes('selectedText') && annotationsJs.includes('comment') && annotationsJs.includes('insertContent'), '应搜索多个字段');
+        });
+
+        test('BT-2.8 annotations.js 批注搜索应与排序兼容', () => {
+            // 搜索过滤应在排序之后执行
+            assert.ok(annotationsJs.includes('annotationSearchQuery'), '应有搜索关键词');
+            assert.ok(annotationsJs.includes('sortedAnnotations'), '应在排序后的数组上过滤');
+        });
+
+        // --- Tier 3: 搜索功能特定断言 ---
+
+        test('BT-3.1 正文搜索栏应有暗色主题适配', () => {
+            assert.ok(styleCss.includes('theme-dark .search-bar'), '应有暗色主题搜索栏样式');
+            assert.ok(styleCss.includes('theme-dark mark.search-highlight'), '应有暗色主题搜索高亮样式');
+        });
+
+        test('BT-3.2 目录搜索应有暗色主题适配', () => {
+            assert.ok(styleCss.includes('theme-dark .toc-search'), '应有暗色主题目录搜索样式');
+        });
+
+        test('BT-3.3 批注搜索应有暗色主题适配', () => {
+            assert.ok(annotationsCss.includes('theme-dark .annotation-search'), '应有暗色主题批注搜索样式');
+        });
+
+        test('BT-3.4 i18n 应包含搜索相关的中文翻译', () => {
+            assert.ok(i18nJs.includes("'search.placeholder'"), '应有搜索占位符翻译');
+            assert.ok(i18nJs.includes("'search.prev_title'"), '应有上一个按钮翻译');
+            assert.ok(i18nJs.includes("'search.next_title'"), '应有下一个按钮翻译');
+            assert.ok(i18nJs.includes("'search.close_title'"), '应有关闭按钮翻译');
+            assert.ok(i18nJs.includes("'toc.search_placeholder'"), '应有目录搜索占位符翻译');
+            assert.ok(i18nJs.includes("'toc.no_results'"), '应有目录无结果翻译');
+            assert.ok(i18nJs.includes("'annotations.search_placeholder'"), '应有批注搜索占位符翻译');
+            assert.ok(i18nJs.includes("'annotations.no_results'"), '应有批注无结果翻译');
+        });
+
+        test('BT-3.5 i18n 应包含搜索相关的英文翻译', () => {
+            assert.ok(i18nJs.includes("'Search...'") || i18nJs.includes("Search..."), '应有英文搜索占位符');
+            assert.ok(i18nJs.includes("'Search TOC...'") || i18nJs.includes("Search TOC..."), '应有英文目录搜索占位符');
+            assert.ok(i18nJs.includes("'Search annotations...'") || i18nJs.includes("Search annotations..."), '应有英文批注搜索占位符');
+        });
+
+        test('BT-3.6 搜索栏应使用 data-i18n 属性支持国际化', () => {
+            assert.ok(html.includes('data-i18n-placeholder="search.placeholder"'), '搜索输入框应有 i18n 占位符');
+            assert.ok(html.includes('data-i18n-placeholder="toc.search_placeholder"'), '目录搜索输入框应有 i18n 占位符');
+            assert.ok(html.includes('data-i18n-placeholder="annotations.search_placeholder"'), '批注搜索输入框应有 i18n 占位符');
+        });
+
+        test('BT-3.7 搜索栏应使用 debounce 防抖', () => {
+            assert.ok(appJs.includes('searchDebounceTimer') || appJs.includes('300'), '正文搜索应有 debounce');
+            assert.ok(appJs.includes('tocSearchDebounceTimer') || appJs.includes('150'), '目录搜索应有 debounce');
+            assert.ok(annotationsJs.includes('annotationSearchDebounceTimer'), '批注搜索应有 debounce');
+        });
+    });
 });

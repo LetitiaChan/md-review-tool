@@ -11,6 +11,8 @@ const Annotations = (() => {
     let editingAnnotationId = null;
     let currentSortMode = 'time'; // 'position' | 'time'
     let currentInsertPosition = 'after'; // 'before' | 'after' — 当前插入弹窗的方向
+    let annotationSearchQuery = ''; // 批注搜索关键词
+    let annotationSearchDebounceTimer = null;
 
     // 批注图片 URI 缓存：路径 -> webview URI
     let _annotationImageUriCache = {};
@@ -80,6 +82,40 @@ const Annotations = (() => {
         setupInsertModal();
         setupAnnotationClicks();
         setupSortSelect();
+        setupAnnotationSearch();
+    }
+
+    // ===== 批注搜索 =====
+    function setupAnnotationSearch() {
+        const searchInput = document.getElementById('annotationSearchInput');
+        const searchClear = document.getElementById('annotationSearchClear');
+        if (!searchInput) return;
+
+        // 移除旧监听器（防止 init 多次调用时重复绑定）
+        searchInput.oninput = null;
+        searchInput.oninput = () => {
+            const val = searchInput.value.trim();
+            if (searchClear) searchClear.style.display = val ? '' : 'none';
+            if (annotationSearchDebounceTimer) clearTimeout(annotationSearchDebounceTimer);
+            annotationSearchDebounceTimer = setTimeout(() => {
+                annotationSearchQuery = val;
+                renderAnnotationsList();
+            }, 150);
+        };
+
+        if (searchClear) {
+            searchClear.onclick = null;
+            searchClear.onclick = () => {
+                searchInput.value = '';
+                searchClear.style.display = 'none';
+                annotationSearchQuery = '';
+                renderAnnotationsList();
+            };
+        }
+    }
+
+    function getAnnotationSearchQuery() {
+        return annotationSearchQuery;
     }
 
     // ===== 排序选择器 =====
@@ -687,14 +723,34 @@ const Annotations = (() => {
             });
         }
 
+        // 应用搜索过滤
+        if (annotationSearchQuery) {
+            const lowerQuery = annotationSearchQuery.toLowerCase();
+            sortedAnnotations = sortedAnnotations.filter(ann => {
+                const text = (ann.selectedText || '').toLowerCase();
+                const comment = (ann.comment || '').toLowerCase();
+                const insertContent = (ann.insertContent || '').toLowerCase();
+                return text.includes(lowerQuery) || comment.includes(lowerQuery) || insertContent.includes(lowerQuery);
+            });
+        }
+
         if (sortedAnnotations.length === 0) {
-            list.innerHTML = `
-                <div class="empty-annotations">
-                    <p>${t('annotations.empty')}</p>
-                    <p class="hint">${t('annotations.empty_hint')}</p>
-                </div>
-            `;
-            document.getElementById('annotationCount').textContent = t('toolbar.annotations_zero');
+            if (annotationSearchQuery) {
+                list.innerHTML = `
+                    <div class="annotation-no-results">
+                        <p>${t('annotations.no_results')}</p>
+                    </div>
+                `;
+                document.getElementById('annotationCount').textContent = t('toolbar.annotations_count', { count: 0 });
+            } else {
+                list.innerHTML = `
+                    <div class="empty-annotations">
+                        <p>${t('annotations.empty')}</p>
+                        <p class="hint">${t('annotations.empty_hint')}</p>
+                    </div>
+                `;
+                document.getElementById('annotationCount').textContent = t('toolbar.annotations_zero');
+            }
             return;
         }
 

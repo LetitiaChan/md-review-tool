@@ -152,6 +152,15 @@
                         </div>
                         </div>
                     </div>
+                    <div class="toc-search" id="tocSearch">
+                        <div class="toc-search-inner">
+                            <svg class="toc-search-icon" width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                            <input type="text" class="toc-search-input" id="tocSearchInput" data-i18n-placeholder="toc.search_placeholder" placeholder="搜索目录..." />
+                            <button class="toc-search-clear" id="tocSearchClear" style="display:none;" data-i18n-title="toc.search_clear" title="清除">
+                                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M7.5 2.5l-5 5M2.5 2.5l5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                            </button>
+                        </div>
+                    </div>
                     <div class="toc-list" id="tocList">
                         <div class="toc-empty">打开文档后自动生成目录</div>
                     </div>
@@ -193,6 +202,23 @@
                         </button>
                     </div>
                 </div>
+                <!-- 正文搜索栏 -->
+                <div class="search-bar" id="searchBar" style="display:none;">
+                    <div class="search-bar-inner">
+                        <svg class="search-bar-icon" width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        <input type="text" class="search-input" id="searchInput" data-i18n-placeholder="search.placeholder" placeholder="搜索..." />
+                        <span class="search-count" id="searchCount"></span>
+                        <button class="search-nav-btn" id="searchPrev" data-i18n-title="search.prev_title" title="上一个 (Shift+Enter)">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                        <button class="search-nav-btn" id="searchNext" data-i18n-title="search.next_title" title="下一个 (Enter)">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                        <button class="search-close-btn" id="searchClose" data-i18n-title="search.close_title" title="关闭 (Esc)">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9 3L3 9M3 3l6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        </button>
+                    </div>
+                </div>
                 <div class="document-content" id="documentContent"></div>
                 <!-- 悬浮回到顶部按钮 -->
                 <button class="btn-scroll-top" id="btnScrollTop" title="回到顶部">
@@ -222,6 +248,15 @@
                         </div>
                         <button class="panel-hide-btn" id="btnHideAnnotations" data-i18n-title="annotations.hide_title" title="隐藏批注面板">
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="annotation-search" id="annotationSearch">
+                    <div class="annotation-search-inner">
+                        <svg class="annotation-search-icon" width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        <input type="text" class="annotation-search-input" id="annotationSearchInput" data-i18n-placeholder="annotations.search_placeholder" placeholder="搜索批注..." />
+                        <button class="annotation-search-clear" id="annotationSearchClear" style="display:none;" data-i18n-title="annotations.search_clear" title="清除">
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M7.5 2.5l-5 5M2.5 2.5l5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
                         </button>
                     </div>
                 </div>

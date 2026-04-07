@@ -495,6 +495,11 @@
         // 快捷键
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
+                // ESC 优先关闭搜索栏
+                if (document.getElementById('searchBar').style.display !== 'none') {
+                    closeContentSearch();
+                    return;
+                }
                 // ESC 优先退出禅模式
                 if (zenMode) {
                     toggleZenMode();
@@ -506,6 +511,10 @@
                 document.getElementById('applyConfirmModal').style.display = 'none';
                 document.getElementById('applyResultModal').style.display = 'none';
                 document.getElementById('helpModal').style.display = 'none';
+            }
+            if (e.ctrlKey && (e.key === 'f' || e.key === 'F') && !e.shiftKey && !e.altKey) {
+                e.preventDefault();
+                openContentSearch();
             }
             if (e.altKey && (e.key === 'z' || e.key === 'Z')) {
                 e.preventDefault();
@@ -535,6 +544,12 @@
 
         // 面板拖拽调整宽度
         initPanelResize();
+
+        // 正文搜索栏事件
+        initContentSearch();
+
+        // 目录搜索事件
+        initTocSearch();
     }
 
 
@@ -2101,6 +2116,314 @@ this.innerHTML = t('modal.ai_result.copied');
         }
 
         handle.addEventListener('mousedown', onMouseDown);
+    }
+
+    // ===== 正文搜索 (Ctrl+F) =====
+    let searchMatches = [];
+    let searchCurrentIndex = -1;
+    let searchDebounceTimer = null;
+
+    function initContentSearch() {
+        const searchInput = document.getElementById('searchInput');
+        const searchPrev = document.getElementById('searchPrev');
+        const searchNext = document.getElementById('searchNext');
+        const searchClose = document.getElementById('searchClose');
+
+        searchInput.addEventListener('input', () => {
+            if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => performContentSearch(), 300);
+        });
+
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (e.shiftKey) { navigateSearch(-1); } else { navigateSearch(1); }
+            }
+        });
+
+        searchPrev.addEventListener('click', () => navigateSearch(-1));
+        searchNext.addEventListener('click', () => navigateSearch(1));
+        searchClose.addEventListener('click', () => closeContentSearch());
+    }
+
+    function openContentSearch() {
+        const searchBar = document.getElementById('searchBar');
+        const searchInput = document.getElementById('searchInput');
+        searchBar.style.display = '';
+        searchInput.focus();
+        searchInput.select();
+    }
+
+    function closeContentSearch() {
+        const searchBar = document.getElementById('searchBar');
+        searchBar.style.display = 'none';
+        document.getElementById('searchInput').value = '';
+        clearSearchHighlights();
+        searchMatches = [];
+        searchCurrentIndex = -1;
+        updateSearchCount();
+    }
+
+    function performContentSearch() {
+        clearSearchHighlights();
+        searchMatches = [];
+        searchCurrentIndex = -1;
+
+        const query = document.getElementById('searchInput').value.trim();
+        if (!query) {
+            updateSearchCount();
+            document.getElementById('searchInput').classList.remove('no-match');
+            return;
+        }
+
+        const docContent = document.getElementById('documentContent');
+        const lowerQuery = query.toLowerCase();
+
+        // 使用 TreeWalker 遍历文本节点
+        const walker = document.createTreeWalker(docContent, NodeFilter.SHOW_TEXT, null);
+        const textNodes = [];
+        let node;
+        while ((node = walker.nextNode())) {
+            // 跳过 script/style 标签内的文本
+            if (node.parentElement && (node.parentElement.tagName === 'SCRIPT' || node.parentElement.tagName === 'STYLE')) continue;
+            if (node.textContent.toLowerCase().includes(lowerQuery)) {
+                textNodes.push(node);
+            }
+        }
+
+        // 对每个匹配的文本节点进行高亮
+        textNodes.forEach(textNode => {
+            const text = textNode.textContent;
+            const lowerText = text.toLowerCase();
+            const parent = textNode.parentNode;
+            const frag = document.createDocumentFragment();
+            let lastIndex = 0;
+            let matchIndex;
+
+            while ((matchIndex = lowerText.indexOf(lowerQuery, lastIndex)) !== -1) {
+                // 匹配前的文本
+                if (matchIndex > lastIndex) {
+                    frag.appendChild(document.createTextNode(text.substring(lastIndex, matchIndex)));
+                }
+                // 匹配的文本
+                const mark = document.createElement('mark');
+                mark.className = 'search-highlight';
+                mark.textContent = text.substring(matchIndex, matchIndex + query.length);
+                frag.appendChild(mark);
+                searchMatches.push(mark);
+                lastIndex = matchIndex + query.length;
+            }
+
+            // 剩余文本
+            if (lastIndex < text.length) {
+                frag.appendChild(document.createTextNode(text.substring(lastIndex)));
+            }
+
+            parent.replaceChild(frag, textNode);
+        });
+
+        if (searchMatches.length > 0) {
+            searchCurrentIndex = 0;
+            searchMatches[0].classList.add('search-current');
+            searchMatches[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.getElementById('searchInput').classList.remove('no-match');
+        } else {
+            document.getElementById('searchInput').classList.add('no-match');
+        }
+
+        updateSearchCount();
+    }
+
+    function navigateSearch(direction) {
+        if (searchMatches.length === 0) return;
+
+        searchMatches[searchCurrentIndex].classList.remove('search-current');
+        searchCurrentIndex = (searchCurrentIndex + direction + searchMatches.length) % searchMatches.length;
+        searchMatches[searchCurrentIndex].classList.add('search-current');
+        searchMatches[searchCurrentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        updateSearchCount();
+    }
+
+    function updateSearchCount() {
+        const countEl = document.getElementById('searchCount');
+        if (searchMatches.length === 0) {
+            const query = document.getElementById('searchInput').value.trim();
+            countEl.textContent = query ? '0/0' : '';
+        } else {
+            countEl.textContent = `${searchCurrentIndex + 1}/${searchMatches.length}`;
+        }
+    }
+
+    function clearSearchHighlights() {
+        const docContent = document.getElementById('documentContent');
+        const marks = docContent.querySelectorAll('mark.search-highlight');
+        marks.forEach(mark => {
+            const parent = mark.parentNode;
+            parent.replaceChild(document.createTextNode(mark.textContent), mark);
+            parent.normalize();
+        });
+        searchMatches = [];
+        searchCurrentIndex = -1;
+    }
+
+    // ===== 目录搜索 =====
+    let tocSearchDebounceTimer = null;
+    let tocPreSearchCollapsedSet = null; // 搜索前的折叠状态快照
+
+    function initTocSearch() {
+        const tocSearchInput = document.getElementById('tocSearchInput');
+        const tocSearchClear = document.getElementById('tocSearchClear');
+
+        tocSearchInput.addEventListener('input', () => {
+            const val = tocSearchInput.value.trim();
+            tocSearchClear.style.display = val ? '' : 'none';
+            if (tocSearchDebounceTimer) clearTimeout(tocSearchDebounceTimer);
+            tocSearchDebounceTimer = setTimeout(() => performTocSearch(val), 150);
+        });
+
+        tocSearchClear.addEventListener('click', () => {
+            tocSearchInput.value = '';
+            tocSearchClear.style.display = 'none';
+            clearTocSearch();
+        });
+    }
+
+    function performTocSearch(query) {
+        const tocList = document.getElementById('tocList');
+        if (!tocList) return;
+        const items = tocList.querySelectorAll('.toc-item');
+        if (items.length === 0) return;
+
+        // 移除之前的无结果提示
+        const noResults = tocList.querySelector('.toc-no-results');
+        if (noResults) noResults.remove();
+
+        if (!query) {
+            clearTocSearch();
+            return;
+        }
+
+        const lowerQuery = query.toLowerCase();
+
+        // 保存搜索前的折叠状态（仅第一次搜索时保存）
+        if (!tocPreSearchCollapsedSet) {
+            tocPreSearchCollapsedSet = new Set();
+            items.forEach(item => {
+                if (item.classList.contains('toc-collapsed')) {
+                    tocPreSearchCollapsedSet.add(item.dataset.headingId);
+                }
+            });
+        }
+
+        // 先标记所有匹配项
+        const matchedIndices = new Set();
+        items.forEach((item, i) => {
+            const textSpan = item.querySelector('.toc-item-text');
+            const text = textSpan ? textSpan.textContent : '';
+            if (text.toLowerCase().includes(lowerQuery)) {
+                matchedIndices.add(i);
+            }
+        });
+
+        // 向上查找祖先：如果某项匹配，其所有祖先也需要显示
+        const visibleIndices = new Set(matchedIndices);
+        matchedIndices.forEach(idx => {
+            const level = parseInt(items[idx].dataset.level, 10);
+            // 向前查找所有更高层级的祖先
+            for (let j = idx - 1; j >= 0; j--) {
+                const parentLevel = parseInt(items[j].dataset.level, 10);
+                if (parentLevel < level) {
+                    visibleIndices.add(j);
+                    // 继续向上找更高层级的祖先
+                }
+            }
+        });
+
+        // 更精确的祖先查找
+        const allVisible = new Set(visibleIndices);
+        matchedIndices.forEach(idx => {
+            let currentLevel = parseInt(items[idx].dataset.level, 10);
+            for (let j = idx - 1; j >= 0; j--) {
+                const jLevel = parseInt(items[j].dataset.level, 10);
+                if (jLevel < currentLevel) {
+                    allVisible.add(j);
+                    currentLevel = jLevel;
+                    if (currentLevel <= 1) break;
+                }
+            }
+        });
+
+        // 应用显示/隐藏 + 高亮
+        let hasVisible = false;
+        items.forEach((item, i) => {
+            const textSpan = item.querySelector('.toc-item-text');
+            if (allVisible.has(i)) {
+                item.style.display = '';
+                hasVisible = true;
+                // 展开所有项
+                item.classList.remove('toc-collapsed');
+                // 高亮匹配文字
+                if (matchedIndices.has(i) && textSpan) {
+                    const text = textSpan.textContent;
+                    const lowerText = text.toLowerCase();
+                    const matchStart = lowerText.indexOf(lowerQuery);
+                    if (matchStart !== -1) {
+                        textSpan.innerHTML =
+                            escapeHtmlForToc(text.substring(0, matchStart)) +
+                            '<mark>' + escapeHtmlForToc(text.substring(matchStart, matchStart + query.length)) + '</mark>' +
+                            escapeHtmlForToc(text.substring(matchStart + query.length));
+                    }
+                } else if (textSpan) {
+                    // 祖先项不高亮，恢复纯文本
+                    textSpan.textContent = textSpan.textContent;
+                }
+            } else {
+                item.style.display = 'none';
+                if (textSpan) textSpan.textContent = textSpan.textContent;
+            }
+        });
+
+        if (!hasVisible) {
+            const noResultsDiv = document.createElement('div');
+            noResultsDiv.className = 'toc-no-results';
+            noResultsDiv.textContent = t('toc.no_results');
+            tocList.appendChild(noResultsDiv);
+        }
+    }
+
+    function clearTocSearch() {
+        const tocList = document.getElementById('tocList');
+        if (!tocList) return;
+        const items = tocList.querySelectorAll('.toc-item');
+
+        // 移除无结果提示
+        const noResults = tocList.querySelector('.toc-no-results');
+        if (noResults) noResults.remove();
+
+        // 恢复所有项显示
+        items.forEach(item => {
+            item.style.display = '';
+            const textSpan = item.querySelector('.toc-item-text');
+            if (textSpan) textSpan.textContent = textSpan.textContent; // 清除高亮
+        });
+
+        // 恢复搜索前的折叠状态
+        if (tocPreSearchCollapsedSet) {
+            items.forEach(item => {
+                if (tocPreSearchCollapsedSet.has(item.dataset.headingId)) {
+                    item.classList.add('toc-collapsed');
+                } else {
+                    item.classList.remove('toc-collapsed');
+                }
+            });
+            const tocData = getTocDataFromItems(items);
+            applyTocCollapseState(tocList, tocData);
+            tocPreSearchCollapsedSet = null;
+        }
+    }
+
+    function escapeHtmlForToc(text) {
+        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     // ===== 目录导航 =====

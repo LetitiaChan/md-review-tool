@@ -52,6 +52,15 @@ window.I18n = (() => {
             'toc.collapse_all': '折叠全部',
             'toc.expand_all': '展开全部',
             'toc.empty': '打开文档后自动生成目录',
+            'toc.search_placeholder': '搜索目录...',
+            'toc.search_clear': '清除',
+            'toc.no_results': '无匹配结果',
+
+            // ===== 正文搜索 =====
+            'search.placeholder': '搜索...',
+            'search.prev_title': '上一个 (Shift+Enter)',
+            'search.next_title': '下一个 (Enter)',
+            'search.close_title': '关闭 (Esc)',
 
             // ===== 编辑器工具栏 =====
             'editor.bold_title': '加粗 (Ctrl+B)',
@@ -83,6 +92,9 @@ window.I18n = (() => {
             'annotations.hide_title': '隐藏批注面板',
             'annotations.empty': '暂无批注',
             'annotations.empty_hint': '选中文本后右键或点击工具栏添加批注',
+            'annotations.search_placeholder': '搜索批注...',
+            'annotations.search_clear': '清除',
+            'annotations.no_results': '无匹配批注',
 
             // ===== 右键菜单 =====
             'context_menu.add_comment': '添加评论',
@@ -496,6 +508,15 @@ window.I18n = (() => {
             'toc.collapse_all': 'Collapse all',
             'toc.expand_all': 'Expand all',
             'toc.empty': 'TOC will be generated after opening a document',
+            'toc.search_placeholder': 'Search TOC...',
+            'toc.search_clear': 'Clear',
+            'toc.no_results': 'No matching results',
+
+            // ===== Content Search =====
+            'search.placeholder': 'Search...',
+            'search.prev_title': 'Previous (Shift+Enter)',
+            'search.next_title': 'Next (Enter)',
+            'search.close_title': 'Close (Esc)',
 
             // ===== Editor Toolbar =====
             'editor.bold_title': 'Bold (Ctrl+B)',
@@ -527,6 +548,9 @@ window.I18n = (() => {
             'annotations.hide_title': 'Hide annotations panel',
             'annotations.empty': 'No annotations yet',
             'annotations.empty_hint': 'Select text and right-click or use the toolbar to add annotations',
+            'annotations.search_placeholder': 'Search annotations...',
+            'annotations.search_clear': 'Clear',
+            'annotations.no_results': 'No matching annotations',
 
             // ===== Context Menu =====
             'context_menu.add_comment': 'Add Comment',
