@@ -7,6 +7,7 @@
 
 ## 最近更新
 
+- **2026-04-08**: 增加 Ctrl+F 正文检索、目录搜索过滤、批注搜索定位功能（add-search-features）
 - **2026-04-07**: 🚀 发布 v1.2.0 到 VS Code Marketplace（含多语言支持、编辑模式增强、PlantUML/Graphviz、多窗口、大量 bugfix）
 - **2026-04-07**: 修复编辑模式下修改引用块/告警块/代码块/数学公式时样式被破坏的问题
 - **2026-04-06**: 🚀 发布 v1.1.0 到 VS Code Marketplace（含 PlantUML/Graphviz 支持、多窗口、UI 增强、字体设置、截图替换视频等全部更新）
@@ -33,6 +34,7 @@
 
 | 变更名 | 描述 | 归档日期 |
 |--------|------|---------|
+| add-search-features | Ctrl+F 正文检索、目录面板搜索过滤、批注面板搜索定位 | 2026-04-08 |
 | add-i18n-support | 多语言支持（中文/英文），i18n 模块、设置面板语言切换、HTML/JS/CSS/TS 全量国际化 | 2026-04-06 |
 | ui-enhancements-batch-1 | UI 增强：任务列表删除线移除、工具栏重排、面板隐藏按钮、多窗口、悬浮/嵌入模式、文档对齐、编辑后渲染修复 | 2026-04-05 |
 | add-plantuml-graphviz-support | 新增 PlantUML（在线服务器渲染）和 Graphviz（Viz.js 本地渲染）图表支持 | 2026-04-05 |
@@ -52,6 +54,9 @@
 
 | Spec | 来源 | 说明 |
 |------|------|------|
+| content-search | add-search-features | Ctrl+F 正文检索、TreeWalker 高亮、匹配导航 |
+| toc-search | add-search-features | 目录面板搜索过滤、层级保持、折叠状态恢复 |
+| annotation-search | add-search-features | 批注面板搜索、多字段匹配、与排序兼容 |
 | multi-panel | ui-enhancements-batch-1 | 多窗口支持、面板标题动态化、文件路径 tooltip |
 | panel-layout-modes | ui-enhancements-batch-1 | 面板悬浮/嵌入模式切换、文档对齐（靠左/居中/靠右） |
 | plantuml-rendering | add-plantuml-graphviz-support | PlantUML 代码块渲染、降级、lightbox、设置项 |
