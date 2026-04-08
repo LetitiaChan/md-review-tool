@@ -2161,17 +2161,31 @@ this.innerHTML = t('modal.ai_result.copied');
 
         let newContent = finalParts.join('\n\n') + '\n';
 
+        // [DIAG] 诊断日志：最终内容
+        console.log('[DIAG] === newContent 诊断 ===');
+        console.log('[DIAG] newContent.length:', newContent.length);
+        console.log('[DIAG] data.rawMarkdown.length:', data.rawMarkdown.length);
+        console.log('[DIAG] newContent === rawMarkdown?', newContent.trim() === data.rawMarkdown.trim());
+        // 找到代码块围栏的位置，输出前后内容
+        const fenceIdx = newContent.indexOf('```');
+        if (fenceIdx >= 0) {
+            console.log('[DIAG] newContent 中第一个代码围栏位置:', fenceIdx, '前后200字符:', newContent.substring(Math.max(0, fenceIdx - 50), fenceIdx + 200));
+        }
+
         if (newContent.trim() === data.rawMarkdown.trim()) {
+            console.log('[DIAG] newContent 与 rawMarkdown 相同，跳过保存');
             editorDirty = false;
             updateEditStatus('saved', '✓ 已保存');
             setTimeout(() => updateEditStatus('', '编辑模式'), 2000);
             return;
         }
 
+        console.log('[DIAG] newContent 与 rawMarkdown 不同，执行保存');
         updateEditStatus('', '⏳ 保存中...');
 
         try {
             const filePath = data.sourceFilePath || data.fileName;
+            console.log('[DIAG] 保存文件路径:', filePath);
             const result = await callHost('saveFile', { filePath, content: newContent });
 
             if (!result || !result.success) {
