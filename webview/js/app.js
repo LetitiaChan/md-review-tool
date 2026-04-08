@@ -1952,6 +1952,24 @@ this.innerHTML = t('modal.ai_result.copied');
                 }
             });
 
+            // ~~删除线~~ → <del>/<s> 标签还原
+            ts.addRule('strikethrough', {
+                filter: function(node) {
+                    return node.nodeName === 'DEL' || node.nodeName === 'S';
+                },
+                replacement: function(content) {
+                    return '~~' + content + '~~';
+                }
+            });
+
+            // <u>下划线</u> → 保留原始 HTML 标签
+            ts.addRule('htmlUnderline', {
+                filter: 'u',
+                replacement: function(content) {
+                    return '<u>' + content + '</u>';
+                }
+            });
+
             ts.addRule('taskListItem', {
                 filter: function(node) {
                     return node.nodeName === 'LI' && node.classList.contains('task-list-item');
@@ -2252,12 +2270,13 @@ this.innerHTML = t('modal.ai_result.copied');
                             .replace(/==(.+?)==/g, '$1')       // ==高亮==
                             .replace(/\^([^\^]+)\^/g, '$1')   // ^上标^
                             .replace(/\+\+(.+?)\+\+/g, '$1') // ++下划线++
+                            .replace(/<u>(.+?)<\/u>/gi, '$1') // <u>下划线</u>
                             .trim();
                     }
 
                     // 检测原始 Markdown 行是否包含内联格式标记
                     function hasInlineFormatting(line) {
-                        return /\*\*.+?\*\*|__.+?__|(?<!\*)\*(?!\*).+?(?<!\*)\*(?!\*)|(?<!_)_(?!_).+?(?<!_)_(?!_)|~~.+?~~|`.+?`|==.+?==|\^[^\^]+\^|\+\+.+?\+\+/.test(line);
+                        return /\*\*.+?\*\*|__.+?__|(?<!\*)\*(?!\*).+?(?<!\*)\*(?!\*)|(?<!_)_(?!_).+?(?<!_)_(?!_)|~~.+?~~|`.+?`|==.+?==|\^[^\^]+\^|\+\+.+?\+\+|<u>.+?<\/u>/i.test(line);
                     }
 
                     // 只在行数相同时尝试行级替换（结构未变）
