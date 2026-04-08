@@ -1926,7 +1926,8 @@ this.innerHTML = t('modal.ai_result.copied');
 
                     // 从当前 DOM 提取纯文本行（用 innerText 保持换行）
                     const currentText = blockEl.innerText || blockEl.textContent || '';
-                    const currentLines = currentText.split('\n').filter(l => l.trim() !== '' || true);
+                    // 去掉 innerText 末尾的换行符（浏览器在块级元素后会自动添加 \n）
+                    const currentLines = currentText.replace(/\n+$/, '').split('\n');
 
                     // 从原始 Markdown 提取纯文本（去掉 Markdown 标记）
                     function stripMdMarkers(line) {
@@ -1948,6 +1949,13 @@ this.innerHTML = t('modal.ai_result.copied');
                                 // 行内容未变 → 保持原始 Markdown 行
                                 patchedLines.push(origLines[j]);
                             } else {
+                                // 安全检查：如果原始行有内容但当前行为空（或反之），
+                                // 说明行对应关系可能已错位，放弃行级 diff
+                                if ((origStripped.length > 0 && currStripped.length === 0) ||
+                                    (origStripped.length === 0 && currStripped.length > 0)) {
+                                    canPatch = false;
+                                    break;
+                                }
                                 // 行内容变化 → 替换原始行中的文本部分，保留 Markdown 标记和缩进
                                 const mdPrefix = origLines[j].match(/^(\s*(?:[-*+]|\d+\.)\s+(?:\[[ xX]\]\s*)?|#+\s+|>\s*)/);
                                 if (mdPrefix) {
@@ -2022,8 +2030,10 @@ this.innerHTML = t('modal.ai_result.copied');
                 Store.save();
 
                 // 更新内部状态和快照（不重新渲染 DOM，避免破坏编辑模式）
+                // 使用 resultParts 作为快照 blocks，因为它与 DOM 中的 .md-block 一一对应
+                // 避免 Renderer.parseMarkdown(newContent) 重新分割后 block 数量与 DOM 不一致导致索引错位
                 Renderer.parseMarkdown(newContent);
-                _editSnapshotBlocks = Renderer.getRawBlocksBeforeExtract().slice();
+                _editSnapshotBlocks = resultParts.slice();
                 _editSnapshotHtmls = Array.from(docContent.querySelectorAll('.md-block:not(.footnotes-block)')).map(el => el.innerHTML);
 
                 updateEditStatus('saved', t('notification.saved'));
