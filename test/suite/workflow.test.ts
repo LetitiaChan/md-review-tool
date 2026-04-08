@@ -1105,6 +1105,35 @@ suite('Workflow Test Suite — 完整工作流', () => {
             );
         });
 
+        test('BT-listIndent.5 列表中新增行应自动添加列表标记前缀', () => {
+            // Tier 3 — 任务特定断言：修复新增行无 - 标记的问题
+            // 当用户在列表中新增一行时，浏览器可能创建 <div> 而非 <li>，
+            // turndown 不会为 <div> 添加列表标记。缩进恢复逻辑应检测列表上下文，
+            // 为没有列表标记的新增行自动添加 `- ` 前缀。
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            const appJs = fs.readFileSync(path.join(extPath!, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // 应检测原始 block 是否是列表上下文
+            assert.ok(
+                appJs.includes('isListBlock'),
+                '应检测原始 block 是否是列表上下文（isListBlock）'
+            );
+
+            // 应记录每行的匹配状态，用于识别新增行
+            assert.ok(
+                appJs.includes('matchedOrigIdx'),
+                '应记录每行的匹配状态（matchedOrigIdx），用于识别新增行'
+            );
+
+            // 应从最近的列表项邻居继承缩进和标记风格
+            assert.ok(
+                appJs.includes('neighborIndent') && appJs.includes('neighborMarker'),
+                '应从最近的列表项邻居继承缩进和标记风格（neighborIndent/neighborMarker）'
+            );
+        });
+
         test('BT-listIndent.3 turndown listItem 与 taskListItem 前缀空格应一致', () => {
             // Tier 3 — 任务特定断言：两个规则的前缀空格数应一致，避免混合列表时格式不统一
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;

@@ -2197,6 +2197,13 @@ this.innerHTML = t('modal.ai_result.copied');
                             // 记录已使用的原始行索引（避免重复匹配）
                             const usedOrigIndices = new Set();
 
+                            // 检测原始 block 是否是列表上下文
+                            const listItemRegex = /^(\s*)([-*+]|\d+[.)]) /;
+                            const isListBlock = origLines.some(l => listItemRegex.test(l));
+
+                            // 记录每行是否匹配到了原始行（用于后续处理新增行）
+                            const matchedOrigIdx = new Array(convertedLines.length).fill(-1);
+
                             for (let k = 0; k < convertedLines.length; k++) {
                                 const convertedText = stripLineForMatch(convertedLines[k]);
                                 if (!convertedText) continue;
@@ -2214,6 +2221,7 @@ this.innerHTML = t('modal.ai_result.copied');
                                     }
                                     if (matchIdx !== -1) {
                                         usedOrigIndices.add(matchIdx);
+                                        matchedOrigIdx[k] = matchIdx;
                                         const origIndent = origLines[matchIdx].match(/^(\s*)/)[0];
                                         const convertedIndent = convertedLines[k].match(/^(\s*)/)[0];
                                         // 恢复原始缩进（如果不同）
@@ -2222,7 +2230,42 @@ this.innerHTML = t('modal.ai_result.copied');
                                         }
                                     }
                                 }
-                                // 没有匹配的行（新增行）→ 保持 turndown 的输出
+                            }
+
+                            // 第二遍：处理新增行（没有匹配到原始行的行）
+                            // 如果该 block 是列表上下文，为没有列表标记的新增行添加 `- ` 前缀
+                            if (isListBlock) {
+                                for (let k = 0; k < convertedLines.length; k++) {
+                                    if (matchedOrigIdx[k] !== -1) continue; // 已匹配的行跳过
+                                    const line = convertedLines[k];
+                                    if (!line.trim()) continue; // 空行跳过
+                                    if (listItemRegex.test(line)) continue; // 已有列表标记的行跳过
+
+                                    // 新增行没有列表标记 → 从最近的列表项邻居继承缩进和标记风格
+                                    let neighborIndent = '';
+                                    let neighborMarker = '- ';
+                                    // 向上查找最近的列表项行
+                                    for (let j = k - 1; j >= 0; j--) {
+                                        const m = convertedLines[j].match(listItemRegex);
+                                        if (m) {
+                                            neighborIndent = m[1];
+                                            neighborMarker = m[2] + ' ';
+                                            break;
+                                        }
+                                    }
+                                    // 如果向上没找到，向下查找
+                                    if (!neighborMarker || neighborMarker === '- ') {
+                                        for (let j = k + 1; j < convertedLines.length; j++) {
+                                            const m = convertedLines[j].match(listItemRegex);
+                                            if (m) {
+                                                neighborIndent = m[1];
+                                                neighborMarker = m[2] + ' ';
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    convertedLines[k] = neighborIndent + neighborMarker + line.trim();
+                                }
                             }
                             converted = convertedLines.join('\n');
                         }
