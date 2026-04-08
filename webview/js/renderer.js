@@ -1445,6 +1445,18 @@ const Renderer = (() => {
     async function renderMermaid() {
         if (typeof mermaid === 'undefined') return;
 
+        // 清理 mermaid 在 DOM 中残留的临时渲染容器
+        // mermaid v10 的 render() 会在 body 中创建临时 <div id="d${id}"> 和 <svg id="${id}">，
+        // 如果未被正确清理，再次渲染时可能导致 D3 选择器选中旧元素，产生错误的渲染结果
+        // 注意：必须清理所有 mermaid 相关的临时元素，不仅是 "dmermaid-" 前缀的
+        document.querySelectorAll('div[id^="dmermaid-"]').forEach(el => el.remove());
+        document.querySelectorAll('svg[id^="mermaid-"]').forEach(el => {
+            // 只清理不在 .mermaid-container 内的（即 mermaid 渲染时创建的临时 SVG）
+            if (!el.closest('.mermaid-container')) el.remove();
+        });
+        // 清理 mermaid 可能残留的 iframe 沙箱容器
+        document.querySelectorAll('iframe[id^="imermaid-"]').forEach(el => el.remove());
+
         // 每次渲染都重新 initialize，确保主题切换后使用正确的主题配置
         const isDark = document.body.classList.contains('theme-dark');
         mermaid.initialize({
@@ -1503,11 +1515,31 @@ const Renderer = (() => {
             }
             if (!code) continue;
 
-            const id = container.dataset.mermaidId || ('mermaid-' + (++_mermaidCounter));
+            // 使用唯一 ID（加入时间戳），避免 mermaid 内部 D3 缓存导致的渲染错误
+            // mermaid v10 在同一页面中多次渲染时，如果复用了之前的 ID，
+            // 内部的 D3.js 选择器可能选中旧的 DOM 元素，导致 SVG 内容不正确
+            const id = 'mermaid-' + Date.now() + '-' + (++_mermaidCounter);
+
+            // 每次渲染前清理上一次渲染可能残留的临时 DOM 元素
+            // 这对类图等有全局解析器状态的图表类型尤为重要
+            document.querySelectorAll('div[id^="dmermaid-"]').forEach(el => el.remove());
+            document.querySelectorAll('svg[id^="mermaid-"]').forEach(el => {
+                if (!el.closest('.mermaid-container')) el.remove();
+            });
 
             try {
                 const { svg } = await mermaid.render(id, code);
-                container.innerHTML = `<div class="mermaid-rendered" data-source="${sourceDataEl ? sourceDataEl.dataset.source : ''}">${svg}</div>`;
+                // 渲染完成后立即清理 mermaid 创建的临时 DOM 元素
+                // 防止残留元素影响后续图表的渲染（特别是类图的 D3 选择器缓存问题）
+                const tempDiv = document.getElementById('d' + id);
+                if (tempDiv) tempDiv.remove();
+                const tempSvg = document.getElementById(id);
+                if (tempSvg && !tempSvg.closest('.mermaid-container')) tempSvg.remove();
+                const tempIframe = document.getElementById('i' + id);
+                if (tempIframe) tempIframe.remove();
+                // 渲染后用最新的源码更新 data-source（确保编辑后的内容被正确保存）
+                const latestBase64 = btoa(unescape(encodeURIComponent(code)));
+                container.innerHTML = `<div class="mermaid-rendered" data-source="${latestBase64}">${svg}</div>`;
 
                 // 使 SVG 自适应容器宽度
                 const svgEl = container.querySelector('svg');
