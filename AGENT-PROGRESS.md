@@ -7,6 +7,7 @@
 
 ## 最近更新
 
+- **2026-04-08**: 编辑模式下图表源码编辑支持（edit-diagram-source），Mermaid/PlantUML/Graphviz 图表在编辑模式下显示为可编辑 textarea，支持直接修改源码
 - **2026-04-08**: 测试基础设施全面优化（optimize-test-infrastructure），Playwright 测试从 23 个增长到 64 个，新增 test:all 统一命令，修复伪测试，补充搜索/编辑/设置/目录/批注/工具栏 UI 测试
 - **2026-04-08**: 引入 Playwright 自动化 UI 测试基础设施（add-automated-ui-testing），23 个测试覆盖图表渲染、Lightbox 交互、Checkbox 行为、基础渲染、批注高亮
 - **2026-04-08**: 🚀 发布 v1.3.0 到 VS Code Marketplace（含正文搜索 Ctrl+F、目录搜索过滤、批注搜索定位）
@@ -37,6 +38,7 @@
 
 | 变更名 | 描述 | 归档日期 |
 |--------|------|---------|
+| edit-diagram-source | 编辑模式下 Mermaid/PlantUML/Graphviz 图表显示为可编辑源码 textarea，支持直接修改 | 2026-04-08 |
 | optimize-test-infrastructure | 测试基础设施优化：统一测试命令、修复伪测试、补充 41 个新 UI 测试覆盖搜索/编辑/设置/目录/批注/工具栏 | 2026-04-08 |
 | add-automated-ui-testing | Playwright 自动化 UI 测试基础设施，23 个测试覆盖图表/Lightbox/Checkbox/渲染/批注 | 2026-04-08 |
 | add-search-features | Ctrl+F 正文检索、目录面板搜索过滤、批注面板搜索定位 | 2026-04-08 |
@@ -71,6 +73,7 @@
 | ui-rendering-tests | add-automated-ui-testing | UI 渲染测试套件：图表、Lightbox、Checkbox、基础渲染、批注 |
 | test-integration | optimize-test-infrastructure | 统一测试命令、修复伪测试、清理 diagnostic、测试容器增强 |
 | ui-test-expansion | optimize-test-infrastructure | UI 测试扩展：搜索、编辑模式、设置面板、目录面板、批注面板、工具栏 |
+| diagram-edit | edit-diagram-source | 编辑模式下图表源码编辑：textarea 转换、turndown 还原、自动高度、dirty 标记 |
 
 ---
 

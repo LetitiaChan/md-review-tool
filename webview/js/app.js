@@ -1267,6 +1267,100 @@ showNotification(t('notification.restored', { count: matchedRecord.annotations.l
         setTimeout(() => { toast.classList.remove('show'); }, 2500);
     }
 
+    // ===== 编辑模式下图表源码编辑 =====
+
+    /**
+     * 从图表容器中提取源码（Task 2.2）
+     * 优先从 data-source（base64）中提取，fallback 到 <pre> 文本
+     */
+    function extractDiagramSource(container) {
+        // 优先从 data-source（base64 编码）中提取
+        const sourceDataEl = container.querySelector('[data-source]');
+        if (sourceDataEl && sourceDataEl.dataset.source) {
+            try {
+                return decodeURIComponent(escape(atob(sourceDataEl.dataset.source)));
+            } catch (e) { /* fallback */ }
+        }
+        // fallback：从 <pre> 中提取纯文本
+        const preEl = container.querySelector('pre');
+        if (preEl) return preEl.textContent || '';
+        return '';
+    }
+
+    /**
+     * 自动调整 textarea 高度以适应内容（Task 2.4）
+     */
+    function autoResizeTextarea(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.max(textarea.scrollHeight, 80) + 'px';
+    }
+
+    /**
+     * 将图表容器转换为可编辑的 textarea 源码区域（Task 2.1）
+     * 在编辑模式下调用，遍历所有 mermaid/plantuml/graphviz 容器
+     */
+    function convertDiagramsToEditable() {
+        const types = [
+            { selector: '.mermaid-container', lang: 'mermaid' },
+            { selector: '.plantuml-container', lang: 'plantuml' },
+            { selector: '.graphviz-container', lang: 'dot' }
+        ];
+
+        types.forEach(({ selector, lang }) => {
+            document.querySelectorAll(selector).forEach(container => {
+                const code = extractDiagramSource(container);
+
+                // 创建可编辑的源码区域
+                const editWrapper = document.createElement('div');
+                editWrapper.className = 'diagram-edit-wrapper';
+                editWrapper.contentEditable = 'false'; // 阻止外层 contentEditable 影响
+                editWrapper.dataset.diagramLang = lang;
+
+                const header = document.createElement('div');
+                header.className = 'diagram-edit-header';
+                header.innerHTML = `<span class="diagram-edit-lang">${lang}</span><span class="diagram-edit-hint">${t('editor.diagram_edit_hint')}</span>`;
+
+                const textarea = document.createElement('textarea');
+                textarea.className = 'diagram-edit-textarea';
+                textarea.spellcheck = false;
+                textarea.dataset.diagramLang = lang;
+                textarea.dataset.originalSource = btoa(unescape(encodeURIComponent(code)));
+                textarea.value = code;
+
+                // 自动高度调整（Task 2.4）
+                textarea.addEventListener('input', () => {
+                    autoResizeTextarea(textarea);
+                    // 触发编辑状态标记和自动保存（Task 2.5）
+                    if (currentMode === 'edit') {
+                        editorDirty = true;
+                        updateEditStatus('modified', t('notification.unsaved'));
+                        scheduleAutoSave();
+                    }
+                });
+
+                // 支持 Tab 键缩进
+                textarea.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+                        textarea.value = textarea.value.substring(0, start) + '    ' + textarea.value.substring(end);
+                        textarea.selectionStart = textarea.selectionEnd = start + 4;
+                        // 触发 input 事件以更新状态
+                        textarea.dispatchEvent(new Event('input'));
+                    }
+                });
+
+                editWrapper.appendChild(header);
+                editWrapper.appendChild(textarea);
+                container.replaceWith(editWrapper);
+
+                // 初始化高度
+                requestAnimationFrame(() => autoResizeTextarea(textarea));
+            });
+        });
+    }
+
     // ===== 编辑模式 Tips 提示 =====
     function showEditModeTips() {
         let tips = document.getElementById('_editModeTips');
@@ -1610,6 +1704,8 @@ this.innerHTML = t('modal.ai_result.copied');
             Renderer.renderBlocks(cleanBlocks, []);
             // 编辑模式下将数学公式占位符还原为原始文本（$...$），方便用户编辑
             Renderer.restoreMathPlaceholders();
+            // 编辑模式下将图表容器转换为可编辑的 textarea 源码区域
+            convertDiagramsToEditable();
             docContent.contentEditable = 'true';
             docContent.classList.add('wysiwyg-editing');
             editorDirty = false;
@@ -1780,6 +1876,20 @@ this.innerHTML = t('modal.ai_result.copied');
                         if (language === 'code') language = '';
                     }
                     return '\n\n```' + language + '\n' + code.replace(/\n$/, '') + '\n```\n\n';
+                }
+            });
+
+            // 编辑模式下的图表源码编辑区 → 还原为对应的 Markdown 代码块
+            ts.addRule('diagramEditWrapper', {
+                filter: function(node) {
+                    return node.nodeName === 'DIV' && node.classList && node.classList.contains('diagram-edit-wrapper');
+                },
+                replacement: function(content, node) {
+                    const textarea = node.querySelector('.diagram-edit-textarea');
+                    if (!textarea) return content;
+                    const lang = textarea.dataset.diagramLang || 'mermaid';
+                    const code = textarea.value || '';
+                    return '\n\n```' + lang + '\n' + code.replace(/\n$/, '') + '\n```\n\n';
                 }
             });
 
