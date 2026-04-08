@@ -1003,4 +1003,33 @@ suite('Workflow Test Suite — 完整工作流', () => {
             );
         });
     });
+
+    suite('编辑模式 Bug 回归：列表编辑后缩进不应丢失', () => {
+        test('app.js turndown fallback 应从原始 Markdown 恢复前导缩进', () => {
+            // 回归测试：当行级 diff 放弃后 fallback 到 turndown 时，
+            // turndown 不保留原始 Markdown 的前导缩进，导致列表项缩进丢失
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            const appJs = fs.readFileSync(path.join(extPath!, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // 验证 turndown fallback 后有缩进恢复逻辑
+            assert.ok(
+                appJs.includes('origIndent') && appJs.includes('convertedIndent'),
+                'turndown fallback 应包含缩进恢复逻辑（origIndent/convertedIndent）'
+            );
+
+            // 验证缩进恢复使用了原始 Markdown 的前导空格
+            assert.ok(
+                appJs.includes("origLines[k].match(/^(\\s*)/)[0]"),
+                '应从原始 Markdown 行提取前导空格'
+            );
+
+            // 验证缩进恢复应用到 turndown 输出
+            assert.ok(
+                appJs.includes('origIndent + convertedLines[k].trimStart()'),
+                '应将原始缩进应用到 turndown 输出行'
+            );
+        });
+    });
 });

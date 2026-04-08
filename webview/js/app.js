@@ -1994,6 +1994,24 @@ this.innerHTML = t('modal.ai_result.copied');
                 // 行级 diff 失败时 fallback 到 turndown
                 if (converted === null) {
                     converted = blockHtmlToMarkdown(blockEl, turndownService);
+
+                    // turndown 不保留原始 Markdown 的前导缩进，
+                    // 尝试从原始 Markdown 恢复每行的前导空格
+                    if (i < _editSnapshotBlocks.length) {
+                        const origMd = _editSnapshotBlocks[i];
+                        const origLines = origMd.split('\n');
+                        const convertedLines = converted.split('\n');
+                        if (origLines.length === convertedLines.length) {
+                            for (let k = 0; k < convertedLines.length; k++) {
+                                const origIndent = origLines[k].match(/^(\s*)/)[0];
+                                const convertedIndent = convertedLines[k].match(/^(\s*)/)[0];
+                                if (origIndent && origIndent !== convertedIndent) {
+                                    convertedLines[k] = origIndent + convertedLines[k].trimStart();
+                                }
+                            }
+                            converted = convertedLines.join('\n');
+                        }
+                    }
                 }
 
                 // 将该 block 中被提取的内联定义行（引用式链接/脚注）追加回去
