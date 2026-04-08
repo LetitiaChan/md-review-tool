@@ -6,27 +6,16 @@ description: >-
   to automatically run tests, diagnose failures, and attempt auto-fix for bugs found.
   Trigger phrases include "run tests", "verify implementation", "auto test", "e2e verify",
   or when the user has just finished an openspec apply-change session.
+  Supports subagent delegation via Task tool for parallel/async execution.
 license: MIT
 metadata:
   author: openspec-harness-kit
-  version: "1.0"
+  version: "2.0"
 ---
 
 # Auto-Test Skill
 
-Automated testing and bug-fixing workflow designed to run after OpenSpec task implementation. This is a **template** — customize it for your project's specific testing stack.
-
-<!-- ⚠️ CUSTOMIZE THIS ENTIRE FILE for your project's testing framework.
-     This template provides the STRUCTURE and WORKFLOW.
-     You need to fill in the PROJECT-SPECIFIC sections marked with ⚠️.
-
-     Examples of customization:
-     - Jest/Vitest for unit tests
-     - Playwright/Cypress for E2E tests
-     - pytest for Python projects
-     - cargo test for Rust projects
-     - Custom integration test scripts
--->
+Automated testing and bug-fixing workflow for **md-human-review** VS Code 扩展项目。支持两种执行模式：直接执行 和 subagent 委托。
 
 ## When to Use
 
@@ -34,177 +23,164 @@ Automated testing and bug-fixing workflow designed to run after OpenSpec task im
 - When the user explicitly requests testing/verification
 - When verifying that code changes don't break existing functionality
 - After any significant code modification
+- In Hotfix Mini-Pipeline H3 回归测试阶段
 
-## Overview
+## Project Testing Architecture
 
-The testing workflow has two phases executed sequentially:
+双层测试架构，共 **624+ 个测试用例**：
 
-1. **Phase 1 — Unit / Data Layer Tests**: Mocha tests via `npm test` covering extension logic, file service, state service
-2. **Phase 2 — Integration / UI Layer Tests**: Same test runner (VS Code extension tests run in a VS Code instance via @vscode/test-electron)
+| 层级 | 框架 | 命令 | 测试文件 | 说明 |
+|------|------|------|---------|------|
+| Layer 1 | Mocha + @vscode/test-electron | `npm test` | 12 个 `.test.ts` (test/suite/) | 扩展逻辑/服务/消息通信/工作流，需启动真实 VS Code 实例 |
+| Layer 2 | Playwright (Chromium) | `npm run test:ui` | 12 个 `.spec.ts` (test/ui/specs/) | 浏览器端 UI 测试，file:// 加载 test-container.html |
+| 全量 | — | `npm run test:all` | 全部 24 个文件 | 串行执行 Layer1 + Layer2 |
 
-After each phase, if failures are detected, enter **Auto-Fix Loop** (up to 3 iterations per failing test).
+### Layer 1 测试文件索引
 
-## Prerequisites
+| 文件 | 覆盖领域 |
+|------|---------|
+| extension.test.ts | 扩展激活、命令注册 |
+| fileService.test.ts | 文件读写服务 |
+| stateService.test.ts | 状态管理 |
+| reviewPanel.test.ts | 审阅面板 |
+| annotation-logic.test.ts | 批注逻辑 |
+| export-logic.test.ts | 导出功能 |
+| store-logic.test.ts | Store 数据管理 |
+| message-comm.test.ts | Extension ↔ Webview 消息通信 |
+| file-integration.test.ts | 文件集成 |
+| workflow.test.ts | 完整工作流 |
+| e2e-review-flow.test.ts | 端到端审阅流程 |
+| e2e-edge-cases.test.ts | 端到端边缘案例 |
+| ui-interaction.test.ts | UI 交互 |
 
-Before running tests, ensure the project is buildable:
+### Layer 2 测试文件索引
 
-<!-- ⚠️ CUSTOMIZE: Replace with your project's build command -->
-```bash
-cd <project-root>
-<build-command>
-```
+| Spec 文件 | 覆盖领域 |
+|----------|---------|
+| basic-rendering.spec.ts | 标题/列表/代码块/表格/KaTeX/告警块渲染 |
+| chart-rendering.spec.ts | Mermaid/PlantUML/Graphviz 图表 |
+| annotations.spec.ts | 批注功能 |
+| annotation-panel.spec.ts | 批注面板 |
+| checkbox.spec.ts | 复选框交互 |
+| edit-mode.spec.ts | WYSIWYG 编辑模式 |
+| lightbox.spec.ts | 图片灯箱 |
+| search.spec.ts | 搜索功能 |
+| settings-panel.spec.ts | 设置面板 |
+| toc-panel.spec.ts | 目录面板 |
+| toolbar.spec.ts | 工具栏 |
+| diagnostic.spec.ts | 诊断 |
 
-If the build fails, fix the build errors first. Do NOT proceed with testing until build succeeds.
+## Execution Mode 1: 直接执行（推荐，同步模式）
 
-## Phase 1: Unit / Data Layer Tests
+主 agent 直接按以下步骤执行测试，适用于管线中需要阻塞等待结果的场景。
 
-### Purpose
-
-Verify business logic, data operations, service functions, and core algorithms — without UI dependency.
-
-### Execution
-
-<!-- ⚠️ CUSTOMIZE: Replace with your project's test command -->
-```bash
-cd <project-root>
-<test-command-phase-1>
-```
-
-### What to Test
-
-For each OpenSpec change, generate test cases covering:
-
-| Area | What to Verify |
-|------|---------------|
-| Core Logic | Business rules, calculations, transformations |
-| Data Operations | CRUD operations, data validation, persistence |
-| Error Handling | Edge cases, invalid inputs, error propagation |
-| Integration Points | API contracts, service boundaries |
-
-### Interpreting Results
-
-Parse test output for pass/fail indicators:
-- Standard test runners output pass ✓ / fail ✗ markers
-- Check exit code: 0 = all passed, non-zero = failures
-- If failures exist → proceed to Auto-Fix
-
-## Phase 2: Integration / UI Layer Tests
-
-### Purpose
-
-Verify user-facing functionality, API endpoints, UI interactions, and end-to-end flows.
-
-### Execution
+### Step 1: 编译验证
 
 ```bash
-cd f:/github/md-review-tool
-npm test
-# Note: VS Code extension tests run via @vscode/test-electron, covering both unit and integration
+cd f:/github/md-review-tool && npm run compile 2>&1
+cd f:/github/md-review-tool && npm run compile:test 2>&1
 ```
 
-### What to Test
+- 失败 → 分析错误，修复（最多 3 次）
+- 成功 → 继续
 
-| Area | What to Verify |
-|------|---------------|
-| User Flows | Complete user journeys from start to finish |
-| API Endpoints | Request/response correctness, error handling |
-| UI Rendering | Components render correctly, interactions work |
-| Data Flow | End-to-end data persistence and retrieval |
+### Step 2: Layer 1 — Mocha 扩展测试
 
-### Interpreting Results
+```bash
+cd f:/github/md-review-tool && npm test 2>&1
+```
 
-- Check test output and exit code
-- Review any generated screenshots or artifacts
-- Summary: N passed, M failed
+解析输出：查找 `N passing` 和 `N failing`。
 
-## Auto-Fix Loop
+### Step 3: Layer 2 — Playwright UI 测试
 
-When tests fail, enter the auto-fix loop:
+```bash
+cd f:/github/md-review-tool && npm run test:ui 2>&1
+```
 
-### Step 1: Diagnose
+解析输出：查找 `N passed`、`N failed`、`N skipped`。
 
-For each failing test:
+### Auto-Fix Loop（每个失败测试最多 3 轮）
 
-1. **Read the error message** — extract expected vs actual, or the specific assertion name
-2. **Identify the source layer**:
-   - Unit test fail → likely in core business logic / service code
-   - Integration test fail → likely in API layer, data layer, or UI components
-3. **Search the codebase** for the relevant code
+1. **诊断**: 读取错误信息，定位失败的测试名和原因
+2. **搜索**: 在源码中搜索相关代码
+3. **分类**:
+   | 类别 | 范围 | 动作 |
+   |------|------|------|
+   | Trivial | 单文件, <10行 | 直接修复 |
+   | Moderate | 2-3文件, <50行 | 修复并解释 |
+   | Large | >3文件 或 >50行 | **标记 Unresolved，报告用户** |
+4. **修复**: replace_in_file 应用修复 → 重编译 → 重测试
+5. **循环**: 仍失败且 <3轮 → 回到步骤 1
 
-### Step 2: Classify the Fix
-
-| Category | Scope | Action |
-|----------|-------|--------|
-| **Trivial** | Single file, <10 lines | Auto-fix immediately |
-| **Moderate** | 2-3 files, <50 lines total | Auto-fix, explain changes |
-| **Large** | >3 files or >50 lines or architectural change | **ASK USER before proceeding** |
-
-**CRITICAL: For large-scope fixes, ALWAYS ask the user:**
-> "Detected a large-scope fix needed (N files, ~M lines of code). Details:\n1. ...\n2. ...\nProceed?"
-
-### Step 3: Apply Fix
-
-1. Make the code change using `replace_in_file`
-2. Rebuild the project
-3. Re-run the failing test phase
-4. If still failing → loop back to Step 1 (max 3 iterations)
-5. If max iterations reached → report remaining failures to user
-
-### Step 4: Report
-
-After all fix attempts, generate a summary:
+### Step 4: 报告
 
 ```
-## Test Report
+## 🧪 Auto-Test Report
 
-### Phase 1 (Unit / Data Layer)
-- Passed: N / Total: M
-- Auto-fixed: K bug(s)
-
-### Phase 2 (Integration / UI Layer)
-- Passed: N / Total: M
-- Auto-fixed: K bug(s)
-
-### Unresolved Issues
-- (list any issues that could not be auto-fixed)
+| 阶段 | 状态 | 详情 |
+|------|------|------|
+| 编译 | ✅/❌ | 编译通过/失败原因 |
+| Layer 1 (Mocha) | ✅/❌ | N/M passing, K failing |
+| Layer 2 (Playwright) | ✅/❌ | N passed, K failed, S skipped |
+| Auto-Fix | ✅/⏭️/❌ | 修复 N 个 / 不需要 / N 个未解决 |
 ```
+
+## Execution Mode 2: Subagent 辅助诊断（失败分析专用）
+
+> **限制**: `code-explorer` subagent 不具备 `execute_command`，无法执行编译/测试命令。
+> 它的价值在于测试**失败后的诊断阶段**——搜索源码、定位错误原因、分析影响面。
+
+### 调用方式（仅在测试失败时使用）
+
+```
+Task(
+  subagent_name="code-explorer",
+  description="测试失败诊断",
+  prompt="在 f:/github/md-review-tool 中，测试 '<失败测试名>' 失败。
+         错误: <错误详情>。搜索相关源码分析原因，定位需修改的文件和行号。"
+)
+```
+
+详见 `references/subagent-prompt-template.md`
 
 ## Adapting Tests for New Changes
 
-When an OpenSpec change adds new features, the test scripts need to be updated:
+When an OpenSpec change adds new features:
 
-### Adding Tests for New Features
+1. Read the change's `tasks.md` and `design.md`
+2. Read relevant source files
+3. **Append new test cases** to appropriate test files:
+   - Layer 1: `test/suite/<module>.test.ts`（TDD 风格：`suite/test`）
+   - Layer 2: `test/ui/specs/<feature>.spec.ts`（Playwright `test.describe/test`）
+4. Follow naming patterns: `BT-<module>.<序号> <描述>`
+5. 覆盖三层测试模型:
+   - Tier 1: 存在性断言（API/DOM 元素存在检查）
+   - Tier 2: 行为级断言（模拟用户操作，验证 DOM 变化）
+   - Tier 3: 任务特定断言（针对本次变更的具体场景）
 
-1. Read the change's `tasks.md` to understand what was implemented
-2. Read the change's `design.md` to understand technical decisions
-3. Read relevant source files to understand the implementation
-4. **Append new test cases** to the appropriate test files:
-   - Follow existing naming patterns and conventions
-   - Cover positive cases, edge cases, and error cases
-   - Do NOT rewrite existing tests — only add new blocks
+### Common Pitfalls
 
-### Common Pitfalls to Avoid
-
-Refer to `references/common-pitfalls.md` for detailed solutions to frequently encountered issues during test authoring and execution.
+Refer to `references/common-pitfalls.md` for solutions to 10 common testing issues.
 
 ## Integration with OpenSpec Workflow
-
-This skill integrates into the OpenSpec workflow as follows:
 
 ```
 openspec-apply-change (implement tasks)
     ↓
-Build project
+Build (npm run compile)
     ↓
-auto-test (this skill)
-    ↓ (if all pass)
+auto-test (this skill — 主 agent 直接执行，诊断可委托 subagent)
+    ↓ (all pass)
 openspec-verify-change → openspec-archive-change
-    ↓ (if failures)
+    ↓ (failures)
 Auto-Fix Loop → Re-test → Report
 ```
 
-Typical invocation after apply-change completes:
-- "run tests"
-- "verify the implementation"
-- "auto test"
-- Or automatically triggered at the end of an apply-change session
+## Baseline (2026-04-09)
+
+| Layer | Passing | Failing | Skipped |
+|-------|---------|---------|---------|
+| Layer 1 (Mocha) | 558 | 0 | 0 |
+| Layer 2 (Playwright) | 64 | 0 | 2 |
+| **Total** | **622** | **0** | **2** |
