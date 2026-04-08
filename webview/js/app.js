@@ -1903,16 +1903,26 @@ this.innerHTML = t('modal.ai_result.copied');
             function extractCodeText(rootNode) {
                 const parts = [];
                 let lastWasCodeLine = false;
+                // lastWasNonWhitespaceText: 上一个节点是否为非空白的裸文本节点
+                // （用于在裸文本后遇到 code-line 时补换行）
+                let lastWasNonWhitespaceText = false;
                 function walk(node) {
                     if (node.nodeType === Node.TEXT_NODE) {
-                        parts.push(node.textContent);
+                        const text = node.textContent;
+                        // 如果前一个是 code-line span，且当前文本不以换行开头，
+                        // 说明这是被浏览器从 code-line 中拆出的裸文本（如用户新增行），需要补换行
+                        if (lastWasCodeLine && text && !text.startsWith('\n') && text.trim().length > 0) {
+                            parts.push('\n');
+                        }
+                        parts.push(text);
                         lastWasCodeLine = false;
+                        lastWasNonWhitespaceText = (text.trim().length > 0 && !text.endsWith('\n'));
                         return;
                     }
                     if (node.nodeType !== Node.ELEMENT_NODE) return;
                     const tag = node.tagName;
                     // <br> → 换行
-                    if (tag === 'BR') { parts.push('\n'); lastWasCodeLine = false; return; }
+                    if (tag === 'BR') { parts.push('\n'); lastWasCodeLine = false; lastWasNonWhitespaceText = false; return; }
                     // <div>（contenteditable 新增行）→ 换行 + 内容
                     if (tag === 'DIV' && !node.querySelector('pre') && !node.classList.contains('code-block')) {
                         // 确保 div 前有换行（避免与前一行粘连）
@@ -1921,18 +1931,20 @@ this.innerHTML = t('modal.ai_result.copied');
                         }
                         parts.push(node.textContent);
                         lastWasCodeLine = false;
+                        lastWasNonWhitespaceText = false;
                         return;
                     }
                     // <span class="code-line"> → 确保行间有换行
                     if (tag === 'SPAN' && node.classList.contains('code-line')) {
-                        if (lastWasCodeLine) {
-                            // 前一个也是 code-line，但中间没有 \n 文本节点 → 补一个换行
+                        // 前一个是 code-line 或非空白裸文本，但中间没有 \n → 补换行
+                        if (lastWasCodeLine || lastWasNonWhitespaceText) {
                             if (parts.length > 0 && !parts[parts.length - 1].endsWith('\n')) {
                                 parts.push('\n');
                             }
                         }
                         parts.push(node.textContent);
                         lastWasCodeLine = true;
+                        lastWasNonWhitespaceText = false;
                         return;
                     }
                     // 其他元素（<code>, <pre> 等）→ 递归子节点

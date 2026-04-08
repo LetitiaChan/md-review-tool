@@ -1693,6 +1693,21 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             );
         });
 
+        test('BT-codeBlockContentEditable.4 extractCodeText 应在裸文本节点前后补换行', () => {
+            // Tier 3 — 任务特定断言：当用户在 code-line span 内按 Enter 新增行时，
+            // 浏览器会将新文本作为裸文本节点放到 code-line 外部，
+            // extractCodeText 应在裸文本前（如果前面是 code-line）和后（如果后面是 code-line）补换行
+            assert.ok(
+                appCode.includes('lastWasNonWhitespaceText'),
+                'extractCodeText 应追踪上一个节点是否为非空白裸文本，用于在其后遇到 code-line 时补换行'
+            );
+            // 验证：文本节点处理时，如果前面是 code-line 且文本不以换行开头，应补换行
+            assert.ok(
+                appCode.includes("lastWasCodeLine && text && !text.startsWith('\\n')"),
+                'extractCodeText 应在 code-line 后的裸文本前补换行'
+            );
+        });
+
         test('BT-codeBlockTruncate.1 renderer.js 应在 code-block 上设置 data-lang 属性', () => {
             // Tier 1 — 存在性断言：验证渲染时保存原始语言信息到 data-lang 属性
             const rendererCode = fs.readFileSync(
