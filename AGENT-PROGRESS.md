@@ -7,6 +7,7 @@
 
 ## 最近更新
 
+- **2026-04-09**: 🚀 发布 v1.3.1 到 VS Code Marketplace（编辑模式多项 bugfix：代码块换行丢失、子列表缩进丢失、列表新增行标记缺失、图表编辑多行合并、颜色文本样式丢失、告警块空行丢失）
 - **2026-04-08**: 编辑模式下图表源码编辑支持（edit-diagram-source），Mermaid/PlantUML/Graphviz 图表在编辑模式下显示为可编辑 textarea，支持直接修改源码
 - **2026-04-08**: 测试基础设施全面优化（optimize-test-infrastructure），Playwright 测试从 23 个增长到 64 个，新增 test:all 统一命令，修复伪测试，补充搜索/编辑/设置/目录/批注/工具栏 UI 测试
 - **2026-04-08**: 引入 Playwright 自动化 UI 测试基础设施（add-automated-ui-testing），23 个测试覆盖图表渲染、Lightbox 交互、Checkbox 行为、基础渲染、批注高亮
