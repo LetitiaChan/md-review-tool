@@ -75,6 +75,10 @@
             case 'ideType':
                 _ideType = message.payload.ideType || 'codebuddy';
                 break;
+            case 'error':
+                console.error('[App] Extension Host 报错:', message.payload && message.payload.message);
+                showNotification(t('notification.load_error', { error: (message.payload && message.payload.message) || 'Unknown error' }));
+                break;
         }
     });
 
@@ -89,12 +93,20 @@
 
     // ===== 初始化 =====
     async function init() {
-        bindEvents();
+        try {
+            bindEvents();
+        } catch (e) {
+            console.error('[App] bindEvents 失败:', e);
+        }
 
-        // 初始化设置模块
-        Settings.bindEvents();
-        Renderer.configureHighlight();
-        Settings.init();
+        try {
+            // 初始化设置模块
+            Settings.bindEvents();
+            Renderer.configureHighlight();
+            Settings.init();
+        } catch (e) {
+            console.error('[App] 设置/渲染器初始化失败:', e);
+        }
 
         // 监听 Mermaid / 数学公式开关变化，触发文档重新渲染
         Settings.onChange((key, value) => {
@@ -122,22 +134,26 @@
             }
         });
 
-        // 初始化工具栏主题按钮标签
-        updateThemeButtonLabel(Settings.getSettings().theme);
-        // 初始化工具栏目录按钮状态
-        const tocBtn = document.getElementById('btnToggleToc');
-        if (tocBtn) tocBtn.classList.add('toc-active');
+        try {
+            // 初始化工具栏主题按钮标签
+            updateThemeButtonLabel(Settings.getSettings().theme);
+            // 初始化工具栏目录按钮状态
+            const tocBtn = document.getElementById('btnToggleToc');
+            if (tocBtn) tocBtn.classList.add('toc-active');
 
-        // 从 Webview state 恢复数据
-        const data = Store.load();
-        if (data.rawMarkdown) {
-            loadDocument(data.fileName, data.rawMarkdown, false);
-            if (data.annotations && data.annotations.length > 0) {
-                Exporter.triggerAutoSave();
+            // 从 Webview state 恢复数据
+            const data = Store.load();
+            if (data.rawMarkdown) {
+                loadDocument(data.fileName, data.rawMarkdown, false);
+                if (data.annotations && data.annotations.length > 0) {
+                    Exporter.triggerAutoSave();
+                }
             }
+        } catch (e) {
+            console.error('[App] 状态恢复失败:', e);
         }
 
-        // 通知 Extension Host webview 已就绪
+        // 通知 Extension Host webview 已就绪（必须确保发出，否则文件内容不会被加载）
         vscode.postMessage({ type: 'ready' });
 
         // 异步从 Host 加载文件列表
