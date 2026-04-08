@@ -1,0 +1,3 @@
+
+# 强制所有文本文件使用 CRLF 换行符
+* text=auto eol=crlf
