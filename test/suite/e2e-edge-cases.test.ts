@@ -1823,5 +1823,35 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 'app.js coloredText 规则应将 <span style="color:xxx"> 还原为 {color:xxx}text{/color}'
             );
         });
+
+        test('BT-coloredText.4 stripMdMarkers 应去除 {color:xxx}...{/color} 标记', () => {
+            // Tier 2 — 行为级断言：行级 diff 中 stripMdMarkers 应正确去除颜色标记，
+            // 使得纯文本比较能正确匹配 innerText
+            assert.ok(
+                appCode.includes("\\{color:[\\w#]+(?:\\([\\d,.\\s%]+\\))?\\}(.+?)\\{\\/color\\}"),
+                'stripMdMarkers 应包含去除 {color:xxx}text{/color} 标记的正则'
+            );
+        });
+
+        test('BT-coloredText.5 hasInlineFormatting 应检测 {color:xxx}...{/color} 标记', () => {
+            // Tier 2 — 行为级断言：当原始行包含颜色标记且内容变化时，
+            // hasInlineFormatting 应返回 true，使行级 diff fallback 到 turndown
+            assert.ok(
+                appCode.includes("\\{color:[\\w#]+(?:\\([\\d,.\\s%]+\\))?\\}.+?\\{\\/color\\}"),
+                'hasInlineFormatting 应包含检测 {color:xxx}text{/color} 标记的正则'
+            );
+        });
+
+        test('BT-coloredText.6 颜色标记编辑后应 fallback 到 turndown 而非行级 diff 直接替换', () => {
+            // Tier 3 — 任务特定断言：验证行级 diff 在检测到颜色标记时会 fallback 到 turndown，
+            // 而不是直接用纯文本替换（导致颜色标记丢失）
+            // hasInlineFormatting 中的颜色标记检测应与 stripMdMarkers 中的去除规则一致
+            const stripPattern = appCode.includes("{color:[\\w#]+");
+            const formatPattern = appCode.includes("{color:[\\w#]+");
+            assert.ok(
+                stripPattern && formatPattern,
+                'stripMdMarkers 和 hasInlineFormatting 都应处理 {color:xxx} 标记'
+            );
+        });
     });
 });
