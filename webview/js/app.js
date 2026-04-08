@@ -1822,9 +1822,10 @@ this.innerHTML = t('modal.ai_result.copied');
                     const trimmed = content.replace(/^\n+|\n+$/g, '');
                     const lines = trimmed.split('\n');
                     // 避免产生 "> > " 双重引用前缀（turndown 递归处理嵌套 blockquote 时可能出现）
-                    return '\n' + lines.map(line => {
+                    // 前后各用 \n\n 确保 turndown join() 在连续引用块之间插入空行分隔
+                    return '\n\n' + lines.map(line => {
                         return '> ' + line;
-                    }).join('\n') + '\n';
+                    }).join('\n') + '\n\n';
                 }
             });
 
@@ -1844,13 +1845,14 @@ this.innerHTML = t('modal.ai_result.copied');
                     const contentEl = node.querySelector('.gh-alert-content');
                     const contentText = contentEl ? ts.turndown(contentEl.innerHTML).trim() : content.trim();
                     const lines = contentText.split('\n');
+                    // 前后各用 \n\n 确保 turndown join() 在连续告警块之间插入空行分隔
                     if (alertType && alertType !== 'BLANK') {
-                        return '\n> [!' + alertType + ']\n' + lines.map(line => '> ' + line).join('\n') + '\n';
+                        return '\n\n> [!' + alertType + ']\n' + lines.map(line => '> ' + line).join('\n') + '\n\n';
                     } else if (alertType === 'BLANK') {
-                        return '\n> [!BLANK]\n' + lines.map(line => '> ' + line).join('\n') + '\n';
+                        return '\n\n> [!BLANK]\n' + lines.map(line => '> ' + line).join('\n') + '\n\n';
                     }
                     // fallback：当作普通引用
-                    return '\n' + lines.map(line => '> ' + line).join('\n') + '\n';
+                    return '\n\n' + lines.map(line => '> ' + line).join('\n') + '\n\n';
                 }
             });
 

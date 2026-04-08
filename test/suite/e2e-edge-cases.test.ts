@@ -1854,4 +1854,67 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             );
         });
     });
+
+    // ===== Suite 15: 告警块编辑后空行保留 =====
+    suite('Suite 15: 告警块编辑后空行保留', () => {
+        let appCode: string;
+        suiteSetup(() => {
+            appCode = fs.readFileSync(
+                path.join(vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath, 'webview', 'js', 'app.js'),
+                'utf-8'
+            );
+        });
+
+        test('BT-ghAlert.1 ghAlert turndown 规则应存在', () => {
+            // Tier 1 — 存在性断言：确认 ghAlert turndown 规则已注册
+            assert.ok(
+                appCode.includes("addRule('ghAlert'") || appCode.includes('addRule("ghAlert"'),
+                'app.js 应包含 ghAlert turndown 规则'
+            );
+        });
+
+        test('BT-ghAlert.2 ghAlert 规则 replacement 应使用双换行确保空行分隔', () => {
+            // Tier 2 — 行为级断言：ghAlert 规则的 replacement 函数应在前后使用 \\n\\n
+            // 以确保 turndown join() 在连续告警块之间插入空行
+            // 检查 return 语句中包含 \\n\\n> [! 模式（前导双换行）
+            assert.ok(
+                appCode.includes("'\\n\\n> [!'"),
+                'ghAlert 规则应在告警块前使用 \\n\\n 双换行'
+            );
+            // 检查 return 语句中包含 + '\\n\\n' 模式（尾部双换行）
+            assert.ok(
+                appCode.includes("+ '\\n\\n';") || appCode.includes("+ '\\n\\n'"),
+                'ghAlert 规则应在告警块后使用 \\n\\n 双换行'
+            );
+        });
+
+        test('BT-ghAlert.3 blockquote 规则 replacement 应使用双换行确保空行分隔', () => {
+            // Tier 2 — 行为级断言：blockquote 规则也应使用 \\n\\n 前后包裹
+            // 检查 blockquote 规则的 return 语句
+            assert.ok(
+                appCode.includes("return '\\n\\n' + lines.map"),
+                'blockquote 规则应在引用块前使用 \\n\\n 双换行'
+            );
+        });
+
+        test('BT-ghAlert.4 hasComplexStructure 应检测 .gh-alert 元素', () => {
+            // Tier 3 — 任务特定断言：包含告警块的 block 应被标记为复杂结构，
+            // 跳过行级 diff，走 turndown 路径
+            assert.ok(
+                appCode.includes('.gh-alert'),
+                'hasComplexStructure 选择器应包含 .gh-alert'
+            );
+        });
+
+        test('BT-ghAlert.5 ghAlert 规则应支持所有 5 种告警类型', () => {
+            // Tier 3 — 任务特定断言：验证 ghAlert 规则支持 NOTE/TIP/IMPORTANT/WARNING/CAUTION
+            const types = ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'];
+            for (const type of types) {
+                assert.ok(
+                    appCode.includes(`'alert-${type.toLowerCase()}'`),
+                    `ghAlert 规则应支持 ${type} 类型`
+                );
+            }
+        });
+    });
 });
