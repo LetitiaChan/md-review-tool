@@ -2002,11 +2002,27 @@ this.innerHTML = t('modal.ai_result.copied');
                         const origLines = origMd.split('\n');
                         const convertedLines = converted.split('\n');
                         if (origLines.length === convertedLines.length) {
+                            // 行数相同：逐行恢复缩进
                             for (let k = 0; k < convertedLines.length; k++) {
                                 const origIndent = origLines[k].match(/^(\s*)/)[0];
                                 const convertedIndent = convertedLines[k].match(/^(\s*)/)[0];
                                 if (origIndent && origIndent !== convertedIndent) {
                                     convertedLines[k] = origIndent + convertedLines[k].trimStart();
+                                }
+                            }
+                            converted = convertedLines.join('\n');
+                        } else {
+                            // 行数不同（新增/删除列表项等）：从原始 Markdown 提取缩进模式，
+                            // 应用到 turndown 输出的对应行上
+                            // 提取原始列表项的缩进前缀（如 "  " 表示嵌套列表的缩进）
+                            const origListIndent = origLines.length > 0
+                                ? origLines[0].match(/^(\s*)/)[0]
+                                : '';
+                            for (let k = 0; k < convertedLines.length; k++) {
+                                const convertedIndent = convertedLines[k].match(/^(\s*)/)[0];
+                                // 如果 turndown 输出的行没有缩进但原始有，恢复原始缩进
+                                if (origListIndent && !convertedIndent && convertedLines[k].trim()) {
+                                    convertedLines[k] = origListIndent + convertedLines[k];
                                 }
                             }
                             converted = convertedLines.join('\n');

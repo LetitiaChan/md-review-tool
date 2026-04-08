@@ -166,6 +166,9 @@ Implement tasks from an OpenSpec change.
 
    b. **Run tests**: Execute the project's test command(s)
 
+   > **测试范围优化**：如果 Step 8 构建已通过且本轮新增了测试用例，可先只运行新增测试验证通过，
+   > 再执行全量回归。如果无新增测试，直接执行全量回归即可。
+
    For each test phase:
    - If tests **all pass** → proceed
    - If tests **fail** → enter Auto-Fix Loop:
@@ -179,6 +182,19 @@ Implement tasks from an OpenSpec change.
 
    > **Note**: If test scripts don't exist yet (first change implementing a new feature), generate them based on the `auto-test` skill's guidelines before running.
 
+9.3. **运行时诊断策略（复杂场景专用，按需执行）**
+
+   - **触发条件**：新功能涉及运行时行为，自动测试环境无法直接覆盖（如依赖真实 VS Code 宿主环境、用户交互时序、特定文件内容等）
+   - **策略 A — 诊断日志 + 自动测试捕获**（优先）：
+     · 在关键代码路径中插入诊断日志（console.log / OutputChannel），标记 `[DIAG]` 前缀
+     · 编写测试用例，通过 mock/stub 模拟运行时条件，捕获日志输出并断言关键信息
+     · 诊断日志在功能确认稳定后应清理或降级为 debug 级别
+   - **策略 B — 用户协助验证**（降级）：
+     · 当策略 A 无法覆盖时，在代码中保留诊断日志
+     · 完成 Step 9.5 打包后，告知用户安装新包并反馈 `[DIAG]` 开头的日志输出
+   - **⚠️ 无论使用哪种策略，都必须在 Step 14 报告中注明诊断方式和结论**
+
+9.5. **Auto Package
 9.5. **Auto Package（打包发布 — 测试通过后、commit 前）**
 
    测试全部通过后，立即打包生成安装包：
@@ -260,8 +276,6 @@ Implement tasks from an OpenSpec change.
 
     - 描述部分使用中文，格式：`feat(<name>): 中文描述`
 
-    **NEVER run `git push`** — leave that decision to the user.
-
 13.5. **Auto Git Push（自动推送）**
 
     Commit 成功后自动推送到远程仓库：
@@ -273,7 +287,7 @@ Implement tasks from an OpenSpec change.
     - 推送**成功** → 继续到 Step 14
     - 推送**失败**（如远程冲突、网络错误）→ 在 Step 14 报告中标注 ⚠️ 推送失败，记录错误信息，**不阻塞管线**（commit 已完成即视为本地安全）
 
-    <!-- ⚠️ CUSTOMIZE: 如果不需要自动推送，删除此步骤并恢复 Step 13 的 "NEVER git push" 约束 -->
+    <!-- ⚠️ CUSTOMIZE: 如果不需要自动推送，删除此步骤并在 Step 13 中添加 "NEVER run git push" 约束 -->
 
 14. **Final Pipeline Report**
 

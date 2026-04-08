@@ -48,6 +48,7 @@
 
 | 变更名 | 描述 | 建议优先级 |
 |--------|------|-----------|
+| add-automated-ui-testing | 引入 Playwright 自动化 UI 测试，覆盖 Webview 图表渲染、Lightbox 交互、Checkbox 行为等（仅有 proposal，待补齐 design + tasks） | 中 |
 
 ---
 

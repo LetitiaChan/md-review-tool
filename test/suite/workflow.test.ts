@@ -1031,5 +1031,67 @@ suite('Workflow Test Suite — 完整工作流', () => {
                 '应将原始缩进应用到 turndown 输出行'
             );
         });
+
+        test('BT-listIndent.1 turndown.js listItem 规则应使用单空格前缀（与原始 Markdown 一致）', () => {
+            // Tier 1 — 存在性断言：turndown.js 的 listItem 规则不应使用多余空格
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            const turndownJs = fs.readFileSync(path.join(extPath!, 'webview', 'lib', 'turndown.js'), 'utf-8');
+
+            // 验证无序列表前缀使用 bulletListMarker + ' '（1个空格），而非 + '   '（3个空格）
+            assert.ok(
+                turndownJs.includes("options.bulletListMarker + ' '"),
+                'turndown listItem 无序列表前缀应使用 bulletListMarker + 单空格'
+            );
+            assert.ok(
+                !turndownJs.includes("options.bulletListMarker + '   '"),
+                'turndown listItem 不应使用 bulletListMarker + 3空格（会导致列表前缀空格变多）'
+            );
+
+            // 验证有序列表前缀使用 '. '（1个空格），而非 '.  '（2个空格）
+            assert.ok(
+                !turndownJs.includes("+ '.  '"),
+                'turndown listItem 有序列表不应使用 2空格后缀（会导致列表前缀空格变多）'
+            );
+        });
+
+        test('BT-listIndent.2 app.js turndown fallback 应在行数不同时也恢复缩进', () => {
+            // Tier 2 — 行为级断言：新增/删除列表项时（行数不同），也应恢复缩进
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            const appJs = fs.readFileSync(path.join(extPath!, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // 验证行数不同时有 else 分支处理缩进恢复
+            assert.ok(
+                appJs.includes('origListIndent'),
+                'turndown fallback 应在行数不同时提取原始列表缩进（origListIndent）'
+            );
+
+            // 验证从原始第一行提取缩进模式
+            assert.ok(
+                appJs.includes("origLines[0].match(/^(\\s*)/)[0]"),
+                '应从原始 Markdown 第一行提取缩进前缀'
+            );
+        });
+
+        test('BT-listIndent.3 turndown listItem 与 taskListItem 前缀空格应一致', () => {
+            // Tier 3 — 任务特定断言：两个规则的前缀空格数应一致，避免混合列表时格式不统一
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            const appJs = fs.readFileSync(path.join(extPath!, 'webview', 'js', 'app.js'), 'utf-8');
+            const turndownJs = fs.readFileSync(path.join(extPath!, 'webview', 'lib', 'turndown.js'), 'utf-8');
+
+            // 两处都应使用 bulletListMarker + ' '（单空格）
+            const appHasSingleSpace = appJs.includes("options.bulletListMarker + ' '");
+            const turndownHasSingleSpace = turndownJs.includes("options.bulletListMarker + ' '");
+
+            assert.ok(
+                appHasSingleSpace && turndownHasSingleSpace,
+                'app.js taskListItem 和 turndown.js listItem 的无序列表前缀空格应一致（均为单空格）'
+            );
+        });
     });
 });

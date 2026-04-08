@@ -143,12 +143,12 @@ var TurndownService = (function () {
     filter: 'li',
 
     replacement: function (content, node, options) {
-      var prefix = options.bulletListMarker + '   ';
+      var prefix = options.bulletListMarker + ' ';
       var parent = node.parentNode;
       if (parent.nodeName === 'OL') {
         var start = parent.getAttribute('start');
         var index = Array.prototype.indexOf.call(parent.children, node);
-        prefix = (start ? Number(start) + index : index + 1) + '.  ';
+        prefix = (start ? Number(start) + index : index + 1) + '. ';
       }
       var isParagraph = /\n$/.test(content);
       content = trimNewlines(content) + (isParagraph ? '\n' : '');
