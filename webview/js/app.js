@@ -2171,18 +2171,58 @@ this.innerHTML = t('modal.ai_result.copied');
                             }
                             converted = convertedLines.join('\n');
                         } else {
-                            // 行数不同（新增/删除列表项等）：从原始 Markdown 提取缩进模式，
-                            // 应用到 turndown 输出的对应行上
-                            // 提取原始列表项的缩进前缀（如 "  " 表示嵌套列表的缩进）
-                            const origListIndent = origLines.length > 0
-                                ? origLines[0].match(/^(\s*)/)[0]
-                                : '';
+                            // 行数不同（新增/删除列表项等）：通过纯文本匹配，
+                            // 将 turndown 输出的每行与原始 Markdown 行配对，恢复原始缩进。
+                            // 这样即使子列表项的缩进级别不同，也能正确恢复。
+
+                            // 辅助函数：提取行的纯文本内容（去掉 Markdown 标记和缩进）
+                            function stripLineForMatch(line) {
+                                return line
+                                    .replace(/^(\s*)([-*+]|\d+[.)]) (\[[ xX]\]\s*)?/, '') // 列表标记+checkbox
+                                    .replace(/^#+\s+/, '')  // 标题
+                                    .replace(/^>\s*/, '')    // 引用
+                                    .trim();
+                            }
+
+                            // 构建原始行的纯文本 → 索引映射（用于快速查找）
+                            // 使用数组支持同一纯文本出现多次的情况
+                            const origTextToIndices = {};
+                            for (let k = 0; k < origLines.length; k++) {
+                                const text = stripLineForMatch(origLines[k]);
+                                if (!text) continue;
+                                if (!origTextToIndices[text]) origTextToIndices[text] = [];
+                                origTextToIndices[text].push(k);
+                            }
+
+                            // 记录已使用的原始行索引（避免重复匹配）
+                            const usedOrigIndices = new Set();
+
                             for (let k = 0; k < convertedLines.length; k++) {
-                                const convertedIndent = convertedLines[k].match(/^(\s*)/)[0];
-                                // 如果 turndown 输出的行没有缩进但原始有，恢复原始缩进
-                                if (origListIndent && !convertedIndent && convertedLines[k].trim()) {
-                                    convertedLines[k] = origListIndent + convertedLines[k];
+                                const convertedText = stripLineForMatch(convertedLines[k]);
+                                if (!convertedText) continue;
+
+                                // 在原始行中查找纯文本匹配
+                                const candidates = origTextToIndices[convertedText];
+                                if (candidates && candidates.length > 0) {
+                                    // 找到第一个未使用的匹配
+                                    let matchIdx = -1;
+                                    for (const idx of candidates) {
+                                        if (!usedOrigIndices.has(idx)) {
+                                            matchIdx = idx;
+                                            break;
+                                        }
+                                    }
+                                    if (matchIdx !== -1) {
+                                        usedOrigIndices.add(matchIdx);
+                                        const origIndent = origLines[matchIdx].match(/^(\s*)/)[0];
+                                        const convertedIndent = convertedLines[k].match(/^(\s*)/)[0];
+                                        // 恢复原始缩进（如果不同）
+                                        if (origIndent !== convertedIndent) {
+                                            convertedLines[k] = origIndent + convertedLines[k].trimStart();
+                                        }
+                                    }
                                 }
+                                // 没有匹配的行（新增行）→ 保持 turndown 的输出
                             }
                             converted = convertedLines.join('\n');
                         }

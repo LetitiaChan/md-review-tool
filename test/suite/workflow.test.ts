@@ -1056,23 +1056,52 @@ suite('Workflow Test Suite — 完整工作流', () => {
             );
         });
 
-        test('BT-listIndent.2 app.js turndown fallback 应在行数不同时也恢复缩进', () => {
-            // Tier 2 — 行为级断言：新增/删除列表项时（行数不同），也应恢复缩进
+        test('BT-listIndent.2 app.js turndown fallback 应在行数不同时通过纯文本匹配恢复缩进', () => {
+            // Tier 2 — 行为级断言：新增/删除列表项时（行数不同），
+            // 应通过纯文本匹配将 turndown 输出的每行与原始 Markdown 行配对，恢复原始缩进
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
             assert.ok(extPath);
 
             const appJs = fs.readFileSync(path.join(extPath!, 'webview', 'js', 'app.js'), 'utf-8');
 
-            // 验证行数不同时有 else 分支处理缩进恢复
+            // 验证行数不同时使用纯文本匹配（stripLineForMatch）
             assert.ok(
-                appJs.includes('origListIndent'),
-                'turndown fallback 应在行数不同时提取原始列表缩进（origListIndent）'
+                appJs.includes('stripLineForMatch'),
+                'turndown fallback 应在行数不同时使用 stripLineForMatch 进行纯文本匹配'
             );
 
-            // 验证从原始第一行提取缩进模式
+            // 验证构建了原始行的纯文本→索引映射
             assert.ok(
-                appJs.includes("origLines[0].match(/^(\\s*)/)[0]"),
-                '应从原始 Markdown 第一行提取缩进前缀'
+                appJs.includes('origTextToIndices'),
+                '应构建原始行的纯文本→索引映射用于快速查找'
+            );
+
+            // 验证使用 usedOrigIndices 避免重复匹配
+            assert.ok(
+                appJs.includes('usedOrigIndices'),
+                '应使用 usedOrigIndices 避免同一原始行被多次匹配'
+            );
+        });
+
+        test('BT-listIndent.4 行数不同时缩进恢复应逐行匹配而非统一应用', () => {
+            // Tier 3 — 任务特定断言：修复子列表缩进丢失的核心逻辑
+            // 当用户新增/删除列表项导致行数不同时，应逐行通过纯文本匹配恢复缩进，
+            // 而不是统一用第一行的缩进应用到所有行（后者会导致子列表缩进丢失）
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            const appJs = fs.readFileSync(path.join(extPath!, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // 不应再使用 origListIndent（旧的统一缩进方案）
+            assert.ok(
+                !appJs.includes('origListIndent'),
+                '不应使用 origListIndent 统一缩进（会导致子列表缩进丢失）'
+            );
+
+            // 应在匹配到原始行后恢复该行的原始缩进
+            assert.ok(
+                appJs.includes('origLines[matchIdx].match'),
+                '应从匹配到的原始行提取缩进（而非统一用第一行缩进）'
             );
         });
 
