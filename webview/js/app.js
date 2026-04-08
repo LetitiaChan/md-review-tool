@@ -2030,10 +2030,8 @@ this.innerHTML = t('modal.ai_result.copied');
                 Store.save();
 
                 // 更新内部状态和快照（不重新渲染 DOM，避免破坏编辑模式）
-                // 使用 resultParts 作为快照 blocks，因为它与 DOM 中的 .md-block 一一对应
-                // 避免 Renderer.parseMarkdown(newContent) 重新分割后 block 数量与 DOM 不一致导致索引错位
                 Renderer.parseMarkdown(newContent);
-                _editSnapshotBlocks = resultParts.slice();
+                _editSnapshotBlocks = Renderer.getRawBlocksBeforeExtract().slice();
                 _editSnapshotHtmls = Array.from(docContent.querySelectorAll('.md-block:not(.footnotes-block)')).map(el => el.innerHTML);
 
                 updateEditStatus('saved', t('notification.saved'));

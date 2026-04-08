@@ -890,4 +890,67 @@ suite('Workflow Test Suite — 完整工作流', () => {
             }
         });
     });
+
+    // ===== 编辑模式 Bug 回归测试 =====
+
+    suite('编辑模式 Bug 回归：删除文本不应导致多复制一行', () => {
+        test('renderer.js 的 inlineExtractedDefs 计算应使用 trimEnd 比较行', () => {
+            // 回归测试：修复 blocks[b].trim() 导致首尾行空白被去掉，
+            // 使 Set 比较时非定义行被错误提取为 extractedLines
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            const rendererJs = fs.readFileSync(path.join(extPath!, 'webview', 'js', 'renderer.js'), 'utf-8');
+
+            // 验证 cleanedLines 使用 trimEnd 进行比较
+            assert.ok(
+                rendererJs.includes('.map(l => l.trimEnd())'),
+                'cleanedLines 应使用 .map(l => l.trimEnd()) 避免 trim 导致的行不匹配'
+            );
+
+            // 验证 extractedLines 过滤时也使用 trimEnd
+            assert.ok(
+                rendererJs.includes('line.trimEnd()'),
+                'extractedLines 过滤时应使用 line.trimEnd() 进行比较'
+            );
+        });
+
+        test('app.js 行级 diff 应去掉 innerText 末尾换行', () => {
+            // 回归测试：修复 innerText 末尾 \n 导致 currentLines 多出空行
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            const appJs = fs.readFileSync(path.join(extPath!, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // 验证去掉 innerText 末尾换行
+            assert.ok(
+                appJs.includes("currentText.replace(/\\n+$/, '').split('\\n')"),
+                'currentLines 应先去掉末尾换行再 split'
+            );
+
+            // 验证不再使用无效过滤器 || true
+            assert.ok(
+                !appJs.includes("|| true)"),
+                '不应包含无效过滤器 || true'
+            );
+        });
+
+        test('app.js 行级 diff 应有安全检查防止行错位', () => {
+            // 回归测试：当原始行有内容但当前行为空时应放弃行级 diff
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            const appJs = fs.readFileSync(path.join(extPath!, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // 验证安全检查逻辑存在
+            assert.ok(
+                appJs.includes('origStripped.length > 0 && currStripped.length === 0'),
+                '应有安全检查：原始行有内容但当前行为空时放弃行级 diff'
+            );
+            assert.ok(
+                appJs.includes('origStripped.length === 0 && currStripped.length > 0'),
+                '应有安全检查：原始行为空但当前行有内容时放弃行级 diff'
+            );
+        });
+    });
 });

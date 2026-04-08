@@ -404,9 +404,11 @@ const Renderer = (() => {
                 finalBlocks.push(blocks[b]);
                 _rawBlocksBeforeExtract.push(rawBlocksCopy[b]);
                 // 计算该非空块中被提取的定义行（rawBlocksCopy[b] 和 blocks[b] 的差异）
+                // 注意：blocks[b] 经过 .trim() 处理，首尾行的空白可能被去掉，
+                // 所以用 trimmed 行进行比较，避免因空白差异导致非定义行被错误提取
                 const rawLines = rawBlocksCopy[b].split('\n');
-                const cleanedLines = new Set(blocks[b].split('\n'));
-                const extractedLines = rawLines.filter(line => !cleanedLines.has(line));
+                const cleanedLines = new Set(blocks[b].split('\n').map(l => l.trimEnd()));
+                const extractedLines = rawLines.filter(line => !cleanedLines.has(line.trimEnd()));
                 _inlineExtractedDefs.push(extractedLines);
             } else {
                 // 空块（全是脚注/引用式链接定义），暂存其原始内容
