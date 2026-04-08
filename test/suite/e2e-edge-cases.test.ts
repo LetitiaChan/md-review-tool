@@ -1573,15 +1573,46 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
         });
 
-        test('blockHtmlToMarkdown 应清理代码块行号包裹', () => {
-            // 验证 blockHtmlToMarkdown 中有清理 code-line span 的逻辑
+        test('blockHtmlToMarkdown 应使用 textContent 提取代码块内容（而非只收集 .code-line）', () => {
+            // 验证 blockHtmlToMarkdown 中使用 textContent 获取所有文本内容
+            // 而不是只收集 .code-line span 的内容（后者会丢失用户新增的行）
             assert.ok(
                 appCode.includes('.code-block pre code'),
-                'blockHtmlToMarkdown 应处理 .code-block pre code 中的行号包裹'
+                'blockHtmlToMarkdown 应处理 .code-block pre code'
+            );
+            // 不应再使用 querySelectorAll('.code-line') 来收集内容
+            assert.ok(
+                !appCode.includes("codeEl.querySelectorAll('.code-line')"),
+                'blockHtmlToMarkdown 不应使用 querySelectorAll(.code-line) 收集内容（会丢失新增行）'
+            );
+        });
+
+        test('BT-codeBlockNewLine.1 代码块内容提取应使用 codeEl.textContent', () => {
+            // Tier 1 — 存在性断言：验证使用 textContent 获取所有文本内容
+            assert.ok(
+                appCode.includes('const plainCode = codeEl.textContent'),
+                '代码块内容提取应使用 codeEl.textContent 获取所有文本（包括新增行）'
+            );
+        });
+
+        test('BT-codeBlockNewLine.2 代码块应处理 contenteditable 中的 br 和 div 元素', () => {
+            // Tier 2 — 行为级断言：验证处理 contenteditable 中按 Enter 产生的 <br> 和 <div>
+            assert.ok(
+                appCode.includes("codeEl.querySelectorAll('br')"),
+                '代码块处理应将 <br> 替换为换行符'
             );
             assert.ok(
-                appCode.includes('.code-line'),
-                'blockHtmlToMarkdown 应清理 .code-line span'
+                appCode.includes("codeEl.querySelectorAll('div')"),
+                '代码块处理应将 <div> 替换为换行符+内容'
+            );
+        });
+
+        test('BT-codeBlockNewLine.3 代码块内容提取不应只收集 .code-line 的内容', () => {
+            // Tier 3 — 任务特定断言：确保不会因为只收集 .code-line 而丢失新增行
+            // 旧代码模式：Array.from(codeLines).map(line => line.textContent).join('\n')
+            assert.ok(
+                !appCode.includes("Array.from(codeLines).map(line => line.textContent).join"),
+                '不应使用 Array.from(codeLines).map(line => line.textContent).join 模式（会丢失新增行）'
             );
         });
 

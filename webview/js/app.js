@@ -1874,14 +1874,20 @@ this.innerHTML = t('modal.ai_result.copied');
             // 移除代码块的 code-header（turndown 规则直接从 pre>code 提取内容）
             tempDiv.querySelectorAll('.code-header').forEach(header => header.remove());
 
-            // 移除代码块中的行号包裹 span.code-line，只保留文本内容
+            // 移除代码块中的行号包裹 span.code-line 和其他 HTML 元素，只保留纯文本内容
+            // 注意：在 contenteditable 模式下，用户新增的行可能不在 .code-line span 中
+            // （作为裸文本节点、<br>、<div> 等存在），所以不能只收集 .code-line 的内容
             tempDiv.querySelectorAll('.code-block pre code').forEach(codeEl => {
-                const codeLines = codeEl.querySelectorAll('.code-line');
-                if (codeLines.length > 0) {
-                    // 提取每行纯文本，重建 code 内容
-                    const plainCode = Array.from(codeLines).map(line => line.textContent).join('\n');
-                    codeEl.textContent = plainCode;
-                }
+                // 先将 <br> 替换为 \n（contenteditable 中按 Enter 可能插入 <br>）
+                codeEl.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+                // 将 <div> 替换为 \n + 内容（contenteditable 中按 Enter 可能创建 <div>）
+                codeEl.querySelectorAll('div').forEach(div => {
+                    const text = div.textContent;
+                    div.replaceWith('\n' + text);
+                });
+                // 使用 textContent 获取所有文本内容（包括用户新增的行）
+                const plainCode = codeEl.textContent;
+                codeEl.textContent = plainCode;
             });
 
             // 还原图片路径
