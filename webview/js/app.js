@@ -1897,32 +1897,72 @@ this.innerHTML = t('modal.ai_result.copied');
             // （<code> 是 phrasing content 容器，不允许包含 <div>），将 <div> 移出 <pre><code>，
             // 导致代码内容被截断。因此必须在重新解析前，从原始 DOM 中提取完整的代码文本。
             const codeBlockData = [];
+            // 从 DOM 节点递归提取纯文本，正确处理 contenteditable 下的各种换行表示。
+            // 关键：<span class="code-line"> 之间的 \n 文本节点可能被浏览器在编辑时移除，
+            // 所以不能简单依赖 textContent，需要在每个 code-line span 之后确保有换行。
+            function extractCodeText(rootNode) {
+                const parts = [];
+                let lastWasCodeLine = false;
+                function walk(node) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        parts.push(node.textContent);
+                        lastWasCodeLine = false;
+                        return;
+                    }
+                    if (node.nodeType !== Node.ELEMENT_NODE) return;
+                    const tag = node.tagName;
+                    // <br> → 换行
+                    if (tag === 'BR') { parts.push('\n'); lastWasCodeLine = false; return; }
+                    // <div>（contenteditable 新增行）→ 换行 + 内容
+                    if (tag === 'DIV' && !node.querySelector('pre') && !node.classList.contains('code-block')) {
+                        // 确保 div 前有换行（避免与前一行粘连）
+                        if (parts.length > 0 && !parts[parts.length - 1].endsWith('\n')) {
+                            parts.push('\n');
+                        }
+                        parts.push(node.textContent);
+                        lastWasCodeLine = false;
+                        return;
+                    }
+                    // <span class="code-line"> → 确保行间有换行
+                    if (tag === 'SPAN' && node.classList.contains('code-line')) {
+                        if (lastWasCodeLine) {
+                            // 前一个也是 code-line，但中间没有 \n 文本节点 → 补一个换行
+                            if (parts.length > 0 && !parts[parts.length - 1].endsWith('\n')) {
+                                parts.push('\n');
+                            }
+                        }
+                        parts.push(node.textContent);
+                        lastWasCodeLine = true;
+                        return;
+                    }
+                    // 其他元素（<code>, <pre> 等）→ 递归子节点
+                    for (const child of node.childNodes) {
+                        walk(child);
+                    }
+                }
+                walk(rootNode);
+                return parts.join('');
+            }
+
             blockEl.querySelectorAll('.code-block').forEach((codeBlockEl, idx) => {
                 const codeEl = codeBlockEl.querySelector('pre code');
                 const preEl = codeBlockEl.querySelector('pre');
                 if (!preEl && !codeEl) return;
-                // 从整个 .code-block 提取代码内容（排除 code-header）。
-                // 原因：contenteditable 下用户在代码块中按 Enter 时，
-                // 浏览器会将新行包裹在 <div> 中并放到 <code> 外部，
-                // 甚至可能放到 <pre> 外部但仍在 .code-block 内部，
-                // 导致只从 <code> 或 <pre> 提取会丢失新增行及其后的所有内容。
-                const clonedBlock = codeBlockEl.cloneNode(true);
-                // 移除 code-header（复制/语言标签等 UI 元素，不属于代码内容）
-                clonedBlock.querySelectorAll('.code-header').forEach(h => h.remove());
-                // 处理 contenteditable 产生的 <br> 和 <div>
-                clonedBlock.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-                clonedBlock.querySelectorAll('div').forEach(div => {
-                    // 跳过包含 <pre> 的 div（避免重复提取）
-                    if (div.querySelector('pre')) return;
-                    const text = div.textContent;
-                    div.replaceWith('\n' + text);
-                });
-                const plainCode = clonedBlock.textContent;
+                // 从 <pre> 元素提取代码内容（优先），fallback 到整个 .code-block。
+                // 使用 extractCodeText 递归遍历，正确处理：
+                // 1. <span class="code-line"> 之间的换行（浏览器可能移除 \n 文本节点）
+                // 2. contenteditable 产生的 <div> 和 <br>（新增行）
+                // 3. 被浏览器移到 <code> 外部的内容
+                const extractRoot = preEl || codeBlockEl;
+                const clonedRoot = extractRoot.cloneNode(true);
+                // 移除 code-header（如果从 .code-block 提取）
+                clonedRoot.querySelectorAll('.code-header').forEach(h => h.remove());
+                const plainCode = extractCodeText(clonedRoot);
                 const className = codeEl ? (codeEl.getAttribute('class') || '') : '';
                 const dataLang = codeBlockEl.getAttribute('data-lang') || '';
                 codeBlockData.push({ index: idx, plainCode, className, dataLang });
                 console.log('[DIAG] blockHtmlToMarkdown: 从原始 DOM 提取代码块', idx, '内容（前100字符）:', plainCode.substring(0, 100));
-                console.log('[DIAG] blockHtmlToMarkdown: codeBlock childNodes 数量:', codeBlockEl.childNodes.length);
+                console.log('[DIAG] blockHtmlToMarkdown: extractRoot tagName:', extractRoot.tagName, 'childNodes 数量:', extractRoot.childNodes.length);
                 if (preEl) console.log('[DIAG] blockHtmlToMarkdown: pre innerHTML（前200字符）:', preEl.innerHTML.substring(0, 200));
             });
 
