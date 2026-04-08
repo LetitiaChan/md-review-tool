@@ -1821,7 +1821,12 @@ this.innerHTML = t('modal.ai_result.copied');
                     const lines = [];
                     rows.forEach((row, rowIdx) => {
                         const cells = row.querySelectorAll('th, td');
-                        const cellTexts = Array.from(cells).map(c => c.textContent.trim());
+                        // 使用 turndown 转换 cell 内容，保留行内格式（行内代码、加粗等）
+                        const cellTexts = Array.from(cells).map(c => {
+                            const cellMd = ts.turndown(c.innerHTML).trim();
+                            // 表格 cell 中不应有换行，替换为空格
+                            return cellMd.replace(/\n/g, ' ');
+                        });
                         lines.push('| ' + cellTexts.join(' | ') + ' |');
                         if (rowIdx === 0) lines.push('| ' + cellTexts.map(() => '---').join(' | ') + ' |');
                     });

@@ -264,8 +264,8 @@ H7. Hotfix 报告
 - `package.json` 中的 `contributes` 描述（如涉及 VS Code 命令/配置变更）
 
 **执行时机：**
-- **OpenSpec 全管线**：在 apply 阶段的代码实现完成后、进入 build 验证之前，检查并更新文档
-- **Hotfix Mini-Pipeline**：在 H1 影响面分析后，如判断涉及用户可感知的功能变更，则在 H5 commit 之前补充文档更新
+- **OpenSpec 全管线**：在测试验证全部通过后（Step 9 之后）、打包之前（Step 9.5 之前），检查并更新文档
+- **Hotfix Mini-Pipeline**：在测试验证全部通过后（H3.3 之后）、打包之前（H4 之前），检查并更新文档
 
 **判定标准：**
 - 纯内部重构（不改变外部行为）→ 无需更新文档

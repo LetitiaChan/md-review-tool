@@ -1584,5 +1584,29 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 'blockHtmlToMarkdown 应清理 .code-line span'
             );
         });
+
+        test('BT-tableInline.1 table turndown 规则应使用 turndown 转换 cell 内容（保留行内格式）', () => {
+            // Tier 1 — 存在性断言：table 规则不应使用 textContent（会丢失行内格式）
+            assert.ok(
+                !appCode.includes("Array.from(cells).map(c => c.textContent.trim())"),
+                'table turndown 规则不应使用 c.textContent（会丢失行内代码等格式）'
+            );
+        });
+
+        test('BT-tableInline.2 table turndown 规则应通过 turndown 转换 cell innerHTML', () => {
+            // Tier 2 — 行为级断言：验证使用 ts.turndown(c.innerHTML) 保留行内格式
+            assert.ok(
+                appCode.includes('ts.turndown(c.innerHTML)'),
+                'table turndown 规则应使用 ts.turndown(c.innerHTML) 保留行内代码、加粗等格式'
+            );
+        });
+
+        test('BT-tableInline.3 table turndown 规则应处理 cell 中的换行', () => {
+            // Tier 3 — 任务特定断言：表格 cell 中不应有换行
+            assert.ok(
+                appCode.includes("cellMd.replace(/\\n/g, ' ')"),
+                'table turndown 规则应将 cell 中的换行替换为空格'
+            );
+        });
     });
 });
