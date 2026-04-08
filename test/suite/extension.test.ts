@@ -137,19 +137,24 @@ suite('Extension Test Suite', () => {
         assert.ok(ext);
         const languages = ext!.packageJSON.contributes.languages;
         assert.ok(Array.isArray(languages), '应有 languages 配置');
-        const mdc = languages.find((l: any) => l.id === 'mdc');
-        assert.ok(mdc, '应注册 mdc 语言');
-        assert.ok(mdc.extensions.includes('.mdc'), 'mdc 语言应关联 .mdc 扩展名');
+        // .mdc 文件通过 markdown 语言 ID 获得语法支持，无需独立的 mdc 语言 ID
+        const mdcLang = languages.find((l: any) => l.extensions && l.extensions.includes('.mdc'));
+        assert.ok(mdcLang, '应有语言配置关联 .mdc 扩展名');
+        assert.strictEqual(mdcLang.id, 'markdown', '.mdc 应关联到 markdown 语言 ID 以复用语法高亮');
     });
 
-    test('扩展应注册 mdc 语法', () => {
+    test('扩展应通过 markdown 语言 ID 为 mdc 提供语法支持', () => {
         const ext = vscode.extensions.getExtension('letitia.md-human-review');
         assert.ok(ext);
-        const grammars = ext!.packageJSON.contributes.grammars;
-        assert.ok(Array.isArray(grammars), '应有 grammars 配置');
-        const mdcGrammar = grammars.find((g: any) => g.language === 'mdc');
-        assert.ok(mdcGrammar, '应注册 mdc 语法');
-        assert.strictEqual(mdcGrammar.scopeName, 'text.html.mdc');
+        const languages = ext!.packageJSON.contributes.languages;
+        assert.ok(Array.isArray(languages), '应有 languages 配置');
+        // .mdc 关联到 markdown 语言 ID，自动继承 VS Code 内置的 Markdown 语法高亮
+        // 因此不需要独立的 grammars 配置
+        const mdcLang = languages.find((l: any) => l.extensions && l.extensions.includes('.mdc'));
+        assert.ok(mdcLang, '应有语言配置关联 .mdc 扩展名');
+        assert.strictEqual(mdcLang.id, 'markdown', '.mdc 复用 markdown 语法，无需独立 grammars');
+        // 验证有 language-configuration.json 配置
+        assert.ok(mdcLang.configuration, '应有 language-configuration.json 配置');
     });
 
     test('扩展应注册快捷键绑定', () => {
