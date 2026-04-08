@@ -2224,7 +2224,7 @@ this.innerHTML = t('modal.ai_result.copied');
             tempDiv.querySelectorAll('.diagram-edit-wrapper').forEach((wrapper, idx) => {
                 const data = diagramEditData.find(d => d.index === idx);
                 if (data) {
-                    const placeholderId = '%%DIAGRAM_EDIT_' + idx + '%%';
+                    const placeholderId = 'DIAGRAMEDITPLACEHOLDER' + idx + 'END';
                     diagramPlaceholders[placeholderId] = '\n\n```' + data.lang + '\n' + data.value.replace(/\n$/, '') + '\n```\n\n';
                     // 用纯文本占位符替换整个 wrapper
                     const placeholder = document.createTextNode(placeholderId);

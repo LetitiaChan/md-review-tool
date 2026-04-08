@@ -662,7 +662,13 @@ window.I18n = (() => {
             'help.edit_1': 'Click the <strong>"Preview/Edit"</strong> toggle button in the toolbar (or press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>)',
             'help.edit_2': 'Edit directly on the rendered document with WYSIWYG toolbar (bold, italic, strikethrough, headings, lists, quotes, horizontal rule, undo/redo)',
             'help.edit_3': 'Right-click tables in edit mode to <strong>insert/delete rows and columns</strong>',
-            'help.edit_4': 'Press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save manually, or wait for auto-save',
+            'help.edit_4': 'In edit mode, Mermaid / PlantUML / Graphviz diagrams are automatically converted to editable <strong>source code areas</strong> for direct modification',
+            'help.edit_5': 'Press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save manually, or wait for auto-save',
+            'help.search_title': '🔍 Search',
+            'help.search_1': 'Press <kbd>Ctrl</kbd>+<kbd>F</kbd> to open the content search bar. All matching text in the document will be highlighted',
+            'help.search_2': 'Use the <strong>up/down navigation buttons</strong> (or <kbd>Enter</kbd> / <kbd>Shift</kbd>+<kbd>Enter</kbd>) to switch between matches',
+            'help.search_3': 'The TOC panel has a <strong>search box</strong> at the top. Enter keywords to filter the TOC list while preserving hierarchy',
+            'help.search_4': 'The annotations panel also supports <strong>search filtering</strong> by annotation content, selected text, inserted content, and more',
             'help.ai_title': '🤖 One-Click AI Fix',
             'help.ai_1': 'After reviewing, click the <strong>"AI Fix"</strong> button in the toolbar',
             'help.ai_2': 'Confirm to generate structured AI instruction file, saved to <code>.review/</code> directory',
@@ -677,6 +683,10 @@ window.I18n = (() => {
             'help.ui_annotations': '<strong>Annotations Panel</strong> — Sidebar annotation list with sorting by time or position, navigation, editing, and deletion',
             'help.ui_lightbox': '<strong>Image Lightbox</strong> — Click images to enlarge, with scroll zoom, drag pan, double-click reset (<kbd>+</kbd>/<kbd>-</kbd> zoom, <kbd>0</kbd> fit, <kbd>R</kbd> reset)',
             'help.ui_mermaid': '<strong>Mermaid Charts</strong> — Click Mermaid diagrams to enlarge with zoom controls',
+            'help.ui_plantuml': '<strong>PlantUML Diagrams</strong> — UML class diagrams, sequence diagrams, activity diagrams, etc. Rendered via online PlantUML server; click to enlarge',
+            'help.ui_graphviz': '<strong>Graphviz Diagrams</strong> — DOT language graph rendering via local Viz.js engine; click to enlarge with zoom controls',
+            'help.ui_search': '<strong>Search</strong> — <kbd>Ctrl</kbd>+<kbd>F</kbd> content search with highlighting, TOC search filtering, annotation search',
+            'help.ui_multi_window': '<strong>Multi-Window</strong> — Open multiple Markdown files simultaneously, each with its own independent review panel and state',
             'help.ui_zen': '<strong>Zen Mode</strong> — Press <kbd>Alt</kbd>+<kbd>Z</kbd> to hide sidebars for focused reading',
             'help.ui_theme': '<strong>Light/Dark Theme</strong> — One-click toggle or follow system',
             'help.ui_file_select': '<strong>File Selector</strong> — Dropdown to quickly switch between workspace Markdown files',
@@ -684,10 +694,11 @@ window.I18n = (() => {
             'help.ui_resize': '<strong>Panel Resize</strong> — Drag to adjust TOC and annotation panel widths',
             'help.shortcut_title': '⌨️ Keyboard Shortcuts',
             'help.shortcut_zen': 'Toggle Zen mode',
+            'help.shortcut_search': 'Open content search',
             'help.shortcut_export': 'Export review record',
             'help.shortcut_save': 'Save edits to source file',
             'help.shortcut_mode': 'Toggle preview/edit mode',
-            'help.shortcut_esc': 'Close popup / Exit Zen mode',
+            'help.shortcut_esc': 'Close popup / Exit Zen mode / Close search bar',
             'help.feedback': 'Bug Reports & Suggestions',
 
             // ===== Settings Panel =====
@@ -1062,7 +1073,17 @@ window.I18n = (() => {
         <li>${_t('help.edit_2')}</li>
         <li>${_t('help.edit_3')}</li>
         <li>${_t('help.edit_4')}</li>
+        <li>${_t('help.edit_5')}</li>
     </ol>
+</section>
+<section class="help-section">
+    <h4>${_t('help.search_title')}</h4>
+    <ul>
+        <li>${_t('help.search_1')}</li>
+        <li>${_t('help.search_2')}</li>
+        <li>${_t('help.search_3')}</li>
+        <li>${_t('help.search_4')}</li>
+    </ul>
 </section>
 <section class="help-section">
     <h4>${_t('help.ai_title')}</h4>
@@ -1088,6 +1109,10 @@ window.I18n = (() => {
         <li>${_t('help.ui_annotations')}</li>
         <li>${_t('help.ui_lightbox')}</li>
         <li>${_t('help.ui_mermaid')}</li>
+        <li>${_t('help.ui_plantuml')}</li>
+        <li>${_t('help.ui_graphviz')}</li>
+        <li>${_t('help.ui_search')}</li>
+        <li>${_t('help.ui_multi_window')}</li>
         <li>${_t('help.ui_zen')}</li>
         <li>${_t('help.ui_theme')}</li>
         <li>${_t('help.ui_file_select')}</li>
@@ -1099,6 +1124,7 @@ window.I18n = (() => {
     <h4>${_t('help.shortcut_title')}</h4>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
         <tr><td style="padding:4px 8px;"><kbd>Alt</kbd>+<kbd>Z</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_zen')}</td></tr>
+        <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_search')}</td></tr>
         <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_export')}</td></tr>
         <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_save')}</td></tr>
         <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_mode')}</td></tr>

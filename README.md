@@ -9,7 +9,7 @@
 >
 > 🖊️ 像导师批改论文一样批阅 Markdown —— 评论、删除、插入、所见即所得编辑，一键生成 AI 修改指令。
 
-**Key Features**: Markdown review, annotation, comment, WYSIWYG editing, AI-powered fix, code highlighting, Mermaid diagrams, KaTeX math, PlantUML, Graphviz, dark/light theme, table of contents, image lightbox, auto-save.
+**Key Features**: Markdown review, annotation, comment, WYSIWYG editing, AI-powered fix, code highlighting, Mermaid diagrams, KaTeX math, PlantUML, Graphviz, content search, dark/light theme, table of contents, image lightbox, multi-window, auto-save.
 
 [中文](#chinese)
 
@@ -29,7 +29,13 @@
 - **➕ Insert Content** — Select anchor text to insert new content (supports Markdown), with before/after insertion options
 - **✏️ WYSIWYG Editing** — Switch to edit mode to modify content directly on the rendered document, with a toolbar (bold, italic, strikethrough, headings, lists, blockquote, horizontal rule, undo/redo)
 - **📊 Table Editing** — Right-click tables in edit mode to insert/delete rows and columns
+- **📈 Diagram Source Editing** — In edit mode, Mermaid / PlantUML / Graphviz diagrams are converted to editable source code areas for direct modification
 - **🔄 Smart Edit Preservation** — Editing blockquotes, GitHub alert blocks, code blocks, math formulas, and diagrams preserves their original Markdown structure
+
+### 🔍 Search
+- **Content Search** — Press `Ctrl+F` to open the search bar; all matching text is highlighted with navigation between matches
+- **TOC Search** — Filter the table of contents by keyword while preserving hierarchy structure
+- **Annotation Search** — Filter annotations by content, selected text, inserted content, and more
 
 ### 🤖 AI Integration
 - **One-click AI Fix** — Generate structured AI modification instruction files from all annotations, send directly to CodeBuddy or Gongfeng Copilot chat
@@ -73,12 +79,13 @@
 
 | Shortcut | Action |
 |----------|--------|
+| `Ctrl+F` | Open content search |
 | `Alt+Z` | Toggle Zen Mode |
 | `Ctrl+E` | Export review records |
 | `Ctrl+S` | Save edits to source file |
 | `Ctrl+Shift+E` | Toggle preview/edit mode |
 | `Ctrl+Enter` | Open review panel from Explorer |
-| `ESC` | Close modals / Exit Zen Mode |
+| `ESC` | Close modals / Exit Zen Mode / Close search bar |
 
 ## 🍴 Fork & Customize
 
@@ -255,6 +262,11 @@ MIT
 - **📈 图表源码编辑** — 编辑模式下 Mermaid / PlantUML / Graphviz 图表自动转换为可编辑的源码区域，支持直接修改图表代码
 - **🔄 智能编辑保护** — 编辑引用块、GitHub 告警块、代码块、数学公式和图表时，保留原始 Markdown 结构不被破坏
 
+### 🔍 搜索功能
+- **正文搜索** — 按 `Ctrl+F` 打开搜索栏，文档中所有匹配文本高亮标记，支持上下导航切换
+- **目录搜索** — 在目录面板中按关键词过滤，保持层级结构
+- **批注搜索** — 在批注面板中按内容、选中文本、插入内容等多字段搜索过滤
+
 ### 🤖 AI 集成
 - **一键 AI 修复** — 将所有批注生成结构化 AI 修改指令文件，一键发送到 CodeBuddy 或工蜂 Copilot 对话窗口执行
 - **📋 一键复制指令** — 复制 AI 指令到剪贴板，方便手动粘贴到任意 AI 工具
@@ -297,12 +309,13 @@ MIT
 
 | 快捷键 | 功能 |
 |--------|------|
+| `Ctrl+F` | 打开正文搜索 |
 | `Alt+Z` | 切换禅模式 |
 | `Ctrl+E` | 导出批阅记录 |
 | `Ctrl+S` | 保存编辑内容到源文件 |
 | `Ctrl+Shift+E` | 切换预览/编辑模式 |
 | `Ctrl+Enter` | 在资源管理器中打开批阅面板 |
-| `ESC` | 关闭弹窗 / 退出禅模式 |
+| `ESC` | 关闭弹窗 / 退出禅模式 / 关闭搜索栏 |
 
 ## 🍴 推荐 Fork 定制
 
