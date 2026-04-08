@@ -1909,6 +1909,8 @@ this.innerHTML = t('modal.ai_result.copied');
                 const className = codeEl.getAttribute('class') || '';
                 const dataLang = codeBlockEl.getAttribute('data-lang') || '';
                 codeBlockData.push({ index: idx, plainCode, className, dataLang });
+                console.log('[DIAG] blockHtmlToMarkdown: 从原始 DOM 提取代码块', idx, '内容（前100字符）:', plainCode.substring(0, 100));
+                console.log('[DIAG] blockHtmlToMarkdown: code 元素 childNodes 数量:', codeEl.childNodes.length, 'innerHTML（前200字符）:', codeEl.innerHTML.substring(0, 200));
             });
 
             const cleanHtml = blockEl.innerHTML
@@ -1939,6 +1941,7 @@ this.innerHTML = t('modal.ai_result.copied');
             // 但我们已经从原始 DOM 提取了代码内容，需要确保 tempDiv 中仍有代码块
             if (codeBlockData.length > 0 && tempDiv.querySelectorAll('.code-block').length === 0) {
                 // .code-block 被浏览器修复拆散了，手动重建
+                console.log('[DIAG] blockHtmlToMarkdown: .code-block 在 tempDiv 中消失了！手动重建');
                 for (const data of codeBlockData) {
                     const newCodeBlock = document.createElement('div');
                     newCodeBlock.className = 'code-block';
@@ -1975,6 +1978,12 @@ this.innerHTML = t('modal.ai_result.copied');
         const turndownService = createTurndownService();
         const inlineExtractedDefs = Renderer.getInlineExtractedDefs();
 
+        // [DIAG] 诊断日志：block 数量对比
+        console.log('[DIAG] === handleSaveMd block-level diff 开始 ===');
+        console.log('[DIAG] currentMdBlocks.length:', currentMdBlocks.length);
+        console.log('[DIAG] _editSnapshotBlocks.length:', _editSnapshotBlocks.length);
+        console.log('[DIAG] _editSnapshotHtmls.length:', _editSnapshotHtmls.length);
+
         for (let i = 0; i < currentMdBlocks.length; i++) {
             const blockEl = currentMdBlocks[i];
             const currentHtml = normalizeHtmlForCompare(blockEl.innerHTML);
@@ -1983,10 +1992,15 @@ this.innerHTML = t('modal.ai_result.copied');
             if (snapshotHtml !== null && currentHtml === snapshotHtml && i < _editSnapshotBlocks.length) {
                 // Block 未变化 → 保持原始 Markdown（含被提取的定义行）
                 resultParts.push(_editSnapshotBlocks[i]);
+                console.log('[DIAG] Block', i, '→ 未变化，保持原始 Markdown（前50字符）:', _editSnapshotBlocks[i].substring(0, 50));
             } else {
                 // Block 有变化 → 优先尝试行级精确替换，fallback 到 turndown
                 hasChanges = true;
                 let converted = null;
+                console.log('[DIAG] Block', i, '→ 有变化');
+                console.log('[DIAG] Block', i, 'snapshotHtml === null?', snapshotHtml === null);
+                console.log('[DIAG] Block', i, 'currentHtml（前100字符）:', currentHtml.substring(0, 100));
+                if (snapshotHtml !== null) console.log('[DIAG] Block', i, 'snapshotHtml（前100字符）:', snapshotHtml.substring(0, 100));
 
                 // 尝试行级 diff：如果原始 Markdown 存在且行数相同，逐行对比纯文本
                 // 注意：对于包含引用块、告警块、代码块等复杂结构的 block，
@@ -2065,7 +2079,10 @@ this.innerHTML = t('modal.ai_result.copied');
 
                 // 行级 diff 失败时 fallback 到 turndown
                 if (converted === null) {
+                    console.log('[DIAG] Block', i, '→ 行级 diff 失败，fallback 到 turndown');
+                    console.log('[DIAG] Block', i, 'innerHTML（前200字符）:', blockEl.innerHTML.substring(0, 200));
                     converted = blockHtmlToMarkdown(blockEl, turndownService);
+                    console.log('[DIAG] Block', i, 'turndown 输出（前200字符）:', converted.substring(0, 200));
 
                     // turndown 不保留原始 Markdown 的前导缩进，
                     // 尝试从原始 Markdown 恢复每行的前导空格
@@ -2112,6 +2129,13 @@ this.innerHTML = t('modal.ai_result.copied');
 
         // 处理新增的 block（用户在编辑模式下新增了内容导致 block 数量增加的情况已在上面循环中处理）
         // 处理删除的 block（当前 block 数量少于快照时，多余的快照 block 自然被忽略）
+
+        // [DIAG] 诊断日志：resultParts 汇总
+        console.log('[DIAG] === resultParts 汇总 ===');
+        console.log('[DIAG] resultParts.length:', resultParts.length);
+        resultParts.forEach((part, idx) => {
+            console.log('[DIAG] resultParts[' + idx + ']（前80字符）:', part.substring(0, 80));
+        });
 
         // 将被过滤掉的引用式链接/脚注定义块插入到正确的位置
         const orphanedDefs = Renderer.getOrphanedDefBlocks();
