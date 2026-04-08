@@ -602,7 +602,7 @@ const Renderer = (() => {
             const codeContent = highlighted || escapeHtml(code);
             const hljsClass = highlighted ? ` hljs language-${langLabel}` : '';
 
-            return `<div class="code-block"><div class="code-header"><span class="code-lang">${escapeHtml(langLabel)}</span><button class="code-copy-btn" title="${typeof t === 'function' ? t('notification.copy') : '📋 复制'}">${typeof t === 'function' ? t('renderer.copy_code') : '📋 复制'}</button></div><pre><code class="${hljsClass}">${wrapLines(codeContent, lang)}</code></pre></div>`;
+            return `<div class="code-block" data-lang="${escapeHtml(lang)}"><div class="code-header"><span class="code-lang">${escapeHtml(langLabel)}</span><button class="code-copy-btn" title="${typeof t === 'function' ? t('notification.copy') : '📋 复制'}">${typeof t === 'function' ? t('renderer.copy_code') : '📋 复制'}</button></div><pre><code class="${hljsClass}">${wrapLines(codeContent, lang)}</code></pre></div>`;
         };
 
         // ===== 自定义标题渲染 — 生成 GitHub 风格的 slug id，支持中文锚点跳转 =====

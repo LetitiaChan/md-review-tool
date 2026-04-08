@@ -1767,8 +1767,16 @@ this.innerHTML = t('modal.ai_result.copied');
                     const codeEl = node.querySelector('pre code');
                     if (!codeEl) return content;
                     const code = codeEl.textContent || '';
-                    const className = codeEl.getAttribute('class') || '';
-                    const language = (className.match(/language-(\S+)/) || [null, ''])[1];
+                    // 优先使用 data-lang 属性获取原始语言（避免 highlight.js 自动检测的语言被误用）
+                    const dataLang = node.getAttribute('data-lang') || '';
+                    let language = dataLang;
+                    if (!language) {
+                        // fallback：从 class 中提取语言（兼容旧版渲染的代码块）
+                        const className = codeEl.getAttribute('class') || '';
+                        language = (className.match(/language-(\S+)/) || [null, ''])[1] || '';
+                        // 排除 highlight.js 默认的 'code' 标记（langLabel 的默认值，不是真正的语言）
+                        if (language === 'code') language = '';
+                    }
                     return '\n\n```' + language + '\n' + code.replace(/\n$/, '') + '\n```\n\n';
                 }
             });
@@ -1881,6 +1889,28 @@ this.innerHTML = t('modal.ai_result.copied');
 
         // 将单个 md-block 的 HTML 转为 Markdown（用于变化的 block）
         function blockHtmlToMarkdown(blockEl, turndownService) {
+            // ===== 关键修复：先从原始 DOM 中提取代码块纯文本内容 =====
+            // 原因：在 contenteditable 中编辑代码块时，浏览器可能在 <code> 内创建 <div> 元素。
+            // 当通过 tempDiv.innerHTML = html 重新解析时，浏览器 HTML 解析器会修复不合法的嵌套
+            // （<code> 是 phrasing content 容器，不允许包含 <div>），将 <div> 移出 <pre><code>，
+            // 导致代码内容被截断。因此必须在重新解析前，从原始 DOM 中提取完整的代码文本。
+            const codeBlockData = [];
+            blockEl.querySelectorAll('.code-block').forEach((codeBlockEl, idx) => {
+                const codeEl = codeBlockEl.querySelector('pre code');
+                if (!codeEl) return;
+                // 从原始 DOM 中提取代码内容（处理 contenteditable 产生的 <br> 和 <div>）
+                const clonedCode = codeEl.cloneNode(true);
+                clonedCode.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+                clonedCode.querySelectorAll('div').forEach(div => {
+                    const text = div.textContent;
+                    div.replaceWith('\n' + text);
+                });
+                const plainCode = clonedCode.textContent;
+                const className = codeEl.getAttribute('class') || '';
+                const dataLang = codeBlockEl.getAttribute('data-lang') || '';
+                codeBlockData.push({ index: idx, plainCode, className, dataLang });
+            });
+
             const cleanHtml = blockEl.innerHTML
                 .replace(/<span class="annotation-indicator"[^>]*>.*?<\/span>/gi, '')
                 .replace(/<span class="annotation-fallback-marker"[^>]*>.*?<\/span>/gi, '');
@@ -1891,21 +1921,35 @@ this.innerHTML = t('modal.ai_result.copied');
             // 移除代码块的 code-header（turndown 规则直接从 pre>code 提取内容）
             tempDiv.querySelectorAll('.code-header').forEach(header => header.remove());
 
-            // 移除代码块中的行号包裹 span.code-line 和其他 HTML 元素，只保留纯文本内容
-            // 注意：在 contenteditable 模式下，用户新增的行可能不在 .code-line span 中
-            // （作为裸文本节点、<br>、<div> 等存在），所以不能只收集 .code-line 的内容
-            tempDiv.querySelectorAll('.code-block pre code').forEach(codeEl => {
-                // 先将 <br> 替换为 \n（contenteditable 中按 Enter 可能插入 <br>）
-                codeEl.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-                // 将 <div> 替换为 \n + 内容（contenteditable 中按 Enter 可能创建 <div>）
-                codeEl.querySelectorAll('div').forEach(div => {
-                    const text = div.textContent;
-                    div.replaceWith('\n' + text);
-                });
-                // 使用 textContent 获取所有文本内容（包括用户新增的行）
-                const plainCode = codeEl.textContent;
-                codeEl.textContent = plainCode;
+            // 用从原始 DOM 提取的纯文本重建代码块内容（避免浏览器 HTML 修复导致的截断）
+            // tempDiv.innerHTML 解析后，代码块结构可能已被浏览器修复（拆分），
+            // 所以直接用提取的纯文本替换整个 .code-block 的内容
+            tempDiv.querySelectorAll('.code-block').forEach((codeBlockEl, idx) => {
+                const data = codeBlockData.find(d => d.index === idx);
+                if (data) {
+                    // 用纯文本重建干净的 <pre><code> 结构
+                    codeBlockEl.setAttribute('data-lang', data.dataLang);
+                    codeBlockEl.innerHTML = '<pre><code class="' + data.className + '">' +
+                        data.plainCode.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+                        '</code></pre>';
+                }
             });
+
+            // 如果浏览器 HTML 修复导致 .code-block 被拆分或消失，
+            // 但我们已经从原始 DOM 提取了代码内容，需要确保 tempDiv 中仍有代码块
+            if (codeBlockData.length > 0 && tempDiv.querySelectorAll('.code-block').length === 0) {
+                // .code-block 被浏览器修复拆散了，手动重建
+                for (const data of codeBlockData) {
+                    const newCodeBlock = document.createElement('div');
+                    newCodeBlock.className = 'code-block';
+                    newCodeBlock.setAttribute('data-lang', data.dataLang);
+                    newCodeBlock.innerHTML = '<pre><code class="' + data.className + '">' +
+                        data.plainCode.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+                        '</code></pre>';
+                    // 插入到 tempDiv 的开头（代码块通常是 md-block 的主要内容）
+                    tempDiv.insertBefore(newCodeBlock, tempDiv.firstChild);
+                }
+            }
 
             // 还原图片路径
             tempDiv.querySelectorAll('img').forEach(img => {

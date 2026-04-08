@@ -1595,12 +1595,16 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
         });
 
-        test('blockHtmlToMarkdown 应使用 textContent 提取代码块内容（而非只收集 .code-line）', () => {
-            // 验证 blockHtmlToMarkdown 中使用 textContent 获取所有文本内容
-            // 而不是只收集 .code-line span 的内容（后者会丢失用户新增的行）
+        test('blockHtmlToMarkdown 应从原始 DOM 提取代码块内容（避免 innerHTML 重解析截断）', () => {
+            // 验证 blockHtmlToMarkdown 先从原始 DOM 中提取代码块纯文本内容
+            // 而不是在 tempDiv.innerHTML 重解析后处理（后者会因浏览器修复不合法嵌套而截断内容）
             assert.ok(
-                appCode.includes('.code-block pre code'),
-                'blockHtmlToMarkdown 应处理 .code-block pre code'
+                appCode.includes("blockEl.querySelectorAll('.code-block')"),
+                'blockHtmlToMarkdown 应从原始 blockEl DOM 中提取代码块'
+            );
+            assert.ok(
+                appCode.includes("codeEl.cloneNode(true)"),
+                'blockHtmlToMarkdown 应克隆 code 元素以安全处理 br/div'
             );
             // 不应再使用 querySelectorAll('.code-line') 来收集内容
             assert.ok(
@@ -1609,23 +1613,26 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             );
         });
 
-        test('BT-codeBlockNewLine.1 代码块内容提取应使用 codeEl.textContent', () => {
-            // Tier 1 — 存在性断言：验证使用 textContent 获取所有文本内容
+        test('BT-codeBlockNewLine.1 代码块内容提取应使用 clonedCode.textContent', () => {
+            // Tier 1 — 存在性断言：验证从克隆的 DOM 中使用 textContent 获取所有文本内容
+            // 修复：先从原始 DOM 克隆 code 元素，处理 br/div 后提取 textContent，
+            // 避免 tempDiv.innerHTML 重新解析时浏览器修复不合法嵌套导致内容截断
             assert.ok(
-                appCode.includes('const plainCode = codeEl.textContent'),
-                '代码块内容提取应使用 codeEl.textContent 获取所有文本（包括新增行）'
+                appCode.includes('const plainCode = clonedCode.textContent'),
+                '代码块内容提取应使用 clonedCode.textContent 获取所有文本（包括新增行）'
             );
         });
 
         test('BT-codeBlockNewLine.2 代码块应处理 contenteditable 中的 br 和 div 元素', () => {
             // Tier 2 — 行为级断言：验证处理 contenteditable 中按 Enter 产生的 <br> 和 <div>
+            // 修复：现在在克隆的 code 元素上处理 br/div，而非在 tempDiv 中处理
             assert.ok(
-                appCode.includes("codeEl.querySelectorAll('br')"),
-                '代码块处理应将 <br> 替换为换行符'
+                appCode.includes("clonedCode.querySelectorAll('br')"),
+                '代码块处理应将 <br> 替换为换行符（在克隆的 DOM 上操作）'
             );
             assert.ok(
-                appCode.includes("codeEl.querySelectorAll('div')"),
-                '代码块处理应将 <div> 替换为换行符+内容'
+                appCode.includes("clonedCode.querySelectorAll('div')"),
+                '代码块处理应将 <div> 替换为换行符+内容（在克隆的 DOM 上操作）'
             );
         });
 
@@ -1635,6 +1642,49 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             assert.ok(
                 !appCode.includes("Array.from(codeLines).map(line => line.textContent).join"),
                 '不应使用 Array.from(codeLines).map(line => line.textContent).join 模式（会丢失新增行）'
+            );
+        });
+
+        test('BT-codeBlockTruncate.1 renderer.js 应在 code-block 上设置 data-lang 属性', () => {
+            // Tier 1 — 存在性断言：验证渲染时保存原始语言信息到 data-lang 属性
+            const rendererCode = fs.readFileSync(
+                path.join(vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath, 'webview', 'js', 'renderer.js'),
+                'utf-8'
+            );
+            assert.ok(
+                rendererCode.includes('data-lang='),
+                'renderer.js 应在 code-block div 上设置 data-lang 属性保存原始语言'
+            );
+        });
+
+        test('BT-codeBlockTruncate.2 turndown codeBlock 规则应优先使用 data-lang 获取语言', () => {
+            // Tier 2 — 行为级断言：验证 turndown 规则优先从 data-lang 属性获取原始语言
+            assert.ok(
+                appCode.includes("node.getAttribute('data-lang')"),
+                'turndown codeBlock 规则应从 data-lang 属性获取原始语言'
+            );
+            // 验证排除 highlight.js 默认的 'code' 标记
+            assert.ok(
+                appCode.includes("language === 'code'"),
+                'turndown codeBlock 规则应排除 highlight.js 默认的 code 语言标记'
+            );
+        });
+
+        test('BT-codeBlockTruncate.3 blockHtmlToMarkdown 应在 tempDiv 中重建代码块结构', () => {
+            // Tier 3 — 任务特定断言：验证从原始 DOM 提取代码内容后在 tempDiv 中重建
+            // 这是修复代码块内容截断的核心逻辑
+            assert.ok(
+                appCode.includes('codeBlockData'),
+                'blockHtmlToMarkdown 应使用 codeBlockData 数组保存从原始 DOM 提取的代码内容'
+            );
+            assert.ok(
+                appCode.includes("codeBlockEl.getAttribute('data-lang')"),
+                'blockHtmlToMarkdown 应从原始 DOM 提取 data-lang 属性'
+            );
+            // 验证在 tempDiv 中重建代码块（避免浏览器 HTML 修复导致的截断）
+            assert.ok(
+                appCode.includes("codeBlockEl.innerHTML = '<pre><code class="),
+                'blockHtmlToMarkdown 应在 tempDiv 中用纯文本重建代码块 HTML'
             );
         });
 
