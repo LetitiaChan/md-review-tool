@@ -1789,6 +1789,15 @@ this.innerHTML = t('modal.ai_result.copied');
                     return node.nodeName === 'DIV' && node.classList && node.classList.contains('mermaid-container');
                 },
                 replacement: function(content, node) {
+                    // 渲染后的结构：.mermaid-rendered[data-source] 包含 base64 编码的原始源码
+                    const renderedEl = node.querySelector('.mermaid-rendered');
+                    if (renderedEl && renderedEl.dataset.source) {
+                        try {
+                            const code = decodeURIComponent(escape(atob(renderedEl.dataset.source)));
+                            return '\n\n```mermaid\n' + code + '\n```\n\n';
+                        } catch (e) { /* fallback */ }
+                    }
+                    // 渲染前的结构：.mermaid-source-data[data-source]
                     const sourceEl = node.querySelector('.mermaid-source-data');
                     if (sourceEl && sourceEl.dataset.source) {
                         try {
@@ -1899,6 +1908,47 @@ this.innerHTML = t('modal.ai_result.copied');
                     try { src = decodeURIComponent(src); } catch (e) { /* 保持原样 */ }
                     var titlePart = title ? ' "' + title + '"' : '';
                     return '![' + alt + '](' + src + titlePart + ')';
+                }
+            });
+
+            // 自定义内联格式标记 → Markdown 语法还原
+            // ==高亮文本== → <mark>高亮文本</mark>
+            ts.addRule('highlight', {
+                filter: 'mark',
+                replacement: function(content, node) {
+                    // 排除搜索高亮标记（search-highlight class）
+                    if (node.classList && node.classList.contains('search-highlight')) {
+                        return content;
+                    }
+                    return '==' + content + '==';
+                }
+            });
+
+            // ^上标^ → <sup>上标</sup>
+            ts.addRule('superscript', {
+                filter: 'sup',
+                replacement: function(content, node) {
+                    // 排除脚注引用（footnote-ref class）
+                    if (node.classList && (node.classList.contains('footnote-ref') || node.closest && node.closest('.footnote-ref'))) {
+                        return content;
+                    }
+                    return '^' + content + '^';
+                }
+            });
+
+            // ~下标~ → <sub>下标</sub>
+            ts.addRule('subscript', {
+                filter: 'sub',
+                replacement: function(content) {
+                    return '~' + content + '~';
+                }
+            });
+
+            // ++下划线++ → <ins>下划线</ins>
+            ts.addRule('underline', {
+                filter: 'ins',
+                replacement: function(content) {
+                    return '++' + content + '++';
                 }
             });
 
@@ -2199,12 +2249,15 @@ this.innerHTML = t('modal.ai_result.copied');
                             .replace(/_(.+?)_/g, '$1')         // _斜体_
                             .replace(/~~(.+?)~~/g, '$1')       // ~~删除线~~
                             .replace(/`([^`]+)`/g, '$1')       // `行内代码`
+                            .replace(/==(.+?)==/g, '$1')       // ==高亮==
+                            .replace(/\^([^\^]+)\^/g, '$1')   // ^上标^
+                            .replace(/\+\+(.+?)\+\+/g, '$1') // ++下划线++
                             .trim();
                     }
 
                     // 检测原始 Markdown 行是否包含内联格式标记
                     function hasInlineFormatting(line) {
-                        return /\*\*.+?\*\*|__.+?__|(?<!\*)\*(?!\*).+?(?<!\*)\*(?!\*)|(?<!_)_(?!_).+?(?<!_)_(?!_)|~~.+?~~|`.+?`/.test(line);
+                        return /\*\*.+?\*\*|__.+?__|(?<!\*)\*(?!\*).+?(?<!\*)\*(?!\*)|(?<!_)_(?!_).+?(?<!_)_(?!_)|~~.+?~~|`.+?`|==.+?==|\^[^\^]+\^|\+\+.+?\+\+/.test(line);
                     }
 
                     // 只在行数相同时尝试行级替换（结构未变）
