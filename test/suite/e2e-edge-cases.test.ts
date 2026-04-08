@@ -1774,5 +1774,54 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 'table turndown 规则应将 cell 中的换行替换为空格'
             );
         });
+
+        test('BT-coloredText.1 createTurndownService 应包含颜色文本（coloredText）的 turndown 规则', () => {
+            // Tier 1 — 存在性断言：验证 coloredText turndown 规则存在
+            assert.ok(
+                appCode.includes("ts.addRule('coloredText'"),
+                'app.js 应包含 coloredText turndown 规则'
+            );
+            // 验证规则过滤 SPAN 节点
+            assert.ok(
+                appCode.includes("node.nodeName !== 'SPAN'"),
+                'coloredText 规则应过滤 SPAN 节点'
+            );
+        });
+
+        test('BT-coloredText.2 coloredText 规则应从 style 属性提取颜色值', () => {
+            // Tier 2 — 行为级断言：验证从 span 的 style 属性中提取 color 值
+            assert.ok(
+                appCode.includes("style.match(/color\\s*:\\s*([^;]+)/i)"),
+                'coloredText 规则应使用正则从 style 属性提取颜色值'
+            );
+            // 验证还原为 {color:xxx}...{/color} 格式
+            assert.ok(
+                appCode.includes("'{color:' + color + '}'"),
+                'coloredText 规则应还原为 {color:xxx} 前缀'
+            );
+            assert.ok(
+                appCode.includes("'{/color}'"),
+                'coloredText 规则应还原为 {/color} 后缀'
+            );
+        });
+
+        test('BT-coloredText.3 preprocessMarkdown 和 coloredText 规则应形成双向转换', () => {
+            // Tier 3 — 任务特定断言：验证 preprocessMarkdown 中的 {color:xxx} → <span> 转换
+            // 与 turndown 中的 <span style="color:xxx"> → {color:xxx} 还原形成闭环
+            const rendererCode = fs.readFileSync(
+                path.join(vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath, 'webview', 'js', 'renderer.js'),
+                'utf-8'
+            );
+            // renderer.js 中 preprocessMarkdown 应将 {color:xxx}text{/color} 转为 <span style="color:xxx">
+            assert.ok(
+                rendererCode.includes('{color:') && rendererCode.includes('<span style="color:$1">'),
+                'renderer.js preprocessMarkdown 应将 {color:xxx}text{/color} 转为 <span style="color:xxx">text</span>'
+            );
+            // app.js 中 coloredText 规则应将 <span style="color:xxx"> 还原为 {color:xxx}
+            assert.ok(
+                appCode.includes('{color:') && appCode.includes('{/color}'),
+                'app.js coloredText 规则应将 <span style="color:xxx"> 还原为 {color:xxx}text{/color}'
+            );
+        });
     });
 });

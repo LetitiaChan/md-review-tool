@@ -2100,6 +2100,25 @@ this.innerHTML = t('modal.ai_result.copied');
                 }
             });
 
+            // <span style="color:xxx">text</span> → {color:xxx}text{/color}
+            // 还原 preprocessMarkdown 中将 {color:xxx}text{/color} 转换为 span 的操作
+            ts.addRule('coloredText', {
+                filter: function(node) {
+                    if (node.nodeName !== 'SPAN') return false;
+                    const style = node.getAttribute('style') || '';
+                    return /^\s*color\s*:\s*.+/i.test(style);
+                },
+                replacement: function(content, node) {
+                    const style = node.getAttribute('style') || '';
+                    const match = style.match(/color\s*:\s*([^;]+)/i);
+                    if (match) {
+                        const color = match[1].trim();
+                        return '{color:' + color + '}' + content + '{/color}';
+                    }
+                    return content;
+                }
+            });
+
             return ts;
         }
 
