@@ -1765,8 +1765,10 @@ this.innerHTML = t('modal.ai_result.copied');
                 },
                 replacement: function(content, node) {
                     const codeEl = node.querySelector('pre code');
+                    console.log('[DIAG] turndown codeBlock rule: codeEl found?', !!codeEl, 'node.innerHTML（前200字符）:', node.innerHTML.substring(0, 200));
                     if (!codeEl) return content;
                     const code = codeEl.textContent || '';
+                    console.log('[DIAG] turndown codeBlock rule: code（前100字符）:', code.substring(0, 100), 'code.length:', code.length);
                     // 优先使用 data-lang 属性获取原始语言（避免 highlight.js 自动检测的语言被误用）
                     const dataLang = node.getAttribute('data-lang') || '';
                     let language = dataLang;
@@ -1959,7 +1961,12 @@ this.innerHTML = t('modal.ai_result.copied');
                 img.removeAttribute('onerror');
             });
 
+            console.log('[DIAG] blockHtmlToMarkdown: tempDiv.innerHTML（前500字符）:', tempDiv.innerHTML.substring(0, 500));
+            console.log('[DIAG] blockHtmlToMarkdown: tempDiv 中 .code-block 数量:', tempDiv.querySelectorAll('.code-block').length);
+            const codeBlockInTemp = tempDiv.querySelector('.code-block pre code');
+            if (codeBlockInTemp) console.log('[DIAG] blockHtmlToMarkdown: tempDiv 中 pre>code textContent（前100字符）:', codeBlockInTemp.textContent.substring(0, 100));
             let md = turndownService.turndown(tempDiv.innerHTML);
+            console.log('[DIAG] blockHtmlToMarkdown: turndown 最终输出（前300字符）:', md.substring(0, 300));
             return md.trim();
         }
 
