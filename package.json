@@ -306,9 +306,13 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run compile:test",
     "test": "node ./out/test/runTest.js",
+    "test:ui": "npx playwright test --config test/ui/playwright.config.ts",
+    "test:ui:headed": "npx playwright test --config test/ui/playwright.config.ts --headed",
+    "test:ui:debug": "npx playwright test --config test/ui/playwright.config.ts --debug",
     "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/mocha": "^10.0.6",
     "@types/node": "^18.19.0",
     "@types/vscode": "^1.74.0",

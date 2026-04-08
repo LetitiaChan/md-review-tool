@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD Human Review - UI Test Container</title>
+    <!-- 生产 CSS（相对路径引用） -->
+    <link rel="stylesheet" href="../../webview/css/style.css">
+    <link rel="stylesheet" href="../../webview/css/markdown.css">
+    <link rel="stylesheet" href="../../webview/css/annotations.css">
+    <link rel="stylesheet" href="../../webview/css/settings.css">
+    <link rel="stylesheet" href="../../webview/css/highlight-themes.css">
+    <link rel="stylesheet" href="../../webview/css/katex.min.css">
+</head>
+<body>
+    <!-- 顶部工具栏（简化版，仅保留测试需要的元素） -->
+    <header class="toolbar">
+        <div class="toolbar-left">
+            <span class="file-name" id="fileName">测试文件</span>
+            <span class="edit-status" id="editStatus"></span>
+            <button class="btn btn-save-md" id="btnSaveMd" style="display:none;">💾</button>
+            <span class="auto-save-status" id="autoSaveStatus"></span>
+        </div>
+        <div class="toolbar-center">
+            <button class="btn-toggle-annotations" id="btnToggleToc" title="目录">📑</button>
+            <button class="btn-toolbar-text" id="btnZenMode" title="禅模式">🧘</button>
+            <button class="btn-toolbar-text" id="btnToggleTheme" title="主题">🌓</button>
+            <button class="btn-mode-toggle" id="btnModeToggle" title="模式">
+                <span class="mode-icon">👁</span>
+            </button>
+            <button class="btn-toggle-annotations" id="btnToggleAnnotations" title="批注">
+                <span class="toggle-annotations-count" id="annotationCount">0 条批注</span>
+            </button>
+        </div>
+        <div class="toolbar-right">
+            <button class="btn btn-apply" id="btnApplyReview" disabled>🤖 AI 修复</button>
+            <button class="btn-toolbar-icon" id="btnSettings" title="设置">⚙️</button>
+            <button class="btn-toolbar-icon" id="btnRefresh" title="刷新">🔄</button>
+        </div>
+    </header>
+
+    <!-- 欢迎页（初始隐藏） -->
+    <div class="welcome" id="welcomeScreen" style="display:none;">
+    </div>
+
+    <!-- 编辑器容器 -->
+    <div class="editor-container" id="editorContainer">
+        <!-- 目录面板 -->
+        <div class="toc-panel" id="tocPanel">
+            <div class="resize-handle resize-handle-right" id="tocResizeHandle"></div>
+            <div class="toc-header">
+                <button class="panel-hide-btn" id="btnHideToc" title="隐藏目录">✕</button>
+            </div>
+            <div class="toc-search" id="tocSearch">
+                <input type="text" class="toc-search-input" id="tocSearchInput" placeholder="搜索目录..." />
+                <button class="toc-search-clear" id="tocSearchClear" style="display:none;">✕</button>
+            </div>
+            <div class="toc-list" id="tocList"></div>
+        </div>
+
+        <!-- WYSIWYG 工具栏 -->
+        <div class="wysiwyg-toolbar" id="wysiwygToolbar" style="display:none;"></div>
+
+        <!-- 搜索栏 -->
+        <div class="search-bar" id="searchBar" style="display:none;">
+            <input type="text" class="search-input" id="searchInput" placeholder="搜索..." />
+            <span class="search-count" id="searchCount"></span>
+            <button class="search-nav-btn" id="searchPrev">▲</button>
+            <button class="search-nav-btn" id="searchNext">▼</button>
+            <button class="search-close-btn" id="searchClose">✕</button>
+        </div>
+
+        <!-- 文档内容区域（核心） -->
+        <div class="document-content" id="documentContent"></div>
+
+        <!-- 回到顶部按钮 -->
+        <button class="btn-scroll-top" id="btnScrollTop" title="回到顶部">⬆</button>
+
+        <!-- 批注面板 -->
+        <div class="annotations-panel" id="annotationsPanel">
+            <div class="resize-handle resize-handle-left" id="annotationsResizeHandle"></div>
+            <div class="annotations-header">
+                <button class="btn btn-header-save" id="btnExport" disabled>💾</button>
+                <button class="btn btn-header-clear" id="btnClearAll" disabled>🗑</button>
+                <select class="sort-select" id="sortSelect">
+                    <option value="position">按位置</option>
+                    <option value="time">按时间</option>
+                    <option value="type">按类型</option>
+                </select>
+                <button class="panel-hide-btn" id="btnHideAnnotations" title="隐藏批注">✕</button>
+            </div>
+            <div class="annotation-search" id="annotationSearch">
+                <input type="text" class="annotation-search-input" id="annotationSearchInput" placeholder="搜索批注..." />
+                <button class="annotation-search-clear" id="annotationSearchClear" style="display:none;">✕</button>
+            </div>
+            <div class="annotations-list" id="annotationsList"></div>
+        </div>
+    </div>
+
+    <!-- Lightbox 容器（图表点击放大） -->
+    <div class="lightbox-overlay" id="lightboxOverlay" style="display:none;">
+        <div class="lightbox-content" id="lightboxContent"></div>
+    </div>
+
+    <!-- 第三方库（本地文件，与生产环境一致） -->
+    <script src="../../webview/lib/marked.min.js"></script>
+    <script src="../../webview/lib/marked-footnote.umd.js"></script>
+    <script src="../../webview/lib/highlight.min.js"></script>
+    <script src="../../webview/lib/turndown.js"></script>
+    <script src="../../webview/lib/katex.min.js"></script>
+    <script src="../../webview/lib/mermaid.min.js"></script>
+    <script src="../../webview/lib/viz-global.js"></script>
+    <script src="../../webview/lib/emoji-map.js"></script>
+
+    <!-- VS Code API Mock（必须在生产 JS 之前加载） -->
+    <script src="./mock-vscode.js"></script>
+
+    <!-- 初始化 vscode 全局变量（模拟 index.html 中的行为） -->
+    <script>
+        // 使用 var 而非 const，确保 vscode 成为 window 全局属性
+        // （const 在 <script> 顶层不会挂载到 window 上）
+        var vscode = acquireVsCodeApi();
+    </script>
+
+    <!-- 生产 JS（原样加载，顺序与 index.html 一致） -->
+    <script src="../../webview/js/i18n.js"></script>
+    <script src="../../webview/js/store.js"></script>
+    <script src="../../webview/js/renderer.js"></script>
+    <script src="../../webview/js/annotations.js"></script>
+    <script src="../../webview/js/export.js"></script>
+    <script src="../../webview/js/settings.js"></script>
+
+    <!-- 在 app.js 加载前，动态创建所有缺失的 DOM 元素占位符 -->
+    <!-- app.js 的 IIFE 会在加载时立即绑定 DOM 事件，缺失元素会导致 null.addEventListener 报错 -->
+    <script>
+        (function() {
+            // app.js 中通过 getElementById 绑定 addEventListener 的所有元素 ID
+            const requiredIds = [
+                'fileSelect', 'fileChangeBadge',
+                'btnHelp', 'btnCloseHelp', 'btnCloseHelpOk',
+                'btnCloseClearAll', 'btnCancelClearAll', 'btnConfirmClearAll',
+                'btnCancelApply', 'btnCloseApplyConfirm', 'btnConfirmApply',
+                'btnCloseApplyResult', 'btnCloseResultOk', 'btnExecuteAiInstruction',
+                'btnTocMenu', 'tocMenuCollapseAll', 'tocMenuExpandAll', 'tocMenuDropdown',
+                'commentModal', 'btnCloseModal', 'btnCancelComment', 'btnSubmitComment',
+                'commentText', 'selectedTextPreview', 'commentModalTitle',
+                'insertModal', 'btnCloseInsertModal', 'btnCancelInsert', 'btnSubmitInsert',
+                'insertText', 'insertSelectedPreview', 'insertModalTitle',
+                'clearAllModal', 'applyConfirmModal', 'applyResultModal', 'helpModal',
+                'contextMenu', 'menuAddComment', 'menuMarkDelete', 'menuAddInsert', 'menuAddInsertBefore',
+                'tableContextMenu', 'tableMenuInsertRowAbove', 'tableMenuInsertRowBelow',
+                'tableMenuInsertColLeft', 'tableMenuInsertColRight',
+                'tableMenuDeleteRow', 'tableMenuDeleteCol',
+                'settingsPanel', 'btnCloseSettings', 'btnResetSettings',
+                'fileSelectorGroup', 'applyResultContent', 'aiInstructionContent',
+                'imageUploadInput', 'imagePreviewList',
+                'insertImageUploadInput', 'insertImagePreviewList',
+            ];
+            requiredIds.forEach(id => {
+                if (!document.getElementById(id)) {
+                    const el = document.createElement('div');
+                    el.id = id;
+                    el.style.display = 'none';
+                    document.body.appendChild(el);
+                }
+            });
+        })();
+    </script>
+
+    <script src="../../webview/js/app.js"></script>
+
+    <!-- 将 const 声明的全局变量挂载到 window 上，供 Playwright page.evaluate() 访问 -->
+    <!-- （const 在 <script> 顶层不会自动成为 window 属性，但 Playwright 的 evaluate 需要通过 window 访问） -->
+    <script>
+        window.Renderer = Renderer;
+        window.Store = Store;
+        window.Annotations = Annotations;
+        window.Settings = Settings;
+        window.I18n = I18n;
+        if (typeof ExportManager !== 'undefined') window.ExportManager = ExportManager;
+        if (typeof EMOJI_MAP !== 'undefined') window.EMOJI_MAP = EMOJI_MAP;
+    </script>
+</body>
+</html>

@@ -1695,8 +1695,20 @@ this.innerHTML = t('modal.ai_result.copied');
         // 排除脚注 block（footnotes-block），脚注定义已包含在 _editSnapshotBlocks 的原始 blocks 中
         const currentMdBlocks = docContent.querySelectorAll('.md-block:not(.footnotes-block)');
 
-        // 构建 turndown 服务（仅用于变化的 block）
-        function createTurndownService() {
+        // [DIAG] 诊断日志：记录 block 数量对比
+        console.log('[DIAG] handleSaveMd: currentMdBlocks.length =', currentMdBlocks.length, ', _editSnapshotBlocks.length =', _editSnapshotBlocks.length, ', _editSnapshotHtmls.length =', _editSnapshotHtmls.length);
+        // [DIAG] 检查 DOM 结构是否被 contenteditable 破坏
+        const directChildren = docContent.children;
+        let nonMdBlockChildren = 0;
+        for (let c = 0; c < directChildren.length; c++) {
+            if (!directChildren[c].classList.contains('md-block')) {
+                nonMdBlockChildren++;
+                console.log('[DIAG] 非 md-block 的直接子元素:', directChildren[c].tagName, directChildren[c].className, '内容前50字:', (directChildren[c].textContent || '').substring(0, 50));
+            }
+        }
+        if (nonMdBlockChildren > 0) console.log('[DIAG] 发现', nonMdBlockChildren, '个非 md-block 的直接子元素（可能是 contenteditable 拆分产生的）');
+
+        // 构建 turndown 服务        function createTurndownService() {
             const ts = new TurndownService({
                 headingStyle: 'atx', hr: '---', bulletListMarker: '-',
                 codeBlockStyle: 'fenced', emDelimiter: '*', strongDelimiter: '**', linkStyle: 'inlined',
@@ -1878,6 +1890,10 @@ this.innerHTML = t('modal.ai_result.copied');
             // 注意：在 contenteditable 模式下，用户新增的行可能不在 .code-line span 中
             // （作为裸文本节点、<br>、<div> 等存在），所以不能只收集 .code-line 的内容
             tempDiv.querySelectorAll('.code-block pre code').forEach(codeEl => {
+                // [DIAG] 记录代码块 code 元素的原始 HTML
+                console.log('[DIAG] blockHtmlToMarkdown: code 元素原始 innerHTML 前300字:', codeEl.innerHTML.substring(0, 300));
+                console.log('[DIAG] blockHtmlToMarkdown: code 元素原始 textContent 前300字:', codeEl.textContent.substring(0, 300));
+                console.log('[DIAG] blockHtmlToMarkdown: code 元素 childNodes 数量:', codeEl.childNodes.length, '类型:', Array.from(codeEl.childNodes).map(n => n.nodeType === 1 ? n.tagName + '.' + (n.className || '') : n.nodeType === 3 ? 'TEXT' : 'OTHER').join(', '));
                 // 先将 <br> 替换为 \n（contenteditable 中按 Enter 可能插入 <br>）
                 codeEl.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
                 // 将 <div> 替换为 \n + 内容（contenteditable 中按 Enter 可能创建 <div>）
@@ -1887,6 +1903,7 @@ this.innerHTML = t('modal.ai_result.copied');
                 });
                 // 使用 textContent 获取所有文本内容（包括用户新增的行）
                 const plainCode = codeEl.textContent;
+                console.log('[DIAG] blockHtmlToMarkdown: 处理后 plainCode 前300字:', plainCode.substring(0, 300), '行数:', plainCode.split('\n').length);
                 codeEl.textContent = plainCode;
             });
 
@@ -1926,6 +1943,12 @@ this.innerHTML = t('modal.ai_result.copied');
                 // Block 有变化 → 优先尝试行级精确替换，fallback 到 turndown
                 hasChanges = true;
                 let converted = null;
+                // [DIAG] 记录变化的 block 信息
+                const _diagHasCodeBlock = blockEl.querySelector('.code-block, pre > code');
+                if (_diagHasCodeBlock) {
+                    console.log('[DIAG] Block', i, '包含代码块，HTML 前200字:', blockEl.innerHTML.substring(0, 200));
+                    console.log('[DIAG] Block', i, '快照 HTML 前200字:', (i < _editSnapshotHtmls.length ? _editSnapshotHtmls[i].substring(0, 200) : 'N/A'));
+                }
 
                 // 尝试行级 diff：如果原始 Markdown 存在且行数相同，逐行对比纯文本
                 // 注意：对于包含引用块、告警块、代码块等复杂结构的 block，
@@ -2005,6 +2028,11 @@ this.innerHTML = t('modal.ai_result.copied');
                 // 行级 diff 失败时 fallback 到 turndown
                 if (converted === null) {
                     converted = blockHtmlToMarkdown(blockEl, turndownService);
+                    // [DIAG] 记录 turndown 转换结果
+                    if (blockEl.querySelector('.code-block, pre > code')) {
+                        console.log('[DIAG] Block', i, 'turndown 转换结果前300字:', converted.substring(0, 300));
+                        console.log('[DIAG] Block', i, 'turndown 转换结果总长度:', converted.length, '行数:', converted.split('\n').length);
+                    }
 
                     // turndown 不保留原始 Markdown 的前导缩进，
                     // 尝试从原始 Markdown 恢复每行的前导空格
@@ -2068,6 +2096,13 @@ this.innerHTML = t('modal.ai_result.copied');
         }
 
         let newContent = finalParts.join('\n\n') + '\n';
+
+        // [DIAG] 记录最终内容信息
+        console.log('[DIAG] finalParts.length =', finalParts.length, ', newContent 总行数:', newContent.split('\n').length, ', rawMarkdown 总行数:', data.rawMarkdown.split('\n').length);
+        if (newContent.split('\n').length < data.rawMarkdown.split('\n').length * 0.5) {
+            console.warn('[DIAG] ⚠️ 保存内容行数不到原始的一半！可能存在内容丢失！');
+            console.log('[DIAG] resultParts 各部分行数:', resultParts.map((p, i) => `[${i}]: ${p.split('\n').length}行`).join(', '));
+        }
 
         if (newContent.trim() === data.rawMarkdown.trim()) {
             editorDirty = false;
