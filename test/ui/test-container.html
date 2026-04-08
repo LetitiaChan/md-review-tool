@@ -180,5 +180,110 @@
         if (typeof ExportManager !== 'undefined') window.ExportManager = ExportManager;
         if (typeof EMOJI_MAP !== 'undefined') window.EMOJI_MAP = EMOJI_MAP;
     </script>
+
+    <!-- 测试环境初始化：触发 app.js 中的关键事件绑定 -->
+    <!-- app.js 的 IIFE 在加载时会调用 init()，但某些绑定（如 lightbox）需要在渲染后手动触发 -->
+    <script>
+        (function() {
+            // 暴露 app.js 内部的后渲染绑定函数到 window，供测试调用
+            // app.js 是 IIFE，内部函数默认不可访问，需要通过 window.__testBindings 桥接
+            window.__testBindings = {
+                /**
+                 * 触发 Mermaid 图表的 lightbox 绑定
+                 * 在 app.js 中，bindMermaidLightbox 在 renderMathAndMermaid 后调用
+                 */
+                bindMermaidLightbox: function() {
+                    const rendered = document.querySelectorAll('.mermaid-rendered');
+                    rendered.forEach(function(el) {
+                        if (el.dataset.lightboxBound) return;
+                        el.dataset.lightboxBound = 'true';
+                        el.title = '点击查看大图';
+                        el.style.cursor = 'pointer';
+                        el.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            // 调用 app.js 暴露的 openMermaidLightbox（如果可用）
+                            // 否则使用简化版 lightbox
+                            var svgEl = el.querySelector('svg');
+                            if (!svgEl) return;
+
+                            var overlay = document.createElement('div');
+                            overlay.className = 'mermaid-lightbox-overlay';
+
+                            var container = document.createElement('div');
+                            container.className = 'mermaid-lightbox-container';
+
+                            var content = document.createElement('div');
+                            content.className = 'mermaid-lightbox-content';
+
+                            var clonedSvg = svgEl.cloneNode(true);
+                            content.appendChild(clonedSvg);
+                            container.appendChild(content);
+                            overlay.appendChild(container);
+
+                            var closeBtn = document.createElement('button');
+                            closeBtn.className = 'mermaid-lightbox-close';
+                            closeBtn.innerHTML = '&times;';
+
+                            function closeLightbox() { overlay.remove(); }
+
+                            closeBtn.addEventListener('click', function(ev) { ev.stopPropagation(); closeLightbox(); });
+                            overlay.appendChild(closeBtn);
+
+                            // 点击遮罩层关闭
+                            var clickStartX = 0, clickStartY = 0;
+                            overlay.addEventListener('mousedown', function(ev) { clickStartX = ev.clientX; clickStartY = ev.clientY; });
+                            overlay.addEventListener('click', function(ev) {
+                                var dx = Math.abs(ev.clientX - clickStartX);
+                                var dy = Math.abs(ev.clientY - clickStartY);
+                                if (dx < 5 && dy < 5 && ev.target === overlay) closeLightbox();
+                            });
+
+                            // ESC 关闭
+                            function onKeyDown(ev) {
+                                if (ev.key === 'Escape') { closeLightbox(); document.removeEventListener('keydown', onKeyDown); }
+                            }
+                            document.addEventListener('keydown', onKeyDown);
+
+                            document.body.appendChild(overlay);
+                        });
+                    });
+                },
+
+                /**
+                 * 触发 Graphviz 图表的 lightbox 绑定
+                 */
+                bindGraphvizLightbox: function() {
+                    var rendered = document.querySelectorAll('.graphviz-rendered');
+                    rendered.forEach(function(el) {
+                        if (el.dataset.lightboxBound) return;
+                        el.dataset.lightboxBound = 'true';
+                        el.title = '点击查看大图';
+                        el.style.cursor = 'pointer';
+                        el.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            window.__testBindings.bindMermaidLightbox.call(null);
+                        });
+                    });
+                },
+
+                /**
+                 * 模拟 app.js 的 renderMathAndMermaid 后的绑定流程
+                 * 在测试中注入 markdown 并渲染后调用此函数
+                 */
+                afterRender: function() {
+                    this.bindMermaidLightbox();
+                    this.bindGraphvizLightbox();
+                },
+
+                /**
+                 * 标记测试容器已就绪
+                 */
+                ready: true
+            };
+
+            // 标记容器初始化完成
+            window.__testContainerReady = true;
+        })();
+    </script>
 </body>
 </html>

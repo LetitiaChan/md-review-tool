@@ -7,6 +7,7 @@
 
 ## 最近更新
 
+- **2026-04-08**: 测试基础设施全面优化（optimize-test-infrastructure），Playwright 测试从 23 个增长到 64 个，新增 test:all 统一命令，修复伪测试，补充搜索/编辑/设置/目录/批注/工具栏 UI 测试
 - **2026-04-08**: 引入 Playwright 自动化 UI 测试基础设施（add-automated-ui-testing），23 个测试覆盖图表渲染、Lightbox 交互、Checkbox 行为、基础渲染、批注高亮
 - **2026-04-08**: 🚀 发布 v1.3.0 到 VS Code Marketplace（含正文搜索 Ctrl+F、目录搜索过滤、批注搜索定位）
 - **2026-04-08**: 增加 Ctrl+F 正文检索、目录搜索过滤、批注搜索定位功能（add-search-features）
@@ -36,6 +37,7 @@
 
 | 变更名 | 描述 | 归档日期 |
 |--------|------|---------|
+| optimize-test-infrastructure | 测试基础设施优化：统一测试命令、修复伪测试、补充 41 个新 UI 测试覆盖搜索/编辑/设置/目录/批注/工具栏 | 2026-04-08 |
 | add-automated-ui-testing | Playwright 自动化 UI 测试基础设施，23 个测试覆盖图表/Lightbox/Checkbox/渲染/批注 | 2026-04-08 |
 | add-search-features | Ctrl+F 正文检索、目录面板搜索过滤、批注面板搜索定位 | 2026-04-08 |
 | add-i18n-support | 多语言支持（中文/英文），i18n 模块、设置面板语言切换、HTML/JS/CSS/TS 全量国际化 | 2026-04-06 |
@@ -67,6 +69,8 @@
 | graphviz-rendering | add-plantuml-graphviz-support | Graphviz DOT 代码块渲染、降级、lightbox、主题适配、延迟加载、设置项 |
 | ui-testing-infra | add-automated-ui-testing | Playwright 测试基础设施、Mock 层、测试容器、辅助工具 |
 | ui-rendering-tests | add-automated-ui-testing | UI 渲染测试套件：图表、Lightbox、Checkbox、基础渲染、批注 |
+| test-integration | optimize-test-infrastructure | 统一测试命令、修复伪测试、清理 diagnostic、测试容器增强 |
+| ui-test-expansion | optimize-test-infrastructure | UI 测试扩展：搜索、编辑模式、设置面板、目录面板、批注面板、工具栏 |
 
 ---
 

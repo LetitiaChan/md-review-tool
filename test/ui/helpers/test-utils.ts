@@ -126,16 +126,89 @@ export async function waitForRender(page: Page, timeout: number = 5000): Promise
 }
 
 /**
+ * 触发 app.js 的后渲染绑定（lightbox、代码复制等）
+ * 在 injectMarkdown + waitForRender 之后调用
+ */
+export async function triggerAppBindings(page: Page): Promise<void> {
+    await page.evaluate(() => {
+        const bindings = (window as any).__testBindings;
+        if (bindings && typeof bindings.afterRender === 'function') {
+            bindings.afterRender();
+        }
+    });
+}
+
+/**
+ * 注入 Markdown 并完成完整渲染流程（包括异步渲染和事件绑定）
+ * 这是 injectMarkdown + waitForRender + triggerAppBindings 的便捷组合
+ */
+export async function loadAndRender(page: Page, markdown: string): Promise<void> {
+    await injectMarkdown(page, markdown);
+    await waitForRender(page);
+    await triggerAppBindings(page);
+}
+
+/**
+ * 加载 fixture 文件并完成完整渲染流程
+ */
+export async function loadFixtureAndRender(page: Page, filename: string): Promise<void> {
+    const markdown = readFixture(filename);
+    await loadAndRender(page, markdown);
+}
+
+/**
+ * 模拟 Store 中有数据（用于编辑模式等需要 Store.getData() 的场景）
+ */
+export async function setStoreData(page: Page, data: {
+    fileName?: string;
+    rawMarkdown?: string;
+    sourceFilePath?: string;
+    annotations?: any[];
+}): Promise<void> {
+    await page.evaluate((d) => {
+        const Store = (window as any).Store;
+        if (!Store) return;
+        const current = Store.getData() || {};
+        if (d.fileName) current.fileName = d.fileName;
+        if (d.rawMarkdown) current.rawMarkdown = d.rawMarkdown;
+        if (d.sourceFilePath) current.sourceFilePath = d.sourceFilePath;
+        if (d.annotations) current.annotations = d.annotations;
+        Store.setData(current);
+    }, data);
+}
+
+/**
  * 重置测试容器状态
  */
 export async function resetContainer(page: Page): Promise<void> {
     await page.evaluate(() => {
         const container = document.getElementById('documentContent');
-        if (container) container.innerHTML = '';
+        if (container) {
+            container.innerHTML = '';
+            container.contentEditable = 'false';
+            container.classList.remove('wysiwyg-editing');
+        }
         const tocList = document.getElementById('tocList');
         if (tocList) tocList.innerHTML = '';
         const annotationsList = document.getElementById('annotationsList');
         if (annotationsList) annotationsList.innerHTML = '';
+
+        // 重置搜索栏状态
+        const searchBar = document.getElementById('searchBar');
+        if (searchBar) searchBar.style.display = 'none';
+        const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+        if (searchInput) searchInput.value = '';
+
+        // 重置禅模式
+        document.body.classList.remove('zen-mode');
+
+        // 重置主题
+        document.body.classList.remove('theme-dark');
+
+        // 重置 lightbox 绑定标记
+        document.querySelectorAll('[data-lightbox-bound]').forEach(el => {
+            delete (el as HTMLElement).dataset.lightboxBound;
+        });
 
         // 重置 Mock 状态
         if ((window as any).__mockVscode) {
