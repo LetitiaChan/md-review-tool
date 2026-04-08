@@ -2217,16 +2217,18 @@ this.innerHTML = t('modal.ai_result.copied');
             // 移除代码块的 code-header（turndown 规则直接从 pre>code 提取内容）
             tempDiv.querySelectorAll('.code-header').forEach(header => header.remove());
 
-            // 将从原始 DOM 提取的图表编辑区 textarea value 写回 tempDiv 中的 textarea
+            // 将图表编辑区替换为占位符（绕过 turndown 对 textarea 内容的处理）
+            // 原因：turndown 内部会将 textarea 的文本内容中的换行符合并为空格，
+            // 导致多行图表源码变成单行。使用占位符可以完全保留原始换行。
+            const diagramPlaceholders = {};
             tempDiv.querySelectorAll('.diagram-edit-wrapper').forEach((wrapper, idx) => {
                 const data = diagramEditData.find(d => d.index === idx);
                 if (data) {
-                    const textarea = wrapper.querySelector('.diagram-edit-textarea');
-                    if (textarea) {
-                        textarea.value = data.value;
-                        // 同时设置 textContent 作为 fallback（某些 turndown 实现可能读取 textContent）
-                        textarea.textContent = data.value;
-                    }
+                    const placeholderId = '%%DIAGRAM_EDIT_' + idx + '%%';
+                    diagramPlaceholders[placeholderId] = '\n\n```' + data.lang + '\n' + data.value.replace(/\n$/, '') + '\n```\n\n';
+                    // 用纯文本占位符替换整个 wrapper
+                    const placeholder = document.createTextNode(placeholderId);
+                    wrapper.replaceWith(placeholder);
                 }
             });
 
@@ -2290,6 +2292,10 @@ this.innerHTML = t('modal.ai_result.copied');
             const codeBlockInTemp = tempDiv.querySelector('.code-block pre code');
             if (codeBlockInTemp) console.log('[DIAG] blockHtmlToMarkdown: tempDiv 中 pre>code textContent（前100字符）:', codeBlockInTemp.textContent.substring(0, 100));
             let md = turndownService.turndown(tempDiv.innerHTML);
+            // 将图表编辑区占位符还原为实际的 Markdown 代码块
+            for (const [placeholder, markdown] of Object.entries(diagramPlaceholders)) {
+                md = md.replace(placeholder, markdown);
+            }
             console.log('[DIAG] blockHtmlToMarkdown: turndown 最终输出（前300字符）:', md.substring(0, 300));
             return md.trim();
         }
