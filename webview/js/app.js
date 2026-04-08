@@ -2192,6 +2192,21 @@ this.innerHTML = t('modal.ai_result.copied');
                 if (preEl) console.log('[DIAG] blockHtmlToMarkdown: pre innerHTML（前200字符）:', preEl.innerHTML.substring(0, 200));
             });
 
+            // ===== 关键修复：先从原始 DOM 中提取图表编辑区 textarea 的 value =====
+            // 原因：textarea.value 是 DOM 属性，不会被 innerHTML 序列化。
+            // 当通过 tempDiv.innerHTML = html 重新解析时，textarea 的用户编辑内容会丢失。
+            const diagramEditData = [];
+            blockEl.querySelectorAll('.diagram-edit-wrapper').forEach((wrapper, idx) => {
+                const textarea = wrapper.querySelector('.diagram-edit-textarea');
+                if (textarea) {
+                    diagramEditData.push({
+                        index: idx,
+                        value: textarea.value || '',
+                        lang: textarea.dataset.diagramLang || 'mermaid'
+                    });
+                }
+            });
+
             const cleanHtml = blockEl.innerHTML
                 .replace(/<span class="annotation-indicator"[^>]*>.*?<\/span>/gi, '')
                 .replace(/<span class="annotation-fallback-marker"[^>]*>.*?<\/span>/gi, '');
@@ -2201,6 +2216,19 @@ this.innerHTML = t('modal.ai_result.copied');
 
             // 移除代码块的 code-header（turndown 规则直接从 pre>code 提取内容）
             tempDiv.querySelectorAll('.code-header').forEach(header => header.remove());
+
+            // 将从原始 DOM 提取的图表编辑区 textarea value 写回 tempDiv 中的 textarea
+            tempDiv.querySelectorAll('.diagram-edit-wrapper').forEach((wrapper, idx) => {
+                const data = diagramEditData.find(d => d.index === idx);
+                if (data) {
+                    const textarea = wrapper.querySelector('.diagram-edit-textarea');
+                    if (textarea) {
+                        textarea.value = data.value;
+                        // 同时设置 textContent 作为 fallback（某些 turndown 实现可能读取 textContent）
+                        textarea.textContent = data.value;
+                    }
+                }
+            });
 
             // 用从原始 DOM 提取的纯文本重建代码块内容（避免浏览器 HTML 修复导致的截断）
             // tempDiv.innerHTML 解析后，代码块结构可能已被浏览器修复（拆分），
@@ -2355,7 +2383,7 @@ this.innerHTML = t('modal.ai_result.copied');
                 // 尝试行级 diff：如果原始 Markdown 存在且行数相同，逐行对比纯文本
                 // 注意：对于包含引用块、告警块、代码块等复杂结构的 block，
                 // innerText 行数与原始 Markdown 行数可能不一致，直接跳过行级 diff
-                const hasComplexStructure = blockEl.querySelector('blockquote, .gh-alert, .code-block, .mermaid-container, .plantuml-container, .graphviz-container, pre > code');
+                const hasComplexStructure = blockEl.querySelector('blockquote, .gh-alert, .code-block, .mermaid-container, .plantuml-container, .graphviz-container, .diagram-edit-wrapper, pre > code');
                 if (!hasComplexStructure && alignedIdx >= 0 && alignedIdx < _editSnapshotBlocks.length) {
                     const origMd = _editSnapshotBlocks[alignedIdx];
                     const origLines = origMd.split('\n');
