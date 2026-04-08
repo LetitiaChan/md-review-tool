@@ -1866,6 +1866,42 @@ this.innerHTML = t('modal.ai_result.copied');
                 replacement: function() { return ''; }
             });
 
+            // 自定义 img 规则：对 src 进行 decodeURIComponent，
+            // 避免浏览器将中文路径 URL 编码后导致保存的 Markdown 中图片路径变成 percent-encoding
+            ts.addRule('image', {
+                filter: 'img',
+                replacement: function(content, node) {
+                    // 跳过 img-placeholder 容器中的 img（已由 imgPlaceholder 规则处理）
+                    if (node.parentNode && node.parentNode.classList && node.parentNode.classList.contains('img-placeholder')) {
+                        return '';
+                    }
+                    var alt = node.getAttribute('alt') || '';
+                    var src = node.getAttribute('src') || '';
+                    var title = node.getAttribute('title') || '';
+                    // 解码 URL 编码的路径（如中文字符）
+                    try { src = decodeURIComponent(src); } catch (e) { /* 保持原样 */ }
+                    var titlePart = title ? ' "' + title + '"' : '';
+                    return '![' + alt + '](' + src + titlePart + ')';
+                }
+            });
+
+            // md-image-container 规则：只输出其中的 img，忽略 md-image-caption
+            ts.addRule('mdImageContainer', {
+                filter: function(node) {
+                    return node.nodeName === 'SPAN' && node.classList && node.classList.contains('md-image-container');
+                },
+                replacement: function(content, node) {
+                    var img = node.querySelector('img');
+                    if (!img) return content;
+                    var alt = img.getAttribute('alt') || '';
+                    var src = img.getAttribute('src') || '';
+                    var title = img.getAttribute('title') || '';
+                    try { src = decodeURIComponent(src); } catch (e) { /* 保持原样 */ }
+                    var titlePart = title ? ' "' + title + '"' : '';
+                    return '![' + alt + '](' + src + titlePart + ')';
+                }
+            });
+
             ts.addRule('taskListItem', {
                 filter: function(node) {
                     return node.nodeName === 'LI' && node.classList.contains('task-list-item');
@@ -2019,9 +2055,28 @@ this.innerHTML = t('modal.ai_result.copied');
                 }
             }
 
-            // 还原图片路径
+            // 还原图片路径：将 webview URI 还原为原始相对路径，解码 URL 编码的中文
+            const imageUriCache = Renderer.getImageUriCache();
+            // 构建反向映射：webview URI → 原始相对路径
+            const reverseImageUriMap = {};
+            for (const [relativePath, webviewUri] of Object.entries(imageUriCache)) {
+                reverseImageUriMap[webviewUri] = relativePath;
+            }
             tempDiv.querySelectorAll('img').forEach(img => {
                 img.removeAttribute('onerror');
+                const src = img.getAttribute('src') || '';
+                // 尝试通过反向映射还原为原始相对路径
+                if (reverseImageUriMap[src]) {
+                    img.setAttribute('src', reverseImageUriMap[src]);
+                } else {
+                    // 没有反向映射时，尝试解码 URL 编码
+                    try {
+                        const decoded = decodeURIComponent(src);
+                        if (decoded !== src) {
+                            img.setAttribute('src', decoded);
+                        }
+                    } catch (e) { /* 保持原样 */ }
+                }
             });
 
             console.log('[DIAG] blockHtmlToMarkdown: tempDiv.innerHTML（前500字符）:', tempDiv.innerHTML.substring(0, 500));
@@ -2054,20 +2109,67 @@ this.innerHTML = t('modal.ai_result.copied');
         console.log('[DIAG] _editSnapshotBlocks.length:', _editSnapshotBlocks.length);
         console.log('[DIAG] _editSnapshotHtmls.length:', _editSnapshotHtmls.length);
 
+        // ===== Block 对齐算法 =====
+        // 当用户在编辑模式下删除或新增了整个 block（如删除图片），
+        // currentMdBlocks 的数量可能与 _editSnapshotBlocks 不同，
+        // 导致简单的索引对应关系错位。
+        // 通过 HTML 内容匹配建立 currentBlock[i] → snapshotBlock[j] 的映射。
+        const blockAlignMap = new Array(currentMdBlocks.length).fill(-1);
+        {
+            const snapshotUsed = new Set();
+            // 第一遍：精确匹配（HTML 完全相同）
+            for (let i = 0; i < currentMdBlocks.length; i++) {
+                const currentHtml = normalizeHtmlForCompare(currentMdBlocks[i].innerHTML);
+                // 优先在附近位置查找匹配（避免远距离错误匹配）
+                for (let j = Math.max(0, i - 3); j < Math.min(_editSnapshotHtmls.length, i + 4); j++) {
+                    if (snapshotUsed.has(j)) continue;
+                    const snapshotHtml = normalizeHtmlForCompare(_editSnapshotHtmls[j]);
+                    if (currentHtml === snapshotHtml) {
+                        blockAlignMap[i] = j;
+                        snapshotUsed.add(j);
+                        break;
+                    }
+                }
+            }
+            // 第二遍：对未匹配的 current block，按顺序分配最近的未使用 snapshot
+            // （这些是内容有变化的 block，需要走行级 diff 或 turndown）
+            let nextSnapshotIdx = 0;
+            for (let i = 0; i < currentMdBlocks.length; i++) {
+                if (blockAlignMap[i] !== -1) continue;
+                // 找到下一个未使用的 snapshot 索引
+                while (nextSnapshotIdx < _editSnapshotBlocks.length && snapshotUsed.has(nextSnapshotIdx)) {
+                    nextSnapshotIdx++;
+                }
+                if (nextSnapshotIdx < _editSnapshotBlocks.length) {
+                    blockAlignMap[i] = nextSnapshotIdx;
+                    snapshotUsed.add(nextSnapshotIdx);
+                    nextSnapshotIdx++;
+                }
+                // 如果没有可用的 snapshot → blockAlignMap[i] 保持 -1（新增 block）
+            }
+            console.log('[DIAG] blockAlignMap:', JSON.stringify(blockAlignMap));
+        }
+
         for (let i = 0; i < currentMdBlocks.length; i++) {
             const blockEl = currentMdBlocks[i];
             const currentHtml = normalizeHtmlForCompare(blockEl.innerHTML);
-            const snapshotHtml = i < _editSnapshotHtmls.length ? normalizeHtmlForCompare(_editSnapshotHtmls[i]) : null;
+            const alignedIdx = blockAlignMap[i];
+            const snapshotHtml = alignedIdx >= 0 && alignedIdx < _editSnapshotHtmls.length ? normalizeHtmlForCompare(_editSnapshotHtmls[alignedIdx]) : null;
 
-            if (snapshotHtml !== null && currentHtml === snapshotHtml && i < _editSnapshotBlocks.length) {
+            if (snapshotHtml !== null && currentHtml === snapshotHtml && alignedIdx < _editSnapshotBlocks.length) {
                 // Block 未变化 → 保持原始 Markdown（含被提取的定义行）
-                resultParts.push(_editSnapshotBlocks[i]);
-                console.log('[DIAG] Block', i, '→ 未变化，保持原始 Markdown（前50字符）:', _editSnapshotBlocks[i].substring(0, 50));
+                let origMd = _editSnapshotBlocks[alignedIdx];
+                // 将该 block 中被提取的内联定义行追加回去
+                if (alignedIdx < inlineExtractedDefs.length && inlineExtractedDefs[alignedIdx].length > 0) {
+                    origMd = origMd + '\n\n' + inlineExtractedDefs[alignedIdx].join('\n');
+                }
+                resultParts.push(origMd);
+                console.log('[DIAG] Block', i, '(aligned→' + alignedIdx + ') → 未变化，保持原始 Markdown（前50字符）:', _editSnapshotBlocks[alignedIdx].substring(0, 50));
             } else {
                 // Block 有变化 → 优先尝试行级精确替换，fallback 到 turndown
                 hasChanges = true;
                 let converted = null;
-                console.log('[DIAG] Block', i, '→ 有变化');
+                console.log('[DIAG] Block', i, '(aligned→' + alignedIdx + ') → 有变化');
                 console.log('[DIAG] Block', i, 'snapshotHtml === null?', snapshotHtml === null);
                 console.log('[DIAG] Block', i, 'currentHtml（前100字符）:', currentHtml.substring(0, 100));
                 if (snapshotHtml !== null) console.log('[DIAG] Block', i, 'snapshotHtml（前100字符）:', snapshotHtml.substring(0, 100));
@@ -2076,8 +2178,8 @@ this.innerHTML = t('modal.ai_result.copied');
                 // 注意：对于包含引用块、告警块、代码块等复杂结构的 block，
                 // innerText 行数与原始 Markdown 行数可能不一致，直接跳过行级 diff
                 const hasComplexStructure = blockEl.querySelector('blockquote, .gh-alert, .code-block, .mermaid-container, .plantuml-container, .graphviz-container, pre > code');
-                if (!hasComplexStructure && i < _editSnapshotBlocks.length) {
-                    const origMd = _editSnapshotBlocks[i];
+                if (!hasComplexStructure && alignedIdx >= 0 && alignedIdx < _editSnapshotBlocks.length) {
+                    const origMd = _editSnapshotBlocks[alignedIdx];
                     const origLines = origMd.split('\n');
 
                     // 从当前 DOM 提取纯文本行（用 innerText 保持换行）
@@ -2157,8 +2259,8 @@ this.innerHTML = t('modal.ai_result.copied');
 
                     // turndown 不保留原始 Markdown 的前导缩进，
                     // 尝试从原始 Markdown 恢复每行的前导空格
-                    if (i < _editSnapshotBlocks.length) {
-                        const origMd = _editSnapshotBlocks[i];
+                    if (alignedIdx >= 0 && alignedIdx < _editSnapshotBlocks.length) {
+                        const origMd = _editSnapshotBlocks[alignedIdx];
                         const origLines = origMd.split('\n');
                         const convertedLines = converted.split('\n');
                         if (origLines.length === convertedLines.length) {
@@ -2289,8 +2391,8 @@ this.innerHTML = t('modal.ai_result.copied');
                 }
 
                 // 将该 block 中被提取的内联定义行（引用式链接/脚注）追加回去
-                if (i < inlineExtractedDefs.length && inlineExtractedDefs[i].length > 0) {
-                    converted = converted + '\n\n' + inlineExtractedDefs[i].join('\n');
+                if (alignedIdx >= 0 && alignedIdx < inlineExtractedDefs.length && inlineExtractedDefs[alignedIdx].length > 0) {
+                    converted = converted + '\n\n' + inlineExtractedDefs[alignedIdx].join('\n');
                 }
                 resultParts.push(converted);
             }

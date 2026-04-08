@@ -1865,5 +1865,5 @@ const Renderer = (() => {
         }
     }
 
-    return { parseMarkdown, renderBlocks, getBlockIndex, setImageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, restoreMathPlaceholders, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
+    return { parseMarkdown, renderBlocks, getBlockIndex, setImageUriCache, getImageUriCache: () => _imageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, restoreMathPlaceholders, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
 })();
