@@ -1899,20 +1899,31 @@ this.innerHTML = t('modal.ai_result.copied');
             const codeBlockData = [];
             blockEl.querySelectorAll('.code-block').forEach((codeBlockEl, idx) => {
                 const codeEl = codeBlockEl.querySelector('pre code');
-                if (!codeEl) return;
-                // 从原始 DOM 中提取代码内容（处理 contenteditable 产生的 <br> 和 <div>）
-                const clonedCode = codeEl.cloneNode(true);
-                clonedCode.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-                clonedCode.querySelectorAll('div').forEach(div => {
+                const preEl = codeBlockEl.querySelector('pre');
+                if (!preEl && !codeEl) return;
+                // 从整个 .code-block 提取代码内容（排除 code-header）。
+                // 原因：contenteditable 下用户在代码块中按 Enter 时，
+                // 浏览器会将新行包裹在 <div> 中并放到 <code> 外部，
+                // 甚至可能放到 <pre> 外部但仍在 .code-block 内部，
+                // 导致只从 <code> 或 <pre> 提取会丢失新增行及其后的所有内容。
+                const clonedBlock = codeBlockEl.cloneNode(true);
+                // 移除 code-header（复制/语言标签等 UI 元素，不属于代码内容）
+                clonedBlock.querySelectorAll('.code-header').forEach(h => h.remove());
+                // 处理 contenteditable 产生的 <br> 和 <div>
+                clonedBlock.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+                clonedBlock.querySelectorAll('div').forEach(div => {
+                    // 跳过包含 <pre> 的 div（避免重复提取）
+                    if (div.querySelector('pre')) return;
                     const text = div.textContent;
                     div.replaceWith('\n' + text);
                 });
-                const plainCode = clonedCode.textContent;
-                const className = codeEl.getAttribute('class') || '';
+                const plainCode = clonedBlock.textContent;
+                const className = codeEl ? (codeEl.getAttribute('class') || '') : '';
                 const dataLang = codeBlockEl.getAttribute('data-lang') || '';
                 codeBlockData.push({ index: idx, plainCode, className, dataLang });
                 console.log('[DIAG] blockHtmlToMarkdown: 从原始 DOM 提取代码块', idx, '内容（前100字符）:', plainCode.substring(0, 100));
-                console.log('[DIAG] blockHtmlToMarkdown: code 元素 childNodes 数量:', codeEl.childNodes.length, 'innerHTML（前200字符）:', codeEl.innerHTML.substring(0, 200));
+                console.log('[DIAG] blockHtmlToMarkdown: codeBlock childNodes 数量:', codeBlockEl.childNodes.length);
+                if (preEl) console.log('[DIAG] blockHtmlToMarkdown: pre innerHTML（前200字符）:', preEl.innerHTML.substring(0, 200));
             });
 
             const cleanHtml = blockEl.innerHTML

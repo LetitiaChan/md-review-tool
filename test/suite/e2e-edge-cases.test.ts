@@ -1602,9 +1602,11 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 appCode.includes("blockEl.querySelectorAll('.code-block')"),
                 'blockHtmlToMarkdown 应从原始 blockEl DOM 中提取代码块'
             );
+            // 应从整个 .code-block 克隆提取内容（而非仅从 code 元素），
+            // 因为 contenteditable 下浏览器可能将新行移到 <code> 外部
             assert.ok(
-                appCode.includes("codeEl.cloneNode(true)"),
-                'blockHtmlToMarkdown 应克隆 code 元素以安全处理 br/div'
+                appCode.includes("codeBlockEl.cloneNode(true)"),
+                'blockHtmlToMarkdown 应克隆整个 code-block 元素以安全处理 br/div'
             );
             // 不应再使用 querySelectorAll('.code-line') 来收集内容
             assert.ok(
@@ -1613,26 +1615,27 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             );
         });
 
-        test('BT-codeBlockNewLine.1 代码块内容提取应使用 clonedCode.textContent', () => {
-            // Tier 1 — 存在性断言：验证从克隆的 DOM 中使用 textContent 获取所有文本内容
-            // 修复：先从原始 DOM 克隆 code 元素，处理 br/div 后提取 textContent，
-            // 避免 tempDiv.innerHTML 重新解析时浏览器修复不合法嵌套导致内容截断
+        test('BT-codeBlockNewLine.1 代码块内容提取应使用 clonedBlock.textContent', () => {
+            // Tier 1 — 存在性断言：验证从克隆的 .code-block DOM 中使用 textContent 获取所有文本内容
+            // 修复：先从原始 DOM 克隆整个 .code-block 元素（而非仅 code 元素），
+            // 处理 br/div 后提取 textContent，确保 contenteditable 下新增行不会丢失
             assert.ok(
-                appCode.includes('const plainCode = clonedCode.textContent'),
-                '代码块内容提取应使用 clonedCode.textContent 获取所有文本（包括新增行）'
+                appCode.includes('const plainCode = clonedBlock.textContent'),
+                '代码块内容提取应使用 clonedBlock.textContent 获取所有文本（包括新增行）'
             );
         });
 
         test('BT-codeBlockNewLine.2 代码块应处理 contenteditable 中的 br 和 div 元素', () => {
             // Tier 2 — 行为级断言：验证处理 contenteditable 中按 Enter 产生的 <br> 和 <div>
-            // 修复：现在在克隆的 code 元素上处理 br/div，而非在 tempDiv 中处理
+            // 修复：现在在克隆的 .code-block 元素上处理 br/div，
+            // 确保即使浏览器将新行移到 <code> 或 <pre> 外部也能正确提取
             assert.ok(
-                appCode.includes("clonedCode.querySelectorAll('br')"),
-                '代码块处理应将 <br> 替换为换行符（在克隆的 DOM 上操作）'
+                appCode.includes("clonedBlock.querySelectorAll('br')"),
+                '代码块处理应将 <br> 替换为换行符（在克隆的 .code-block 上操作）'
             );
             assert.ok(
-                appCode.includes("clonedCode.querySelectorAll('div')"),
-                '代码块处理应将 <div> 替换为换行符+内容（在克隆的 DOM 上操作）'
+                appCode.includes("clonedBlock.querySelectorAll('div')"),
+                '代码块处理应将 <div> 替换为换行符+内容（在克隆的 .code-block 上操作）'
             );
         });
 
@@ -1642,6 +1645,38 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             assert.ok(
                 !appCode.includes("Array.from(codeLines).map(line => line.textContent).join"),
                 '不应使用 Array.from(codeLines).map(line => line.textContent).join 模式（会丢失新增行）'
+            );
+        });
+
+        test('BT-codeBlockContentEditable.1 代码块应从整个 .code-block 克隆提取内容', () => {
+            // Tier 1 — 存在性断言：验证使用 codeBlockEl.cloneNode(true) 而非 codeEl.cloneNode(true)
+            // 原因：contenteditable 下按 Enter 时，浏览器将新行的 <div> 放到 <code> 外部，
+            // 甚至可能放到 <pre> 外部但仍在 .code-block 内部
+            assert.ok(
+                appCode.includes('codeBlockEl.cloneNode(true)'),
+                '应从整个 .code-block 元素克隆提取内容（而非仅从 code 元素）'
+            );
+            assert.ok(
+                !appCode.includes('codeEl.cloneNode(true)'),
+                '不应仅从 code 元素克隆（会丢失被浏览器移到 code 外部的新增行）'
+            );
+        });
+
+        test('BT-codeBlockContentEditable.2 代码块提取应排除 code-header UI 元素', () => {
+            // Tier 2 — 行为级断言：验证克隆后移除 code-header（复制按钮、语言标签等 UI 元素）
+            // 避免将 UI 元素的文本混入代码内容
+            assert.ok(
+                appCode.includes("clonedBlock.querySelectorAll('.code-header').forEach"),
+                '应在克隆的 .code-block 上移除 code-header UI 元素'
+            );
+        });
+
+        test('BT-codeBlockContentEditable.3 代码块提取应容错 codeEl 不存在的情况', () => {
+            // Tier 3 — 任务特定断言：当浏览器严重破坏 DOM 结构导致 <code> 元素消失时，
+            // 仍应能从 .code-block 提取内容
+            assert.ok(
+                appCode.includes("const className = codeEl ? (codeEl.getAttribute('class') || '') : ''"),
+                '应容错处理 codeEl 不存在的情况（使用可选链或条件判断）'
             );
         });
 
