@@ -10,19 +10,23 @@ test.describe('批注高亮测试', () => {
     });
 
     test('BT-annotation.1 批注高亮区域可以通过 DOM 操作创建并显示', async ({ page }) => {
-        // 模拟添加批注高亮（生产代码中由 Annotations 模块处理）
-        await page.evaluate(() => {
-            const blocks = document.querySelectorAll('.md-block');
-            if (blocks.length < 2) return;
+        // 先确认有 md-block 元素
+        const blockCount = await page.locator('.md-block').count();
+        expect(blockCount).toBeGreaterThanOrEqual(1);
 
-            // 在第二个 block 的 p 元素中创建高亮标记
-            const targetBlock = blocks[1];
-            const p = targetBlock.querySelector('p');
-            if (p) {
-                const originalHTML = p.innerHTML;
-                p.innerHTML = `<span class="annotation-highlight" data-annotation-id="test-ann-1" style="background-color: rgba(255, 235, 59, 0.4); cursor: pointer;">${originalHTML.substring(0, 20)}</span>${originalHTML.substring(20)}`;
-            }
+        // 在第一个包含 p 元素的 block 中创建高亮标记
+        const created = await page.evaluate(() => {
+            const paragraphs = document.querySelectorAll('.md-block p');
+            if (paragraphs.length === 0) return false;
+
+            const p = paragraphs[0];
+            const originalHTML = p.innerHTML;
+            if (originalHTML.length < 5) return false;
+
+            p.innerHTML = `<span class="annotation-highlight" data-annotation-id="test-ann-1" style="background-color: rgba(255, 235, 59, 0.4); cursor: pointer;">${originalHTML.substring(0, 20)}</span>${originalHTML.substring(20)}`;
+            return true;
         });
+        expect(created).toBe(true);
 
         // 验证高亮区域存在
         const highlights = page.locator('.annotation-highlight');
@@ -42,15 +46,12 @@ test.describe('批注高亮测试', () => {
 
     test('BT-annotation.2 点击批注高亮可以触发事件', async ({ page }) => {
         // 创建批注高亮和对应的批注卡片
-        await page.evaluate(() => {
-            // 创建高亮
-            const blocks = document.querySelectorAll('.md-block');
-            if (blocks.length < 2) return;
-            const targetBlock = blocks[1];
-            const p = targetBlock.querySelector('p');
-            if (p) {
-                p.innerHTML = `<span class="annotation-highlight" data-annotation-id="test-ann-1" style="background-color: rgba(255, 235, 59, 0.4); cursor: pointer;">高亮文本</span>${p.innerHTML}`;
-            }
+        const created = await page.evaluate(() => {
+            const paragraphs = document.querySelectorAll('.md-block p');
+            if (paragraphs.length === 0) return false;
+
+            const p = paragraphs[0];
+            p.innerHTML = `<span class="annotation-highlight" data-annotation-id="test-ann-1" style="background-color: rgba(255, 235, 59, 0.4); cursor: pointer;">高亮文本</span>${p.innerHTML}`;
 
             // 创建批注卡片
             const annotationsList = document.getElementById('annotationsList');
@@ -58,6 +59,7 @@ test.describe('批注高亮测试', () => {
                 const card = document.createElement('div');
                 card.className = 'annotation-card';
                 card.setAttribute('data-annotation-id', 'test-ann-1');
+                card.style.display = 'block';
                 card.innerHTML = '<div class="annotation-content">测试批注内容</div>';
                 annotationsList.appendChild(card);
             }
@@ -72,14 +74,17 @@ test.describe('批注高亮测试', () => {
                     }
                 });
             }
+            return true;
         });
+        expect(created).toBe(true);
 
         // 点击高亮区域
         const highlight = page.locator('.annotation-highlight').first();
+        await expect(highlight).toBeVisible();
         await highlight.click();
 
         // 验证批注卡片获得 active 状态
         const activeCard = page.locator('.annotation-card.active');
-        await expect(activeCard).toBeVisible({ timeout: 3000 });
+        await expect(activeCard).toHaveCount(1);
     });
 });

@@ -7,6 +7,7 @@
 
 ## 最近更新
 
+- **2026-04-08**: 引入 Playwright 自动化 UI 测试基础设施（add-automated-ui-testing），23 个测试覆盖图表渲染、Lightbox 交互、Checkbox 行为、基础渲染、批注高亮
 - **2026-04-08**: 🚀 发布 v1.3.0 到 VS Code Marketplace（含正文搜索 Ctrl+F、目录搜索过滤、批注搜索定位）
 - **2026-04-08**: 增加 Ctrl+F 正文检索、目录搜索过滤、批注搜索定位功能（add-search-features）
 - **2026-04-07**: 🚀 发布 v1.2.0 到 VS Code Marketplace（含多语言支持、编辑模式增强、PlantUML/Graphviz、多窗口、大量 bugfix）
@@ -35,6 +36,7 @@
 
 | 变更名 | 描述 | 归档日期 |
 |--------|------|---------|
+| add-automated-ui-testing | Playwright 自动化 UI 测试基础设施，23 个测试覆盖图表/Lightbox/Checkbox/渲染/批注 | 2026-04-08 |
 | add-search-features | Ctrl+F 正文检索、目录面板搜索过滤、批注面板搜索定位 | 2026-04-08 |
 | add-i18n-support | 多语言支持（中文/英文），i18n 模块、设置面板语言切换、HTML/JS/CSS/TS 全量国际化 | 2026-04-06 |
 | ui-enhancements-batch-1 | UI 增强：任务列表删除线移除、工具栏重排、面板隐藏按钮、多窗口、悬浮/嵌入模式、文档对齐、编辑后渲染修复 | 2026-04-05 |
@@ -48,7 +50,7 @@
 
 | 变更名 | 描述 | 建议优先级 |
 |--------|------|-----------|
-| add-automated-ui-testing | 引入 Playwright 自动化 UI 测试，覆盖 Webview 图表渲染、Lightbox 交互、Checkbox 行为等（仅有 proposal，待补齐 design + tasks） | 中 |
+| （暂无活跃变更） | — | — |
 
 ---
 
@@ -63,6 +65,8 @@
 | panel-layout-modes | ui-enhancements-batch-1 | 面板悬浮/嵌入模式切换、文档对齐（靠左/居中/靠右） |
 | plantuml-rendering | add-plantuml-graphviz-support | PlantUML 代码块渲染、降级、lightbox、设置项 |
 | graphviz-rendering | add-plantuml-graphviz-support | Graphviz DOT 代码块渲染、降级、lightbox、主题适配、延迟加载、设置项 |
+| ui-testing-infra | add-automated-ui-testing | Playwright 测试基础设施、Mock 层、测试容器、辅助工具 |
+| ui-rendering-tests | add-automated-ui-testing | UI 渲染测试套件：图表、Lightbox、Checkbox、基础渲染、批注 |
 
 ---
 
@@ -79,7 +83,9 @@ md-review-tool/
 │   ├── *.js                        # 前端 JS 模块
 │   ├── *.css                       # 样式文件
 │   └── *.woff2                     # 字体文件
-├── test/                           # Mocha 测试
+├── test/                           # 测试
+│   ├── suite/                      # Mocha 单元测试
+│   └── ui/                         # Playwright UI 测试
 ├── syntaxes/                       # .mdc 语法高亮定义
 ├── assets/                         # 图标等资源
 ├── openspec/                       # OpenSpec 工作流
