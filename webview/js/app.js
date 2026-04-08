@@ -1929,13 +1929,24 @@ this.innerHTML = t('modal.ai_result.copied');
                     // 去掉 innerText 末尾的换行符（浏览器在块级元素后会自动添加 \n）
                     const currentLines = currentText.replace(/\n+$/, '').split('\n');
 
-                    // 从原始 Markdown 提取纯文本（去掉 Markdown 标记）
+                    // 从原始 Markdown 提取纯文本（去掉 Markdown 标记）用于与 innerText 比较
                     function stripMdMarkers(line) {
                         return line
                             .replace(/^(\s*)([-*+]|\d+\.)\s+(\[[ xX]\]\s*)?/, '') // 列表标记+checkbox
                             .replace(/^#+\s+/, '')  // 标题
                             .replace(/^>\s*/, '')    // 引用
+                            .replace(/\*\*(.+?)\*\*/g, '$1')  // **加粗**
+                            .replace(/__(.+?)__/g, '$1')       // __加粗__
+                            .replace(/\*(.+?)\*/g, '$1')       // *斜体*
+                            .replace(/_(.+?)_/g, '$1')         // _斜体_
+                            .replace(/~~(.+?)~~/g, '$1')       // ~~删除线~~
+                            .replace(/`([^`]+)`/g, '$1')       // `行内代码`
                             .trim();
+                    }
+
+                    // 检测原始 Markdown 行是否包含内联格式标记
+                    function hasInlineFormatting(line) {
+                        return /\*\*.+?\*\*|__.+?__|(?<!\*)\*(?!\*).+?(?<!\*)\*(?!\*)|(?<!_)_(?!_).+?(?<!_)_(?!_)|~~.+?~~|`.+?`/.test(line);
                     }
 
                     // 只在行数相同时尝试行级替换（结构未变）
@@ -1953,6 +1964,13 @@ this.innerHTML = t('modal.ai_result.copied');
                                 // 说明行对应关系可能已错位，放弃行级 diff
                                 if ((origStripped.length > 0 && currStripped.length === 0) ||
                                     (origStripped.length === 0 && currStripped.length > 0)) {
+                                    canPatch = false;
+                                    break;
+                                }
+                                // 如果原始行包含内联格式标记（**加粗**、`代码`等），
+                                // 行级 diff 无法安全地将纯文本 currStripped 替换回带格式的 Markdown，
+                                // 放弃行级 diff，fallback 到 turndown 以正确还原格式
+                                if (hasInlineFormatting(origLines[j])) {
                                     canPatch = false;
                                     break;
                                 }

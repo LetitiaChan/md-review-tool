@@ -953,4 +953,54 @@ suite('Workflow Test Suite — 完整工作流', () => {
             );
         });
     });
+
+    suite('编辑模式 Bug 回归：行内代码/加粗编辑不应导致格式丢失', () => {
+        test('app.js stripMdMarkers 应去掉内联格式标记（**加粗**、`代码`等）', () => {
+            // 回归测试：stripMdMarkers 只去掉行首标记但不去掉内联格式标记，
+            // 导致与 innerText 纯文本比较时不匹配，未变化的行被误判为"已变化"
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            const appJs = fs.readFileSync(path.join(extPath!, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // 验证 stripMdMarkers 去掉 **加粗** 标记
+            assert.ok(
+                appJs.includes(".replace(/\\*\\*(.+?)\\*\\*/g, '$1')"),
+                'stripMdMarkers 应去掉 **加粗** 标记'
+            );
+
+            // 验证 stripMdMarkers 去掉 `行内代码` 标记
+            assert.ok(
+                appJs.includes(".replace(/`([^`]+)`/g, '$1')"),
+                'stripMdMarkers 应去掉 `行内代码` 标记'
+            );
+
+            // 验证 stripMdMarkers 去掉 ~~删除线~~ 标记
+            assert.ok(
+                appJs.includes(".replace(/~~(.+?)~~/g, '$1')"),
+                'stripMdMarkers 应去掉 ~~删除线~~ 标记'
+            );
+        });
+
+        test('app.js 行级 diff 应在变化行包含内联格式时 fallback 到 turndown', () => {
+            // 回归测试：当变化行包含 **加粗** 或 `代码` 等内联格式时，
+            // 行级 diff 无法安全替换，应放弃行级 diff fallback 到 turndown
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            assert.ok(extPath);
+
+            const appJs = fs.readFileSync(path.join(extPath!, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // 验证 hasInlineFormatting 函数存在
+            assert.ok(
+                appJs.includes('function hasInlineFormatting(line)'),
+                '应有 hasInlineFormatting 函数检测内联格式标记'
+            );
+
+            // 验证在变化行包含内联格式时放弃行级 diff
+            assert.ok(
+                appJs.includes('if (hasInlineFormatting(origLines[j]))'),
+                '变化行包含内联格式时应放弃行级 diff'
+            );
+        });
+    });
 });
