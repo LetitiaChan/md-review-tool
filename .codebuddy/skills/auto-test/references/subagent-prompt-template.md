@@ -1,13 +1,25 @@
 # Auto-Test 执行模板
 
-> **重要发现**: `code-explorer` subagent **不具备 `execute_command` 工具**，无法执行编译/测试命令。
-> 因此自动测试必须由**主 agent 直接执行**（Mode 1），不能委托给 subagent。
-> 
-> `code-explorer` subagent 的价值在于：**测试失败后的诊断阶段**——搜索源码、定位错误原因、分析影响面。
+## 项目级 Agent 委托（推荐方式）
+
+项目已配置 `auto-test` 项目级 Agent（`.codebuddy/agents/auto-test.md`），具备 `ExecuteCommand` 等全部工具，可独立完成编译 + 测试 + 诊断修复。
+
+### 调用方式
+
+```
+Task(
+  subagent_name="auto-test",
+  subagent_path=".codebuddy/agents/auto-test.md",
+  description="自动测试验证",
+  prompt="执行全量编译 + 双层测试。上下文: <简述本次变更>"
+)
+```
 
 ---
 
-## 主 Agent 自动测试标准流程
+## 主 Agent 直接执行（备选方式）
+
+当 subagent 不可用时，主 agent 按以下步骤直接执行：
 
 ### Step 1: 编译验证
 ```bash
@@ -24,7 +36,7 @@ cd f:/github/md-review-tool && npm run test:ui 2>&1
 - Layer 2: 查找 `N passed`、`N failed`、`N skipped`
 
 ### Step 4: Auto-Fix Loop（如有失败，max 3 轮）
-1. 诊断 → 可委托 `code-explorer` 搜索源码
+1. 诊断 → 读取错误信息，搜索源码
 2. 分类 → Trivial(<10行)/Moderate(<50行)/Large(>50行)
 3. 修复 → replace_in_file → 重编译 → 重测试
 
@@ -37,18 +49,6 @@ cd f:/github/md-review-tool && npm run test:ui 2>&1
 | Layer 1 (Mocha) | ✅/❌ | N passing, K failing |
 | Layer 2 (Playwright) | ✅/❌ | N passed, K failed, S skipped |
 | Auto-Fix | ✅/⏭️/❌ | 修复 N 个 / 不需要 / N 个未解决 |
-```
-
----
-
-## Subagent 委托（仅诊断阶段）
-
-```
-Task(
-  subagent_name="code-explorer",
-  description="测试失败诊断",
-  prompt="在 f:/github/md-review-tool 中，测试 '<名>' 失败。错误: <详情>。搜索相关源码分析原因。"
-)
 ```
 
 ## 性能优化

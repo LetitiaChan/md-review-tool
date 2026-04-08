@@ -126,23 +126,30 @@ cd f:/github/md-review-tool && npm run test:ui 2>&1
 | Auto-Fix | ✅/⏭️/❌ | 修复 N 个 / 不需要 / N 个未解决 |
 ```
 
-## Execution Mode 2: Subagent 辅助诊断（失败分析专用）
+## Execution Mode 2: 项目级 Subagent 委托（推荐）
 
-> **限制**: `code-explorer` subagent 不具备 `execute_command`，无法执行编译/测试命令。
-> 它的价值在于测试**失败后的诊断阶段**——搜索源码、定位错误原因、分析影响面。
+项目已配置专用的 `auto-test` 项目级 Agent（`.codebuddy/agents/auto-test.md`），具备 `ExecuteCommand`、`ReadFile`、`SearchContent`、`ReplaceInFile` 等完整工具集，可独立执行编译 + 测试 + 诊断修复全流程。
 
-### 调用方式（仅在测试失败时使用）
+### 调用方式
 
 ```
 Task(
-  subagent_name="code-explorer",
-  description="测试失败诊断",
-  prompt="在 f:/github/md-review-tool 中，测试 '<失败测试名>' 失败。
-         错误: <错误详情>。搜索相关源码分析原因，定位需修改的文件和行号。"
+  subagent_name="auto-test",
+  subagent_path=".codebuddy/agents/auto-test.md",
+  description="自动测试验证",
+  prompt="执行全量编译 + 双层测试。上下文: <简述本次变更>"
 )
 ```
 
-详见 `references/subagent-prompt-template.md`
+### 使用场景
+
+| 场景 | prompt 示例 |
+|------|-------------|
+| OpenSpec apply 完成后 | "执行全量编译 + 双层测试。上下文: 刚完成 xxx change 的所有任务实现" |
+| Hotfix 回归测试 | "执行全量编译 + 双层测试。上下文: hotfix 修复了 xxx（修改了 src/xxx.ts）" |
+| 用户手动请求 | "执行全量编译 + 双层测试。上下文: 用户请求全量测试验证" |
+
+详见 `.codebuddy/agents/auto-test.md` 中的完整 System Prompt。
 
 ## Adapting Tests for New Changes
 
@@ -170,7 +177,7 @@ openspec-apply-change (implement tasks)
     ↓
 Build (npm run compile)
     ↓
-auto-test (this skill — 主 agent 直接执行，诊断可委托 subagent)
+auto-test (this skill — Mode 1 直接执行 或 Mode 2 委托项目级 auto-test Agent)
     ↓ (all pass)
 openspec-verify-change → openspec-archive-change
     ↓ (failures)
