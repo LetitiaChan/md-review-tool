@@ -836,9 +836,58 @@
     <script src="${mermaidUri}"></script>
     <script src="${vizUri}"></script>
     <script src="${emojiMapUri}"></script>
+    <!-- 全局错误监听器（必须在所有 JS 之前加载，捕获 SyntaxError 等加载错误） -->
+    <script nonce="${nonce}">
+        (function() {
+            var _errors = [];
+            window.addEventListener('error', function(e) {
+                var info = {
+                    message: e.message || 'Unknown error',
+                    filename: e.filename || '',
+                    lineno: e.lineno || 0,
+                    colno: e.colno || 0,
+                    stack: e.error && e.error.stack ? e.error.stack : ''
+                };
+                _errors.push(info);
+                // 如果 vscode API 已可用，立即上报
+                if (window.__vscodeApi) {
+                    window.__vscodeApi.postMessage({
+                        type: 'webviewError',
+                        payload: info
+                    });
+                }
+            });
+            window.addEventListener('unhandledrejection', function(e) {
+                var info = {
+                    message: 'Unhandled Promise rejection: ' + (e.reason || 'unknown'),
+                    filename: '',
+                    lineno: 0,
+                    colno: 0,
+                    stack: e.reason && e.reason.stack ? e.reason.stack : ''
+                };
+                _errors.push(info);
+                if (window.__vscodeApi) {
+                    window.__vscodeApi.postMessage({
+                        type: 'webviewError',
+                        payload: info
+                    });
+                }
+            });
+            // 暴露给后续脚本，用于在 vscode API 就绪后补发积压错误
+            window.__pendingErrors = _errors;
+        })();
+    </script>
     <!-- 初始化 VSCode API -->
     <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
+        window.__vscodeApi = vscode;
+        // 补发在 vscode API 就绪前积压的错误
+        if (window.__pendingErrors && window.__pendingErrors.length > 0) {
+            window.__pendingErrors.forEach(function(err) {
+                vscode.postMessage({ type: 'webviewError', payload: err });
+            });
+            window.__pendingErrors = [];
+        }
     </script>
     <!-- 应用脚本 -->
     <script src="${i18nUri}"></script>

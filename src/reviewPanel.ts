@@ -37,6 +37,7 @@ export class ReviewPanel {
     private _disposables: vscode.Disposable[] = [];
     private _currentFilePath: string | undefined;
     private _watcher: vscode.FileSystemWatcher | undefined;
+    private _webviewReady = false;
 
     public static createOrShow(context: vscode.ExtensionContext, filePath?: string) {
         const column = vscode.ViewColumn.Active;
@@ -154,6 +155,16 @@ export class ReviewPanel {
         if (filePath) {
             this._currentFilePath = filePath;
         }
+
+        // 方案 C：ready 超时检测 — 如果 webview 在 8 秒内未发送 ready 消息，提示可能存在 JS 加载错误
+        setTimeout(() => {
+            if (!this._webviewReady) {
+                const ch = vscode.window.createOutputChannel('MD Review - Webview');
+                ch.appendLine('[Warning] Webview 未在 8 秒内就绪，可能存在 JS 加载错误。');
+                ch.appendLine('请打开 DevTools (Ctrl+Shift+I 或 Help > Toggle Developer Tools) 检查 Console 输出。');
+                ch.show(true);
+            }
+        }, 8000);
     }
 
     public postMessage(message: any) {
@@ -207,7 +218,17 @@ export class ReviewPanel {
         const { type, payload, requestId } = message;
 
         switch (type) {
+            case 'webviewError': {
+                // 方案 B 上报：webview 全局错误监听器捕获的错误
+                const errCh = vscode.window.createOutputChannel('MD Review - Webview');
+                errCh.appendLine(`[Webview Error] ${payload.message}`);
+                if (payload.filename) { errCh.appendLine(`  File: ${payload.filename}:${payload.lineno}:${payload.colno}`); }
+                if (payload.stack) { errCh.appendLine(`  Stack: ${payload.stack}`); }
+                errCh.show(true);
+                break;
+            }
             case 'ready': {
+                this._webviewReady = true;
                 // Webview 初始化完成，发送初始文件
                 if (this._currentFilePath) {
                     this.loadFile(this._currentFilePath);

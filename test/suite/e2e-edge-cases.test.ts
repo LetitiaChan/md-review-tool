@@ -1311,6 +1311,28 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
         });
 
+        test('BT-webview-syntax.1 所有 webview JS 文件应通过 node --check 语法检查', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) {
+                assert.ok(true, '测试环境中扩展路径不可用');
+                return;
+            }
+
+            const { execSync } = require('child_process');
+            const jsFiles = ['i18n.js', 'store.js', 'renderer.js', 'annotations.js', 'export.js', 'settings.js', 'app.js'];
+            for (const js of jsFiles) {
+                const jsPath = path.join(extPath, 'webview', 'js', js);
+                if (!fs.existsSync(jsPath)) {
+                    assert.fail(`${js} 不存在，无法进行语法检查`);
+                }
+                try {
+                    execSync(`node --check "${jsPath}"`, { encoding: 'utf-8', stdio: 'pipe' });
+                } catch (e: any) {
+                    assert.fail(`${js} 语法检查失败: ${e.stderr || e.message}`);
+                }
+            }
+        });
+
         test('index.html 应包含完整的 HTML 结构', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
             if (!extPath) {
