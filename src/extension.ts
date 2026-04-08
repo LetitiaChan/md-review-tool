@@ -13,7 +13,6 @@ export function activate(context: vscode.ExtensionContext) {
                 const editor = vscode.window.activeTextEditor;
                 if (editor && (
                     editor.document.languageId === 'markdown' ||
-                    editor.document.languageId === 'mdc' ||
                     editor.document.fileName.endsWith('.md') ||
                     editor.document.fileName.endsWith('.mdc')
                 )) {

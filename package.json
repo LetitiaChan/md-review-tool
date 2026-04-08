@@ -44,7 +44,7 @@
   "contributes": {
     "languages": [
       {
-        "id": "mdc",
+        "id": "markdown",
         "extensions": [
           ".mdc"
         ],
@@ -53,13 +53,6 @@
           "Markdown Cursor"
         ],
         "configuration": "./language-configuration.json"
-      }
-    ],
-    "grammars": [
-      {
-        "language": "mdc",
-        "scopeName": "text.html.mdc",
-        "path": "./syntaxes/mdc.tmLanguage.json"
       }
     ],
     "commands": [

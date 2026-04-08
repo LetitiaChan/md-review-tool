@@ -15,9 +15,9 @@
 
 ## 📸 Screenshots
 
-| Light Theme | Dark Theme |
-|:-----------:|:----------:|
-| ![Light Theme](assets/main_page_light.png) | ![Dark Theme](assets/main_page_dark.png) |
+![intro](assets/intro.gif)
+
+![Main Page](assets/main_page_en.png) 
 
 ---
 
@@ -238,9 +238,9 @@ MIT
 
 ## 📸 截图预览
 
-| 亮色主题 | 暗色主题 |
-|:--------:|:--------:|
-| ![亮色主题](assets/main_page_light.png) | ![暗色主题](assets/main_page_dark.png) |
+![简介](assets/intro.gif)
+
+![主界面](assets/main_page_cn.png)
 
 ---
 
