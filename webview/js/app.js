@@ -2106,6 +2106,7 @@ this.innerHTML = t('modal.ai_result.copied');
                     }
 
                     // 只在行数相同时尝试行级替换（结构未变）
+                    console.log('[DIAG] Block', i, '行级 diff: origLines.length=', origLines.length, 'currentLines.length=', currentLines.length);
                     if (origLines.length === currentLines.length) {
                         const patchedLines = [];
                         let canPatch = true;
@@ -2152,7 +2153,7 @@ this.innerHTML = t('modal.ai_result.copied');
                     console.log('[DIAG] Block', i, '→ 行级 diff 失败，fallback 到 turndown');
                     console.log('[DIAG] Block', i, 'innerHTML（前200字符）:', blockEl.innerHTML.substring(0, 200));
                     converted = blockHtmlToMarkdown(blockEl, turndownService);
-                    console.log('[DIAG] Block', i, 'turndown 输出（前200字符）:', converted.substring(0, 200));
+                    console.log('[DIAG] Block', i, 'turndown 完整输出:', converted);
 
                     // turndown 不保留原始 Markdown 的前导缩进，
                     // 尝试从原始 Markdown 恢复每行的前导空格
@@ -2170,6 +2171,7 @@ this.innerHTML = t('modal.ai_result.copied');
                                 }
                             }
                             converted = convertedLines.join('\n');
+                            console.log('[DIAG] Block', i, '缩进恢复后 converted:', converted);
                         } else {
                             // 行数不同（新增/删除列表项等）：通过纯文本匹配，
                             // 将 turndown 输出的每行与原始 Markdown 行配对，恢复原始缩进。
@@ -2200,6 +2202,8 @@ this.innerHTML = t('modal.ai_result.copied');
                             // 检测原始 block 是否是列表上下文
                             const listItemRegex = /^(\s*)([-*+]|\d+[.)]) /;
                             const isListBlock = origLines.some(l => listItemRegex.test(l));
+                            console.log('[DIAG] Block', i, '行数不同分支: isListBlock=', isListBlock, 'origLines.length=', origLines.length, 'convertedLines.length=', convertedLines.length);
+                            console.log('[DIAG] Block', i, 'convertedLines:', JSON.stringify(convertedLines));
 
                             // 记录每行是否匹配到了原始行（用于后续处理新增行）
                             const matchedOrigIdx = new Array(convertedLines.length).fill(-1);
@@ -2234,17 +2238,18 @@ this.innerHTML = t('modal.ai_result.copied');
 
                             // 第二遍：处理新增行（没有匹配到原始行的行）
                             // 如果该 block 是列表上下文，为没有列表标记的新增行添加 `- ` 前缀
+                            console.log('[DIAG] Block', i, 'matchedOrigIdx:', JSON.stringify(matchedOrigIdx));
                             if (isListBlock) {
                                 for (let k = 0; k < convertedLines.length; k++) {
                                     if (matchedOrigIdx[k] !== -1) continue; // 已匹配的行跳过
                                     const line = convertedLines[k];
                                     if (!line.trim()) continue; // 空行跳过
-                                    if (listItemRegex.test(line)) continue; // 已有列表标记的行跳过
+                                    console.log('[DIAG] Block', i, '新增行 k=', k, 'line:', JSON.stringify(line));
 
-                                    // 新增行没有列表标记 → 从最近的列表项邻居继承缩进和标记风格
+                                    // 从最近的已匹配列表项邻居继承缩进和标记风格
                                     let neighborIndent = '';
                                     let neighborMarker = '- ';
-                                    // 向上查找最近的列表项行
+                                    // 向上查找最近的已匹配列表项行（优先使用已恢复缩进的行）
                                     for (let j = k - 1; j >= 0; j--) {
                                         const m = convertedLines[j].match(listItemRegex);
                                         if (m) {
@@ -2254,7 +2259,7 @@ this.innerHTML = t('modal.ai_result.copied');
                                         }
                                     }
                                     // 如果向上没找到，向下查找
-                                    if (!neighborMarker || neighborMarker === '- ') {
+                                    if (neighborIndent === '' && neighborMarker === '- ') {
                                         for (let j = k + 1; j < convertedLines.length; j++) {
                                             const m = convertedLines[j].match(listItemRegex);
                                             if (m) {
@@ -2264,7 +2269,18 @@ this.innerHTML = t('modal.ai_result.copied');
                                             }
                                         }
                                     }
-                                    convertedLines[k] = neighborIndent + neighborMarker + line.trim();
+
+                                    const existingMatch = line.match(listItemRegex);
+                                    console.log('[DIAG] Block', i, '新增行 k=', k, 'existingMatch:', !!existingMatch, 'neighborIndent:', JSON.stringify(neighborIndent), 'neighborMarker:', JSON.stringify(neighborMarker));
+                                    if (existingMatch) {
+                                        // 新增行已有列表标记 → 只修正缩进（继承邻居的缩进）
+                                        convertedLines[k] = neighborIndent + line.trimStart();
+                                        console.log('[DIAG] Block', i, '新增行 k=', k, '修正缩进后:', JSON.stringify(convertedLines[k]));
+                                    } else {
+                                        // 新增行没有列表标记 → 添加标记和缩进
+                                        convertedLines[k] = neighborIndent + neighborMarker + line.trim();
+                                        console.log('[DIAG] Block', i, '新增行 k=', k, '添加标记后:', JSON.stringify(convertedLines[k]));
+                                    }
                                 }
                             }
                             converted = convertedLines.join('\n');
