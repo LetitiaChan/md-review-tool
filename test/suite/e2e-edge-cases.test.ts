@@ -275,7 +275,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             cleanupFile(filePath);
         });
 
-        test('BT-mermaid-seq-preprocess.1 renderer.js 应包含 sequenceDiagram 特殊字符预处理函数', () => {
+        test('BT-mermaid-preprocess.1 renderer.js 应包含通用 Mermaid 特殊字符预处理函数', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
             if (!extPath) {
                 assert.ok(true, '测试环境中扩展路径不可用');
@@ -285,15 +285,28 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
             const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
 
-            // Tier 1：验证预处理函数存在
+            // Tier 1：验证通用预处理入口函数存在
             assert.ok(
-                rendererCode.includes('preprocessMermaidSequenceDiagram'),
-                'renderer.js 应包含 preprocessMermaidSequenceDiagram 预处理函数'
+                rendererCode.includes('preprocessMermaidCode'),
+                'renderer.js 应包含 preprocessMermaidCode 通用预处理函数'
             );
             // 验证预处理函数在 mermaid.render 调用前被使用
             assert.ok(
-                rendererCode.includes('preprocessMermaidSequenceDiagram(code)'),
+                rendererCode.includes('preprocessMermaidCode(code)'),
                 '预处理函数应在 mermaid.render 调用前被调用'
+            );
+            // Tier 1：验证各图表类型的子处理函数存在
+            assert.ok(
+                rendererCode.includes('preprocessSequenceDiagram'),
+                'renderer.js 应包含 preprocessSequenceDiagram 子处理函数'
+            );
+            assert.ok(
+                rendererCode.includes('preprocessClassDiagram'),
+                'renderer.js 应包含 preprocessClassDiagram 子处理函数'
+            );
+            assert.ok(
+                rendererCode.includes('preprocessStateDiagram'),
+                'renderer.js 应包含 preprocessStateDiagram 子处理函数'
             );
         });
 
@@ -318,6 +331,58 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             assert.ok(result.content.includes('sequenceDiagram'));
             assert.ok(result.content.includes('C++'));
             assert.ok(result.content.includes('participant'));
+
+            cleanupFile(filePath);
+        });
+
+        test('BT-mermaid-class-special-chars.1 含 C++ 类名的 classDiagram 文档 → 读取正常', () => {
+            const content = [
+                '# ClassDiagram 特殊字符测试',
+                '',
+                '```mermaid',
+                'classDiagram',
+                '    class C++ {',
+                '        +compile()',
+                '        -link()',
+                '    }',
+                '    class C# {',
+                '        +build()',
+                '    }',
+                '    C++ <|-- C#',
+                '```',
+                '',
+                '以上是含 C++ 类名的类图。'
+            ].join('\n');
+            const filePath = createTestFile('mermaid-class-cpp.md', content);
+
+            const result = fileService.readFile(filePath);
+            assert.ok(result.content.includes('```mermaid'));
+            assert.ok(result.content.includes('classDiagram'));
+            assert.ok(result.content.includes('C++'));
+            assert.ok(result.content.includes('C#'));
+
+            cleanupFile(filePath);
+        });
+
+        test('BT-mermaid-state-special-chars.1 含特殊字符状态名的 stateDiagram 文档 → 读取正常', () => {
+            const content = [
+                '# StateDiagram 特殊字符测试',
+                '',
+                '```mermaid',
+                'stateDiagram-v2',
+                '    [*] --> C++编译',
+                '    C++编译 --> C#构建',
+                '    C#构建 --> [*]',
+                '```',
+                '',
+                '以上是含特殊字符状态名的状态图。'
+            ].join('\n');
+            const filePath = createTestFile('mermaid-state-cpp.md', content);
+
+            const result = fileService.readFile(filePath);
+            assert.ok(result.content.includes('```mermaid'));
+            assert.ok(result.content.includes('stateDiagram'));
+            assert.ok(result.content.includes('C++'));
 
             cleanupFile(filePath);
         });

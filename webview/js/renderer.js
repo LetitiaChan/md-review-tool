@@ -1439,30 +1439,45 @@ const Renderer = (() => {
     }
 
     /**
-     * 预处理 Mermaid sequenceDiagram 源码，修复含特殊字符的 participant 名称。
+     * 预处理 Mermaid 源码，修复各图表类型中含特殊字符的标识符。
      * 
-     * 问题：Mermaid sequenceDiagram 中 ++ 和 -- 是激活/停用操作符，
-     * 导致 `participant C++` 被误解析（C 后面的 ++ 被当作激活语法）。
-     * 
-     * 修复策略：
-     * 1. 检测是否为 sequenceDiagram
-     * 2. 扫描 participant/actor 声明，找出含特殊字符（++、--、#）的 ID
-     * 3. 将不安全的 ID 替换为安全别名（纯字母数字），并用引号包裹显示名
-     * 4. 在消息行中也替换这些不安全的 ID 引用
+     * 各图表类型的特殊字符冲突：
+     * - sequenceDiagram: ++ 和 -- 是激活/停用操作符，participant C++ 会被误解析
+     * - classDiagram: +/-/#/~ 是可见性修饰符，类名含这些字符可能冲突
+     * - stateDiagram: --> 是转换箭头，状态名含 ++ 或 -- 可能冲突
+     * - flowchart/graph: 已通过 securityLevel:'loose' + htmlLabels:true 解决
+     * - gantt/pie/journey/mindmap/gitgraph/erDiagram: 低风险，文本标签不太可能冲突
      */
-    function preprocessMermaidSequenceDiagram(code) {
+    function preprocessMermaidCode(code) {
         const lines = code.split('\n');
         const trimmedFirst = lines.find(l => l.trim().length > 0);
-        // 仅处理 sequenceDiagram 类型
-        if (!trimmedFirst || !trimmedFirst.trim().startsWith('sequenceDiagram')) {
-            return code;
+        if (!trimmedFirst) return code;
+
+        const firstLine = trimmedFirst.trim();
+
+        // 根据图表类型分发到不同的预处理逻辑
+        if (firstLine.startsWith('sequenceDiagram')) {
+            return preprocessSequenceDiagram(lines);
+        }
+        if (firstLine.startsWith('classDiagram')) {
+            return preprocessClassDiagram(lines);
+        }
+        if (firstLine.startsWith('stateDiagram')) {
+            return preprocessStateDiagram(lines);
         }
 
-        // 特殊字符模式：包含 ++、--、# 的标识符需要处理
+        // 其他图表类型暂不需要预处理
+        return code;
+    }
+
+    /**
+     * 预处理 sequenceDiagram：修复含 ++/--/# 的 participant 名称
+     * Mermaid 的 sequenceDiagram 语法中 ++ 和 -- 是激活/停用操作符，
+     * 导致 `participant C++` 被误解析。
+     */
+    function preprocessSequenceDiagram(lines) {
         const unsafePattern = /\+\+|--|#/;
-        // 收集需要替换的 participant ID 映射：原始ID → 安全ID
-        const idMap = new Map(); // originalId → safeId
-        const displayMap = new Map(); // originalId → displayName (别名)
+        const idMap = new Map();
         let safeCounter = 0;
 
         // 第一遍：扫描 participant/actor 声明，建立映射
@@ -1472,8 +1487,6 @@ const Renderer = (() => {
             if (!match) continue;
 
             const rest = match[3].trim();
-            // 解析 "ID as DisplayName" 或纯 "ID" 格式
-            // 注意：as 关键字前后可能有空格
             let rawId, displayName;
             const asMatch = rest.match(/^(.+?)\s+as\s+(.+)$/i);
             if (asMatch) {
@@ -1484,29 +1497,20 @@ const Renderer = (() => {
                 displayName = rest;
             }
 
-            // 去除已有的引号
             const unquotedId = rawId.replace(/^["']|["']$/g, '');
             const unquotedDisplay = displayName.replace(/^["']|["']$/g, '');
 
-            // 检查 ID 或显示名是否含特殊字符
             if (unsafePattern.test(unquotedId) || unsafePattern.test(unquotedDisplay)) {
-                // 生成安全的 ID（纯字母数字）
                 const safeId = '_safe_' + (safeCounter++);
                 idMap.set(unquotedId, safeId);
-                // 如果有别名，保留原始别名作为显示名；否则用原始 ID 作为显示名
-                displayMap.set(unquotedId, unquotedDisplay || unquotedId);
             }
         }
 
-        // 如果没有需要处理的 participant，直接返回
-        if (idMap.size === 0) return code;
+        if (idMap.size === 0) return lines.join('\n');
 
         // 第二遍：替换所有行中的不安全 ID
         const result = lines.map(line => {
-            const trimmed = line.trim();
-
-            // 处理 participant/actor 声明行
-            const pMatch = trimmed.match(participantRegex);
+            const pMatch = line.match(participantRegex);
             if (pMatch) {
                 const indent = pMatch[1];
                 const keyword = pMatch[2];
@@ -1530,21 +1534,150 @@ const Renderer = (() => {
                 return line;
             }
 
-            // 处理消息行和 Note 行中的 participant 引用
-            // 替换所有出现的不安全 ID 为安全 ID
             let newLine = line;
             for (const [originalId, safeId] of idMap) {
-                // 使用全局替换，但要注意不要替换引号内的内容（显示文本）
-                // 只替换作为 participant 引用的位置（行首、箭头两侧、Note over 等）
-                // 简单策略：直接全文替换，因为安全 ID 不会出现在正常文本中
                 if (newLine.includes(originalId)) {
-                    // 转义正则特殊字符
                     const escaped = originalId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                     newLine = newLine.replace(new RegExp(escaped, 'g'), safeId);
                 }
             }
             return newLine;
         });
+
+        return result.join('\n');
+    }
+
+    /**
+     * 预处理 classDiagram：修复含特殊字符的类名
+     * Mermaid classDiagram 中 +/-/#/~ 是可见性修饰符，
+     * 类名含 C++ 等特殊字符时可能导致解析器混淆。
+     * 
+     * 策略：将含特殊字符的类名替换为安全 ID，并添加 label 注解。
+     * 例如：class C++ → class _safe_0["C++"]
+     */
+    function preprocessClassDiagram(lines) {
+        // 特殊字符模式：类名中不应出现的字符
+        const unsafePattern = /[+#~<>{}|\[\]]/;
+        const classNameMap = new Map(); // originalName → safeId
+        let safeCounter = 0;
+
+        // 第一遍：扫描类声明，找出含特殊字符的类名
+        for (const line of lines) {
+            const trimmed = line.trim();
+            // 匹配 "class ClassName" 或 "class ClassName {" 格式
+            const classMatch = trimmed.match(/^class\s+([^\s{:"]+)/i);
+            if (classMatch) {
+                const className = classMatch[1].replace(/^`|`$/g, '');
+                if (unsafePattern.test(className) && !classNameMap.has(className)) {
+                    classNameMap.set(className, '_cls_' + (safeCounter++));
+                }
+            }
+            // 匹配关系行中的类名：ClassName1 <|-- ClassName2 等
+            // 关系操作符：<|--, *--, o--, ..|>, -->, --*, --o, ..>
+            const relationMatch = trimmed.match(/^([^\s:"]+)\s+(?:<\||\*|o|\.|--|\.\.)[|<>*o-]+\s+([^\s:"]+)/);
+            if (relationMatch) {
+                for (const name of [relationMatch[1], relationMatch[2]]) {
+                    const cleanName = name.replace(/^`|`$/g, '');
+                    if (unsafePattern.test(cleanName) && !classNameMap.has(cleanName)) {
+                        classNameMap.set(cleanName, '_cls_' + (safeCounter++));
+                    }
+                }
+            }
+        }
+
+        if (classNameMap.size === 0) return lines.join('\n');
+
+        // 第二遍：替换类名并添加注解
+        const result = [];
+        let addedLabels = false;
+        for (const line of lines) {
+            let newLine = line;
+            for (const [originalName, safeId] of classNameMap) {
+                if (newLine.includes(originalName)) {
+                    const escaped = originalName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    newLine = newLine.replace(new RegExp(escaped, 'g'), safeId);
+                }
+            }
+            result.push(newLine);
+
+            // 在 classDiagram 声明行后面插入类名标签注解
+            if (!addedLabels && line.trim().startsWith('classDiagram')) {
+                for (const [originalName, safeId] of classNameMap) {
+                    result.push(`    ${safeId} : "${originalName}"`);
+                }
+                addedLabels = true;
+            }
+        }
+
+        return result.join('\n');
+    }
+
+    /**
+     * 预处理 stateDiagram：修复含特殊字符的状态名
+     * Mermaid stateDiagram 中 --> 是转换箭头，
+     * 状态名含 ++ 或 -- 可能与箭头语法冲突。
+     * 
+     * 策略：将含特殊字符的状态名替换为安全 ID，
+     * 并用 state "display" as safeId 语法声明。
+     */
+    function preprocessStateDiagram(lines) {
+        const unsafePattern = /\+\+|--|#|[<>{}|\[\]]/;
+        const stateNameMap = new Map();
+        let safeCounter = 0;
+
+        // 第一遍：扫描所有行，找出含特殊字符的状态名
+        for (const line of lines) {
+            const trimmed = line.trim();
+            // 跳过图表类型声明行和注释行
+            if (trimmed.startsWith('stateDiagram') || trimmed.startsWith('%%')) continue;
+
+            // 匹配 state "描述" as id 格式（已经安全，跳过）
+            if (/^state\s+"/.test(trimmed)) continue;
+
+            // 匹配 state 声明：state StateName
+            const stateMatch = trimmed.match(/^state\s+([^\s{"]+)/i);
+            if (stateMatch) {
+                const stateName = stateMatch[1];
+                if (unsafePattern.test(stateName) && !stateNameMap.has(stateName)) {
+                    stateNameMap.set(stateName, '_st_' + (safeCounter++));
+                }
+            }
+
+            // 匹配转换行：StateA --> StateB 或 StateA --> StateB : 描述
+            const transMatch = trimmed.match(/^([^\s:]+)\s*-->\s*([^\s:]+)/);
+            if (transMatch) {
+                for (const name of [transMatch[1], transMatch[2]]) {
+                    if (name === '[*]') continue; // 起止状态
+                    if (unsafePattern.test(name) && !stateNameMap.has(name)) {
+                        stateNameMap.set(name, '_st_' + (safeCounter++));
+                    }
+                }
+            }
+        }
+
+        if (stateNameMap.size === 0) return lines.join('\n');
+
+        // 第二遍：替换状态名并添加 state 声明
+        const result = [];
+        let addedDeclarations = false;
+        for (const line of lines) {
+            let newLine = line;
+            for (const [originalName, safeId] of stateNameMap) {
+                if (newLine.includes(originalName)) {
+                    const escaped = originalName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    newLine = newLine.replace(new RegExp(escaped, 'g'), safeId);
+                }
+            }
+            result.push(newLine);
+
+            // 在 stateDiagram 声明行后面插入 state 声明
+            if (!addedDeclarations && line.trim().startsWith('stateDiagram')) {
+                for (const [originalName, safeId] of stateNameMap) {
+                    result.push(`    state "${originalName}" as ${safeId}`);
+                }
+                addedDeclarations = true;
+            }
+        }
 
         return result.join('\n');
     }
@@ -1642,10 +1775,11 @@ const Renderer = (() => {
                 if (!el.closest('.mermaid-container')) el.remove();
             });
 
-            // 预处理：修复 sequenceDiagram 中含特殊字符（如 C++ 的 ++）的 participant 名称
-                // Mermaid 的 sequenceDiagram 语法中 ++ 和 -- 是激活/停用操作符，
-                // 会导致 participant C++ 被误解析。此预处理将不安全的 ID 替换为安全别名。
-            code = preprocessMermaidSequenceDiagram(code);
+            // 预处理：修复各图表类型中含特殊字符的标识符
+            // - sequenceDiagram: ++ 和 -- 是激活/停用操作符
+            // - classDiagram: +/-/#/~ 是可见性修饰符
+            // - stateDiagram: --> 箭头语法可能与状态名冲突
+            code = preprocessMermaidCode(code);
 
             try {
                 const { svg } = await mermaid.render(id, code);

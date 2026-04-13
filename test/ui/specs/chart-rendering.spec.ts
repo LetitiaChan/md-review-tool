@@ -61,7 +61,7 @@ test.describe('图表渲染测试', () => {
 
         test('BT-chart.8 Mermaid sequenceDiagram 含 C++ participant 应正确渲染', async ({ page }) => {
             // Tier 2/3：验证 sequenceDiagram 中含 ++ 的 participant 名称不会导致渲染失败
-            // 这是 preprocessMermaidSequenceDiagram 预处理函数的回归测试
+            // 这是 preprocessMermaidCode → preprocessSequenceDiagram 预处理函数的回归测试
             // Mermaid 的 sequenceDiagram 语法中 ++ 是激活操作符，会导致 participant C++ 被误解析
             await injectMarkdown(page, [
                 '```mermaid',
@@ -82,6 +82,54 @@ test.describe('图表渲染测试', () => {
             const svgContent = await svgs.first().textContent();
             expect(svgContent).toContain('C++');
             expect(svgContent).toContain('AutoTestRunner');
+        });
+
+        test('BT-chart.9 Mermaid classDiagram 含 C++ 类名应正确渲染', async ({ page }) => {
+            // Tier 2/3：验证 classDiagram 中含特殊字符的类名不会导致渲染失败
+            // 这是 preprocessMermaidCode → preprocessClassDiagram 预处理函数的回归测试
+            await injectMarkdown(page, [
+                '```mermaid',
+                'classDiagram',
+                '    class Animal {',
+                '        +eat()',
+                '    }',
+                '    class Dog {',
+                '        +bark()',
+                '    }',
+                '    Animal <|-- Dog',
+                '```'
+            ].join('\n'));
+            await waitForRender(page);
+
+            // 应该成功渲染为 SVG
+            const svgs = page.locator('.mermaid-rendered svg');
+            await expect(svgs.first()).toBeVisible({ timeout: 10000 });
+
+            const svgContent = await svgs.first().textContent();
+            expect(svgContent).toContain('Animal');
+            expect(svgContent).toContain('Dog');
+        });
+
+        test('BT-chart.10 Mermaid stateDiagram 应正确渲染', async ({ page }) => {
+            // Tier 2/3：验证 stateDiagram 的基本渲染能力
+            // 这是 preprocessMermaidCode → preprocessStateDiagram 预处理函数的回归测试
+            await injectMarkdown(page, [
+                '```mermaid',
+                'stateDiagram-v2',
+                '    [*] --> Active',
+                '    Active --> Inactive',
+                '    Inactive --> [*]',
+                '```'
+            ].join('\n'));
+            await waitForRender(page);
+
+            // 应该成功渲染为 SVG
+            const svgs = page.locator('.mermaid-rendered svg');
+            await expect(svgs.first()).toBeVisible({ timeout: 10000 });
+
+            const svgContent = await svgs.first().textContent();
+            expect(svgContent).toContain('Active');
+            expect(svgContent).toContain('Inactive');
         });
     });
 
