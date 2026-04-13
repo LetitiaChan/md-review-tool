@@ -41,6 +41,23 @@ test.describe('图表渲染测试', () => {
             const text = await container.textContent();
             expect(text!.length).toBeGreaterThan(0);
         });
+
+        test('BT-chart.7 Mermaid 含 C++ 等特殊字符节点名应正确渲染', async ({ page }) => {
+            // Tier 2/3：验证含 +、# 等特殊字符的节点名不会导致渲染失败
+            // 这是 securityLevel: 'strict' → 'loose' 修复的回归测试
+            await injectMarkdown(page, '```mermaid\ngraph LR\n    A["C++"] --> B["C#"]\n    B --> C[Java]\n```');
+            await waitForRender(page);
+
+            // 应该成功渲染为 SVG，而非降级显示错误
+            const svgs = page.locator('.mermaid-rendered svg');
+            await expect(svgs.first()).toBeVisible({ timeout: 10000 });
+
+            // SVG 内容中应包含节点文本
+            const svgContent = await svgs.first().textContent();
+            expect(svgContent).toContain('C++');
+            expect(svgContent).toContain('C#');
+            expect(svgContent).toContain('Java');
+        });
     });
 
     test.describe('Graphviz 图表', () => {

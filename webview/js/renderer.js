@@ -1462,7 +1462,11 @@ const Renderer = (() => {
         mermaid.initialize({
             startOnLoad: false,
             theme: isDark ? 'dark' : 'default',
-            securityLevel: 'strict',
+            // 使用 'loose' 而非 'strict'：
+            // 'strict' 会强制将 htmlLabels 设为 false，导致节点文本中的特殊字符
+            // （如 C++ 中的 +、C# 中的 #）被 Mermaid 解析器误解为语法符号，渲染失败。
+            // VS Code webview 本身已是沙箱环境，安全性由宿主保证，'loose' 不会引入额外风险。
+            securityLevel: 'loose',
             fontFamily: '"Segoe UI", "Microsoft YaHei", sans-serif',
             flowchart: {
                 useMaxWidth: false,

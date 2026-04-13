@@ -230,6 +230,51 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             cleanupAiInstructions();
         });
 
+        test('BT-mermaid-security.1 renderer.js Mermaid 应使用 loose 安全级别（支持特殊字符节点名）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) {
+                assert.ok(true, '测试环境中扩展路径不可用');
+                return;
+            }
+
+            const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
+            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+
+            // Tier 1：securityLevel 应为 'loose' 而非 'strict'
+            // 'strict' 会强制 htmlLabels=false，导致 C++ 等含特殊字符的节点名渲染失败
+            assert.ok(
+                rendererCode.includes("securityLevel: 'loose'"),
+                "Mermaid 配置应使用 securityLevel: 'loose'（支持 htmlLabels，避免特殊字符解析失败）"
+            );
+            assert.ok(
+                !rendererCode.includes("securityLevel: 'strict'"),
+                "Mermaid 配置不应使用 securityLevel: 'strict'（会强制禁用 htmlLabels）"
+            );
+        });
+
+        test('BT-mermaid-special-chars.1 含 C++ 等特殊字符节点名的 Mermaid 文档 → 读取正常', () => {
+            const content = [
+                '# 特殊字符 Mermaid 测试',
+                '',
+                '```mermaid',
+                'graph LR',
+                '    A["C++"] --> B["C#"]',
+                '    B --> C["Objective-C++"]',
+                '    C --> D[Java]',
+                '```',
+                '',
+                '以上是含特殊字符的流程图。'
+            ].join('\n');
+            const filePath = createTestFile('mermaid-special-chars.md', content);
+
+            const result = fileService.readFile(filePath);
+            assert.ok(result.content.includes('```mermaid'));
+            assert.ok(result.content.includes('C++'));
+            assert.ok(result.content.includes('C#'));
+
+            cleanupFile(filePath);
+        });
+
         test('含 PlantUML 图表的文档 → 读取正常', () => {
             const content = [
                 '# PlantUML 测试',
