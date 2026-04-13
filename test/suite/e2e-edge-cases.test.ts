@@ -275,6 +275,53 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             cleanupFile(filePath);
         });
 
+        test('BT-mermaid-seq-preprocess.1 renderer.js 应包含 sequenceDiagram 特殊字符预处理函数', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) {
+                assert.ok(true, '测试环境中扩展路径不可用');
+                return;
+            }
+
+            const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
+            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+
+            // Tier 1：验证预处理函数存在
+            assert.ok(
+                rendererCode.includes('preprocessMermaidSequenceDiagram'),
+                'renderer.js 应包含 preprocessMermaidSequenceDiagram 预处理函数'
+            );
+            // 验证预处理函数在 mermaid.render 调用前被使用
+            assert.ok(
+                rendererCode.includes('preprocessMermaidSequenceDiagram(code)'),
+                '预处理函数应在 mermaid.render 调用前被调用'
+            );
+        });
+
+        test('BT-mermaid-seq-special-chars.1 含 C++ participant 的 sequenceDiagram 文档 → 读取正常', () => {
+            const content = [
+                '# SequenceDiagram 特殊字符测试',
+                '',
+                '```mermaid',
+                'sequenceDiagram',
+                '    participant C++ as C++ (moelua.dostring)',
+                '    participant Runner as AutoTestRunner',
+                '    C++ ->> Runner: require(...).Run(modulePath)',
+                '    Runner ->> C++: 返回结果',
+                '```',
+                '',
+                '以上是含 C++ participant 的时序图。'
+            ].join('\n');
+            const filePath = createTestFile('mermaid-seq-cpp.md', content);
+
+            const result = fileService.readFile(filePath);
+            assert.ok(result.content.includes('```mermaid'));
+            assert.ok(result.content.includes('sequenceDiagram'));
+            assert.ok(result.content.includes('C++'));
+            assert.ok(result.content.includes('participant'));
+
+            cleanupFile(filePath);
+        });
+
         test('含 PlantUML 图表的文档 → 读取正常', () => {
             const content = [
                 '# PlantUML 测试',

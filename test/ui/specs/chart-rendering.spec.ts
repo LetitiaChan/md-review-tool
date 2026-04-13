@@ -58,6 +58,31 @@ test.describe('图表渲染测试', () => {
             expect(svgContent).toContain('C#');
             expect(svgContent).toContain('Java');
         });
+
+        test('BT-chart.8 Mermaid sequenceDiagram 含 C++ participant 应正确渲染', async ({ page }) => {
+            // Tier 2/3：验证 sequenceDiagram 中含 ++ 的 participant 名称不会导致渲染失败
+            // 这是 preprocessMermaidSequenceDiagram 预处理函数的回归测试
+            // Mermaid 的 sequenceDiagram 语法中 ++ 是激活操作符，会导致 participant C++ 被误解析
+            await injectMarkdown(page, [
+                '```mermaid',
+                'sequenceDiagram',
+                '    participant C++ as C++ (moelua.dostring)',
+                '    participant Runner as AutoTestRunner',
+                '    C++ ->> Runner: require(...).Run(modulePath)',
+                '    Runner -->> C++: 返回结果',
+                '```'
+            ].join('\n'));
+            await waitForRender(page);
+
+            // 应该成功渲染为 SVG，而非降级显示错误
+            const svgs = page.locator('.mermaid-rendered svg');
+            await expect(svgs.first()).toBeVisible({ timeout: 10000 });
+
+            // SVG 内容中应包含 participant 的显示名
+            const svgContent = await svgs.first().textContent();
+            expect(svgContent).toContain('C++');
+            expect(svgContent).toContain('AutoTestRunner');
+        });
     });
 
     test.describe('Graphviz 图表', () => {
