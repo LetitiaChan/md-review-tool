@@ -304,6 +304,35 @@ H7. Hotfix 报告
 - **构建工具**: tsc (TypeScript Compiler)，npm scripts
 - **工作流**: OpenSpec spec-driven，通过 `/opsx:*` 命令驱动
 
+## 发布规则（双市场发布）
+
+> **核心原则：每次用户说"发布"时，必须同时发布到 VSCode Marketplace 和 Open VSX Registry（Cursor 市场），缺一不可。**
+
+**发布流程：**
+
+```
+1. 打包 .vsix 文件
+   npx vsce package --no-dependencies
+
+2. 发布到 VSCode Marketplace
+   npx vsce publish --no-dependencies
+
+3. 发布到 Open VSX Registry（Cursor 市场）
+   npx ovsx publish <生成的 .vsix 文件名> -p <OVSX_TOKEN>
+   （Token 通过环境变量 OVSX_TOKEN 获取，如未设置则提示用户提供）
+
+4. 发布完成后，输出两个市场的安装链接：
+   - VSCode Marketplace: https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review
+   - Open VSX (Cursor): https://open-vsx.org/extension/letitia/md-human-review
+```
+
+**注意事项：**
+- 两个市场都发布成功才算"发布完成"
+- 如果其中一个失败，必须报告失败原因并尝试修复
+- 发布前确保已通过构建和测试
+
+---
+
 ## 命令执行策略
 
 > **所有命令直接执行，无需确认。** 包括但不限于：构建、测试、打包、Git commit/push、安装依赖等操作，一律自动执行，不逐步询问用户确认。
