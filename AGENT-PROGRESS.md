@@ -7,6 +7,7 @@
 
 ## 最近更新
 
+- **2026-04-16**: 🚀 发布 v1.3.4 到双市场（工作区文件短链接跳转支持：Markdown 中的相对路径链接可点击打开，.md/.mdc 文件用 Review Panel 打开，其他文件用 VS Code 打开）
 - **2026-04-13**: 🚀 发布 v1.3.2 到 VS Code Marketplace（Mermaid 特殊字符渲染修复：flowchart/sequenceDiagram/classDiagram/stateDiagram 全覆盖）
 - **2026-04-09**: 🚀 发布 v1.3.1 到 VS Code Marketplace（编辑模式多项 bugfix：代码块换行丢失、子列表缩进丢失、列表新增行标记缺失、图表编辑多行合并、颜色文本样式丢失、告警块空行丢失）
 - **2026-04-08**: 编辑模式下图表源码编辑支持（edit-diagram-source），Mermaid/PlantUML/Graphviz 图表在编辑模式下显示为可编辑 textarea，支持直接修改源码
