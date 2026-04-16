@@ -503,6 +503,16 @@
             container.scrollTo({ top: targetRect.top - containerRect.top + container.scrollTop - 16, behavior: 'smooth' });
         });
 
+        // 工作区内文件链接点击处理 — 在新窗口打开文件
+        document.getElementById('documentContent').addEventListener('click', (e) => {
+            const link = e.target.closest('a.workspace-file-link');
+            if (!link) return;
+            e.preventDefault();
+            const filePath = link.getAttribute('data-filepath');
+            if (!filePath) return;
+            vscode.postMessage({ type: 'openWorkspaceFile', payload: { filePath } });
+        });
+
         document.getElementById('documentContent').addEventListener('scroll', () => {
             if (tocScrollTimer) clearTimeout(tocScrollTimer);
             tocScrollTimer = setTimeout(() => updateTocActiveItem(), 80);

@@ -619,13 +619,14 @@ const Renderer = (() => {
             return `<h${depth} id="${slug}">${text}</h${depth}>\n`;
         };
 
-        // ===== 自定义链接渲染 — 外部链接新窗口打开 =====
+        // ===== 自定义链接渲染 — 外部链接新窗口打开，工作区文件链接特殊处理 =====
         renderer.link = function(data) {
             const href = data.href || '';
             const title = data.title;
             let text = data.text || '';
             const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
             const isExternal = href.startsWith('http://') || href.startsWith('https://');
+            const isAnchor = href.startsWith('#');
             const targetAttr = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
 
             // 处理链接内嵌套图片 [![alt](img)](link)
@@ -633,6 +634,11 @@ const Renderer = (() => {
                 const img = data.tokens[0];
                 const imgTitle = img.title ? ` title="${escapeHtml(img.title)}"` : '';
                 text = `<img src="${img.href}" alt="${escapeHtml(img.text)}"${imgTitle} loading="lazy" class="md-image" />`;
+            }
+
+            // 工作区内文件链接：非外部、非锚点的链接视为相对文件路径
+            if (!isExternal && !isAnchor && href) {
+                return `<a href="${href}"${titleAttr} class="workspace-file-link" data-filepath="${escapeHtml(href)}" title="${escapeHtml(href)}">${text}</a>`;
             }
 
             return `<a href="${href}"${titleAttr}${targetAttr}>${text}</a>`;

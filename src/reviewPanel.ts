@@ -32,6 +32,7 @@ export class ReviewPanel {
 
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
+    private readonly _extensionContext: vscode.ExtensionContext;
     private readonly _fileService: FileService;
     private readonly _stateService: StateService;
     private _disposables: vscode.Disposable[] = [];
@@ -128,6 +129,7 @@ export class ReviewPanel {
     private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, filePath?: string) {
         this._panel = panel;
         this._extensionUri = context.extensionUri;
+        this._extensionContext = context;
         this._fileService = new FileService();
         this._stateService = new StateService(context);
 
@@ -411,6 +413,43 @@ export class ReviewPanel {
                     this.postMessage({ type: 'settingsSaved', payload: { success: true }, requestId });
                 } catch (e: any) {
                     this.postMessage({ type: 'settingsSaved', payload: { success: false, error: e.message }, requestId });
+                }
+                break;
+            }
+            case 'openWorkspaceFile': {
+                // 工作区内文件链接点击 — 在新窗口打开文件
+                const linkPath = payload.filePath || '';
+                if (!linkPath) { break; }
+                try {
+                    let absPath: string;
+                    if (path.isAbsolute(linkPath)) {
+                        absPath = linkPath;
+                    } else if (this._currentFilePath) {
+                        // 相对于当前打开文件的目录解析
+                        absPath = path.resolve(path.dirname(this._currentFilePath), linkPath);
+                    } else {
+                        // 相对于工作区根目录解析
+                        const wsFolder = vscode.workspace.workspaceFolders?.[0];
+                        if (wsFolder) {
+                            absPath = path.resolve(wsFolder.uri.fsPath, linkPath);
+                        } else {
+                            absPath = path.resolve(linkPath);
+                        }
+                    }
+                    const fileUri = vscode.Uri.file(absPath);
+                    if (fs.existsSync(absPath)) {
+                        // 如果是 .md 或 .mdc 文件，用本扩展的 Review Panel 打开
+                        const ext = path.extname(absPath).toLowerCase();
+                        if (ext === '.md' || ext === '.mdc') {
+                            ReviewPanel.createOrShow(this._extensionContext, absPath);
+                        } else {
+                            vscode.commands.executeCommand('vscode.open', fileUri, { preview: false });
+                        }
+                    } else {
+                        vscode.window.showWarningMessage(`文件不存在: ${absPath}`);
+                    }
+                } catch (e: any) {
+                    vscode.window.showErrorMessage(`打开文件失败: ${e.message}`);
                 }
                 break;
             }

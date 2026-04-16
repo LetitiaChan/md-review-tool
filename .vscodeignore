@@ -20,5 +20,6 @@ package-lock.json
 CHANGELOG.md
 **/*.mp4
 todo.md
+编辑模式设计方案.md
 test-output*.log
 out/reviewPanel_original.js

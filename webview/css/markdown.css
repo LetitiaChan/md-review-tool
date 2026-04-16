@@ -1511,3 +1511,19 @@ pre code.language-diff {
     opacity: 0.5;
     vertical-align: super;
 }
+
+/* 工作区内文件链接 — 可点击打开 */
+.document-content a.workspace-file-link {
+    cursor: pointer;
+    text-decoration-style: dashed;
+    text-underline-offset: 3px;
+}
+.document-content a.workspace-file-link:hover {
+    text-decoration: underline;
+    text-decoration-style: solid;
+}
+.document-content a.workspace-file-link::before {
+    content: '📄';
+    font-size: 0.8em;
+    margin-right: 2px;
+}
