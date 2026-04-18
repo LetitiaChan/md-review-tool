@@ -7,6 +7,7 @@
 
 ## 最近更新
 
+- **2026-04-18**: 🐛 Hotfix — 修复"添加批注后关闭再次打开 md 文件，批注被删除"Bug。根因：Extension Host 推送 fileContent 时 handleFileContentPush 未从 .review 目录恢复批注，导致 webview 以空批注启动，紧接着 Exporter.enableAutoSave() 触发 doAutoSave 无条件发送 deleteReviewRecords 消息，将磁盘上已存在的批阅记录文件清除。修复：(A) handleFileContentPush 改为 async，先 callHost('getReviewRecords') → Store.restoreFromReviewRecord，与 handleFileSelectChange 保持一致；(B) export.js 加入 DELETE_ON_EMPTY_GRACE_MS 宽限期保护，enableAutoSave 刷新 _suppressDeleteUntil，doAutoSave 在空批注 + 宽限期内跳过删除磁盘记录，首次正常保存后解除保护。新增 BT-annotationPersist.1~8 共 8 个回归测试（Tier1/2/3）。Commit: 0ade044
 - **2026-04-16**: 🚀 发布 v1.3.4 到双市场（工作区文件短链接跳转支持：Markdown 中的相对路径链接可点击打开，.md/.mdc 文件用 Review Panel 打开，其他文件用 VS Code 打开）
 - **2026-04-13**: 🚀 发布 v1.3.2 到 VS Code Marketplace（Mermaid 特殊字符渲染修复：flowchart/sequenceDiagram/classDiagram/stateDiagram 全覆盖）
 - **2026-04-09**: 🚀 发布 v1.3.1 到 VS Code Marketplace（编辑模式多项 bugfix：代码块换行丢失、子列表缩进丢失、列表新增行标记缺失、图表编辑多行合并、颜色文本样式丢失、告警块空行丢失）
