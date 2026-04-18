@@ -310,7 +310,10 @@
     "test:ui:headed": "npx playwright test --config test/ui/playwright.config.ts --headed",
     "test:ui:debug": "npx playwright test --config test/ui/playwright.config.ts --debug",
     "test:all": "npm test && npm run test:ui",
-    "vscode:prepublish": "npm run compile"
+    "vscode:prepublish": "npm run compile",
+    "sync-aikit": "node scripts/sync-aikit-shims.js",
+    "sync-aikit:check": "node scripts/sync-aikit-shims.js --check",
+    "sync-aikit:clean": "node scripts/sync-aikit-shims.js --clean"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

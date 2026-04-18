@@ -109,7 +109,7 @@ npx vsce package --no-dependencies
 
 ## 开发工作流
 
-本项目采用 **OpenSpec spec-driven 工作流**（详见 `.codebuddy/rules/project-continuity.mdc`）：
+本项目采用 **OpenSpec spec-driven 工作流**（详见 `.aikp/rules/project-continuity.mdc`，该文件通过 shim 同时出现在 `.codebuddy/rules/`、`.claude/rules/`、`.cursor/rules/`）：
 
 - **新功能/重大修改**: 必须通过 OpenSpec 流程（`openspec/changes/`），先 propose 再 apply
 - **Hotfix 例外**: 源码文件 <=3 个且改动 <=30 行可直接修改，但必须执行 Hotfix Mini-Pipeline（构建 -> 影响分析 -> 回归测试 -> 测试补全 -> 打包 -> commit -> push）

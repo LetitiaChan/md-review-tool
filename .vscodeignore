@@ -2,6 +2,8 @@
 .vscode-test/**
 .vscode-test-userdata/**
 .codebuddy/**
+.aikp/**
+.cursor/**
 openspec/**
 AGENT-PROGRESS.md
 src/**

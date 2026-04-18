@@ -7,8 +7,8 @@
 
 ## 最近更新
 
-- **2026-04-18**: ✨ Hotfix — AI 修复指令追加"完成后提示刷新面板"提示。需求：用户希望 AI 修复完成后能自动提醒回到 MD Human Review 面板点击右上角刷新按钮。修复两处触达链路：(1) `webview/js/i18n.js` `modal.ai_result.copy_text`（发送到 AI 对话框的 prompt）中英文末尾追加"完成后请提醒我回到 MD Human Review 面板点击刷新按钮"；(2) `src/fileService.ts` `_aiLabels` 新增 `refresh_hint` 键（中英文）并在 `applyReview` 生成 `_aicmd.md` 指令文件时按 order_hint → anchor_hint → refresh_hint 顺序推入文件头部。测试：新增 Suite 22 BT-aiRefreshHint.1~4（Tier 1/2/3），覆盖 i18n 关键词存在、_aiLabels 键存在、占位符替换不破坏提示、端到端双渠道一致性。文档：README 一键 AI 修复条目补充说明。624 passing, 0 failing。Commit: <待生成>
-- **2026-04-18**: 🐛 Hotfix — 修复"webview 关闭期间源文件被外部修改，重开仍恢复旧批注导致锚点失效"Bug（思路 A+B 并存）。根因：webview 关闭时磁盘 md 被外部工具改写，重新打开时无法感知中间变化，仍会 restoreFromReviewRecord 恢复 records[0] 旧批注，旧锚点在新文件上可能已失效。修复五处：(1) export.js generateReviewDoc JSON 块写入 rawMarkdown 快照；(2) fileService.ts extractAnnotationsFromReview 解析并透传 rawMarkdown；(3) store.js 新增 forceBumpVersion(prevVersion, content, docVersion)；(4) app.js 新增 _isRecordStaleOnOpen helper（A 主判据 rawMarkdown 对比 + B 辅助信号 docVersion 对比），handleFileContentPush/handleFileSelectChange 两处 restore 前检测，过期则 forceBumpVersion + triggerAutoSave 落盘新占位；(5) i18n.js 新增 notification.stale_content_bumped 中英文翻译。向后兼容：旧格式 record 无快照时保守放行。测试：新增 Suite 21 BT-staleContentDetect.1~8（Tier 1/2/3），端到端闭环 + 旧格式兼容。文档：README 补充关闭期间检测描述。616 passing, 0 failing。Commit: 25da75f
+- **2026-04-18**: ✨ OpenSpec 全管线 — 新增 aikit 真源目录 `.aikp/` 与 shim 桥接机制，支持 `.codebuddy/`、`.claude/`、`.cursor/` 三个 AI 工具共享同一套 agents/commands/rules/skills。实施四步：(1) 创建 `.aikp/` 目录并从 `.codebuddy/` 将 12 个 skill + 11 个 opsx 命令 + 1 个 agent + 1 个 rule 全部迁移为唯一真源；(2) 新增 `scripts/sync-aikit-shims.js`（无外部依赖，支持默认/--check/--clean 三种模式，幂等）；(3) `package.json` 接入 `sync-aikit` / `sync-aikit:check` / `sync-aikit:clean` 三个 npm scripts；(4) 生成 84 个 Stub（28 源 × 3 目标），每个 Stub 包含 SHIM 警告头 + 相对链接 + AI 可读指令段。连带消除两个移植隐患：(a) `.gitignore` 将原来的 `.claude/` 整体忽略收紧为仅忽略 `settings.local.json`，让 shim 也能被 Git 追踪；(b) `.vscodeignore` 补上 `.aikp/**` 和 `.cursor/**`，避免 aikit 资产流入扩展发行包（出包从 116 文件 2.24MB 降至 59 文件 2.13MB）。测试：新增 `test/suite/aikit-shim.test.ts`（BT-aikitShim.1~8 共 12 个 Tier 1/2/3 断言：真源存在、Stub 内容模板、幂等性、--check/--clean 模式、相对路径生成、文件类型过滤），636 passing, 0 failing。文档：CLAUDE.md / CODEBUDDY.md 已更新规则文件路径引用；AGENT-PROGRESS.md 项目目录结构更新。归档：openspec/changes/archive/2026-04-18-aikit-shim-bridge；Specs 同步：新增 `aikit-source-layout` 和 `aikit-shim-sync` 两个 capability。Commit: <待生成>
+- **2026-04-18**: ✨ Hotfix — AI 修复指令追加"完成后提示刷新面板"提示。- **2026-04-18**: 🐛 Hotfix — 修复"webview 关闭期间源文件被外部修改，重开仍恢复旧批注导致锚点失效"Bug（思路 A+B 并存）。根因：webview 关闭时磁盘 md 被外部工具改写，重新打开时无法感知中间变化，仍会 restoreFromReviewRecord 恢复 records[0] 旧批注，旧锚点在新文件上可能已失效。修复五处：(1) export.js generateReviewDoc JSON 块写入 rawMarkdown 快照；(2) fileService.ts extractAnnotationsFromReview 解析并透传 rawMarkdown；(3) store.js 新增 forceBumpVersion(prevVersion, content, docVersion)；(4) app.js 新增 _isRecordStaleOnOpen helper（A 主判据 rawMarkdown 对比 + B 辅助信号 docVersion 对比），handleFileContentPush/handleFileSelectChange 两处 restore 前检测，过期则 forceBumpVersion + triggerAutoSave 落盘新占位；(5) i18n.js 新增 notification.stale_content_bumped 中英文翻译。向后兼容：旧格式 record 无快照时保守放行。测试：新增 Suite 21 BT-staleContentDetect.1~8（Tier 1/2/3），端到端闭环 + 旧格式兼容。文档：README 补充关闭期间检测描述。616 passing, 0 failing。Commit: 25da75f
 - **2026-04-18**: 🐛 Hotfix — 修复"AI 修复后没有创建新版本，重开恢复的是已处理过的旧批注"Bug。根因：handleRefresh 内容变化时 setFile 已正确自增 reviewVersion 到 v2 并清空批注，但 doAutoSave 空批注分支直接 return 不落盘，磁盘仅存 v1 旧批注；下次打开 getReviewRecords 返回 records[0]=v1，annotations.length>0 短路判断通过，restoreFromReviewRecord 把旧批注错误恢复。修复三处：(1) export.js doAutoSave 空批注分支在 reviewVersion>1 时 saveViaHost 写空占位；(2) app.js loadDocument(isNew=true) 触发 triggerAutoSave 立即落盘新版本；(3) app.js handleFileContentPush/handleFileSelectChange/handleRefresh 三处 records[0] 恢复逻辑移除 annotations.length>0 短路，即使空批注也 restoreFromReviewRecord 以恢复 reviewVersion。测试：新增 Suite 20 BT-versionBump.1~6（Tier 1/2/3），修正 BT-reviewKeep.6 branch 提取方式。文档：README 补充新版本创建描述。608 passing, 0 failing。Commit: a6bbee4
 - **2026-04-18**: 🐛 Hotfix — 修复"清除所有批注按钮点击报 TypeError: Store.getRelPath is not a function"。根因：store.js 内部定义了 getRelPath() 函数但模块 return 对象中未导出，导致 app.js btnConfirmClearAll handler 调用时抛 TypeError，用户无法清除批注。修复：在 store.js return 列表补上 getRelPath。测试：新增 Suite 19 BT-storeExports.1~6（Tier 1/2/3），Tier 3 通过 vm 沙箱加载 store.js 真实调用验证；Tier 1 扫描所有 getX 函数确保全部被导出以防回归。602 passing, 0 failing。Commit: c253377
 - **2026-04-18**: 🐛 Hotfix — 修复"AI修复后点刷新，.review 下所有历史批阅版本被删除"Bug（C-1 + C-a 策略）。根因：handleRefresh 内容变化分支触发 setFile 清空 annotations，doAutoSave 空批注分支无条件发送 deleteReviewRecords 消息，按 rbaseName_v* 前缀匹配删除所有历史版本（v1/v2/v3 全删）。修复策略 C-1：doAutoSave 空批注分支不再删除磁盘记录（历史版本永久保留），磁盘删除仅由用户显式 btnConfirmClearAll 触发；C-a：getReviewRecords 按 reviewVersion 倒序返回，打开文件时自动恢复 records[0]（最新版本）。同步清理上次 hotfix 遗留的 DELETE_ON_EMPTY_GRACE_MS 宽限期代码（冗余）。测试：重写 BT-annotationPersist.3~8（反映新策略），新增 BT-reviewKeep.1~6（C-1 + C-a 多版本保留场景 Tier 1/2/3）。文档：README/CLAUDE/CODEBUDDY 同步更新归档策略描述。596 passing, 0 failing。Commit: f36588c
@@ -48,6 +48,7 @@
 
 | 变更名 | 描述 | 归档日期 |
 |--------|------|---------|
+| aikit-shim-bridge | 新增 `.aikp/` 真源目录 + `scripts/sync-aikit-shims.js` 同步脚本，`.codebuddy/`/`.claude/`/`.cursor/` 通过 Stub 文件桥接到真源，距 AI 工具复用同一套 aikit | 2026-04-18 |
 | edit-diagram-source | 编辑模式下 Mermaid/PlantUML/Graphviz 图表显示为可编辑源码 textarea，支持直接修改 | 2026-04-08 |
 | optimize-test-infrastructure | 测试基础设施优化：统一测试命令、修复伪测试、补充 41 个新 UI 测试覆盖搜索/编辑/设置/目录/批注/工具栏 | 2026-04-08 |
 | add-automated-ui-testing | Playwright 自动化 UI 测试基础设施，23 个测试覆盖图表/Lightbox/Checkbox/渲染/批注 | 2026-04-08 |
@@ -72,6 +73,8 @@
 
 | Spec | 来源 | 说明 |
 |------|------|------|
+| aikit-source-layout | aikit-shim-bridge | `.aikp/` 作为 aikit 资产唯一真源的目录布局约束：四个子目录、README、kebab-case 命名、skill 必为目录形式 |
+| aikit-shim-sync | aikit-shim-bridge | `scripts/sync-aikit-shims.js` 同步能力：Stub 内容模板、三目录下发、默认/--check/--clean 三模式、幂等性、无外部依赖 |
 | content-search | add-search-features | Ctrl+F 正文检索、TreeWalker 高亮、匹配导航 |
 | toc-search | add-search-features | 目录面板搜索过滤、层级保持、折叠状态恢复 |
 | annotation-search | add-search-features | 批注面板搜索、多字段匹配、与排序兼容 |
@@ -109,10 +112,16 @@ md-review-tool/
 │   ├── changes/                    # 活跃 + 归档的变更
 │   │   └── archive/                # 已归档
 │   └── specs/                      # 能力规格库
-├── .codebuddy/                     # AI 工作流配置
+├── .aikp/                          # ✨ AI Kit 真源（跨 AI 工具复用）
+│   ├── agents/                     # sub-agent 定义
 │   ├── commands/opsx/              # 11 个 OpenSpec 命令
-│   ├── rules/                      # 全局规则
-│   └── skills/                     # 技能定义
+│   ├── rules/                      # 全局规则（含 project-continuity.mdc）
+│   └── skills/                     # 12 个 skill 定义（含 auto-test + 11 openspec-*）
+├── .codebuddy/                     # AI 工具桥接目录（shim，指向 .aikp/）
+├── .claude/                        # AI 工具桥接目录（shim，指向 .aikp/）
+├── .cursor/                        # AI 工具桥接目录（shim，指向 .aikp/）
+├── scripts/
+│   └── sync-aikit-shims.js         # .aikp → 三工具目录 Stub 同步脚本
 ├── package.json                    # 扩展清单
 └── tsconfig.json                   # TypeScript 配置
 ```

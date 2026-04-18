@@ -101,7 +101,7 @@ npx playwright test --config test/ui/playwright.config.ts test/ui/specs/某个.s
 
 ## 开发工作流（强制 OpenSpec）
 
-> 项目根目录的 `AGENT-PROGRESS.md` 是跨会话记忆，会话启动必读；完整规则在 `.codebuddy/rules/project-continuity.mdc`。
+> 项目根目录的 `AGENT-PROGRESS.md` 是跨会话记忆，会话启动必读；完整规则在 `.aikp/rules/project-continuity.mdc`（通过 shim 暴露到 `.codebuddy/rules/`、`.claude/rules/`、`.cursor/rules/`）。
 
 ### 新功能 / 重大修改 → 必须走 OpenSpec
 - 检查 `openspec/changes/` 是否已有对应 change，没有则先调用 `openspec-propose` 创建 proposal + design + tasks，然后 `openspec-apply-change` 实施
