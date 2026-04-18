@@ -14,6 +14,7 @@
  * 诊断日志统一以 "[DIAG:aiChat]" 开头，便于在真机反馈时快速定位失败策略。
  */
 import * as vscode from 'vscode';
+import { exec } from 'child_process';
 
 export type IdeKind = 'codebuddy' | 'cursor' | 'windsurf' | 'vscode';
 
@@ -33,17 +34,25 @@ export interface DispatchResult {
     strategy: string;
     /** 是否降级为"用户手动粘贴"路径 */
     fellBackToClipboard: boolean;
+    /**
+     * 是否已通过 OS 键盘模拟自动按下 Enter 完成"发送"动作。
+     * 当前仅在 Windows 平台下 Cursor 策略成功且 SendKeys 未抛错时为 true；
+     * 其它平台 / 其它 IDE 均为 false（用户仍需手动按 Enter）。
+     */
+    autoSubmitted: boolean;
 }
 
 /**
  * 单条策略定义。
  * requires: 策略执行所需的命令 ID。若不在 availableCommands 中则跳过该策略。
  *           某些策略（CodeBuddy 策略 1）内部会先后调用多条命令，requires 指代首条关键命令。
+ * run:      返回 void 或 boolean。返回 true 表示该策略不仅打开并填入了指令，还额外完成了
+ *           "自动发送"（即不需要用户再按 Enter），由 dispatchAiChat 映射为结果中的 autoSubmitted。
  */
 interface Strategy {
     name: string;
     requires?: string;
-    run: (ctx: DispatchContext) => Promise<void>;
+    run: (ctx: DispatchContext) => Promise<boolean | void>;
 }
 
 /** 轻量 sleep 辅助 */
@@ -66,6 +75,51 @@ export function __setExecuteCommandForTest(fn: typeof _executeCommand): void {
 /** 测试用重置点：恢复默认 executeCommand（vscode 宿主） */
 export function __resetExecuteCommandForTest(): void {
     _executeCommand = (command, ...args) => Promise.resolve(vscode.commands.executeCommand(command, ...args));
+}
+
+/**
+ * OS 级键盘模拟：向当前前台窗口发送一次 Enter。
+ *
+ * 仅 Windows 平台真实执行（通过 PowerShell 调用 System.Windows.Forms.SendKeys）。
+ * 其它平台为 no-op（返回 false），由调用方根据返回值判断是否真的"发送"了指令。
+ *
+ * 设计取舍：
+ *   - Cursor Composer 是自定义 webview，不接受 VS Code `type` 命令，故必须走 OS 键盘模拟
+ *   - 依赖"Cursor 窗口当前为前台且输入框聚焦"，调用方必须在此之前完成 paste，
+ *     并留足延迟让焦点稳定
+ *   - 任何异常均被捕获并返回 false，不中断派发链
+ */
+let _sendEnterKey: () => Promise<boolean> = async () => {
+    if (process.platform !== 'win32') { return false; }
+    return new Promise<boolean>((resolve) => {
+        // SendWait 同步返回，确保按键真的投递到前台窗口
+        const cmd = 'powershell -NoProfile -WindowStyle Hidden -Command '
+            + '"Add-Type -AssemblyName System.Windows.Forms; '
+            + '[System.Windows.Forms.SendKeys]::SendWait(\'{ENTER}\')"';
+        exec(cmd, { timeout: 3000 }, (err) => {
+            resolve(!err);
+        });
+    });
+};
+
+/** 测试用注入点：替换 sendEnterKey 实现（返回 true 表示模拟成功发送） */
+export function __setSendEnterKeyForTest(fn: () => Promise<boolean>): void {
+    _sendEnterKey = fn;
+}
+
+/** 测试用重置点：恢复默认 sendEnterKey 实现 */
+export function __resetSendEnterKeyForTest(): void {
+    _sendEnterKey = async () => {
+        if (process.platform !== 'win32') { return false; }
+        return new Promise<boolean>((resolve) => {
+            const cmd = 'powershell -NoProfile -WindowStyle Hidden -Command '
+                + '"Add-Type -AssemblyName System.Windows.Forms; '
+                + '[System.Windows.Forms.SendKeys]::SendWait(\'{ENTER}\')"';
+            exec(cmd, { timeout: 3000 }, (err) => {
+                resolve(!err);
+            });
+        });
+    };
 }
 
 /**
@@ -152,26 +206,35 @@ const STRATEGIES: Record<IdeKind, Strategy[]> = {
         }
     ],
     cursor: [
-        // 策略A：composer.newAgentChat（打开 Agent 新对话）+ 等待 + 自动粘贴
+        // 策略A：composer.newAgentChat（打开 Agent 新对话）+ 等待 + 自动粘贴 + （Windows）自动 Enter 发送
         {
-            name: 'cursor.composer.newAgentChat+paste',
+            name: 'cursor.composer.newAgentChat+paste+enter',
             requires: 'composer.newAgentChat',
-            run: async () => {
+            run: async (ctx) => {
                 await _executeCommand('composer.newAgentChat');
                 await sleep(600);
                 // 粘贴剪贴板内容。若当前焦点不在输入框，此命令可能 no-op，
-                // 但不会 throw；后续由提示文案告诉用户补按 Ctrl+V。
+                // 但不会 throw；后续若 Enter 也无效，用户可按兜底提示手动粘贴。
                 await _executeCommand('editor.action.clipboardPasteAction');
+                // 粘贴完成后给 UI 一点时间稳定焦点再发 Enter
+                await sleep(250);
+                const submitted = await _sendEnterKey();
+                ctx.log(`[DIAG:aiChat] sendEnterKey(cursor.A) platform=${process.platform} result=${submitted}`);
+                return submitted;
             }
         },
-        // 策略B：aichat.newchataction（旧版命令 ID）+ 自动粘贴
+        // 策略B：aichat.newchataction（旧版命令 ID）+ 自动粘贴 + （Windows）自动 Enter 发送
         {
-            name: 'cursor.aichat.newchataction+paste',
+            name: 'cursor.aichat.newchataction+paste+enter',
             requires: 'aichat.newchataction',
-            run: async () => {
+            run: async (ctx) => {
                 await _executeCommand('aichat.newchataction');
                 await sleep(600);
                 await _executeCommand('editor.action.clipboardPasteAction');
+                await sleep(250);
+                const submitted = await _sendEnterKey();
+                ctx.log(`[DIAG:aiChat] sendEnterKey(cursor.B) platform=${process.platform} result=${submitted}`);
+                return submitted;
             }
         }
     ],
@@ -246,6 +309,7 @@ export async function dispatchAiChat(ide: IdeKind, ctx: DispatchContext): Promis
 
     let succeededStrategy = '';
     let lastAttempted = 'none';
+    let autoSubmitted = false;
 
     for (const strat of chain) {
         // 检查 requires
@@ -262,8 +326,9 @@ export async function dispatchAiChat(ide: IdeKind, ctx: DispatchContext): Promis
         lastAttempted = strat.name;
         ctx.log(`[DIAG:aiChat] strategy=${strat.name} begin`);
         try {
-            await strat.run(ctx);
-            ctx.log(`[DIAG:aiChat] strategy=${strat.name} ok`);
+            const ret = await strat.run(ctx);
+            autoSubmitted = ret === true;
+            ctx.log(`[DIAG:aiChat] strategy=${strat.name} ok autoSubmitted=${autoSubmitted}`);
             succeededStrategy = strat.name;
             break;
         } catch (e: any) {
@@ -277,8 +342,9 @@ export async function dispatchAiChat(ide: IdeKind, ctx: DispatchContext): Promis
     const result: DispatchResult = {
         succeeded,
         strategy: succeeded ? succeededStrategy : lastAttempted,
-        fellBackToClipboard: !succeeded
+        fellBackToClipboard: !succeeded,
+        autoSubmitted: succeeded && autoSubmitted
     };
-    ctx.log(`[DIAG:aiChat] dispatch result: succeeded=${result.succeeded} strategy=${result.strategy} fellBackToClipboard=${result.fellBackToClipboard}`);
+    ctx.log(`[DIAG:aiChat] dispatch result: succeeded=${result.succeeded} strategy=${result.strategy} fellBackToClipboard=${result.fellBackToClipboard} autoSubmitted=${result.autoSubmitted}`);
     return result;
 }

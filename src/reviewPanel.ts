@@ -10,16 +10,18 @@ const _hostMessages: Record<string, Record<string, string>> = {
         'ai.chat_success_codebuddy': '✅ AI 新对话已打开，指令已复制到剪贴板，请按 Ctrl+V 粘贴后回车发送。',
         'ai.chat_success_vscode': '✅ AI 对话已打开，指令已复制到剪贴板，请按 Ctrl+V 粘贴后回车发送。',
         'ai.chat_success_cursor': '✅ 已在 Cursor 打开 AI Chat 并自动粘贴指令。若未自动发送请按 Enter。',
+        'ai.chat_success_cursor_autosend': '✅ 已在 Cursor 自动打开 AI Chat，指令已粘贴并发送。',
         'ai.chat_success_windsurf': '✅ 已在 Windsurf 打开 Cascade 并自动粘贴指令。若未自动发送请按 Enter。',
-        'ai.chat_fallback': '✅ 已复制 AI 指令到剪贴板，请手动打开AI对话窗口并粘贴执行。',
+        'ai.chat_fallback': '⚠️ 自动派发未完成。已复制 AI 指令到剪贴板，请在 AI 对话窗口按 Ctrl+V 粘贴，然后回车发送（详情见 Output 面板）。',
         'ai.chat_error': '❌ 操作失败: ',
     },
     'en': {
         'ai.chat_success_codebuddy': '✅ New AI chat opened. Instructions copied to clipboard. Press Ctrl+V to paste and send.',
         'ai.chat_success_vscode': '✅ AI chat opened. Instructions copied to clipboard. Press Ctrl+V to paste and send.',
         'ai.chat_success_cursor': '✅ AI Chat opened in Cursor and instructions pasted automatically. Press Enter if not sent.',
+        'ai.chat_success_cursor_autosend': '✅ AI Chat opened in Cursor; instructions pasted and sent automatically.',
         'ai.chat_success_windsurf': '✅ Cascade opened in Windsurf and instructions pasted automatically. Press Enter if not sent.',
-        'ai.chat_fallback': '✅ AI instructions copied to clipboard. Please open AI chat manually and paste.',
+        'ai.chat_fallback': '⚠️ Auto-dispatch did not complete. AI instructions copied to clipboard — please press Ctrl+V then Enter in the AI chat input (see Output panel for details).',
         'ai.chat_error': '❌ Operation failed: ',
     }
 };
@@ -484,14 +486,23 @@ export class ReviewPanel {
                         availableCommands: commandSet
                     });
 
-                    outputChannel.show(true);
-
-                    // 4. 根据结果显示合适的 toast 提示
+                    // 4. 根据结果决定 toast 文案 + OutputChannel 是否抢焦点
                     if (result.succeeded) {
-                        const successKey = `ai.chat_success_${ide}`;
+                        // 成功路径：OutputChannel 仅静默出现在面板，不打断用户
+                        outputChannel.show(true);
+
+                        // Cursor + 已通过 SendKeys 自动发送 → 专属"已发送"文案
+                        const successKey = (ide === 'cursor' && result.autoSubmitted)
+                            ? 'ai.chat_success_cursor_autosend'
+                            : `ai.chat_success_${ide}`;
                         vscode.window.showInformationMessage(_hostT(successKey));
                     } else {
-                        vscode.window.showInformationMessage(_hostT('ai.chat_fallback'));
+                        // 失败路径：追加明确"下一步"指引，并聚焦 OutputChannel 帮助用户自查
+                        outputChannel.appendLine('');
+                        outputChannel.appendLine('[NEXT-STEP] 自动派发未完成。请在 AI 对话窗口输入框按 Ctrl+V 粘贴，然后按回车发送。');
+                        outputChannel.appendLine('[NEXT-STEP] Auto-dispatch did not complete. In the AI chat input, press Ctrl+V to paste, then Enter to send.');
+                        outputChannel.show(false);
+                        vscode.window.showWarningMessage(_hostT('ai.chat_fallback'));
                     }
                 } catch (e: any) {
                     vscode.window.showErrorMessage(_hostT('ai.chat_error') + e.message);

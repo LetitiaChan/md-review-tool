@@ -2542,6 +2542,121 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         });
     });
 
+    // ========= Suite 22: Hotfix — 一键 AI 修复指令追加"完成后点击刷新"提示 =========
+    // 需求：用户希望 AI 修复完成后自动提醒回到 MD Human Review 面板点击右上角刷新按钮。
+    //       触达渠道有两条：(1) 发送到 AI 对话框的 prompt（i18n.js modal.ai_result.copy_text）；
+    //       (2) 生成的 _aicmd.md 指令文件头部（fileService.ts _aiLabels.refresh_hint）。
+    // 两处都必须包含"刷新"关键词，否则 AI 读到指令后可能遗漏此步骤。
+    suite('22. Hotfix — 一键 AI 修复完成后提示刷新面板', () => {
+        const extPath22 = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const i18nJsText22 = fs.readFileSync(path.join(extPath22, 'webview', 'js', 'i18n.js'), 'utf-8');
+        const fileServiceJs22 = fs.readFileSync(path.join(extPath22, 'out', 'fileService.js'), 'utf-8');
+
+        // ---- Tier 1：存在性断言 ----
+
+        test('BT-aiRefreshHint.1 Tier1 — i18n.js copy_text 中英文必须包含"刷新"关键词', () => {
+            // 提取 modal.ai_result.copy_text 的中文值
+            const zhMatch = i18nJsText22.match(/'modal\.ai_result\.copy_text':\s*'([^']+)'/);
+            assert.ok(zhMatch, 'i18n.js 应存在 modal.ai_result.copy_text 中文翻译');
+            const zhText = zhMatch![1];
+            assert.ok(
+                /\u5237\u65b0/.test(zhText),
+                '中文 copy_text 必须包含"刷新"关键词，实际：' + zhText
+            );
+            assert.ok(
+                /MD Human Review|md human review/i.test(zhText),
+                '中文 copy_text 必须提及 MD Human Review 面板名称'
+            );
+
+            // 提取英文版（文件中出现两次 modal.ai_result.copy_text，第二次是英文）
+            const allMatches = [...i18nJsText22.matchAll(/'modal\.ai_result\.copy_text':\s*'([^']+)'/g)];
+            assert.ok(allMatches.length >= 2, '应存在中英文两个 copy_text 翻译');
+            const enText = allMatches[1][1];
+            assert.ok(
+                /refresh/i.test(enText),
+                'English copy_text must include "refresh" keyword, got: ' + enText
+            );
+            assert.ok(
+                /MD Human Review/i.test(enText),
+                'English copy_text must reference MD Human Review panel'
+            );
+        });
+
+        test('BT-aiRefreshHint.2 Tier1 — fileService.ts _aiLabels 必须包含 refresh_hint 键（中英文）', () => {
+            // refresh_hint 中文（编译后 JS 中会是普通字符串字面量）
+            assert.ok(
+                /refresh_hint:\s*['"`][^'"`]*\u5237\u65b0/.test(fileServiceJs22),
+                '_aiLabels zh-CN 必须存在 refresh_hint 且含"刷新"关键词'
+            );
+            // refresh_hint 英文
+            assert.ok(
+                /refresh_hint:\s*['"`][^'"`]*refresh/i.test(fileServiceJs22),
+                '_aiLabels en 必须存在 refresh_hint 且含 refresh keyword'
+            );
+            // applyReview 调用 _aiT('refresh_hint')
+            assert.ok(
+                /_aiT\(\s*['"]refresh_hint['"]\s*\)/.test(fileServiceJs22),
+                'applyReview 必须在某处调用 _aiT(\'refresh_hint\') 以把提示行写入 _aicmd.md'
+            );
+        });
+
+        // ---- Tier 2：行为级/占位符模板替换断言 ----
+
+        test('BT-aiRefreshHint.3 Tier2 — copy_text 含占位符 {source}/{instruction}，替换后完整保留刷新提示', () => {
+            // 模拟 i18n 的 t() 替换行为：{key} → value
+            function tReplace(template: string, params: Record<string, string>) {
+                let out = template;
+                Object.keys(params).forEach(k => {
+                    out = out.replace(new RegExp('\\{' + k + '\\}', 'g'), params[k]);
+                });
+                return out;
+            }
+            const zhMatch = i18nJsText22.match(/'modal\.ai_result\.copy_text':\s*'([^']+)'/);
+            const zhTemplate = zhMatch![1].replace(/\\n/g, '\n');
+            const final = tReplace(zhTemplate, {
+                source: '/tmp/demo.md',
+                instruction: '/tmp/.review/demo_aicmd.md'
+            });
+            // 占位符应被消费，最终文本不应仍含 {source}/{instruction}
+            assert.ok(!/\{source\}|\{instruction\}/.test(final), '占位符应被完全替换');
+            // 最终文本必须含源文件路径 + 指令文件路径 + 刷新提示 三要素
+            assert.ok(final.includes('/tmp/demo.md'), '替换后应含源文件路径');
+            assert.ok(final.includes('/tmp/.review/demo_aicmd.md'), '替换后应含指令文件路径');
+            assert.ok(/\u5237\u65b0/.test(final), '替换后应保留"刷新"提示（不被模板占位符消费掉）');
+        });
+
+        // ---- Tier 3：任务特定断言（针对本次 Hotfix 的具体触达点）----
+
+        test('BT-aiRefreshHint.4 Tier3 — 端到端：AI 对话框文本与 _aicmd.md 指令文件头部都必须含刷新提示', () => {
+            // 场景：用户点击「确定执行」后：
+            //   (a) _lastAiCopyText 被发送到 AI 对话框（来自 modal.ai_result.copy_text）
+            //   (b) _aicmd.md 文件被 AI 读取（来自 fileService.ts applyReview 写入的 lines）
+            // 断言两条链路都在各自载体中留下"刷新"提示，避免 AI 遗漏此步骤。
+
+            // (a) 对话框文本链路
+            const zhCopy = i18nJsText22.match(/'modal\.ai_result\.copy_text':\s*'([^']+)'/)![1];
+            assert.ok(/\u5237\u65b0/.test(zhCopy), '对话框文本（copy_text）必须含"刷新"');
+            assert.ok(/MD Human Review/i.test(zhCopy), '对话框文本应明确提及面板名 MD Human Review');
+
+            // (b) _aicmd.md 文件链路 — 模拟 applyReview 生成逻辑
+            // 现实中 _aiT('refresh_hint') 会在 applyReview 的 lines.push(`> ${_aiT('refresh_hint')}`) 中被调用
+            // 这里通过静态检查确保这条 push 存在且紧跟 anchor_hint 之后
+            const pushSequence = fileServiceJs22.match(
+                /_aiT\(['"]order_hint['"]\)[\s\S]{0,200}?_aiT\(['"]anchor_hint['"]\)[\s\S]{0,200}?_aiT\(['"]refresh_hint['"]\)/
+            );
+            assert.ok(
+                pushSequence,
+                'applyReview 必须按 order_hint → anchor_hint → refresh_hint 顺序推入三行提示到 _aicmd.md 头部'
+            );
+
+            // (c) 双渠道一致性：两处都必须提及 MD Human Review 面板名
+            assert.ok(
+                /MD Human Review/i.test(fileServiceJs22.match(/refresh_hint:\s*['"`]([^'"`]+)/)![1]),
+                '_aicmd.md 的 refresh_hint 也应明确提及 MD Human Review 面板名，保持与对话框文案一致'
+            );
+        });
+    });
+
     // ==========================================================================
     // AI Chat 派发适配层测试（change: add-cursor-windsurf-ai-chat）
     // Tier 1：存在性断言 / Tier 2：行为级路由断言 / Tier 3：BT-aiChat.X 任务断言
@@ -2550,7 +2665,14 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         // 动态 require，避免顶层 import 影响 test file 加载
         // tslint:disable-next-line:no-require-imports
         const adapters = require('../../src/aiChatAdapters');
-        const { detectIdeKind, dispatchAiChat, __setExecuteCommandForTest, __resetExecuteCommandForTest } = adapters;
+        const {
+            detectIdeKind,
+            dispatchAiChat,
+            __setExecuteCommandForTest,
+            __resetExecuteCommandForTest,
+            __setSendEnterKeyForTest,
+            __resetSendEnterKeyForTest
+        } = adapters;
 
         // i18n.js 文本用于 Tier 1 断言翻译 key 存在性
         const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
@@ -2570,9 +2692,12 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         }
 
         teardown(() => {
-            // 确保每个 test 之间 executeCommand mock 被重置
+            // 确保每个 test 之间 executeCommand / sendEnterKey mock 被重置
             if (typeof __resetExecuteCommandForTest === 'function') {
                 __resetExecuteCommandForTest();
+            }
+            if (typeof __resetSendEnterKeyForTest === 'function') {
+                __resetSendEnterKeyForTest();
             }
         });
 
@@ -2646,10 +2771,12 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             __setExecuteCommandForTest(async (cmd: string) => {
                 called.push(cmd);
             });
+            // sendEnterKey 默认桩：非 Win 返回 false；测试里强制桩为 false 避免依赖平台
+            __setSendEnterKeyForTest(async () => false);
             const { ctx } = makeCtx(['composer.newAgentChat', 'editor.action.clipboardPasteAction']);
             const res = await dispatchAiChat('cursor', ctx);
             assert.strictEqual(res.succeeded, true, '策略 A 应成功');
-            assert.strictEqual(res.strategy, 'cursor.composer.newAgentChat+paste');
+            assert.strictEqual(res.strategy, 'cursor.composer.newAgentChat+paste+enter');
             assert.strictEqual(res.fellBackToClipboard, false);
             assert.deepStrictEqual(
                 called,
@@ -2663,10 +2790,11 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             __setExecuteCommandForTest(async (cmd: string) => {
                 called.push(cmd);
             });
+            __setSendEnterKeyForTest(async () => false);
             const { ctx } = makeCtx(['aichat.newchataction']);
             const res = await dispatchAiChat('cursor', ctx);
             assert.strictEqual(res.succeeded, true);
-            assert.strictEqual(res.strategy, 'cursor.aichat.newchataction+paste');
+            assert.strictEqual(res.strategy, 'cursor.aichat.newchataction+paste+enter');
             assert.strictEqual(called[0], 'aichat.newchataction');
         });
 
@@ -2726,11 +2854,11 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.strictEqual(res.fellBackToClipboard, true, '应标记 fellBackToClipboard=true');
             // 日志应记录每条策略的 error
             assert.ok(
-                logs.some(l => /strategy=cursor\.composer\.newAgentChat\+paste error=simulated failure/.test(l)),
+                logs.some(l => /strategy=cursor\.composer\.newAgentChat\+paste\+enter error=simulated failure/.test(l)),
                 '日志应记录策略 A 的失败'
             );
             assert.ok(
-                logs.some(l => /strategy=cursor\.aichat\.newchataction\+paste error=simulated failure/.test(l)),
+                logs.some(l => /strategy=cursor\.aichat\.newchataction\+paste\+enter error=simulated failure/.test(l)),
                 '日志应记录策略 B 的失败'
             );
         });
@@ -2763,6 +2891,55 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(
                 !called.includes('aichat.newchataction'),
                 '策略 A 成功后不应再调用策略 B 的 aichat.newchataction'
+            );
+        });
+
+        // ==== 新增：OS 级自动发送（SendKeys）相关断言 ====
+
+        test('BT-aiChat.6 Cursor 策略 A 成功 + sendEnterKey=true → autoSubmitted=true', async () => {
+            let sendEnterCalls = 0;
+            __setExecuteCommandForTest(async (_cmd: string) => { /* noop */ });
+            __setSendEnterKeyForTest(async () => { sendEnterCalls++; return true; });
+            const { ctx } = makeCtx(['composer.newAgentChat']);
+            const res = await dispatchAiChat('cursor', ctx);
+            assert.strictEqual(res.succeeded, true, '策略 A 应成功');
+            assert.strictEqual(res.autoSubmitted, true, 'sendEnterKey=true 时 autoSubmitted 应为 true');
+            assert.strictEqual(sendEnterCalls, 1, 'sendEnterKey 应被调用一次');
+        });
+
+        test('BT-aiChat.7 Cursor 策略 A 成功 + sendEnterKey=false（非 Win 平台）→ succeeded=true 但 autoSubmitted=false', async () => {
+            __setExecuteCommandForTest(async (_cmd: string) => { /* noop */ });
+            __setSendEnterKeyForTest(async () => false);
+            const { ctx } = makeCtx(['composer.newAgentChat']);
+            const res = await dispatchAiChat('cursor', ctx);
+            assert.strictEqual(res.succeeded, true, '打开 + 粘贴成功 → succeeded 仍为 true');
+            assert.strictEqual(res.autoSubmitted, false, '未在 Win 平台 sendEnterKey 不会真发送');
+            assert.strictEqual(res.fellBackToClipboard, false, '未降级 —— 粘贴已完成');
+        });
+
+        test('BT-aiChat.8 非 Cursor 策略（如 CodeBuddy）autoSubmitted 始终为 false', async () => {
+            __setExecuteCommandForTest(async (_cmd: string) => { /* noop */ });
+            // 即使 sendEnterKey 返回 true，也不应影响非 Cursor 策略（它们不调用 sendEnterKey）
+            let sendEnterCalls = 0;
+            __setSendEnterKeyForTest(async () => { sendEnterCalls++; return true; });
+            const { ctx } = makeCtx([
+                'tencentcloud.codingcopilot.chat.startNewChat',
+                'tencentcloud.codingcopilot.chat.sendMessage'
+            ]);
+            const res = await dispatchAiChat('codebuddy', ctx);
+            assert.strictEqual(res.succeeded, true);
+            assert.strictEqual(res.autoSubmitted, false, 'CodeBuddy 策略不走 sendEnterKey，autoSubmitted 必须为 false');
+            assert.strictEqual(sendEnterCalls, 0, 'CodeBuddy 策略不应触发 sendEnterKey');
+        });
+
+        test('BT-aiChat.9 dispatch 汇总日志应包含 autoSubmitted 字段', async () => {
+            __setExecuteCommandForTest(async (_cmd: string) => { /* noop */ });
+            __setSendEnterKeyForTest(async () => true);
+            const { ctx, logs } = makeCtx(['composer.newAgentChat']);
+            await dispatchAiChat('cursor', ctx);
+            assert.ok(
+                logs.some(l => /dispatch result:.*autoSubmitted=true/.test(l)),
+                '汇总日志应带 autoSubmitted=true'
             );
         });
     });

@@ -20,6 +20,7 @@ const _aiLabels: Record<string, Record<string, string>> = {
         field_target: '目标文本', field_comment: '评论内容', field_images: '附图', field_images_n: '共 {n} 张', field_image_n: '图片{n}：', field_image_alt: '附图{n}',
         no_valid: '无有效指令', generated: '共 {n} 条指令已生成 AI 修改文件',
         file_not_found: '文件不存在: ', invalid_image: '无效的图片数据格式',
+        refresh_hint: '✅ **完成所有修改后**，请提醒用户回到 **MD Human Review** 面板点击右上角的刷新按钮（🔄），以加载最新内容并创建新的批阅版本。',
     },
     'en': {
         title: 'AI Modification Instructions',
@@ -37,6 +38,7 @@ const _aiLabels: Record<string, Record<string, string>> = {
         field_target: 'Target Text', field_comment: 'Comment', field_images: 'Images', field_images_n: '{n} image(s)', field_image_n: 'Image {n}:', field_image_alt: 'Image {n}',
         no_valid: 'No valid instructions', generated: '{n} instructions generated for AI modification',
         file_not_found: 'File not found: ', invalid_image: 'Invalid image data format',
+        refresh_hint: '✅ **After completing all modifications**, please remind the user to go back to the **MD Human Review** panel and click the refresh button (🔄) at the top right corner to reload the latest content and create a new review version.',
     }
 };
 
@@ -222,6 +224,7 @@ const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules
         lines.push('');
         lines.push(`> ${_aiT('order_hint')}`);
         lines.push(`> ${_aiT('anchor_hint')}`);
+        lines.push(`> ${_aiT('refresh_hint')}`);
         lines.push('');
 
         sortedAnnotations.forEach((ann: any, i: number) => {

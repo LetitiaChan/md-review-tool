@@ -168,7 +168,7 @@ window.I18n = (() => {
             'modal.ai_result.copy_btn': '📋 一键复制指令',
             'modal.ai_result.copied': '✅ 已复制',
             'modal.ai_result.header_empty': '⚠️ 无有效指令',
-            'modal.ai_result.copy_text': '请根据评审指令文件修改源文件。\n\n源文件路径：{source}\n评审指令文件：{instruction}\n\n请先读取评审指令文件了解需要修改的内容，然后按指令逐条修改源文件。',
+            'modal.ai_result.copy_text': '请根据评审指令文件修改源文件。\n\n源文件路径：{source}\n评审指令文件：{instruction}\n\n请先读取评审指令文件了解需要修改的内容，然后按指令逐条修改源文件。\n\n✅ 完成所有修改后，请提醒我回到 **MD Human Review** 面板点击右上角的刷新按钮（🔄），以加载最新内容并创建新的批阅版本。',
 
             // ===== 帮助弹窗 =====
             'help.title': '📖 使用帮助',
@@ -639,7 +639,7 @@ window.I18n = (() => {
             'modal.ai_result.copy_btn': '📋 Copy Instructions',
             'modal.ai_result.copied': '✅ Copied',
             'modal.ai_result.header_empty': '⚠️ No valid instructions',
-            'modal.ai_result.copy_text': 'Please modify the source file according to the review instruction file.\n\nSource file: {source}\nInstruction file: {instruction}\n\nPlease read the instruction file first, then apply modifications one by one.',
+            'modal.ai_result.copy_text': 'Please modify the source file according to the review instruction file.\n\nSource file: {source}\nInstruction file: {instruction}\n\nPlease read the instruction file first, then apply modifications one by one.\n\n✅ After all modifications are completed, please remind me to go back to the **MD Human Review** panel and click the refresh button (🔄) at the top right corner to reload the latest content and create a new review version.',
 
             // ===== Help Modal =====
             'help.title': '📖 User Guide',
