@@ -2,6 +2,17 @@
 
 所有重要的版本变更都将记录在此文件中。
 
+## [1.3.6] - 2026-04-19
+
+### 🔧 改进
+- `.claude/` 目录改用全量复制替代 shim，提升 Claude Code 声明式加载的兼容性
+- `sync-aikit-shims.js` 脚本支持跳过子目录配置（`.claude/rules/` 改由 CLAUDE.md `@import` 替代）
+- 扩充 aikit-shim 测试覆盖全量复制场景（新增 BT-aikitShim.12~15）
+
+### 📝 文档
+- 修正 README badge 链接，扩充 package.json keywords/categories 改善 Marketplace 搜索可见度
+- CLAUDE.md 开发工作流章节改用 `@.aikp/rules/` 导入语法
+
 ## [1.3.5] - 2026-04-19
 
 ### ✨ 新增
