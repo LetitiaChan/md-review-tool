@@ -230,7 +230,7 @@ const Store = (() => {
         addAnnotation, removeAnnotation, updateAnnotation,
         getAnnotations, getAnnotationsForBlock, getData, clearAll,
         getFileHash, setFileHash, getDocVersion, setDocVersion,
-        getSourceFilePath, getSourceDir,
+        getSourceFilePath, getSourceDir, getRelPath,
         archiveCurrentRecord, getArchivedRecords, restoreFromReviewRecord
     };
 })();

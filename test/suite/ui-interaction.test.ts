@@ -2054,6 +2054,110 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         });
     });
 
+    // ========= Suite 19: Hotfix — Store 模块导出接口完整性 =========
+    // Bug：清除批注按钮点击时报 TypeError: Store.getRelPath is not a function
+    // 根因：store.js 内部定义了 getRelPath() 但 return 对象中未导出
+    // 修复：在 return 列表补充 getRelPath
+    suite('19. Hotfix — Store 模块导出接口完整性', () => {
+        const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const storeJsPath = path.join(extPath, 'webview', 'js', 'store.js');
+        const appJsPath = path.join(extPath, 'webview', 'js', 'app.js');
+        const storeJsText = fs.readFileSync(storeJsPath, 'utf-8');
+        const appJsText = fs.readFileSync(appJsPath, 'utf-8');
+
+        // ---- Tier 1：存在性断言（源码关键字） ----
+
+        test('BT-storeExports.1 Tier1 — store.js 应定义 getRelPath 函数', () => {
+            assert.ok(
+                /function\s+getRelPath\s*\(\s*\)\s*\{[^}]*return\s+data\.relPath/.test(storeJsText),
+                'store.js 应定义 getRelPath() 函数，返回 data.relPath'
+            );
+        });
+
+        test('BT-storeExports.2 Tier1 — store.js 的模块 return 列表应导出 getRelPath', () => {
+            // 提取 Store IIFE 末尾的 return { ... } 对象体
+            const returnMatch = /return\s*\{([\s\S]*?)\};\s*\}\s*\)\s*\(\s*\)\s*;/.exec(storeJsText);
+            assert.ok(returnMatch, '应能定位 Store IIFE 的 return 语句');
+            const returnBody = returnMatch![1];
+            assert.ok(
+                /\bgetRelPath\b/.test(returnBody),
+                'Store 模块的 return 对象应包含 getRelPath（否则外部调用 Store.getRelPath() 会抛 TypeError）'
+            );
+        });
+
+        test('BT-storeExports.3 Tier1 — Store 内部定义的所有 getter 都应被导出', () => {
+            // 防回归：内部定义了但没导出的 getter 是同类 bug
+            const definedGetters = new Set<string>();
+            const defRe = /function\s+(get[A-Z]\w*)\s*\(/g;
+            let m: RegExpExecArray | null;
+            while ((m = defRe.exec(storeJsText)) !== null) {
+                definedGetters.add(m[1]);
+            }
+            const returnMatch = /return\s*\{([\s\S]*?)\};\s*\}\s*\)\s*\(\s*\)\s*;/.exec(storeJsText);
+            assert.ok(returnMatch, '应能定位 Store IIFE 的 return 语句');
+            const returnBody = returnMatch![1];
+            const missing: string[] = [];
+            definedGetters.forEach(g => {
+                if (!new RegExp(`\\b${g}\\b`).test(returnBody)) missing.push(g);
+            });
+            assert.deepStrictEqual(
+                missing,
+                [],
+                `以下 getter 函数已定义但未在 return 中导出：${missing.join(', ')}（会导致外部调用报 TypeError）`
+            );
+        });
+
+        // ---- Tier 2：行为级断言（调用链验证） ----
+
+        test('BT-storeExports.4 Tier2 — btnConfirmClearAll handler 调用 Store.getRelPath 必须有导出支持', () => {
+            // 验证 app.js 确实通过 Store.getRelPath() 获取 relPath
+            const callerIdx = appJsText.indexOf('Store.getRelPath()');
+            assert.ok(callerIdx > 0, 'app.js 的 btnConfirmClearAll handler 应调用 Store.getRelPath()');
+            // 上下文中必须是 btnConfirmClearAll handler（500 字符窗口内）
+            const context = appJsText.slice(Math.max(0, callerIdx - 500), callerIdx);
+            assert.ok(
+                context.includes('btnConfirmClearAll'),
+                'Store.getRelPath() 调用应发生在 btnConfirmClearAll handler 上下文'
+            );
+        });
+
+        test('BT-storeExports.5 Tier2 — getRelPath 返回空串而非 undefined（防御性默认值）', () => {
+            const body = /function\s+getRelPath\s*\(\s*\)\s*\{([^}]+)\}/.exec(storeJsText);
+            assert.ok(body, '应能提取 getRelPath 函数体');
+            assert.ok(
+                /data\.relPath\s*\|\|\s*['"]{2}/.test(body![1]),
+                'getRelPath 应返回 data.relPath || "" 以避免 undefined 传给 deleteReviewRecords'
+            );
+        });
+
+        // ---- Tier 3：任务特定断言（本次 Bug 具体场景） ----
+
+        test('BT-storeExports.6 Tier3 — 模拟清除批注操作：Store.getRelPath 必须可调用（不抛 TypeError）', () => {
+            // 在 Node 环境下加载 store.js，验证 Store 对象真正暴露了 getRelPath
+            // 注意：store.js 是 webview 代码，用 const 声明的 Store 不会挂到 sandbox，
+            // 需要在代码末尾追加 `this.Store = Store` 将其显式暴露
+            const sandbox: any = { window: {}, localStorage: { getItem: () => null, setItem: () => {} } };
+            // @ts-ignore
+            const vm = require('vm');
+            const ctx = vm.createContext(sandbox);
+            const wrappedCode = storeJsText + '\n;this.Store = Store;';
+            vm.runInContext(wrappedCode, ctx);
+            assert.strictEqual(
+                typeof sandbox.Store,
+                'object',
+                'store.js 执行后应暴露 Store 对象'
+            );
+            assert.strictEqual(
+                typeof sandbox.Store.getRelPath,
+                'function',
+                'Store.getRelPath 必须是函数（否则 btnConfirmClearAll 会抛 TypeError）'
+            );
+            // 调用一次，确保不抛且返回字符串
+            const result = sandbox.Store.getRelPath();
+            assert.strictEqual(typeof result, 'string', 'Store.getRelPath() 应返回字符串');
+        });
+    });
+
     // ==========================================================================
     // AI Chat 派发适配层测试（change: add-cursor-windsurf-ai-chat）
     // Tier 1：存在性断言 / Tier 2：行为级路由断言 / Tier 3：BT-aiChat.X 任务断言
