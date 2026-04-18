@@ -12,6 +12,8 @@ const Exporter = (() => {
     // 1. doAutoSave 发现批注为空时，仅更新 UI 状态，不删除磁盘批阅记录（保留历史版本供日后回溯）
     // 2. 磁盘记录删除仅通过用户显式操作触发（见 app.js btnConfirmClearAll）
     // 3. 刷新/文件内容变化时会创建新版本号（reviewVersion + 1），旧版本自然保留为历史版本
+    // 4. 新版本号（v>1）即使批注为空也会写入空占位记录到磁盘，
+    //    否则下次打开文件会把上一版旧批注错误恢复（Bug: AI 修复后重开仍见旧批注）
 
     /**
      * 构建用于文件名的 reviewBaseName。
@@ -280,7 +282,27 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
         // 只有用户显式点击"清除全部批注"时，才会主动删除磁盘文件。
         // 这样可以避免 handleRefresh 内容变化分支、setFile 清空 annotations 等场景
         // 误删用户已保存的历史批阅记录。
+        //
+        // 特殊情况：刷新后 reviewVersion 自增到 >1 且批注为空时，必须落盘一条
+        // 空占位记录（v{N}_record.md），否则磁盘上只有上一版 v{N-1} 记录，
+        // 下次打开文件时 getReviewRecords 返回最新为 v{N-1}，会把已处理过的
+        // 旧批注错误地恢复给用户（Bug: AI 修复后重开仍见旧批注）。
         if (!data.annotations.length) {
+            const version = data.reviewVersion || 1;
+            if (version > 1) {
+                try {
+                    const blocks = Renderer.parseMarkdown(data.rawMarkdown);
+                    const doc = generateReviewDoc(data, blocks);
+                    const rbaseName = _reviewBaseName(data);
+                    const mdFileName = `${rbaseName}_v${version}_record.md`;
+                    const saved = await saveViaHost(mdFileName, doc);
+                    updateAutoSaveStatus(saved ? 'saved' : 'error');
+                } catch (e) {
+                    console.error('[AutoSave] 空版本占位记录保存失败:', e);
+                    updateAutoSaveStatus('error');
+                }
+                return;
+            }
             updateAutoSaveStatus('saved');
             return;
         }

@@ -94,20 +94,22 @@
             const records = await callHost('getReviewRecords', { fileName: data.name, relPath: data.relPath || '' });
             if (records && records.records && records.records.length > 0) {
                 const matchedRecord = records.records[0];
+                // 即使最新记录批注为空（v>1 空占位），也要 restoreFromReviewRecord
+                // 让 reviewVersion 正确恢复，下次刷新不会从 v1 开始自增。
+                loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
+                requestImageUris(data.content, data.sourceDir);
+                Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
+                const newBlocks = Renderer.parseMarkdown(data.content);
+                Renderer.renderBlocks(newBlocks, Store.getAnnotations());
+                renderMathAndMermaid();
+                Annotations.setBlocks(newBlocks);
+                Annotations.init(newBlocks);
+                Annotations.renderAnnotationsList();
+                Annotations.updateToolbarState();
                 if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
-                    loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
-                    requestImageUris(data.content, data.sourceDir);
-                    Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
-                    const newBlocks = Renderer.parseMarkdown(data.content);
-                    Renderer.renderBlocks(newBlocks, Store.getAnnotations());
-                    renderMathAndMermaid();
-                    Annotations.setBlocks(newBlocks);
-                    Annotations.init(newBlocks);
-                    Annotations.renderAnnotationsList();
-                    Annotations.updateToolbarState();
                     showNotification(t('notification.restored', { count: matchedRecord.annotations.length }));
-                    return;
                 }
+                return;
             }
         } catch (e) {
             console.warn('[App] 推送恢复批阅记录失败:', e);
@@ -626,20 +628,22 @@
                 const fileData = await callHost('readFile', { filePath: value });
                 if (fileData && !fileData.error) {
                     const matchedRecord = records.records[0];
+                    // 即使最新记录批注为空（v>1 空占位），也要 restoreFromReviewRecord
+                    // 让 reviewVersion 正确恢复，下次刷新不会从 v1 开始自增。
+                    loadDocument(fileData.name, fileData.content, true, undefined, fileData.docVersion, fileData.sourceFilePath, fileData.sourceDir, fileData.relPath, fileData.pathHash);
+                    requestImageUris(fileData.content, fileData.sourceDir);
+                    Store.restoreFromReviewRecord(matchedRecord, fileData.name, fileData.content, fileData.docVersion);
+                    const newBlocks = Renderer.parseMarkdown(fileData.content);
+                    Renderer.renderBlocks(newBlocks, Store.getAnnotations());
+                    renderMathAndMermaid();
+                    Annotations.setBlocks(newBlocks);
+                    Annotations.init(newBlocks);
+                    Annotations.renderAnnotationsList();
+                    Annotations.updateToolbarState();
                     if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
-                        loadDocument(fileData.name, fileData.content, true, undefined, fileData.docVersion, fileData.sourceFilePath, fileData.sourceDir, fileData.relPath, fileData.pathHash);
-                        requestImageUris(fileData.content, fileData.sourceDir);
-                        Store.restoreFromReviewRecord(matchedRecord, fileData.name, fileData.content, fileData.docVersion);
-                        const newBlocks = Renderer.parseMarkdown(fileData.content);
-                        Renderer.renderBlocks(newBlocks, Store.getAnnotations());
-                        renderMathAndMermaid();
-                        Annotations.setBlocks(newBlocks);
-                        Annotations.init(newBlocks);
-                        Annotations.renderAnnotationsList();
-                        Annotations.updateToolbarState();
-showNotification(t('notification.restored', { count: matchedRecord.annotations.length }));
-                        return;
+                        showNotification(t('notification.restored', { count: matchedRecord.annotations.length }));
                     }
+                    return;
                 }
             }
 
@@ -681,8 +685,10 @@ showNotification(t('notification.restored', { count: matchedRecord.annotations.l
                         const records = await callHost('getReviewRecords', { fileName: data.name, relPath: data.relPath || '' });
                         if (records && records.records && records.records.length > 0) {
                             const matchedRecord = records.records[0];
+                            // 即使最新记录批注为空（v>1 空占位），也要 restoreFromReviewRecord
+                            // 让 reviewVersion 与磁盘保持一致。
+                            Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
                             if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
-                                Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
                                 const newBlocks = Renderer.parseMarkdown(data.content);
                                 Renderer.renderBlocks(newBlocks, Store.getAnnotations());
                                 renderMathAndMermaid();
@@ -711,6 +717,13 @@ showNotification(t('notification.restored', { count: matchedRecord.annotations.l
     function loadDocument(fileName, markdown, isNew, fileHash, docVersion, sourceFilePath, sourceDir, relPath, pathHash) {
         if (isNew) {
             Store.setFile(fileName, markdown, fileHash, docVersion, sourceFilePath, sourceDir, relPath, pathHash);
+            // 文件内容变化场景（刷新 / AI修复后重新加载）：setFile 会将 reviewVersion 自增。
+            // 此时批注可能为空，但新版本号必须落盘一条占位记录，
+            // 否则下次打开文件时 getReviewRecords 返回的最新版本仍是旧 v{N-1}，
+            // 会把已处理过的旧批注错误地恢复（Bug: AI 修复后重开仍见旧批注）。
+            if (Exporter && Exporter.isAutoSaveEnabled && Exporter.isAutoSaveEnabled()) {
+                Exporter.triggerAutoSave();
+            }
         }
 
         document.getElementById('welcomeScreen').style.display = 'none';

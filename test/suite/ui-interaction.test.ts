@@ -2033,23 +2033,30 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
         test('BT-reviewKeep.6 Tier3 — 模拟刷新场景：Store 批注被清空后 doAutoSave 不应发 deleteReviewRecords', () => {
             // 行为级：解析 doAutoSave 实际执行路径
-            // 构造一个最小化的 sandbox，mock Store.getData 返回空批注 + 有 fileName，
-            // 验证 doAutoSave 执行时不会产生 deleteReviewRecords 消息
+            // 验证 doAutoSave 空批注分支不会产生 deleteReviewRecords 消息（C-1 核心）
+            // 注意：修复 BT-versionBump 后，空批注分支在 v>1 时会调用 saveViaHost 落盘空占位，
+            //      但仍不应发 deleteReviewRecords；v=1 仍只 updateAutoSaveStatus('saved')。
             const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
-            // 精确断言：空批注分支进入后，updateAutoSaveStatus('saved') 应是唯一的副作用
-            const emptyIdx = body.indexOf('!data.annotations.length');
-            assert.ok(emptyIdx >= 0);
-            const returnIdx = body.indexOf('return', emptyIdx);
-            assert.ok(returnIdx > emptyIdx, '空批注分支应在短路径内直接 return');
-            const branch = body.slice(emptyIdx, returnIdx);
-            // 应只有 updateAutoSaveStatus 调用，没有 postMessage
+            // 通过括号匹配提取空批注外层 if 的完整块
+            const emptyIfStart = body.indexOf('if (!data.annotations.length)');
+            assert.ok(emptyIfStart >= 0);
+            const blockStart = body.indexOf('{', emptyIfStart);
+            let depth = 1, j = blockStart + 1;
+            while (j < body.length && depth > 0) {
+                if (body[j] === '{') depth++;
+                else if (body[j] === '}') depth--;
+                j++;
+            }
+            const branch = body.slice(blockStart, j);
+            // 核心断言 1：整个空批注分支应包含至少一次 updateAutoSaveStatus 调用（v=1 或占位落盘后）
             assert.ok(
-                branch.includes("updateAutoSaveStatus('saved')"),
-                '空批注分支应调用 updateAutoSaveStatus("saved") 保持 UI 一致'
+                /updateAutoSaveStatus\(/.test(branch),
+                '空批注分支应通过 updateAutoSaveStatus 保持 UI 一致'
             );
+            // 核心断言 2：C-1 策略核心 — 不应发 deleteReviewRecords 消息
             assert.ok(
-                !/vscode\.postMessage/.test(branch),
-                '空批注分支不应调用 vscode.postMessage（C-1 策略核心）'
+                !/deleteReviewRecords/.test(branch),
+                '空批注分支不应触发 deleteReviewRecords（C-1 策略核心，历史版本永久保留）'
             );
         });
     });
@@ -2155,6 +2162,179 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             // 调用一次，确保不抛且返回字符串
             const result = sandbox.Store.getRelPath();
             assert.strictEqual(typeof result, 'string', 'Store.getRelPath() 应返回字符串');
+        });
+    });
+
+    // ========= Suite 20: Hotfix — AI 修复后新版本号必须落盘占位记录 =========
+    // Bug：一键 AI 修复后点刷新，文件内容变化 → reviewVersion 自增到 v2，
+    //      但批注为空导致 doAutoSave 不落盘，磁盘上仍只有 v1（已处理过的旧批注）。
+    //      下次打开文件时 getReviewRecords 返回 records[0]=v1，
+    //      restoreFromReviewRecord 把旧批注恢复给用户，用户看到的是过期数据。
+    // 修复：
+    //   A. export.js doAutoSave 在 v>1 且批注为空时，写入空占位记录到磁盘
+    //   B. app.js loadDocument(isNew=true) 触发一次 autosave，立刻落盘新版本
+    //   C. app.js 三处 records[0] 恢复逻辑：即使空批注也要 restoreFromReviewRecord
+    //      恢复 reviewVersion（store.js 已兼容 annotations=[] 场景）
+    suite('20. Hotfix — AI 修复后新版本号必须落盘占位记录', () => {
+        const extPath20 = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const exportJsText20 = fs.readFileSync(path.join(extPath20, 'webview', 'js', 'export.js'), 'utf-8');
+        const appJsText20 = fs.readFileSync(path.join(extPath20, 'webview', 'js', 'app.js'), 'utf-8');
+        const storeJsText20 = fs.readFileSync(path.join(extPath20, 'webview', 'js', 'store.js'), 'utf-8');
+
+        // 本地 extractFunctionBody（与 Suite 18 同实现，因作用域隔离需复制）
+        function extractFunctionBody20(source: string, anchorRegex: RegExp): string {
+            const m = anchorRegex.exec(source);
+            if (!m) return '';
+            let i = m.index + m[0].length;
+            while (i < source.length && source[i] !== '{') i++;
+            if (i >= source.length) return '';
+            let depth = 1;
+            const start = i + 1;
+            i = start;
+            while (i < source.length && depth > 0) {
+                const ch = source[i];
+                if (ch === '{') depth++;
+                else if (ch === '}') depth--;
+                i++;
+            }
+            return source.slice(start, i - 1);
+        }
+
+        // ---- Tier 1：存在性断言 ----
+
+        test('BT-versionBump.1 Tier1 — doAutoSave 空批注分支应包含 reviewVersion > 1 的占位落盘逻辑', () => {
+            const body = extractFunctionBody20(exportJsText20, /async\s+function\s+doAutoSave\s*\(/);
+            // 提取空批注外层 if 块的完整内容（通过括号匹配）
+            const emptyIfStart = body.indexOf('if (!data.annotations.length)');
+            assert.ok(emptyIfStart >= 0, '应能定位空批注分支');
+            const blockStart = body.indexOf('{', emptyIfStart);
+            let depth = 1, j = blockStart + 1;
+            while (j < body.length && depth > 0) {
+                if (body[j] === '{') depth++;
+                else if (body[j] === '}') depth--;
+                j++;
+            }
+            const emptyBranch = body.slice(blockStart, j);
+            assert.ok(
+                /version\s*>\s*1/.test(emptyBranch),
+                '空批注分支应判断 version > 1 走占位落盘'
+            );
+            assert.ok(
+                /saveViaHost\(/.test(emptyBranch),
+                '空批注分支在 version > 1 时应调用 saveViaHost 落盘占位记录'
+            );
+        });
+
+        test('BT-versionBump.2 Tier1 — loadDocument 在 isNew=true 时应触发 autosave 落盘新版本', () => {
+            // 正则提取 loadDocument 函数体
+            const body = extractFunctionBody20(appJsText20, /function\s+loadDocument\s*\(/);
+            const isNewIdx = body.indexOf('if (isNew)');
+            assert.ok(isNewIdx >= 0, 'loadDocument 应存在 isNew 分支');
+            // 取 isNew 块（到下一个 document.getElementById 之前）
+            const nextIdx = body.indexOf("document.getElementById('welcomeScreen')", isNewIdx);
+            const isNewBranch = body.slice(isNewIdx, nextIdx);
+            assert.ok(
+                /Store\.setFile\(/.test(isNewBranch),
+                'isNew 分支应调用 Store.setFile'
+            );
+            assert.ok(
+                /triggerAutoSave\(/.test(isNewBranch),
+                'isNew 分支应调用 Exporter.triggerAutoSave 使新版本号立刻落盘'
+            );
+        });
+
+        test('BT-versionBump.3 Tier1 — 所有 records[0] 恢复分支不应因空批注而跳过 restoreFromReviewRecord', () => {
+            // 正则匹配 "matchedRecord.annotations && matchedRecord.annotations.length > 0" 作为
+            // 旧版判断条件，且其后紧跟 Store.restoreFromReviewRecord —— 这种被"短路过滤"的形式应不存在
+            // 统计有多少处 restoreFromReviewRecord 被旧判断包围
+            const pattern = /if\s*\(\s*matchedRecord\.annotations\s*&&\s*matchedRecord\.annotations\.length\s*>\s*0\s*\)\s*\{[\s\S]{0,200}?Store\.restoreFromReviewRecord/g;
+            const matches = appJsText20.match(pattern) || [];
+            assert.strictEqual(
+                matches.length,
+                0,
+                `app.js 不应有任何 "matchedRecord.annotations.length > 0" 短路导致跳过 restoreFromReviewRecord 的逻辑（找到 ${matches.length} 处，会导致 reviewVersion 无法恢复）`
+            );
+        });
+
+        // ---- Tier 2：行为级断言 ----
+
+        test('BT-versionBump.4 Tier2 — store.setFile 同文件内容变化应自增 reviewVersion（v1 → v2 → v3）', () => {
+            const sandbox: any = { window: {}, localStorage: { getItem: () => null, setItem: () => {} } };
+            // @ts-ignore
+            const vm = require('vm');
+            const ctx = vm.createContext(sandbox);
+            vm.runInContext(storeJsText20 + '\n;this.Store = Store;', ctx);
+            const Store = sandbox.Store;
+
+            // 初始化 v1 + 一个假批注
+            Store.setFile('a.md', 'content v1', '', '1.0', '', '', '', '');
+            Store.addAnnotation({ blockIndex: 0, startOffset: 0, selectedText: 'x', comment: 'c', type: 'comment' });
+            assert.strictEqual(Store.getData().reviewVersion, 1, '初始 reviewVersion 应为 1');
+
+            // 内容变化 → 应进入 contentChanged 分支并自增到 v2
+            Store.setFile('a.md', 'content v2 changed', '', '1.0', '', '', '', '');
+            assert.strictEqual(Store.getData().reviewVersion, 2, '内容变化后 reviewVersion 应自增到 v2');
+            assert.strictEqual(Store.getData().annotations.length, 0, '内容变化后 annotations 应被清空');
+
+            // 再次内容变化（AI 第二轮修复） → v3
+            Store.setFile('a.md', 'content v3 changed again', '', '1.0', '', '', '', '');
+            assert.strictEqual(Store.getData().reviewVersion, 3, '连续内容变化应持续自增 reviewVersion');
+        });
+
+        test('BT-versionBump.5 Tier2 — restoreFromReviewRecord 对空批注占位应正确恢复 reviewVersion', () => {
+            const sandbox: any = { window: {}, localStorage: { getItem: () => null, setItem: () => {} } };
+            // @ts-ignore
+            const vm = require('vm');
+            const ctx = vm.createContext(sandbox);
+            vm.runInContext(storeJsText20 + '\n;this.Store = Store;', ctx);
+            const Store = sandbox.Store;
+
+            // 模拟打开文件场景：磁盘最新记录是 v2 空占位
+            const emptyPlaceholder = { reviewVersion: 2, annotations: [], createdAt: '2026-04-18T00:00:00.000Z' };
+            Store.restoreFromReviewRecord(emptyPlaceholder, 'a.md', 'current content', '1.1');
+            assert.strictEqual(Store.getData().reviewVersion, 2, '空占位记录应恢复 reviewVersion=2（关键：下次刷新不会从 v1 重新开始）');
+            assert.strictEqual(Store.getData().annotations.length, 0, '空占位应恢复为空批注列表');
+            assert.strictEqual(Store.getData().nextId, 1, '空批注列表的 nextId 应重置为 1');
+        });
+
+        // ---- Tier 3：任务特定断言 ----
+
+        test('BT-versionBump.6 Tier3 — 端到端模拟 AI 修复闭环：添加批注→刷新→v2占位→重开恢复v2而非v1', () => {
+            // 完整场景模拟：使用 vm 沙箱运行 store.js，模拟整个 AI 修复闭环
+            const sandbox: any = { window: {}, localStorage: { getItem: () => null, setItem: () => {} } };
+            // @ts-ignore
+            const vm = require('vm');
+            const ctx = vm.createContext(sandbox);
+            vm.runInContext(storeJsText20 + '\n;this.Store = Store;', ctx);
+            const Store = sandbox.Store;
+
+            // Step 1: 用户打开 a.md 并添加批注（v1）
+            Store.setFile('a.md', '原始内容', '', '1.0', '', '', '', '');
+            Store.addAnnotation({ blockIndex: 0, startOffset: 0, selectedText: '原始', comment: '改成新的', type: 'comment' });
+            const v1Snapshot = {
+                reviewVersion: Store.getData().reviewVersion,
+                annotations: [...Store.getData().annotations]
+            };
+            assert.strictEqual(v1Snapshot.reviewVersion, 1);
+            assert.strictEqual(v1Snapshot.annotations.length, 1);
+
+            // Step 2: AI 修复完成，文件内容变化 → 刷新 → loadDocument(isNew=true) → setFile 触发 v2 + 清空批注
+            Store.setFile('a.md', '新内容（AI 已修改）', '', '1.0', '', '', '', '');
+            assert.strictEqual(Store.getData().reviewVersion, 2, '刷新后应为 v2');
+            assert.strictEqual(Store.getData().annotations.length, 0, '新版本应为空批注');
+
+            // Step 3: 假设 doAutoSave 正确落盘了 v2 空占位记录到磁盘（这里用另一个 record 模拟）
+            const v2PlaceholderOnDisk = { reviewVersion: 2, annotations: [], createdAt: new Date().toISOString() };
+
+            // Step 4: 用户关闭文件后重新打开 → getReviewRecords 返回 v2 placeholder（已按版本倒序）
+            // restoreFromReviewRecord 应恢复到 v2，不应复活 v1 的旧批注
+            Store.restoreFromReviewRecord(v2PlaceholderOnDisk, 'a.md', '新内容（AI 已修改）', '1.0');
+            assert.strictEqual(Store.getData().reviewVersion, 2, '重新打开应恢复到 v2（而非 v1）');
+            assert.strictEqual(
+                Store.getData().annotations.length,
+                0,
+                '重新打开应恢复为空批注（而非 v1 的旧批注）— 本次 Bug 核心修复点'
+            );
         });
     });
 
