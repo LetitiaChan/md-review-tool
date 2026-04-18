@@ -8,6 +8,11 @@ const Exporter = (() => {
     let autoSaveEnabled = false;
     let autoSaveTimer = null;
     const AUTO_SAVE_DELAY = 1500;
+    // 防御性保护：webview 刚启动时，annotations 尚未从磁盘恢复，
+    // 若 doAutoSave 立即因"批注为空"而删除磁盘批阅文件，会导致关闭再打开后批注丢失。
+    // 在此宽限期内，空批注不触发删除磁盘记录，只更新 UI 状态。
+    const DELETE_ON_EMPTY_GRACE_MS = 3000;
+    let _suppressDeleteUntil = 0;
 
     /**
      * 构建用于文件名的 reviewBaseName。
@@ -245,6 +250,8 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
 
     function enableAutoSave() {
         autoSaveEnabled = true;
+        // 刷新"刚启动不允许删除磁盘记录"的宽限期起点
+        _suppressDeleteUntil = Date.now() + DELETE_ON_EMPTY_GRACE_MS;
         doAutoSave();
         return true;
     }
@@ -273,6 +280,11 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
 
         // 批注为空时，删除磁盘上的批阅记录文件
         if (!data.annotations.length) {
+            // 宽限期内（webview 刚启动，批注尚未从磁盘恢复），不删除磁盘文件
+            if (Date.now() < _suppressDeleteUntil) {
+                updateAutoSaveStatus('saved');
+                return;
+            }
             try {
                 const requestId = 'delete_review_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
                 vscode.postMessage({ type: 'deleteReviewRecords', payload: { fileName: data.fileName, relPath: data.relPath || '' }, requestId });
@@ -282,6 +294,9 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
             }
             return;
         }
+
+        // 一旦有批注进行正常保存，立即解除删除保护（后续手动清空应能删除）
+        _suppressDeleteUntil = 0;
 
         try {
             const blocks = Renderer.parseMarkdown(data.rawMarkdown);

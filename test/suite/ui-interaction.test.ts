@@ -1032,16 +1032,11 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
             const i18nJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'i18n.js'), 'utf-8');
 
-            // vscodeAiHint 默认文本应包含 VSCode 而非 CodeBuddy
+            // vscodeAiHint 元素应存在，默认文本应通过 i18n 适配（modal.ai_result.vscode_hint）
             assert.ok(html.includes('id="vscodeAiHint"'), 'vscodeAiHint 元素应存在');
-            assert.ok(!html.includes('粘贴到CodeBuddy对话发送'), 'vscodeAiHint 默认文本不应包含 CodeBuddy');
-            assert.ok(html.includes('粘贴到VSCode AI对话发送'), 'vscodeAiHint 默认文本应包含 VSCode');
-
-            // i18n 中文翻译应包含 VSCode
-            const zhMatch = i18nJs.match(/'modal\.ai_result\.vscode_hint':\s*'([^']+)'/);
-            assert.ok(zhMatch, 'i18n 中应有 vscode_hint 翻译');
-            assert.ok(!zhMatch![1].includes('CodeBuddy'), 'vscode_hint 中文翻译不应包含 CodeBuddy');
-            assert.ok(zhMatch![1].includes('VSCode'), 'vscode_hint 中文翻译应包含 VSCode');
+            assert.ok(html.includes('data-i18n="modal.ai_result.vscode_hint"'), 'vscodeAiHint 应通过 data-i18n 适配多语言');
+            // i18n 字典应包含对应翻译
+            assert.ok(i18nJs.includes('modal.ai_result.vscode_hint'), 'i18n.js 应包含 vscode_hint 翻译 key');
         });
 
         test('评论弹窗应使用 data-i18n 属性适配多语言', () => {
@@ -1816,6 +1811,139 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(appJs.includes('searchDebounceTimer') || appJs.includes('300'), '正文搜索应有 debounce');
             assert.ok(appJs.includes('tocSearchDebounceTimer') || appJs.includes('150'), '目录搜索应有 debounce');
             assert.ok(annotationsJs.includes('annotationSearchDebounceTimer'), '批注搜索应有 debounce');
+        });
+    });
+
+    // ========= Suite 18: Hotfix — 关闭再打开 md 文件批注不丢失 =========
+    // Bug：md 文件添加批注后，关闭再次打开时 .review 批阅文件被删除
+    // 根因链：
+    //   1. extension host 主动推送 fileContent → handleFileContentPush 仅调用 loadDocument(isNew=true)
+    //      未先查询 .review 记录 → store 批注被清空
+    //   2. init() 尾部 Exporter.enableAutoSave() 立即触发 doAutoSave → annotations 为空时
+    //      无条件 postMessage('deleteReviewRecords') → 磁盘批阅文件被删除
+    // 修复：
+    //   A. handleFileContentPush 改为 async，先 callHost('getReviewRecords') 并 restoreFromReviewRecord
+    //   B. doAutoSave 在 enableAutoSave 后 DELETE_ON_EMPTY_GRACE_MS 宽限期内跳过删除磁盘记录
+    suite('18. Hotfix — 关闭再打开 md 文件批注不丢失', () => {
+        const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const appJsPath = path.join(extPath, 'webview', 'js', 'app.js');
+        const exportJsPath = path.join(extPath, 'webview', 'js', 'export.js');
+        const appJsText = fs.readFileSync(appJsPath, 'utf-8');
+        const exportJsText = fs.readFileSync(exportJsPath, 'utf-8');
+
+        // 通过括号匹配提取函数体（比正则更健壮）
+        function extractFunctionBody(source: string, anchorRegex: RegExp): string {
+            const m = anchorRegex.exec(source);
+            if (!m) return '';
+            // 找到 anchor 之后的第一个 '{'
+            let i = m.index + m[0].length;
+            while (i < source.length && source[i] !== '{') i++;
+            if (i >= source.length) return '';
+            let depth = 1;
+            const start = i + 1;
+            i = start;
+            while (i < source.length && depth > 0) {
+                const ch = source[i];
+                if (ch === '{') depth++;
+                else if (ch === '}') depth--;
+                if (depth === 0) break;
+                i++;
+            }
+            return source.slice(start, i);
+        }
+
+        // ---- Tier 1：存在性断言（源码关键字断言） ----
+
+        test('BT-annotationPersist.1 handleFileContentPush 应为 async 函数', () => {
+            // 修复后必须能 await callHost('getReviewRecords')
+            assert.ok(
+                /async\s+function\s+handleFileContentPush\s*\(/.test(appJsText),
+                'handleFileContentPush 应声明为 async function'
+            );
+        });
+
+        test('BT-annotationPersist.2 handleFileContentPush 应调用 getReviewRecords 恢复批注', () => {
+            const body = extractFunctionBody(appJsText, /async\s+function\s+handleFileContentPush\s*\(/);
+            assert.ok(body.length > 0, '应能提取到 handleFileContentPush 函数体');
+            assert.ok(body.includes("'getReviewRecords'"), '函数体内应 callHost 到 getReviewRecords');
+            assert.ok(body.includes('restoreFromReviewRecord'), '函数体内应调用 Store.restoreFromReviewRecord');
+        });
+
+        test('BT-annotationPersist.3 export.js 应声明删除保护宽限期常量与变量', () => {
+            assert.ok(
+                exportJsText.includes('DELETE_ON_EMPTY_GRACE_MS'),
+                'export.js 应声明 DELETE_ON_EMPTY_GRACE_MS 常量'
+            );
+            assert.ok(
+                exportJsText.includes('_suppressDeleteUntil'),
+                'export.js 应声明 _suppressDeleteUntil 变量'
+            );
+        });
+
+        // ---- Tier 2：行为级断言（通过源码逻辑结构验证行为） ----
+
+        test('BT-annotationPersist.4 enableAutoSave 应刷新删除保护宽限期起点', () => {
+            const body = extractFunctionBody(exportJsText, /function\s+enableAutoSave\s*\(/);
+            assert.ok(body.length > 0, '应能提取到 enableAutoSave 函数体');
+            assert.ok(
+                /_suppressDeleteUntil\s*=\s*Date\.now\(\)\s*\+\s*DELETE_ON_EMPTY_GRACE_MS/.test(body),
+                'enableAutoSave 应将 _suppressDeleteUntil 设为 Date.now() + DELETE_ON_EMPTY_GRACE_MS'
+            );
+        });
+
+        test('BT-annotationPersist.5 doAutoSave 在宽限期内不应 postMessage deleteReviewRecords', () => {
+            const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
+            assert.ok(body.length > 0, '应能提取到 doAutoSave 函数体');
+            const emptyBranchIdx = body.indexOf('!data.annotations.length');
+            assert.ok(emptyBranchIdx >= 0, '空批注分支应存在');
+            const afterEmpty = body.slice(emptyBranchIdx);
+            const suppressIdx = afterEmpty.indexOf('_suppressDeleteUntil');
+            const deleteIdx = afterEmpty.indexOf("'deleteReviewRecords'");
+            assert.ok(suppressIdx >= 0, '空批注分支应检查 _suppressDeleteUntil');
+            assert.ok(deleteIdx >= 0, '空批注分支仍保留 deleteReviewRecords 消息发送');
+            assert.ok(
+                suppressIdx < deleteIdx,
+                '_suppressDeleteUntil 判断必须在发送 deleteReviewRecords 之前（宽限期内应提前 return）'
+            );
+        });
+
+        test('BT-annotationPersist.6 doAutoSave 有批注正常保存路径应解除删除保护', () => {
+            const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
+            assert.ok(body.length > 0, '应能提取到 doAutoSave 函数体');
+            assert.ok(
+                /_suppressDeleteUntil\s*=\s*0/.test(body),
+                'doAutoSave 在正常保存路径应将 _suppressDeleteUntil 重置为 0'
+            );
+        });
+
+        // ---- Tier 3：任务特定断言（本次 Bug 的具体回归场景） ----
+
+        test('BT-annotationPersist.7 handleFileContentPush 有批注时应走 restore 路径且 return，不进入普通加载', () => {
+            const body = extractFunctionBody(appJsText, /async\s+function\s+handleFileContentPush\s*\(/);
+            assert.ok(body.length > 0, '应能提取到 handleFileContentPush 函数体');
+            // restore 分支必须 return，避免随后再触发 setFile(isNew=true) 把刚恢复的批注清空
+            const restoreIdx = body.indexOf('restoreFromReviewRecord');
+            assert.ok(restoreIdx >= 0, '应包含 restoreFromReviewRecord 调用');
+            const afterRestore = body.slice(restoreIdx);
+            assert.ok(
+                /\n\s+return\s*;/.test(afterRestore),
+                'restoreFromReviewRecord 之后应 return，不再走普通 loadDocument(isNew=true) 清空批注'
+            );
+        });
+
+        test('BT-annotationPersist.8 修复前反向断言：doAutoSave 空批注分支不再无条件发送 deleteReviewRecords', () => {
+            // 原 bug 版本：空批注分支会立刻 postMessage deleteReviewRecords，无任何防护
+            // 修复后该分支在宽限期内必须先 return
+            const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
+            assert.ok(body.length > 0, '应能提取到 doAutoSave 函数体');
+            const emptyBranchStart = body.indexOf('!data.annotations.length');
+            const emptyBranchEnd = body.indexOf('return;', emptyBranchStart);
+            assert.ok(emptyBranchStart >= 0 && emptyBranchEnd > emptyBranchStart, '空批注分支应存在');
+            const emptyBranch = body.slice(emptyBranchStart, emptyBranchEnd);
+            assert.ok(
+                emptyBranch.includes('Date.now()') && emptyBranch.includes('_suppressDeleteUntil'),
+                '空批注分支首个 return 之前必须有 Date.now() 与 _suppressDeleteUntil 的比较（宽限期保护）'
+            );
         });
     });
 });

@@ -17,9 +17,26 @@ tsconfig.json
 *.vsix
 test_debug.js
 package-lock.json
-CHANGELOG.md
-**/*.mp4
 todo.md
-编辑模式设计方案.md
 test-output*.log
+test-out*.log
 out/reviewPanel_original.js
+
+# 编译产物中的测试文件和重复输出
+out/test/**
+out/src/**
+
+# 测试报告和结果
+playwright-report/**
+test-results/**
+
+# AI 工具配置文件
+.claude/**
+CLAUDE.md
+CODEBUDDY.md
+llms.txt
+
+# README 引用的大图（改用 GitHub 绝对 URL，不打入包内）
+assets/intro.gif
+assets/main_page_en.png
+assets/main_page_cn.png

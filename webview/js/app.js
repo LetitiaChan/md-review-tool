@@ -82,11 +82,37 @@
         }
     });
 
-    function handleFileContentPush(data) {
+    async function handleFileContentPush(data) {
         if (data.error) {
             showNotification(t('notification.load_error', { error: data.error }));
             return;
         }
+        // 先尝试从 .review 目录恢复已有批注（与 handleFileSelectChange 保持一致）
+        // 否则 Extension 主动推送文件时，webview 会以空批注启动，并触发自动保存
+        // 把磁盘上已存在的批阅记录文件清空/删除（Bug: 关闭再打开后批注丢失）。
+        try {
+            const records = await callHost('getReviewRecords', { fileName: data.name, relPath: data.relPath || '' });
+            if (records && records.records && records.records.length > 0) {
+                const matchedRecord = records.records[0];
+                if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
+                    loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
+                    requestImageUris(data.content, data.sourceDir);
+                    Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
+                    const newBlocks = Renderer.parseMarkdown(data.content);
+                    Renderer.renderBlocks(newBlocks, Store.getAnnotations());
+                    renderMathAndMermaid();
+                    Annotations.setBlocks(newBlocks);
+                    Annotations.init(newBlocks);
+                    Annotations.renderAnnotationsList();
+                    Annotations.updateToolbarState();
+                    showNotification(t('notification.restored', { count: matchedRecord.annotations.length }));
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('[App] 推送恢复批阅记录失败:', e);
+        }
+        // 无批阅记录时，正常加载
         loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
         requestImageUris(data.content, data.sourceDir);
     }
