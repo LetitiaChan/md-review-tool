@@ -82,6 +82,35 @@
         }
     });
 
+    /**
+     * 检测批阅记录是否已过期（思路 A + 思路 B 并存）：
+     * 思路 A（主判据）：批阅记录快照 rawMarkdown 与当前源文件 content 不一致 → 关闭期间源文件被外部修改
+     * 思路 B（辅助信号）：批阅记录 docVersion 与当前源文件 docVersion 不一致 → 额外佐证源文件版本已前进
+     *
+     * 只要 A 命中（主判据）即判定过期；B 用于补充日志/提示，不单独作为过期判据（避免 docVersion 未填写时误伤）。
+     * 返回：{ stale: boolean, reason: string } — stale=true 表示应触发 forceBumpVersion 而非 restoreFromReviewRecord
+     */
+    function _isRecordStaleOnOpen(record, currentContent, currentDocVersion) {
+        // 旧格式批阅记录没有 rawMarkdown 字段，无法做 A 判据 → 保守放行（不视为过期）
+        if (!record || typeof record.rawMarkdown !== 'string' || record.rawMarkdown === '') {
+            return { stale: false, reason: 'no-snapshot' };
+        }
+        const snapshotTrim = (record.rawMarkdown || '').trim();
+        const currentTrim = (currentContent || '').trim();
+        const contentDiffers = snapshotTrim !== currentTrim;
+        const docVersionDiffers = !!(record.docVersion && currentDocVersion
+            && record.docVersion !== currentDocVersion);
+        if (contentDiffers) {
+            return {
+                stale: true,
+                reason: docVersionDiffers
+                    ? 'content+docVersion-both-differ'
+                    : 'content-differs'
+            };
+        }
+        return { stale: false, reason: docVersionDiffers ? 'only-docVersion-differs' : 'match' };
+    }
+
     async function handleFileContentPush(data) {
         if (data.error) {
             showNotification(t('notification.load_error', { error: data.error }));
@@ -94,6 +123,18 @@
             const records = await callHost('getReviewRecords', { fileName: data.name, relPath: data.relPath || '' });
             if (records && records.records && records.records.length > 0) {
                 const matchedRecord = records.records[0];
+                // 思路 A + B：检测批阅记录是否已过期（关闭期间源文件被外部修改）
+                const staleCheck = _isRecordStaleOnOpen(matchedRecord, data.content, data.docVersion);
+                if (staleCheck.stale) {
+                    // 过期 → 强制升级版本号，不恢复旧批注（否则锚点已失效）
+                    loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
+                    requestImageUris(data.content, data.sourceDir);
+                    Store.forceBumpVersion(matchedRecord.reviewVersion || 1, data.content, data.docVersion);
+                    if (Exporter && Exporter.triggerAutoSave) { Exporter.triggerAutoSave(); }
+                    showNotification(t('notification.stale_content_bumped', { version: Store.getData().reviewVersion }));
+                    console.log('[App] 批阅记录过期 (' + staleCheck.reason + ')，已升级到 v' + Store.getData().reviewVersion);
+                    return;
+                }
                 // 即使最新记录批注为空（v>1 空占位），也要 restoreFromReviewRecord
                 // 让 reviewVersion 正确恢复，下次刷新不会从 v1 开始自增。
                 loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
@@ -628,6 +669,17 @@
                 const fileData = await callHost('readFile', { filePath: value });
                 if (fileData && !fileData.error) {
                     const matchedRecord = records.records[0];
+                    // 思路 A + B：检测批阅记录是否已过期（关闭期间源文件被外部修改）
+                    const staleCheck = _isRecordStaleOnOpen(matchedRecord, fileData.content, fileData.docVersion);
+                    if (staleCheck.stale) {
+                        loadDocument(fileData.name, fileData.content, true, undefined, fileData.docVersion, fileData.sourceFilePath, fileData.sourceDir, fileData.relPath, fileData.pathHash);
+                        requestImageUris(fileData.content, fileData.sourceDir);
+                        Store.forceBumpVersion(matchedRecord.reviewVersion || 1, fileData.content, fileData.docVersion);
+                        if (Exporter && Exporter.triggerAutoSave) { Exporter.triggerAutoSave(); }
+                        showNotification(t('notification.stale_content_bumped', { version: Store.getData().reviewVersion }));
+                        console.log('[App] 批阅记录过期 (' + staleCheck.reason + ')，已升级到 v' + Store.getData().reviewVersion);
+                        return;
+                    }
                     // 即使最新记录批注为空（v>1 空占位），也要 restoreFromReviewRecord
                     // 让 reviewVersion 正确恢复，下次刷新不会从 v1 开始自增。
                     loadDocument(fileData.name, fileData.content, true, undefined, fileData.docVersion, fileData.sourceFilePath, fileData.sourceDir, fileData.relPath, fileData.pathHash);

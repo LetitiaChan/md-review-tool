@@ -225,12 +225,33 @@ const Store = (() => {
         console.log('[Store] 从 .review 恢复批阅记录:', fileName, '评审版本:', data.reviewVersion, '批注数:', data.annotations.length);
     }
 
+    /**
+     * 强制升级版本号（用于"关闭期间源文件被修改"场景）
+     * 场景：webview 关闭时磁盘上 md 文件被外部修改，重新打开时 webview 检测到
+     *       记录里的 rawMarkdown 与当前源文件内容不一致，须视为新的批阅版本，
+     *       而不是恢复旧批注（否则旧批注的锚点在新文件上可能已失效）。
+     * @param {number} fromVersion 磁盘记录里的 reviewVersion（升级基准）
+     * @param {string} markdown 当前源文件内容
+     * @param {string} docVersion 当前源文件的 docVersion（可选）
+     */
+    function forceBumpVersion(fromVersion, markdown, docVersion) {
+        data.reviewVersion = (fromVersion || 1) + 1;
+        data.rawMarkdown = markdown;
+        if (docVersion) data.docVersion = docVersion;
+        data.annotations = [];
+        data.nextId = 1;
+        data.createdAt = new Date().toISOString();
+        save();
+        console.log('[Store] 关闭期间源文件变化，强制升级到 v' + data.reviewVersion);
+    }
+
     return {
         save, load, loadFromHost, reset, setFile,
         addAnnotation, removeAnnotation, updateAnnotation,
         getAnnotations, getAnnotationsForBlock, getData, clearAll,
         getFileHash, setFileHash, getDocVersion, setDocVersion,
         getSourceFilePath, getSourceDir, getRelPath,
-        archiveCurrentRecord, getArchivedRecords, restoreFromReviewRecord
+        archiveCurrentRecord, getArchivedRecords, restoreFromReviewRecord,
+        forceBumpVersion
     };
 })();

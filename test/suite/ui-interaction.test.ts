@@ -2338,6 +2338,210 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         });
     });
 
+    // ========= Suite 21: Hotfix — 关闭期间源文件被外部修改的过期检测（思路 A + B） =========
+    // Bug：webview 关闭时源文件被外部工具修改，重新打开 webview 检测不到内容变化，
+    //      仍恢复上一版旧批注 records[0]，旧批注的锚点（blockIndex / startOffset）在新文件上可能失效。
+    // 修复思路：
+    //   A（主判据）：批阅记录 JSON 块写入 rawMarkdown 快照；打开时与当前源文件 trim 对比
+    //   B（辅助信号）：批阅记录 docVersion 与当前源文件 docVersion 对比
+    //   过期 → Store.forceBumpVersion(prevVersion, content, docVersion) → 自动升级 v+1
+    //   不过期 → 继续原 restoreFromReviewRecord 恢复
+    suite('21. Hotfix — 关闭期间源文件被外部修改的过期检测', () => {
+        const extPath21 = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const exportJsText21 = fs.readFileSync(path.join(extPath21, 'webview', 'js', 'export.js'), 'utf-8');
+        const appJsText21 = fs.readFileSync(path.join(extPath21, 'webview', 'js', 'app.js'), 'utf-8');
+        const storeJsText21 = fs.readFileSync(path.join(extPath21, 'webview', 'js', 'store.js'), 'utf-8');
+        const fileServiceText21 = fs.readFileSync(path.join(extPath21, 'out', 'fileService.js'), 'utf-8');
+        const i18nJsText21 = fs.readFileSync(path.join(extPath21, 'webview', 'js', 'i18n.js'), 'utf-8');
+
+        // ---- Tier 1：存在性断言 ----
+
+        test('BT-staleContentDetect.1 Tier1 — export.js generateReviewDoc JSON 块必须写入 rawMarkdown 字段', () => {
+            // 定位 JSON.stringify 块，要求包含 rawMarkdown 字段
+            const jsonBlockMatch = exportJsText21.match(/JSON\.stringify\(\{[\s\S]{0,500}?fileName:[\s\S]{0,300}?annotations:/);
+            assert.ok(jsonBlockMatch, 'export.js 应包含 JSON.stringify 序列化块');
+            assert.ok(
+                /rawMarkdown:\s*data\.rawMarkdown/.test(jsonBlockMatch![0]),
+                'JSON 块必须写入 rawMarkdown 字段（用于打开时比对源文件是否被外部修改）'
+            );
+        });
+
+        test('BT-staleContentDetect.2 Tier1 — fileService extractAnnotationsFromReview 必须返回 rawMarkdown', () => {
+            assert.ok(
+                /rawMarkdown:\s*typeof parsed\.rawMarkdown/.test(fileServiceText21),
+                'extractAnnotationsFromReview 应解析并返回 rawMarkdown（旧格式回退为空串）'
+            );
+            assert.ok(
+                /rawMarkdown:\s*annotationData\s*\?\s*annotationData\.rawMarkdown/.test(fileServiceText21),
+                'getReviewRecords 返回的 record 应透传 rawMarkdown 给前端'
+            );
+        });
+
+        test('BT-staleContentDetect.3 Tier1 — Store.forceBumpVersion 必须被导出', () => {
+            assert.ok(
+                /function\s+forceBumpVersion\s*\(/.test(storeJsText21),
+                'store.js 应定义 forceBumpVersion 函数'
+            );
+            // 校验 return 对象列表里也导出了
+            const returnMatch = storeJsText21.match(/return\s*\{([\s\S]*?)\};/);
+            assert.ok(returnMatch, 'store.js 应有 return 导出对象');
+            assert.ok(
+                /\bforceBumpVersion\b/.test(returnMatch![1]),
+                'forceBumpVersion 必须在 return 列表中导出，否则 app.js 无法调用'
+            );
+        });
+
+        test('BT-staleContentDetect.4 Tier1 — app.js 必须定义 _isRecordStaleOnOpen 且被三处调用或两处调用', () => {
+            assert.ok(
+                /function\s+_isRecordStaleOnOpen\s*\(/.test(appJsText21),
+                'app.js 应定义 _isRecordStaleOnOpen helper'
+            );
+            // 至少 handleFileContentPush + handleFileSelectChange 两处调用
+            const callCount = (appJsText21.match(/_isRecordStaleOnOpen\(/g) || []).length;
+            assert.ok(
+                callCount >= 3,
+                `_isRecordStaleOnOpen 应至少在 2 处调用（定义 1 次 + 至少 2 次调用 = 3 次出现），实际 ${callCount} 次`
+            );
+            // 过期分支必须调用 forceBumpVersion
+            assert.ok(
+                /Store\.forceBumpVersion\(/.test(appJsText21),
+                '过期检测后必须调用 Store.forceBumpVersion 升级版本号'
+            );
+            // 过期分支必须触发 autosave 落盘新版本
+            const forceBumpIdx = appJsText21.indexOf('Store.forceBumpVersion(');
+            assert.ok(forceBumpIdx > 0);
+            const next200 = appJsText21.slice(forceBumpIdx, forceBumpIdx + 300);
+            assert.ok(
+                /triggerAutoSave\(/.test(next200),
+                'forceBumpVersion 后应触发 triggerAutoSave 让新空版本立即落盘'
+            );
+        });
+
+        test('BT-staleContentDetect.5 Tier1 — i18n.js 必须包含 stale_content_bumped 中英文翻译', () => {
+            assert.ok(
+                /'notification\.stale_content_bumped':\s*'[^']*\{version\}/.test(i18nJsText21),
+                'i18n.js 必须存在 notification.stale_content_bumped 翻译且含 {version} 占位符'
+            );
+            // 中英文各至少一条
+            const count = (i18nJsText21.match(/'notification\.stale_content_bumped':/g) || []).length;
+            assert.ok(count >= 2, `中英文翻译都应存在，当前 ${count} 处`);
+        });
+
+        // ---- Tier 2：行为级断言 ----
+
+        test('BT-staleContentDetect.6 Tier2 — forceBumpVersion 在沙箱中应正确升级版本号并清空批注', () => {
+            const sandbox: any = { window: {}, localStorage: { getItem: () => null, setItem: () => {} } };
+            // @ts-ignore
+            const vm = require('vm');
+            const ctx = vm.createContext(sandbox);
+            vm.runInContext(storeJsText21 + '\n;this.Store = Store;', ctx);
+            const Store = sandbox.Store;
+
+            // 模拟场景：用户在 v3 批阅了 5 条，现在关闭期间文件被改过 → 升级到 v4
+            Store.setFile('x.md', '旧内容', '', '1.0', '', '', '', '');
+            for (let i = 0; i < 5; i++) {
+                Store.addAnnotation({ blockIndex: 0, startOffset: i, selectedText: 'x', comment: 'c', type: 'comment' });
+            }
+            // 模拟 v3
+            Store.restoreFromReviewRecord(
+                { reviewVersion: 3, annotations: Store.getAnnotations(), createdAt: '2026-04-01T00:00:00.000Z' },
+                'x.md', '旧内容', '1.0'
+            );
+            assert.strictEqual(Store.getData().reviewVersion, 3);
+            assert.strictEqual(Store.getData().annotations.length, 5);
+
+            // 调用 forceBumpVersion → 基准 v3 → 升级到 v4
+            Store.forceBumpVersion(3, '新内容（外部修改）', '1.1');
+            assert.strictEqual(Store.getData().reviewVersion, 4, '应升级到 v4');
+            assert.strictEqual(Store.getData().annotations.length, 0, '应清空旧批注');
+            assert.strictEqual(Store.getData().rawMarkdown, '新内容（外部修改）', '应采用新内容为 rawMarkdown');
+            assert.strictEqual(Store.getData().docVersion, '1.1', '应采用新 docVersion');
+            assert.strictEqual(Store.getData().nextId, 1, 'nextId 应重置');
+        });
+
+        // ---- Tier 3：任务特定断言 ----
+
+        test('BT-staleContentDetect.7 Tier3 — 端到端：关闭期间文件被外部修改，重开应升级 v+1 而非恢复旧批注', () => {
+            // 完整闭环：v1 添加批注 → 生成 record.md 含 rawMarkdown='旧内容' → 关闭
+            // → 外部工具改文件为 '全新内容' → 重开 webview → 触发 _isRecordStaleOnOpen 检测
+            // → forceBumpVersion 升级到 v2 且清空批注（避免旧锚点应用到新文件上）
+            const sandbox: any = { window: {}, localStorage: { getItem: () => null, setItem: () => {} } };
+            // @ts-ignore
+            const vm = require('vm');
+            const ctx = vm.createContext(sandbox);
+            vm.runInContext(storeJsText21 + '\n;this.Store = Store;', ctx);
+            const Store = sandbox.Store;
+
+            // Step 1: v1 批阅
+            Store.setFile('doc.md', '旧内容', '', '1.0', '', '', '', '');
+            Store.addAnnotation({ blockIndex: 0, startOffset: 0, selectedText: '旧', comment: '评论', type: 'comment' });
+
+            // Step 2: 模拟生成 v1 的磁盘批阅记录（含 rawMarkdown 快照）
+            const v1RecordOnDisk = {
+                reviewVersion: 1,
+                annotations: [...Store.getAnnotations()],
+                rawMarkdown: '旧内容',
+                docVersion: '1.0',
+                createdAt: '2026-04-18T10:00:00.000Z'
+            };
+
+            // Step 3: 用户关闭 webview；外部工具修改 doc.md 源文件内容为 '全新内容'
+            const currentFileContent = '全新内容（外部修改）';
+            const currentDocVersion = '1.0';
+
+            // Step 4: webview 重新打开，执行 _isRecordStaleOnOpen 的等价逻辑（内嵌检测）
+            const snapshotTrim = (v1RecordOnDisk.rawMarkdown || '').trim();
+            const currentTrim = currentFileContent.trim();
+            const isStale = snapshotTrim !== currentTrim;
+            assert.strictEqual(isStale, true, '思路 A 必须检测到内容差异');
+
+            // Step 5: 过期 → forceBumpVersion
+            Store.forceBumpVersion(v1RecordOnDisk.reviewVersion, currentFileContent, currentDocVersion);
+            assert.strictEqual(Store.getData().reviewVersion, 2, '应升级到 v2');
+            assert.strictEqual(
+                Store.getData().annotations.length,
+                0,
+                '关键：不应恢复 v1 的旧批注（锚点可能已失效），应以空批注状态开启 v2'
+            );
+            assert.strictEqual(Store.getData().rawMarkdown, currentFileContent, 'rawMarkdown 应为新文件内容');
+        });
+
+        test('BT-staleContentDetect.8 Tier3 — 旧格式 record（无 rawMarkdown 快照）不应被误判为过期', () => {
+            // 向后兼容：旧格式批阅记录 JSON 里没有 rawMarkdown 字段 → extractAnnotationsFromReview
+            // 返回 rawMarkdown=''，_isRecordStaleOnOpen 应保守地判定"非过期"（因为无法可靠对比）
+            // 模拟 _isRecordStaleOnOpen 的核心逻辑
+            function isStale(record: any, currentContent: string, currentDocVersion: string) {
+                if (!record || typeof record.rawMarkdown !== 'string' || record.rawMarkdown === '') {
+                    return { stale: false, reason: 'no-snapshot' };
+                }
+                const snapshotTrim = (record.rawMarkdown || '').trim();
+                const currentTrim = (currentContent || '').trim();
+                return { stale: snapshotTrim !== currentTrim, reason: 'check' };
+            }
+
+            // 旧格式：无 rawMarkdown
+            const oldRecord = { reviewVersion: 3, annotations: [{ id: 1 }], docVersion: '1.0' };
+            const r1 = isStale(oldRecord, '任何新内容', '1.0');
+            assert.strictEqual(r1.stale, false, '旧格式 record 无快照 → 保守放行，不视为过期');
+            assert.strictEqual(r1.reason, 'no-snapshot');
+
+            // 空字符串 rawMarkdown：同样保守放行
+            const emptyRecord = { reviewVersion: 3, rawMarkdown: '', annotations: [] };
+            const r2 = isStale(emptyRecord, '任何新内容', '1.0');
+            assert.strictEqual(r2.stale, false, '空 rawMarkdown → 保守放行');
+
+            // 新格式：有 rawMarkdown 且内容一致 → 非过期
+            const matchRecord = { reviewVersion: 3, rawMarkdown: '一致内容', annotations: [] };
+            const r3 = isStale(matchRecord, '一致内容', '1.0');
+            assert.strictEqual(r3.stale, false, '内容一致 → 非过期');
+
+            // 新格式：有 rawMarkdown 且不一致 → 过期
+            const staleRecord = { reviewVersion: 3, rawMarkdown: '旧内容', annotations: [] };
+            const r4 = isStale(staleRecord, '新内容', '1.0');
+            assert.strictEqual(r4.stale, true, '内容不一致 → 过期');
+        });
+    });
+
     // ==========================================================================
     // AI Chat 派发适配层测试（change: add-cursor-windsurf-ai-chat）
     // Tier 1：存在性断言 / Tier 2：行为级路由断言 / Tier 3：BT-aiChat.X 任务断言

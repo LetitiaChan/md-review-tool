@@ -202,6 +202,7 @@ showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
             docVersion: data.docVersion || '未知',
             reviewVersion: data.reviewVersion || 1,
             annotationCount: data.annotations.length,
+            rawMarkdown: data.rawMarkdown || '',
             annotations: exportAnnotations
         }, null, 2));
         lines.push(`\`\`\``);

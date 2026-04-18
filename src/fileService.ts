@@ -376,6 +376,8 @@ console.error('删除批阅记录失败:', fullPath, e);
                     docVersion: docVersionInRecord,
                     annotationCount: annotationData ? annotationData.annotationCount : 0,
                     annotations: annotationData ? annotationData.annotations : [],
+                    // 批阅记录生成时的源文件内容快照（用于打开时比对是否在关闭期间被外部修改）
+                    rawMarkdown: annotationData ? annotationData.rawMarkdown : '',
                     rawContent: content
                 });
             }
@@ -695,14 +697,17 @@ console.error('删除批阅记录失败:', fullPath, e);
         return match ? match[1] : null;
     }
 
-    private extractAnnotationsFromReview(content: string): { annotationCount: number; annotations: any[] } | null {
+    private extractAnnotationsFromReview(content: string): { annotationCount: number; annotations: any[]; rawMarkdown: string } | null {
         const jsonMatch = content.match(/```json\s*\n([\s\S]*?)\n```/);
         if (!jsonMatch) { return null; }
         try {
             const parsed = JSON.parse(jsonMatch[1]);
             return {
                 annotationCount: parsed.annotationCount || (parsed.annotations ? parsed.annotations.length : 0),
-                annotations: parsed.annotations || []
+                annotations: parsed.annotations || [],
+                // 返回批阅记录生成时的源文件内容快照，用于打开时比对源文件是否在关闭期间被修改（思路 A）
+                // 旧格式的批阅记录没有此字段，返回空串（打开时视为无法比对，降级到思路 B 或放行恢复）
+                rawMarkdown: typeof parsed.rawMarkdown === 'string' ? parsed.rawMarkdown : ''
             };
         } catch (e) {
             return null;
