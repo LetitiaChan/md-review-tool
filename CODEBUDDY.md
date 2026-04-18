@@ -2,110 +2,155 @@
 
 This file provides guidance to CodeBuddy Code when working with code in this repository.
 
-## Project Overview
+## 项目概述
 
-**MD Human Review** is a VS Code extension for reviewing and annotating Markdown files — like a professor marking up a student's paper. Users can add comments, mark deletions, insert content, edit WYSIWYG, and generate structured AI fix instructions with one click.
+**MD Human Review** 是一个 Markdown 批阅与批注扩展，发布于 **VS Code Marketplace** 与 **Open VSX Registry**，支持 VS Code 及所有基于 VS Code 开源版本构建的 AI 编辑器（如 Cursor、Windsurf、CodeBuddy IDE、Trae 等）。用户在渲染后的文档上添加评论、标记删除、插入内容、所见即所得编辑，并一键生成 AI 修改指令。
 
-- **Tech stack**: TypeScript + VS Code Extension API + Mocha (unit) + Playwright (UI tests) + marked (rendering)
-- **Build output**: `out/` directory
-- **Annotations storage**: `.review/` directory in user workspaces
-- **Marketplace**: `letitia.md-human-review`
+- **发布者**: `letitia.md-human-review`
+- **支持格式**: `.md`, `.markdown`, `.mdc`
+- **兼容编辑器**: VS Code / Cursor / Windsurf / CodeBuddy IDE / Trae 等（所有基于 VS Code 开源版本的编辑器）
+- **双市场发布**: VS Code Marketplace + Open VSX（Cursor / Windsurf 等从 Open VSX 拉取）
 
-## Commands
+## 常用命令
 
 ```bash
-# Install dependencies
-npm install
+npm install                # 安装依赖
+npm run compile            # TypeScript 编译到 out/
+npm run watch              # 监听模式（开发推荐）
+npm test                   # Mocha 单元测试（pretest 自动编译 src 与 test）
+npm run test:ui            # Playwright UI 测试
+npm run test:ui:headed     # Playwright 有头模式（可观察）
+npm run test:ui:debug      # Playwright 调试模式
+npm run test:all           # 运行全部测试（Mocha + Playwright）
+```
 
-# Compile TypeScript to out/
-npm run compile
+**运行单个 Mocha 测试**（按测试名过滤）:
+```bash
+npm run compile && npm run compile:test && node ./out/test/runTest.js -- --grep "测试名关键字"
+```
 
-# Watch mode (recommended during development)
-npm run watch
+**运行单个 Playwright 测试文件**:
+```bash
+npx playwright test --config test/ui/playwright.config.ts test/ui/specs/某个.spec.ts
+```
 
-# Run Mocha unit tests (pretest auto-compiles)
-npm test
+**调试扩展**: 在 VS Code 中按 `F5` 启动 Extension Development Host，`Ctrl+Shift+I` 打开 WebView DevTools。
 
-# Run a single Mocha test by name pattern
-npm test -- --grep "test name pattern"
+**打包**: `npx vsce package --no-dependencies`
 
-# Run Playwright UI tests (headless)
-npm run test:ui
+## 架构
 
-# Run Playwright UI tests (headed, for debugging)
-npm run test:ui:headed
+本扩展采用经典的 VS Code WebView 架构：后端 TypeScript 与前端纯 JavaScript 之间通过 `postMessage` 消息桥通信。前端**无构建步骤**——`webview/` 下的 JS/CSS 由 WebView 直接加载。
 
-# Run all tests (Mocha + Playwright)
-npm run test:all
+### 后端 (src/) — TypeScript，编译输出到 `out/`
 
-# Package .vsix (no dependency bundling)
+| 文件 | 职责 |
+|------|------|
+| `extension.ts` | 扩展入口，注册 `mdReview.openPanel` / `mdReview.exportReview` 命令 |
+| `reviewPanel.ts` | WebView 面板管理（创建/复用/多窗口）、消息处理、AI 聊天集成、文件监听 |
+| `fileService.ts` | 文件读写、`.review/` 目录下的批注存储与版本管理、AI 指令文件生成 |
+| `stateService.ts` | 基于 `workspaceState` 的 UI 状态持久化 |
+
+### 前端 (webview/) — 纯 JavaScript
+
+| 文件 | 职责 |
+|------|------|
+| `app.js` | 主控模块：初始化、事件绑定、预览/编辑模式切换、禅模式、快捷键 |
+| `renderer.js` | Markdown 渲染引擎：marked 解析、Mermaid/KaTeX/PlantUML/Graphviz 集成、WYSIWYG 编辑、图片灯箱 |
+| `annotations.js` | 批注系统：高亮渲染、评论/删除/插入卡片、浮层工具条交互 |
+| `export.js` | 导出模块：生成 AI 修改指令、自动保存到 `.review/` |
+| `store.js` | 内存数据存储：批注数据管理、版本对比 |
+| `settings.js` | 设置面板：读取/应用/同步 VS Code 配置项 |
+| `i18n.js` | 国际化：中文/英文界面文本映射 |
+
+`webview/index.html` 是主页面；CSS 分为 `style.css`（布局）、`markdown.css`（渲染）、`annotations.css`（批注）、`settings.css`（设置）、`highlight-themes.css`（15 种代码主题）。
+
+### 消息协议（Host ↔ WebView）
+
+- **Host → WebView**: `fileContent`, `fileList`, `settingsData`, `ideType`, `fileChanged`, `triggerExport`
+- **WebView → Host**: `saveFile`, `saveReview`, `getSettings`, `saveSettings`, `openCodeBuddyChat`, `ready`
+- 使用 `requestId` 支持请求-响应模式（`callHost()` 函数，15 秒超时）
+
+## 测试体系
+
+### Mocha 单元测试 (`test/suite/`)
+- 框架: Mocha + `@vscode/test-electron`，TDD UI（`suite`/`test`）
+- 运行器: `test/runTest.ts` 启动无头 VS Code 实例
+- 测试配置: `test/tsconfig.json`（编译到 `out/test/`）
+- 测试夹具: `test/fixtures/` 下的 `.md` 文件
+
+### Playwright UI 测试 (`test/ui/`)
+- 配置: `test/ui/playwright.config.ts`
+- 测试文件: `test/ui/specs/*.spec.ts`
+- 使用 `file://` 协议加载 `test-container.html`（模拟 WebView 环境）
+- 辅助工具: `test/ui/helpers/test-utils.ts`, `test/ui/mock-vscode.js`
+
+### 三层测试模型（apply / hotfix 必须覆盖）
+- **Tier 1**: 存在性断言（API 暴露、DOM 元素检查）
+- **Tier 2**: 行为级断言（模拟用户真实操作——拖拽/点击/键盘等——验证 DOM 状态实际变化）
+- **Tier 3**: 场景特定断言（命名 `BT-<模块>.<序号> <描述>`，针对本次修复的具体场景）
+
+## 关键约束
+
+- **WebView 沙箱**: 前端 JS 无法使用 `fs`/`path` 等 Node API，所有文件操作必须通过消息桥请求 Host 端执行
+- **前端无构建步骤**: `webview/` 下的 JS/CSS 直接加载，不经过 bundler/transpiler
+- **前端 JS 兼容性**: 保持 ES5/ES6 兼容，不使用 ES2020+ 特性
+- **国际化**: 所有用户可见文本必须通过 `i18n.js`（前端）或 `package.nls.json` / `package.nls.zh-cn.json`（后端命令/配置描述）进行本地化
+- **打包体积**: `.vsix` 包 < 50MB（使用 `--no-dependencies` 打包，依赖内联）
+- **批注存储**: 自动保存到工作区 `.review/` 目录，JSON 格式，空批注自动删除文件
+
+## 开发工作流（强制 OpenSpec）
+
+> 项目根目录的 `AGENT-PROGRESS.md` 是跨会话记忆，会话启动必读；完整规则在 `.codebuddy/rules/project-continuity.mdc`。
+
+### 新功能 / 重大修改 → 必须走 OpenSpec
+- 检查 `openspec/changes/` 是否已有对应 change，没有则先调用 `openspec-propose` 创建 proposal + design + tasks，然后 `openspec-apply-change` 实施
+- ❌ 禁止跳过 spec 直接写代码
+- ❌ 禁止在有"已实施但未归档"的 change 时开始新 propose / apply（**完成门禁**）
+
+### Hotfix 例外 — 必须执行 Hotfix Mini-Pipeline（完整 H0→H7）
+- **阈值**: 源码文件 ≤3 个 且 源码改动 ≤30 行（测试文件新增不计入）
+- **H0 分流**: Doc-Only（跳过 H1~H4）/ Refactor（跳过 H3.3）/ 普通 bugfix（完整流程）
+- **H1-H7**: 影响面分析 → `npm run compile` → `npm test` → 测试补全（Tier 1/2/3）→ `npx vsce package --no-dependencies` → `git commit` → `git push` → 报告
+- **运行时 Bug**（自动测试无法复现）: 用 H3.5 诊断策略 A（诊断日志 + mock 捕获）或策略 B（用户协助验证）
+
+### 阶段完成自检（防止提前收尾）
+- 每个阶段结束后回溯用户原始请求边界
+- 用户说"完成 X" = 必须走完 propose → apply → build → test → verify → archive → commit 全管线
+- ❌ 不要在管线中途输出会话总结；不要把控制权交还给用户（除非明确要求分步）
+
+## 文档同步纪律
+
+任何用户可感知的功能变更（新增、修改、删除）**必须同步更新**：
+- `README.md` 功能列表与使用说明
+- `package.json` 的 `contributes` 描述（涉及 VS Code 命令/配置变更时）
+- 相关帮助文档
+
+执行时机：全管线在测试通过后、打包之前；Hotfix 在 H3.3 之后、H4 之前。纯内部重构无需更新。
+
+## Git 规范
+
+- **Commit message 格式**: `<type>: <中文描述>`
+- **类型前缀**: `feat:` / `fix:` / `refactor:` / `chore:` / `docs:`
+- ❌ 同一文件不要在同一轮发起多次并行 Edit（文件内容已变会导致后续匹配失败，必须串行）
+
+## 发布流程（双市场，缺一不可）
+
+```bash
+# 1. 打包
 npx vsce package --no-dependencies
 
-# Publish to VS Code Marketplace
+# 2. VS Code Marketplace
 npx vsce publish --no-dependencies
 
-# Publish to Open VSX Registry (Cursor marketplace)
+# 3. Open VSX (Cursor 市场)
 npx ovsx publish <file.vsix> -p <OVSX_TOKEN>
 ```
 
-Press `F5` in VS Code/CodeBuddy IDE to launch the Extension Development Host for live debugging.
+两个市场都成功才算"发布完成"。安装链接：
+- VS Code: https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review
+- Open VSX: https://open-vsx.org/extension/letitia/md-human-review
 
-## Architecture
+## 命令执行策略
 
-### Backend (TypeScript, `src/`)
-
-The backend is minimal — it manages the VS Code host side and bridges to the webview frontend.
-
-| File | Role |
-|------|------|
-| `extension.ts` | Entry point. Registers `mdReview.openPanel` and `mdReview.exportReview` commands. Resolves file path from active editor, URI argument, or clipboard trick (for Explorer selection). |
-| `reviewPanel.ts` | Manages `vscode.WebviewPanel` instances. Keyed by file path in `ReviewPanel.panels: Map<string, ReviewPanel>`. Handles webview↔host message passing, file system watchers, and AI chat integration (CodeBuddy/Copilot). |
-| `fileService.ts` | All file I/O: reads source `.md` files, reads/writes annotation JSON to `.review/`, manages versioning (archives old review files when source content changes). |
-| `stateService.ts` | Lightweight state management for the extension host side. |
-
-### Frontend (plain JS/CSS, `webview/`)
-
-The frontend runs inside the VS Code Webview (sandboxed browser context) and communicates with the backend via `vscode.postMessage` / `window.addEventListener('message')`.
-
-| File | Role |
-|------|------|
-| `js/app.js` | Main orchestrator: initializes all modules, handles mode switching (review ↔ edit), toolbar events, keyboard shortcuts, and message routing with the VS Code host. |
-| `js/renderer.js` | Markdown rendering engine: parses with `marked`, applies Mermaid, KaTeX, PlantUML, Graphviz, syntax highlighting. Also handles WYSIWYG edit mode (contenteditable) and diagram source editing. |
-| `js/annotations.js` | Annotation system: creates/renders comment, deletion, and insertion highlights in the DOM; manages annotation cards and their interactions. |
-| `js/export.js` | Export module: generates structured AI modification instruction Markdown from all annotations (ordered back-to-front); handles auto-save to `.review/` via host messages. |
-| `js/store.js` | In-webview data store: holds annotation data, manages version state. |
-| `js/settings.js` | Reads VS Code settings (sent from host on init), applies them to DOM (font size, theme, layout, etc.), and syncs configuration changes. |
-| `index.html` | Webview shell: contains toolbar markup, modal templates, settings panel, and loads all CSS/JS assets. |
-
-### Message Protocol (Host ↔ Webview)
-
-- **Host → Webview**: `initData` (file content + annotations + settings), `triggerExport`, `fileUpdated`, `settingsUpdated`
-- **Webview → Host**: `saveAnnotations`, `openAiChat`, `copyToClipboard`, `webviewReady`
-
-### Test Infrastructure
-
-| Directory | Framework | Scope |
-|-----------|-----------|-------|
-| `test/suite/` | Mocha + `@vscode/test-electron` | Unit/integration tests run inside a VS Code instance; mock-vscode.js provides stubs for unit tests |
-| `test/ui/` | Playwright | UI tests run against `test-container.html` (a standalone HTML harness that loads the webview JS/CSS without VS Code) |
-
-Playwright tests use `test/ui/specs/` for spec files and `test/ui/fixtures/` for test Markdown files.
-
-## OpenSpec Workflow
-
-This project uses **OpenSpec spec-driven development**. Any feature implementation must go through the OpenSpec pipeline — do not write code directly for new features.
-
-- Active and archived changes: `openspec/changes/`
-- Capability specs library: `openspec/specs/`
-- Cross-session progress: `AGENT-PROGRESS.md`
-- Workflow commands: `.codebuddy/commands/opsx/`
-
-**Hotfix exemption**: Changes touching ≤3 source files and ≤30 lines may skip OpenSpec, but must still run the Hotfix Mini-Pipeline (compile → test → package → commit → push).
-
-## Key Constraints
-
-- The Mocha tests require a VS Code electron instance (`@vscode/test-electron`) — they cannot run in a plain Node.js environment.
-- Webview JS is **plain ES5/ES6 JavaScript** (not TypeScript, not bundled). No import/export — modules communicate via globals or direct function calls.
-- Annotations are stored as JSON in `<workspace>/.review/<filename>.json`. Version archives are created automatically when the source file's content hash changes.
-- Both VS Code Marketplace and Open VSX (Cursor) must be published on every release.
-- Commit messages must use Chinese descriptions: `feat: 中文描述`, `fix: 中文描述`, etc.
+所有构建、测试、打包、Git commit/push、安装依赖等操作一律**直接执行**，不逐步询问用户确认。仅在遇到错误/失败时刹车报告。

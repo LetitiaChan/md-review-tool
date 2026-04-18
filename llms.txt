@@ -1,6 +1,6 @@
 # MD Human Review
 
-> A VS Code / CodeBuddy IDE extension for reviewing and annotating Markdown documents — like a mentor grading papers, with one-click AI fix instruction generation.
+> A Markdown review & annotation extension for VS Code and all VS Code–based AI editors (Cursor, Windsurf, CodeBuddy IDE, Trae, etc.) — like a mentor grading papers, with one-click AI fix instruction generation.
 
 ## What it does
 
@@ -31,8 +31,9 @@ MD Human Review is a Markdown review & annotation tool built as a VS Code extens
 
 ## Installation
 
-Search **"MD Human Review"** in VS Code or CodeBuddy IDE extension marketplace, or install from:
+Search **"MD Human Review"** in your editor's extension marketplace — works with VS Code, Cursor, Windsurf, CodeBuddy IDE, Trae and any other VS Code–based AI editor. Published on both:
 - VS Code Marketplace: https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review
+- Open VSX Registry (used by Cursor / Windsurf / etc.): https://open-vsx.org/extension/letitia/md-human-review
 
 ## Links
 
@@ -44,4 +45,5 @@ Search **"MD Human Review"** in VS Code or CodeBuddy IDE extension marketplace, 
 
 - Built with: TypeScript, VS Code Extension API, marked (Markdown parser)
 - Supported file types: `.md`, `.markdown`, `.mdc`
+- Compatible editors: VS Code, Cursor, Windsurf, CodeBuddy IDE, Trae, and any other editor built on the VS Code open-source base
 - Platforms: Windows, macOS, Linux (anywhere VS Code runs)
