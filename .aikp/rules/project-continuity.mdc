@@ -299,6 +299,15 @@ H7. Hotfix 报告
 | `openspec/changes/` | OpenSpec 变更管理 |
 | `openspec/specs/` | 能力规格库 |
 | `src/` | 应用代码根目录 |
+| `CODEBUDDY.md` | CodeBuddy Code 的项目入口文件（仅保留项目本体说明 + 工作流摘要；流程规则真源在本文件） |
+| `.aikp/rules/` | 流程规则**真源**（本目录由 `npm run sync-aikit` 同步到 `.codebuddy/`、`.claude/`、`.cursor/`） |
+
+### AI 工具入口分工（重要）
+
+- **真源唯一**：所有流程规则（本文件、未来新增的 `.aikp/rules/*.mdc`）的真源统一在 `.aikp/rules/`。
+- **CODEBUDDY.md**：CBC 的原生入口，保留"项目概述 / 常用命令 / 架构 / 关键约束"等项目本体说明；流程规则部分只保留一段摘要 + 指向 `.aikp/rules/` 的引用块（区块标记 `<!-- AIKP-RULES:START -->` / `<!-- AIKP-RULES:END -->`）。CBC 读到该文件时应按指引**立即读取**引用块中列出的真源文件。
+- **Shim 目录**：`.codebuddy/rules/`、`.claude/rules/`、`.cursor/rules/` 下的同名 `.mdc` 文件均为 shim，自动由 `scripts/sync-aikit-shims.js` 生成，指向同一 `.aikp/` 真源。
+- **一致性校验**：`npm run sync-aikit:check` 同时检查 shim 同步状态 **与** `CODEBUDDY.md` 引用块清单是否与 `.aikp/rules/` 实际文件一致。如果新增/删除/改名 `.aikp/rules/*.mdc`，必须同步更新 `CODEBUDDY.md` 的引用块。
 
 ## 开发环境
 

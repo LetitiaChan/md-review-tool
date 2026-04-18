@@ -32,6 +32,88 @@ const EXCLUDE_FILES_AT_ROOT = new Set(['README.md']);
 // 允许的模式参数
 const MODES = new Set(['default', 'check', 'clean']);
 
+// CODEBUDDY.md 引用块校验配置
+// CODEBUDDY.md 是 CBC 的规则入口文件。它采用"摘要 + 引用"模式：
+// 流程规则的真源在 .aikp/rules/*.mdc，CODEBUDDY.md 中只列出指向真源的链接清单。
+// 本脚本在 check/default/clean 三种模式下均校验该清单与 .aikp/rules/ 实际文件一致，
+// 避免规则真源新增/删除/改名后，CODEBUDDY.md 的引用块出现漂移。
+const CODEBUDDY_ENTRY_FILE = 'CODEBUDDY.md';
+const CODEBUDDY_BLOCK_START = '<!-- AIKP-RULES:START';
+const CODEBUDDY_BLOCK_END = '<!-- AIKP-RULES:END -->';
+// 校验清单的来源目录（相对 .aikp/）——仅 rules/ 下的条目需要在 CODEBUDDY.md 中引用
+const CODEBUDDY_REFERENCED_SUBDIR = 'rules';
+
+// ---------- CODEBUDDY.md 引用块校验 ----------
+
+/**
+ * 从 .aikp/rules/ 下的 .mdc / .md 文件列表，生成期望的引用清单（排序后）。
+ * 返回相对 .aikp/ 的 POSIX 路径数组，例如 ['rules/project-continuity.mdc']。
+ */
+function listCodebuddyReferencedRules(sources) {
+    return sources
+        .filter((rel) => rel.startsWith(`${CODEBUDDY_REFERENCED_SUBDIR}/`))
+        .sort();
+}
+
+/**
+ * 解析 CODEBUDDY.md 中 AIKP-RULES:START ... AIKP-RULES:END 区块内引用到的
+ * .aikp/ 相对路径集合。容忍行前空白、反引号包裹与可选的 Markdown 链接语法。
+ * 返回 Set<string>（relPath 相对 .aikp/）。
+ */
+function extractReferencedRulesFromCodebuddy(content) {
+    const result = new Set();
+    const startIdx = content.indexOf(CODEBUDDY_BLOCK_START);
+    const endIdx = content.indexOf(CODEBUDDY_BLOCK_END);
+    if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) return result;
+    const block = content.slice(startIdx, endIdx);
+    // 匹配 `.aikp/<rel>` 形式的引用（rel 必须以 .mdc 或 .md 结尾）
+    const refRegex = /\.aikp\/([A-Za-z0-9_\-./]+\.(?:mdc|md))/g;
+    let m;
+    while ((m = refRegex.exec(block)) !== null) {
+        result.add(m[1]);
+    }
+    return result;
+}
+
+/**
+ * 校验 CODEBUDDY.md 的引用块与 .aikp/rules/ 实际清单是否一致。
+ * 返回 drifts 数组；空数组表示一致。
+ * 如果 CODEBUDDY.md 不存在 → 视为未启用该校验机制，直接返回空数组（静默跳过）。
+ */
+function checkCodebuddyEntry(sources) {
+    const drifts = [];
+    const entryAbs = path.join(REPO_ROOT, CODEBUDDY_ENTRY_FILE);
+    const content = readIfExists(entryAbs);
+    if (content === null) {
+        // CODEBUDDY.md 不存在：项目未接入此校验机制，跳过而非报 drift
+        return drifts;
+    }
+    if (content.indexOf(CODEBUDDY_BLOCK_START) === -1 || content.indexOf(CODEBUDDY_BLOCK_END) === -1) {
+        drifts.push(
+            `codebuddy-entry : ${CODEBUDDY_ENTRY_FILE} 缺少 AIKP-RULES:START/END 引用块（请参考仓库文档恢复）`
+        );
+        return drifts;
+    }
+
+    const expectedList = listCodebuddyReferencedRules(sources);
+    const expectedSet = new Set(expectedList);
+    const actualSet = extractReferencedRulesFromCodebuddy(content);
+
+    // 缺少的引用
+    for (const rel of expectedList) {
+        if (!actualSet.has(rel)) {
+            drifts.push(`codebuddy-entry : 缺少对 .aikp/${rel} 的引用`);
+        }
+    }
+    // 多余的引用（真源已不存在但 CODEBUDDY.md 仍在引用）
+    for (const rel of actualSet) {
+        if (!expectedSet.has(rel)) {
+            drifts.push(`codebuddy-entry : 引用了已不存在的真源 .aikp/${rel}`);
+        }
+    }
+    return drifts;
+}
+
 // ---------- 工具函数 ----------
 
 /**
@@ -272,15 +354,19 @@ function main() {
 
     const sources = listSourceFiles(aikpAbs);
 
+    // CODEBUDDY.md 引用块校验（三种模式都执行，只读）
+    const codebuddyDrifts = checkCodebuddyEntry(sources);
+
     if (mode === 'check') {
         const { drifts } = runCheckMode({ aikpAbs, sources });
-        if (drifts.length === 0) {
-            console.log(`[sync-aikit-shims] Shim 同步检查通过（${sources.length} 个源 × ${TARGETS.length} 个目标）`);
+        const allDrifts = drifts.concat(codebuddyDrifts);
+        if (allDrifts.length === 0) {
+            console.log(`[sync-aikit-shims] Shim 同步检查通过（${sources.length} 个源 × ${TARGETS.length} 个目标）+ CODEBUDDY.md 引用一致`);
             process.exit(0);
         } else {
-            console.error(`[sync-aikit-shims] 检测到 ${drifts.length} 处漂移：`);
-            for (const d of drifts) console.error(`  - ${d}`);
-            console.error(`请运行 "npm run sync-aikit" 修复。`);
+            console.error(`[sync-aikit-shims] 检测到 ${allDrifts.length} 处漂移：`);
+            for (const d of allDrifts) console.error(`  - ${d}`);
+            console.error(`请运行 "npm run sync-aikit" 修复 shim 漂移；CODEBUDDY.md 引用块需手工同步到 .aikp/rules/ 实际清单。`);
             process.exit(1);
         }
     } else if (mode === 'clean') {
@@ -288,12 +374,22 @@ function main() {
         console.log(
             `[sync-aikit-shims] 同步完成：${created} 新建 / ${updated} 更新 / ${skipped} 跳过 / ${cleaned} 清理`
         );
+        if (codebuddyDrifts.length > 0) {
+            console.warn(`[sync-aikit-shims] ⚠ CODEBUDDY.md 引用块存在 ${codebuddyDrifts.length} 处漂移：`);
+            for (const d of codebuddyDrifts) console.warn(`  - ${d}`);
+            console.warn(`  （自动同步不会改写 CODEBUDDY.md，请手工更新引用块或运行 --check 确认）`);
+        }
         process.exit(0);
     } else {
         const { created, updated, skipped } = runDefaultMode({ aikpAbs, sources });
         console.log(
             `[sync-aikit-shims] 同步完成：${created} 新建 / ${updated} 更新 / ${skipped} 跳过（${sources.length} 源 × ${TARGETS.length} 目标）`
         );
+        if (codebuddyDrifts.length > 0) {
+            console.warn(`[sync-aikit-shims] ⚠ CODEBUDDY.md 引用块存在 ${codebuddyDrifts.length} 处漂移：`);
+            for (const d of codebuddyDrifts) console.warn(`  - ${d}`);
+            console.warn(`  （自动同步不会改写 CODEBUDDY.md，请手工更新引用块或运行 --check 确认）`);
+        }
         process.exit(0);
     }
 }
@@ -308,6 +404,9 @@ module.exports = {
     AIKP_ROOT,
     TARGETS,
     SHIM_EXTENSIONS,
+    CODEBUDDY_ENTRY_FILE,
+    CODEBUDDY_BLOCK_START,
+    CODEBUDDY_BLOCK_END,
     listSourceFiles,
     computeRelLinkFromShim,
     buildStubContent,
@@ -316,4 +415,7 @@ module.exports = {
     runDefaultMode,
     runCheckMode,
     runCleanMode,
+    listCodebuddyReferencedRules,
+    extractReferencedRulesFromCodebuddy,
+    checkCodebuddyEntry,
 };

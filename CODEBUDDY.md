@@ -99,58 +99,22 @@ npx playwright test --config test/ui/playwright.config.ts test/ui/specs/某个.s
 - **打包体积**: `.vsix` 包 < 50MB（使用 `--no-dependencies` 打包，依赖内联）
 - **批注存储**: 自动保存到工作区 `.review/` 目录，JSON 格式，历史版本永久保留（仅用户显式清除时删除）
 
-## 开发工作流（强制 OpenSpec）
+## 工作流与规则真源
 
-> 项目根目录的 `AGENT-PROGRESS.md` 是跨会话记忆，会话启动必读；完整规则在 `.aikp/rules/project-continuity.mdc`（通过 shim 暴露到 `.codebuddy/rules/`、`.claude/rules/`、`.cursor/rules/`）。
+> **重要**：本项目的流程规则（OpenSpec 工作流、Hotfix Mini-Pipeline、完成门禁、阶段完成自检、文档同步纪律、发布流程、命令执行策略、Git 规范等）的**真源统一位于 `.aikp/rules/` 目录**。`.codebuddy/rules/`、`.claude/rules/`、`.cursor/rules/` 下的同名文件均为 shim，指向同一真源（由 `npm run sync-aikit` 维护）。
+>
+> **AI 工具读取指引**：阅读本文件时，请**立即读取**以下真源文件，并将其内容视为本文件内容的一部分：
 
-### 新功能 / 重大修改 → 必须走 OpenSpec
-- 检查 `openspec/changes/` 是否已有对应 change，没有则先调用 `openspec-propose` 创建 proposal + design + tasks，然后 `openspec-apply-change` 实施
-- ❌ 禁止跳过 spec 直接写代码
-- ❌ 禁止在有"已实施但未归档"的 change 时开始新 propose / apply（**完成门禁**）
+<!-- AIKP-RULES:START (由 npm run sync-aikit:check 校验，勿手工改动真源清单) -->
+- [`.aikp/rules/project-continuity.mdc`](.aikp/rules/project-continuity.mdc) — 跨会话上下文恢复 + 开发纪律（OpenSpec 工作流、Hotfix Mini-Pipeline、完成门禁、阶段完成自检、文档同步、发布流程、Git 规范、命令执行策略）
+<!-- AIKP-RULES:END -->
 
-### Hotfix 例外 — 必须执行 Hotfix Mini-Pipeline（完整 H0→H7）
-- **阈值**: 源码文件 ≤3 个 且 源码改动 ≤30 行（测试文件新增不计入）
-- **H0 分流**: Doc-Only（跳过 H1~H4）/ Refactor（跳过 H3.3）/ 普通 bugfix（完整流程）
-- **H1-H7**: 影响面分析 → `npm run compile` → `npm test` → 测试补全（Tier 1/2/3）→ `npx vsce package --no-dependencies` → `git commit` → `git push` → 报告
-- **运行时 Bug**（自动测试无法复现）: 用 H3.5 诊断策略 A（诊断日志 + mock 捕获）或策略 B（用户协助验证）
+### 摘要（仅为快速导航，详情以真源为准）
 
-### 阶段完成自检（防止提前收尾）
-- 每个阶段结束后回溯用户原始请求边界
-- 用户说"完成 X" = 必须走完 propose → apply → build → test → verify → archive → commit 全管线
-- ❌ 不要在管线中途输出会话总结；不要把控制权交还给用户（除非明确要求分步）
-
-## 文档同步纪律
-
-任何用户可感知的功能变更（新增、修改、删除）**必须同步更新**：
-- `README.md` 功能列表与使用说明
-- `package.json` 的 `contributes` 描述（涉及 VS Code 命令/配置变更时）
-- 相关帮助文档
-
-执行时机：全管线在测试通过后、打包之前；Hotfix 在 H3.3 之后、H4 之前。纯内部重构无需更新。
-
-## Git 规范
-
-- **Commit message 格式**: `<type>: <中文描述>`
-- **类型前缀**: `feat:` / `fix:` / `refactor:` / `chore:` / `docs:`
-- ❌ 同一文件不要在同一轮发起多次并行 Edit（文件内容已变会导致后续匹配失败，必须串行）
-
-## 发布流程（双市场，缺一不可）
-
-```bash
-# 1. 打包
-npx vsce package --no-dependencies
-
-# 2. VS Code Marketplace
-npx vsce publish --no-dependencies
-
-# 3. Open VSX (Cursor 市场)
-npx ovsx publish <file.vsix> -p <OVSX_TOKEN>
-```
-
-两个市场都成功才算"发布完成"。安装链接：
-- VS Code: https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review
-- Open VSX: https://open-vsx.org/extension/letitia/md-human-review
-
-## 命令执行策略
-
-所有构建、测试、打包、Git commit/push、安装依赖等操作一律**直接执行**，不逐步询问用户确认。仅在遇到错误/失败时刹车报告。
+- **新功能 / 重大修改 → 强制 OpenSpec**：`propose` → `apply` → `build` → `test` → `verify` → `archive` → `commit` 全管线；禁止跳过 spec 写代码；存在"已实施未归档"的 change 时不得开始新 propose / apply（**完成门禁**）。
+- **Hotfix Mini-Pipeline（H0→H7）**：阈值为源码 ≤3 文件且 ≤30 行（测试新增不计）；H0 分流 Doc-Only / Refactor / 普通 bugfix；运行时 Bug 用 H3.5 诊断策略 A/B。
+- **阶段完成自检**：每阶段结束回溯用户原始请求边界；不要在管线中途输出会话总结；不要提前把控制权交还用户。
+- **文档同步纪律**：用户可感知的功能变更必须同步 `README.md` / `package.json` `contributes` / 相关帮助文档；时机为测试通过后、打包之前；纯内部重构无需更新。
+- **发布流程（双市场，缺一不可）**：`vsce package` → `vsce publish` → `ovsx publish`；两个市场都成功才算"发布完成"。
+- **命令执行策略**：构建/测试/打包/Git commit/push/安装依赖一律直接执行，仅在失败时刹车报告。
+- **Git 规范**：commit message 格式 `<type>: <中文描述>`；同一文件同一轮不得并行 Edit。

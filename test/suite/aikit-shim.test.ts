@@ -338,5 +338,80 @@ suite('aikit-shim-bridge Suite', () => {
                 fs.rmSync(tmpRoot, { recursive: true, force: true });
             }
         });
+
+        // ====================================================================
+        // BT-aikitShim.9/.10/.11 —— CODEBUDDY.md 引用块校验（本次新增能力）
+        // ====================================================================
+
+        test('BT-aikitShim.9 CODEBUDDY.md 含 AIKP-RULES:START/END 引用块且与 .aikp/rules/ 实际清单一致', () => {
+            const entryPath = path.join(REPO_ROOT, 'CODEBUDDY.md');
+            assert.ok(fs.existsSync(entryPath), 'CODEBUDDY.md 应存在');
+            const content = fs.readFileSync(entryPath, 'utf8');
+            assert.ok(
+                content.indexOf('<!-- AIKP-RULES:START') !== -1,
+                'CODEBUDDY.md 应含 AIKP-RULES:START 标记'
+            );
+            assert.ok(
+                content.indexOf('<!-- AIKP-RULES:END -->') !== -1,
+                'CODEBUDDY.md 应含 AIKP-RULES:END 标记'
+            );
+            // 真实仓库下不应有 drift
+            const sources = syncModule.listSourceFiles(AIKP_ROOT);
+            const drifts = syncModule.checkCodebuddyEntry(sources);
+            assert.deepStrictEqual(
+                drifts,
+                [],
+                `CODEBUDDY.md 引用块应与 .aikp/rules/ 实际清单一致，发现漂移：${JSON.stringify(drifts)}`
+            );
+        });
+
+        test('BT-aikitShim.10 extractReferencedRulesFromCodebuddy 正确解析引用路径', () => {
+            const sample = [
+                '# Doc',
+                '<!-- AIKP-RULES:START (marker) -->',
+                '- [`.aikp/rules/project-continuity.mdc`](.aikp/rules/project-continuity.mdc) — desc',
+                '- see .aikp/rules/another.md for details',
+                '<!-- AIKP-RULES:END -->',
+                '## 不应被解析的区块外引用',
+                '.aikp/rules/outside.mdc should NOT be picked',
+            ].join('\n');
+            const refs = syncModule.extractReferencedRulesFromCodebuddy(sample);
+            assert.ok(
+                refs.has('rules/project-continuity.mdc'),
+                '应识别 rules/project-continuity.mdc'
+            );
+            assert.ok(refs.has('rules/another.md'), '应识别 rules/another.md');
+            assert.ok(
+                !refs.has('rules/outside.mdc'),
+                '区块外的 .aikp/ 引用不应被计入'
+            );
+        });
+
+        test('BT-aikitShim.11 checkCodebuddyEntry 能检测缺失引用与多余引用的漂移', () => {
+            // 缺失场景：sources 里有但 CODEBUDDY.md 不引用 —— 通过伪造 sources 触发
+            const fakeSources = [
+                'rules/project-continuity.mdc',
+                'rules/__fake_unreferenced_rule__.mdc',
+            ];
+            const driftsMissing = syncModule.checkCodebuddyEntry(fakeSources);
+            assert.ok(
+                driftsMissing.some((d: string) =>
+                    d.indexOf('__fake_unreferenced_rule__') !== -1
+                ),
+                `应报告缺少对新真源的引用，实际 drifts=${JSON.stringify(driftsMissing)}`
+            );
+
+            // 多余场景：sources 里没有 rules/project-continuity.mdc
+            // —— 但 CODEBUDDY.md 仍在引用它 —— 应报告 orphan
+            const driftsOrphan = syncModule.checkCodebuddyEntry([]);
+            assert.ok(
+                driftsOrphan.some(
+                    (d: string) =>
+                        d.indexOf('引用了已不存在的真源') !== -1 &&
+                        d.indexOf('project-continuity.mdc') !== -1
+                ),
+                `应报告 CODEBUDDY.md 引用了已不存在的真源，实际 drifts=${JSON.stringify(driftsOrphan)}`
+            );
+        });
     });
 });
