@@ -1536,10 +1536,21 @@ showNotification(t('notification.restored', { count: matchedRecord.annotations.l
             if (executeBtn) {
                 executeBtn.style.display = '';
             }
-            // VSCode 模式下显示剪贴板粘贴提示
+            // 非 CodeBuddy 模式下显示剪贴板粘贴提示（按 ideType 切换文案）
             const vscodeHint = document.getElementById('vscodeAiHint');
             if (vscodeHint) {
-                vscodeHint.style.display = (_ideType === 'vscode') ? 'inline' : 'none';
+                // codebuddy 模式有全自动策略链，不需要显示提示；其余 IDE 都显示
+                if (_ideType === 'codebuddy') {
+                    vscodeHint.style.display = 'none';
+                } else {
+                    // 根据 ideType 选择提示文案 i18n key
+                    let hintKey = 'modal.ai_result.vscode_hint';
+                    if (_ideType === 'cursor') { hintKey = 'modal.ai_result.cursor_hint'; }
+                    else if (_ideType === 'windsurf') { hintKey = 'modal.ai_result.windsurf_hint'; }
+                    vscodeHint.setAttribute('data-i18n', hintKey);
+                    vscodeHint.textContent = t(hintKey);
+                    vscodeHint.style.display = 'inline';
+                }
             }
 
             copyBtn.addEventListener('click', function() {

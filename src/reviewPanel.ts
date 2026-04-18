@@ -3,17 +3,22 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { FileService } from './fileService';
 import { StateService } from './stateService';
+import { detectIdeKind, dispatchAiChat, IdeKind } from './aiChatAdapters';
 
 const _hostMessages: Record<string, Record<string, string>> = {
     'zh-CN': {
         'ai.chat_success_codebuddy': '✅ AI 新对话已打开，指令已复制到剪贴板，请按 Ctrl+V 粘贴后回车发送。',
         'ai.chat_success_vscode': '✅ AI 对话已打开，指令已复制到剪贴板，请按 Ctrl+V 粘贴后回车发送。',
+        'ai.chat_success_cursor': '✅ 已在 Cursor 打开 AI Chat 并自动粘贴指令。若未自动发送请按 Enter。',
+        'ai.chat_success_windsurf': '✅ 已在 Windsurf 打开 Cascade 并自动粘贴指令。若未自动发送请按 Enter。',
         'ai.chat_fallback': '✅ 已复制 AI 指令到剪贴板，请手动打开AI对话窗口并粘贴执行。',
         'ai.chat_error': '❌ 操作失败: ',
     },
     'en': {
         'ai.chat_success_codebuddy': '✅ New AI chat opened. Instructions copied to clipboard. Press Ctrl+V to paste and send.',
         'ai.chat_success_vscode': '✅ AI chat opened. Instructions copied to clipboard. Press Ctrl+V to paste and send.',
+        'ai.chat_success_cursor': '✅ AI Chat opened in Cursor and instructions pasted automatically. Press Enter if not sent.',
+        'ai.chat_success_windsurf': '✅ Cascade opened in Windsurf and instructions pasted automatically. Press Enter if not sent.',
         'ai.chat_fallback': '✅ AI instructions copied to clipboard. Please open AI chat manually and paste.',
         'ai.chat_error': '❌ Operation failed: ',
     }
@@ -235,9 +240,9 @@ export class ReviewPanel {
                 if (this._currentFilePath) {
                     this.loadFile(this._currentFilePath);
                 }
-                // 发送 IDE 类型信息给 webview
+                // 发送 IDE 类型信息给 webview（支持 codebuddy/cursor/windsurf/vscode 四种值）
                 const allCmds = await vscode.commands.getCommands(true);
-                const ideType = allCmds.includes('tencentcloud.codingcopilot.chat.startNewChat') ? 'codebuddy' : 'vscode';
+                const ideType: IdeKind = detectIdeKind(vscode.env.appName || '', new Set(allCmds));
                 this.postMessage({ type: 'ideType', payload: { ideType } });
                 break;
             }
@@ -454,139 +459,39 @@ export class ReviewPanel {
                 break;
             }
             case 'openCodeBuddyChat': {
-                // 将指令内容发送到 AI 对话窗口
+                // 将指令内容发送到当前 IDE 的 AI 对话窗口。
+                // 实际派发通过 aiChatAdapters 模块完成（按 IdeKind 路由多策略 fallback 链）。
                 const instruction = payload.instruction || '';
                 try {
-const outputChannel = vscode.window.createOutputChannel('MD Human Review - AI Chat');
+                    const outputChannel = vscode.window.createOutputChannel('MD Human Review - AI Chat');
                     outputChannel.clear();
 
-                    // 写入剪贴板作为备份
+                    // 1. 写入剪贴板作为所有策略失败时的兜底
                     await vscode.env.clipboard.writeText(instruction);
-                    outputChannel.appendLine(`[AI Chat] 指令已写入剪贴板, 长度: ${instruction.length}`);
+                    outputChannel.appendLine(`[DIAG:aiChat] clipboard written, length=${instruction.length}`);
 
+                    // 2. 识别当前 IDE 类型
                     const allCommands = await vscode.commands.getCommands(true);
-
-                    // 判断当前 IDE 类型：CodeBuddy 还是 VSCode
-                    const isCodeBuddy = allCommands.includes('tencentcloud.codingcopilot.chat.startNewChat');
+                    const commandSet = new Set(allCommands);
                     const appName = vscode.env.appName || '';
-                    outputChannel.appendLine(`[AI Chat] IDE: ${appName}, isCodeBuddy: ${isCodeBuddy}`);
+                    const ide: IdeKind = detectIdeKind(appName, commandSet);
+                    outputChannel.appendLine(`[DIAG:aiChat] ide=${ide} appName=${appName} commands=${allCommands.length} total`);
 
-                    let succeeded = false;
+                    // 3. 派发到对应 IDE 的策略链
+                    const result = await dispatchAiChat(ide, {
+                        instruction,
+                        log: (line) => outputChannel.appendLine(line),
+                        availableCommands: commandSet
+                    });
 
-                    if (isCodeBuddy) {
-                        // ========== CodeBuddy IDE 逻辑 ==========
-                        outputChannel.appendLine('[AI Chat] 进入 CodeBuddy 模式');
+                    outputChannel.show(true);
 
-                        // 策略1: startNewChat + sendMessage 全自动
-                        try {
-                            outputChannel.appendLine('[AI Chat] CB策略1: startNewChat + sendMessage...');
-                            await vscode.commands.executeCommand('tencentcloud.codingcopilot.chat.startNewChat');
-                            outputChannel.appendLine('[AI Chat] CB策略1: ✅ startNewChat 已执行');
-
-                            await new Promise(resolve => setTimeout(resolve, 800));
-
-                            await vscode.commands.executeCommand('tencentcloud.codingcopilot.chat.sendMessage', {
-                                message: instruction
-                            });
-                            outputChannel.appendLine('[AI Chat] CB策略1: ✅ sendMessage 已执行');
-                            succeeded = true;
-                            outputChannel.show(true);
-                        } catch (e: any) {
-                            outputChannel.appendLine(`[AI Chat] CB策略1: ❌ 失败: ${e.message}`);
-                        }
-
-                        // 策略2: sendToChat
-                        if (!succeeded) {
-                            try {
-                                outputChannel.appendLine('[AI Chat] CB策略2: sendToChat...');
-                                await vscode.commands.executeCommand('tencentcloud.codingcopilot.sendToChat', {
-                                    message: instruction
-                                });
-                                outputChannel.appendLine('[AI Chat] CB策略2: ✅ sendToChat 已执行');
-                                succeeded = true;
-                                outputChannel.show(true);
-                            } catch (e: any) {
-                                outputChannel.appendLine(`[AI Chat] CB策略2: ❌ 失败: ${e.message}`);
-                            }
-                        }
-
-                        // 策略3: addToChat
-                        if (!succeeded) {
-                            try {
-                                outputChannel.appendLine('[AI Chat] CB策略3: addToChat...');
-                                await vscode.commands.executeCommand('tencentcloud.codingcopilot.addToChat', {
-                                    message: instruction
-                                });
-                                outputChannel.appendLine('[AI Chat] CB策略3: ✅ addToChat 已执行');
-                                succeeded = true;
-                                outputChannel.show(true);
-                            } catch (e: any) {
-                                outputChannel.appendLine(`[AI Chat] CB策略3: ❌ 失败: ${e.message}`);
-                            }
-                        }
-
-                        // 策略4: startNewChat + 聚焦面板 + 剪贴板提示
-                        if (!succeeded) {
-                            try {
-                                outputChannel.appendLine('[AI Chat] CB策略4: startNewChat + 聚焦 + 剪贴板...');
-                                await vscode.commands.executeCommand('tencentcloud.codingcopilot.chat.startNewChat');
-                                outputChannel.appendLine('[AI Chat] CB策略4: ✅ startNewChat 已执行');
-
-                                await new Promise(resolve => setTimeout(resolve, 800));
-
-                                await vscode.commands.executeCommand('coding-copilot.webviews.chat.focus');
-                                outputChannel.appendLine('[AI Chat] CB策略4: ✅ 已聚焦对话面板');
-
-                                vscode.window.showInformationMessage(
-                                    '✅ AI 新对话已打开，指令已复制到剪贴板，请按 Ctrl+V 粘贴后回车发送。'
-                                );
-                                succeeded = true;
-                                outputChannel.show(true);
-                            } catch (e: any) {
-                                outputChannel.appendLine(`[AI Chat] CB策略4: ❌ 失败: ${e.message}`);
-                            }
-                        }
+                    // 4. 根据结果显示合适的 toast 提示
+                    if (result.succeeded) {
+                        const successKey = `ai.chat_success_${ide}`;
+                        vscode.window.showInformationMessage(_hostT(successKey));
                     } else {
-                        // ========== VSCode + 工蜂 Copilot 逻辑 ==========
-                        outputChannel.appendLine('[AI Chat] 进入 VSCode + 工蜂 Copilot 模式');
-
-                        // 策略1: 打开工蜂对话 → 聚焦面板 → 剪贴板提示
-                        if (allCommands.includes('gongfeng.gongfeng-copilot.chat.openNewChat')) {
-                            try {
-                                outputChannel.appendLine('[AI Chat] GF策略1: 打开工蜂 Copilot 对话...');
-                                await vscode.commands.executeCommand('gongfeng.gongfeng-copilot.chat.openNewChat');
-                                outputChannel.appendLine('[AI Chat] GF策略1: ✅ 工蜂对话已打开');
-
-                                // 等待 Webview 面板加载
-                                await new Promise(resolve => setTimeout(resolve, 1000));
-
-                                // 聚焦工蜂对话面板
-                                if (allCommands.includes('gongfeng-copilot.webviews.chat.focus')) {
-                                    await vscode.commands.executeCommand('gongfeng-copilot.webviews.chat.focus');
-                                    outputChannel.appendLine('[AI Chat] GF策略1: ✅ 已聚焦工蜂面板');
-                                    await new Promise(resolve => setTimeout(resolve, 300));
-                                }
-
-                                // 提示用户粘贴（Webview 内无法程序化输入文本）
-                                outputChannel.appendLine('[AI Chat] GF策略1: 指令已在剪贴板，请 Ctrl+V 粘贴后回车发送');
-                                vscode.window.showInformationMessage(
-                                    '✅ AI 对话已打开，指令已复制到剪贴板，请按 Ctrl+V 粘贴后回车发送。'
-                                );
-                                succeeded = true;
-                                outputChannel.show(true);
-                            } catch (e: any) {
-                                outputChannel.appendLine(`[AI Chat] GF策略1: ❌ 失败: ${e.message}`);
-                            }
-                        }
-                    }
-
-                    // 所有策略都失败
-                    if (!succeeded) {
-                        outputChannel.appendLine('[AI Chat] ⚠️ 所有策略都失败，请手动操作');
-                        outputChannel.show(true);
-                        vscode.window.showInformationMessage(
-                            '✅ 已复制 AI 指令到剪贴板，请手动打开AI对话窗口并粘贴执行。'
-                        );
+                        vscode.window.showInformationMessage(_hostT('ai.chat_fallback'));
                     }
                 } catch (e: any) {
                     vscode.window.showErrorMessage(_hostT('ai.chat_error') + e.message);
