@@ -40,7 +40,7 @@
 - **Annotation Search** — Filter annotations by content, selected text, inserted content, and more
 
 ### 🤖 AI Integration
-- **One-click AI Fix** — Generate structured AI modification instruction files from all annotations, send directly to CodeBuddy or Gongfeng Copilot chat
+- **One-click AI Fix** — Generate structured AI modification instruction files from all annotations; automatically open a new chat and send instructions on CodeBuddy, Cursor, or Windsurf; fall back to clipboard + manual paste on other editors
 - **📋 Copy Instructions** — Copy AI instructions to clipboard for manual use with any AI tool
 
 ### 🎨 Markdown Rendering
@@ -55,7 +55,7 @@
 
 ### 📤 Export & Storage
 - **Export Review Records** — Generate AI-readable structured Markdown modification instructions (`Ctrl+E`), ordered back-to-front for safe execution
-- **Auto-save** — Annotation records automatically saved to workspace `.review/` directory; empty annotations auto-delete the record file
+- **Auto-save** — Annotation records automatically saved to workspace `.review/` directory; historical versions are preserved for rollback (records are only deleted when users explicitly click "Clear All Annotations")
 - **Version Management** — Automatically archives old versions when source file content changes, creating new review versions
 - **Image Support** — Base64 images in comments are additionally exported as JSON data files; path-referenced images are stored in the file system
 
@@ -280,7 +280,7 @@ MIT
 - **批注搜索** — 在批注面板中按内容、选中文本、插入内容等多字段搜索过滤
 
 ### 🤖 AI 集成
-- **一键 AI 修复** — 将所有批注生成结构化 AI 修改指令文件，一键发送到 CodeBuddy 或工蜂 Copilot 对话窗口执行
+- **一键 AI 修复** — 将所有批注生成结构化 AI 修改指令文件；在 CodeBuddy、Cursor、Windsurf 上自动打开新对话并送出指令；其他编辑器降级为剪贴板 + 手动粘贴
 - **📋 一键复制指令** — 复制 AI 指令到剪贴板，方便手动粘贴到任意 AI 工具
 
 ### 🎨 Markdown 渲染
@@ -295,7 +295,7 @@ MIT
 
 ### 📤 导出与存储
 - **导出批阅记录** — 生成 AI 可读的结构化 Markdown 修改指令（`Ctrl+E`），指令按从后往前排列确保执行安全
-- **自动保存** — 批注记录自动保存到工作区 `.review/` 目录，批注清空时自动删除记录文件
+- **自动保存** — 批注记录自动保存到工作区 `.review/` 目录，历史版本永久保留供回溯（仅当用户显式点击“清除全部批注”时才会删除记录文件）
 - **版本管理** — 源文件内容变更时自动归档旧版本，创建新批阅版本
 - **图片支持** — 评论中的 Base64 图片会额外导出为 JSON 数据文件，路径引用的图片直接保存到文件系统
 

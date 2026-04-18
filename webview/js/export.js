@@ -8,11 +8,10 @@ const Exporter = (() => {
     let autoSaveEnabled = false;
     let autoSaveTimer = null;
     const AUTO_SAVE_DELAY = 1500;
-    // 防御性保护：webview 刚启动时，annotations 尚未从磁盘恢复，
-    // 若 doAutoSave 立即因"批注为空"而删除磁盘批阅文件，会导致关闭再打开后批注丢失。
-    // 在此宽限期内，空批注不触发删除磁盘记录，只更新 UI 状态。
-    const DELETE_ON_EMPTY_GRACE_MS = 3000;
-    let _suppressDeleteUntil = 0;
+    // 历史版本归档策略：
+    // 1. doAutoSave 发现批注为空时，仅更新 UI 状态，不删除磁盘批阅记录（保留历史版本供日后回溯）
+    // 2. 磁盘记录删除仅通过用户显式操作触发（见 app.js btnConfirmClearAll）
+    // 3. 刷新/文件内容变化时会创建新版本号（reviewVersion + 1），旧版本自然保留为历史版本
 
     /**
      * 构建用于文件名的 reviewBaseName。
@@ -250,8 +249,6 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
 
     function enableAutoSave() {
         autoSaveEnabled = true;
-        // 刷新"刚启动不允许删除磁盘记录"的宽限期起点
-        _suppressDeleteUntil = Date.now() + DELETE_ON_EMPTY_GRACE_MS;
         doAutoSave();
         return true;
     }
@@ -278,25 +275,15 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
         const data = Store.getData();
         if (!data.fileName) return;
 
-        // 批注为空时，删除磁盘上的批阅记录文件
+        // 批注为空时：仅更新 UI 状态，不删除磁盘记录
+        // 理由：磁盘记录作为历史版本保留，方便用户回溯之前的批阅成果；
+        // 只有用户显式点击"清除全部批注"时，才会主动删除磁盘文件。
+        // 这样可以避免 handleRefresh 内容变化分支、setFile 清空 annotations 等场景
+        // 误删用户已保存的历史批阅记录。
         if (!data.annotations.length) {
-            // 宽限期内（webview 刚启动，批注尚未从磁盘恢复），不删除磁盘文件
-            if (Date.now() < _suppressDeleteUntil) {
-                updateAutoSaveStatus('saved');
-                return;
-            }
-            try {
-                const requestId = 'delete_review_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-                vscode.postMessage({ type: 'deleteReviewRecords', payload: { fileName: data.fileName, relPath: data.relPath || '' }, requestId });
-                updateAutoSaveStatus('saved');
-            } catch (e) {
-                console.warn('[AutoSave] 删除空批阅记录失败:', e);
-            }
+            updateAutoSaveStatus('saved');
             return;
         }
-
-        // 一旦有批注进行正常保存，立即解除删除保护（后续手动清空应能删除）
-        _suppressDeleteUntil = 0;
 
         try {
             const blocks = Renderer.parseMarkdown(data.rawMarkdown);

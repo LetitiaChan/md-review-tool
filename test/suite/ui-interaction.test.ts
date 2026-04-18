@@ -1814,17 +1814,19 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         });
     });
 
-    // ========= Suite 18: Hotfix — 关闭再打开 md 文件批注不丢失 =========
-    // Bug：md 文件添加批注后，关闭再次打开时 .review 批阅文件被删除
+    // ========= Suite 18: Hotfix — 批阅记录保留策略（关闭重开 + 刷新场景） =========
+    // Bug A（关闭再打开）：md 文件添加批注后，关闭再次打开时 .review 批阅文件被删除
+    // Bug B（刷新）：AI 修复后点刷新，所有历史版本批阅文件被删除
     // 根因链：
-    //   1. extension host 主动推送 fileContent → handleFileContentPush 仅调用 loadDocument(isNew=true)
-    //      未先查询 .review 记录 → store 批注被清空
-    //   2. init() 尾部 Exporter.enableAutoSave() 立即触发 doAutoSave → annotations 为空时
-    //      无条件 postMessage('deleteReviewRecords') → 磁盘批阅文件被删除
-    // 修复：
+    //   1. extension host 主动推送 fileContent → handleFileContentPush 未恢复批注 → store 空批注启动
+    //   2. AI 修复后刷新 → handleRefresh contentChanged=true → setFile 清空 annotations
+    //   3. 空批注触发 doAutoSave → 无条件 postMessage('deleteReviewRecords') → 磁盘文件被全量删除
+    //      （删除按前缀匹配，会同时删掉 v1/v2/v3... 所有历史版本）
+    // 修复策略（C-1 + C-a）：
     //   A. handleFileContentPush 改为 async，先 callHost('getReviewRecords') 并 restoreFromReviewRecord
-    //   B. doAutoSave 在 enableAutoSave 后 DELETE_ON_EMPTY_GRACE_MS 宽限期内跳过删除磁盘记录
-    suite('18. Hotfix — 关闭再打开 md 文件批注不丢失', () => {
+    //   B. doAutoSave 空批注分支不再删除磁盘记录，仅更新 UI 状态（磁盘记录仅由用户显式清空触发删除）
+    //   C. 多版本保留：setFile 内容变化时 reviewVersion+1 自动生成新版本；getReviewRecords 倒序返回最新版本
+    suite('18. Hotfix — 批阅记录保留策略（关闭重开 + 刷新场景）', () => {
         const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
         const appJsPath = path.join(extPath, 'webview', 'js', 'app.js');
         const exportJsPath = path.join(extPath, 'webview', 'js', 'export.js');
@@ -1869,50 +1871,68 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(body.includes('restoreFromReviewRecord'), '函数体内应调用 Store.restoreFromReviewRecord');
         });
 
-        test('BT-annotationPersist.3 export.js 应声明删除保护宽限期常量与变量', () => {
+        test('BT-annotationPersist.3 export.js 应声明历史版本归档策略（不自动删除磁盘记录）', () => {
+            // 新策略（C-1）：doAutoSave 空批注分支不再删除磁盘文件，作为历史版本保留
             assert.ok(
-                exportJsText.includes('DELETE_ON_EMPTY_GRACE_MS'),
-                'export.js 应声明 DELETE_ON_EMPTY_GRACE_MS 常量'
+                /\u5386\u53f2\u7248\u672c\u5f52\u6863\u7b56\u7565|\u4e0d\u5220\u9664\u78c1\u76d8/.test(exportJsText),
+                'export.js 应在顶部注释中声明"历史版本归档策略 / 不删除磁盘"的设计意图'
+            );
+            // 反向断言：不应再有旧版的宽限期实现（防止回退）
+            assert.ok(
+                !exportJsText.includes('DELETE_ON_EMPTY_GRACE_MS'),
+                'export.js 不应保留废弃的 DELETE_ON_EMPTY_GRACE_MS 常量（已由无条件保留策略替代）'
             );
             assert.ok(
-                exportJsText.includes('_suppressDeleteUntil'),
-                'export.js 应声明 _suppressDeleteUntil 变量'
+                !exportJsText.includes('_suppressDeleteUntil'),
+                'export.js 不应保留废弃的 _suppressDeleteUntil 变量（已由无条件保留策略替代）'
             );
         });
 
         // ---- Tier 2：行为级断言（通过源码逻辑结构验证行为） ----
 
-        test('BT-annotationPersist.4 enableAutoSave 应刷新删除保护宽限期起点', () => {
+        test('BT-annotationPersist.4 enableAutoSave 应简化为仅启用自动保存（无宽限期副作用）', () => {
             const body = extractFunctionBody(exportJsText, /function\s+enableAutoSave\s*\(/);
             assert.ok(body.length > 0, '应能提取到 enableAutoSave 函数体');
+            // 新策略：enableAutoSave 不再操作 _suppressDeleteUntil
             assert.ok(
-                /_suppressDeleteUntil\s*=\s*Date\.now\(\)\s*\+\s*DELETE_ON_EMPTY_GRACE_MS/.test(body),
-                'enableAutoSave 应将 _suppressDeleteUntil 设为 Date.now() + DELETE_ON_EMPTY_GRACE_MS'
+                !body.includes('_suppressDeleteUntil'),
+                'enableAutoSave 不应再设置 _suppressDeleteUntil（已废弃）'
+            );
+            // 必须仍启用 autoSaveEnabled
+            assert.ok(
+                /autoSaveEnabled\s*=\s*true/.test(body),
+                'enableAutoSave 应将 autoSaveEnabled 设为 true'
             );
         });
 
-        test('BT-annotationPersist.5 doAutoSave 在宽限期内不应 postMessage deleteReviewRecords', () => {
+        test('BT-annotationPersist.5 doAutoSave 空批注分支不应发送 deleteReviewRecords', () => {
             const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
             assert.ok(body.length > 0, '应能提取到 doAutoSave 函数体');
             const emptyBranchIdx = body.indexOf('!data.annotations.length');
             assert.ok(emptyBranchIdx >= 0, '空批注分支应存在');
+            // 从空批注分支起点到第一个 return 之间，不应出现 deleteReviewRecords
             const afterEmpty = body.slice(emptyBranchIdx);
-            const suppressIdx = afterEmpty.indexOf('_suppressDeleteUntil');
-            const deleteIdx = afterEmpty.indexOf("'deleteReviewRecords'");
-            assert.ok(suppressIdx >= 0, '空批注分支应检查 _suppressDeleteUntil');
-            assert.ok(deleteIdx >= 0, '空批注分支仍保留 deleteReviewRecords 消息发送');
+            const returnIdx = afterEmpty.indexOf('return');
+            assert.ok(returnIdx > 0, '空批注分支内应有 return');
+            const emptyBranch = afterEmpty.slice(0, returnIdx);
             assert.ok(
-                suppressIdx < deleteIdx,
-                '_suppressDeleteUntil 判断必须在发送 deleteReviewRecords 之前（宽限期内应提前 return）'
+                !emptyBranch.includes("'deleteReviewRecords'"),
+                '空批注分支不应 postMessage deleteReviewRecords（磁盘记录作为历史版本保留）'
             );
         });
 
-        test('BT-annotationPersist.6 doAutoSave 有批注正常保存路径应解除删除保护', () => {
+        test('BT-annotationPersist.6 doAutoSave 有批注正常保存路径应走 saveViaHost', () => {
             const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
             assert.ok(body.length > 0, '应能提取到 doAutoSave 函数体');
+            // 正常保存路径必须调用 saveViaHost 写磁盘
             assert.ok(
-                /_suppressDeleteUntil\s*=\s*0/.test(body),
-                'doAutoSave 在正常保存路径应将 _suppressDeleteUntil 重置为 0'
+                body.includes('saveViaHost'),
+                'doAutoSave 正常保存路径应调用 saveViaHost 持久化到磁盘'
+            );
+            // 反向断言：不再出现废弃的宽限期重置
+            assert.ok(
+                !/_suppressDeleteUntil\s*=\s*0/.test(body),
+                'doAutoSave 不应再重置 _suppressDeleteUntil（已废弃）'
             );
         });
 
@@ -1931,18 +1951,330 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             );
         });
 
-        test('BT-annotationPersist.8 修复前反向断言：doAutoSave 空批注分支不再无条件发送 deleteReviewRecords', () => {
-            // 原 bug 版本：空批注分支会立刻 postMessage deleteReviewRecords，无任何防护
-            // 修复后该分支在宽限期内必须先 return
+        test('BT-annotationPersist.8 反向断言：空批注分支彻底不再发送 deleteReviewRecords', () => {
+            // 原 bug 版本：空批注分支会立刻 postMessage deleteReviewRecords
+            // 上一个 hotfix 版本：通过宽限期拦截（_suppressDeleteUntil）
+            // 本次 hotfix（C-1）：彻底移除删除逻辑，磁盘记录作为历史版本永久保留
             const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
             assert.ok(body.length > 0, '应能提取到 doAutoSave 函数体');
             const emptyBranchStart = body.indexOf('!data.annotations.length');
-            const emptyBranchEnd = body.indexOf('return;', emptyBranchStart);
-            assert.ok(emptyBranchStart >= 0 && emptyBranchEnd > emptyBranchStart, '空批注分支应存在');
-            const emptyBranch = body.slice(emptyBranchStart, emptyBranchEnd);
+            assert.ok(emptyBranchStart >= 0, '空批注分支应存在');
+            // 整个 doAutoSave 函数体内都不应再出现 deleteReviewRecords 调用
             assert.ok(
-                emptyBranch.includes('Date.now()') && emptyBranch.includes('_suppressDeleteUntil'),
-                '空批注分支首个 return 之前必须有 Date.now() 与 _suppressDeleteUntil 的比较（宽限期保护）'
+                !body.includes("'deleteReviewRecords'"),
+                'doAutoSave 整个函数体不应再包含 deleteReviewRecords 消息发送（该操作仅由用户显式清空触发）'
+            );
+        });
+
+        // ---- 新增 Tier 1/2/3：本次 Hotfix（C-1 + C-a）多版本保留策略 ----
+        // Bug B（刷新）+ C-1（保留历史磁盘记录）+ C-a（打开时自动取最新版本恢复）
+
+        test('BT-reviewKeep.1 Tier1 — Store.setFile 内容变化分支应生成新 reviewVersion', () => {
+            const storeJsPath = path.join(extPath, 'webview', 'js', 'store.js');
+            const storeJsText = fs.readFileSync(storeJsPath, 'utf-8');
+            const body = extractFunctionBody(storeJsText, /function\s+setFile\s*\(/);
+            assert.ok(body.length > 0, '应能提取到 setFile 函数体');
+            // 版本递增逻辑
+            assert.ok(
+                /reviewVersion\s*=\s*\(data\.reviewVersion\s*\|\|\s*1\)\s*\+\s*1/.test(body),
+                'setFile 内容变化分支应将 reviewVersion 自增 1（生成新版本号用于磁盘记录命名）'
+            );
+        });
+
+        test('BT-reviewKeep.2 Tier1 — fileService.getReviewRecords 应按 reviewVersion 倒序返回（最新在前）', () => {
+            const fsSrcPath = path.join(extPath, 'out', 'fileService.js');
+            const fsText = fs.readFileSync(fsSrcPath, 'utf-8');
+            // 编译后的 JS 中应包含按 reviewVersion 降序排序逻辑
+            assert.ok(
+                /reviewVersion\s*-\s*a\.reviewVersion/.test(fsText) ||
+                /b\.reviewVersion\s*-\s*a\.reviewVersion/.test(fsText),
+                'fileService.getReviewRecords 应按 reviewVersion 倒序排列（b - a），确保 records[0] 始终是最新版本'
+            );
+        });
+
+        test('BT-reviewKeep.3 Tier2 — handleFileContentPush 恢复批注时应取 records[0]（最新版本）', () => {
+            const body = extractFunctionBody(appJsText, /async\s+function\s+handleFileContentPush\s*\(/);
+            assert.ok(body.length > 0, '应能提取到 handleFileContentPush 函数体');
+            // 必须通过 records[0] 或等效方式取最新版本
+            assert.ok(
+                /records\.records\[0\]|matchedRecord\s*=\s*records/.test(body),
+                'handleFileContentPush 应取 records[0] 作为最新批阅版本进行恢复'
+            );
+        });
+
+        test('BT-reviewKeep.4 Tier2 — handleRefresh 内容变化分支不应主动调用 deleteReviewRecords', () => {
+            const body = extractFunctionBody(appJsText, /async\s+function\s+handleRefresh\s*\(/);
+            assert.ok(body.length > 0, '应能提取到 handleRefresh 函数体');
+            // handleRefresh 自己不应直接发起磁盘删除
+            assert.ok(
+                !/callHost\s*\(\s*['"]deleteReviewRecords/.test(body),
+                'handleRefresh 不应直接调用 deleteReviewRecords（避免误删历史批阅版本）'
+            );
+        });
+
+        test('BT-reviewKeep.5 Tier3 — 仅 btnConfirmClearAll handler 保留显式 deleteReviewRecords 调用', () => {
+            // 全代码库扫描：webview 里 callHost('deleteReviewRecords', ...) 只应存在于"清除全部批注"显式 handler 中
+            const allCallers: string[] = [];
+            const files = [
+                path.join(extPath, 'webview', 'js', 'app.js'),
+                path.join(extPath, 'webview', 'js', 'export.js'),
+                path.join(extPath, 'webview', 'js', 'annotations.js'),
+                path.join(extPath, 'webview', 'js', 'store.js')
+            ];
+            for (const f of files) {
+                if (!fs.existsSync(f)) continue;
+                const txt = fs.readFileSync(f, 'utf-8');
+                if (/deleteReviewRecords/.test(txt)) allCallers.push(path.basename(f));
+            }
+            // app.js 因包含 btnConfirmClearAll 必然出现；export.js 本次 hotfix 后应不再出现
+            assert.ok(allCallers.includes('app.js'), 'app.js 应保留 btnConfirmClearAll 中的显式删除调用');
+            assert.ok(!allCallers.includes('export.js'), 'export.js 中不应再有 deleteReviewRecords 调用（本次 hotfix C-1 策略）');
+        });
+
+        test('BT-reviewKeep.6 Tier3 — 模拟刷新场景：Store 批注被清空后 doAutoSave 不应发 deleteReviewRecords', () => {
+            // 行为级：解析 doAutoSave 实际执行路径
+            // 构造一个最小化的 sandbox，mock Store.getData 返回空批注 + 有 fileName，
+            // 验证 doAutoSave 执行时不会产生 deleteReviewRecords 消息
+            const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
+            // 精确断言：空批注分支进入后，updateAutoSaveStatus('saved') 应是唯一的副作用
+            const emptyIdx = body.indexOf('!data.annotations.length');
+            assert.ok(emptyIdx >= 0);
+            const returnIdx = body.indexOf('return', emptyIdx);
+            assert.ok(returnIdx > emptyIdx, '空批注分支应在短路径内直接 return');
+            const branch = body.slice(emptyIdx, returnIdx);
+            // 应只有 updateAutoSaveStatus 调用，没有 postMessage
+            assert.ok(
+                branch.includes("updateAutoSaveStatus('saved')"),
+                '空批注分支应调用 updateAutoSaveStatus("saved") 保持 UI 一致'
+            );
+            assert.ok(
+                !/vscode\.postMessage/.test(branch),
+                '空批注分支不应调用 vscode.postMessage（C-1 策略核心）'
+            );
+        });
+    });
+
+    // ==========================================================================
+    // AI Chat 派发适配层测试（change: add-cursor-windsurf-ai-chat）
+    // Tier 1：存在性断言 / Tier 2：行为级路由断言 / Tier 3：BT-aiChat.X 任务断言
+    // ==========================================================================
+    suite('AI Chat Dispatch Adapters — src/aiChatAdapters.ts', () => {
+        // 动态 require，避免顶层 import 影响 test file 加载
+        // tslint:disable-next-line:no-require-imports
+        const adapters = require('../../src/aiChatAdapters');
+        const { detectIdeKind, dispatchAiChat, __setExecuteCommandForTest, __resetExecuteCommandForTest } = adapters;
+
+        // i18n.js 文本用于 Tier 1 断言翻译 key 存在性
+        const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const i18nJsText = fs.readFileSync(path.join(extPath, 'webview', 'js', 'i18n.js'), 'utf-8');
+
+        // 通用：构造 ctx 的辅助函数
+        function makeCtx(commands: string[] = []) {
+            const logs: string[] = [];
+            return {
+                logs,
+                ctx: {
+                    instruction: 'hello AI, please fix this.',
+                    log: (line: string) => logs.push(line),
+                    availableCommands: new Set<string>(commands)
+                }
+            };
+        }
+
+        teardown(() => {
+            // 确保每个 test 之间 executeCommand mock 被重置
+            if (typeof __resetExecuteCommandForTest === 'function') {
+                __resetExecuteCommandForTest();
+            }
+        });
+
+        // ---- Tier 1：存在性断言 ----
+
+        test('Tier1 — aiChatAdapters 模块应导出核心 API', () => {
+            assert.strictEqual(typeof detectIdeKind, 'function', '应导出 detectIdeKind');
+            assert.strictEqual(typeof dispatchAiChat, 'function', '应导出 dispatchAiChat');
+            assert.strictEqual(typeof __setExecuteCommandForTest, 'function', '应导出测试注入点 __setExecuteCommandForTest');
+            assert.strictEqual(typeof __resetExecuteCommandForTest, 'function', '应导出测试重置点 __resetExecuteCommandForTest');
+        });
+
+        test('Tier1 — i18n.js 应包含 cursor_hint / windsurf_hint 的中英文翻译', () => {
+            assert.ok(i18nJsText.includes("'modal.ai_result.cursor_hint'"), 'i18n.js 应包含 modal.ai_result.cursor_hint key');
+            assert.ok(i18nJsText.includes("'modal.ai_result.windsurf_hint'"), 'i18n.js 应包含 modal.ai_result.windsurf_hint key');
+            // 中文版：应提到 Cursor / Windsurf
+            assert.ok(/Cursor/.test(i18nJsText), 'i18n.js 应包含 Cursor 字样');
+            assert.ok(/Windsurf/.test(i18nJsText), 'i18n.js 应包含 Windsurf 字样');
+        });
+
+        test('Tier1 — reviewPanel.ts 应 import aiChatAdapters 并新增 cursor/windsurf 成功文案', () => {
+            const reviewPanelText = fs.readFileSync(path.join(extPath, 'src', 'reviewPanel.ts'), 'utf-8');
+            assert.ok(
+                /from\s+['"]\.\/aiChatAdapters['"]/.test(reviewPanelText),
+                'reviewPanel.ts 应 import ./aiChatAdapters'
+            );
+            assert.ok(
+                reviewPanelText.includes("'ai.chat_success_cursor'"),
+                'reviewPanel.ts 应新增 ai.chat_success_cursor i18n key'
+            );
+            assert.ok(
+                reviewPanelText.includes("'ai.chat_success_windsurf'"),
+                'reviewPanel.ts 应新增 ai.chat_success_windsurf i18n key'
+            );
+        });
+
+        // ---- Tier 2：行为级路由断言 ----
+
+        test('Tier2 — detectIdeKind 基于 CodeBuddy 命令应返回 codebuddy', () => {
+            const ide = detectIdeKind('Visual Studio Code', new Set(['tencentcloud.codingcopilot.chat.startNewChat']));
+            assert.strictEqual(ide, 'codebuddy');
+        });
+
+        test('Tier2 — detectIdeKind 基于 Cursor appName 应返回 cursor', () => {
+            const ide = detectIdeKind('Cursor', new Set([]));
+            assert.strictEqual(ide, 'cursor');
+        });
+
+        test('Tier2 — detectIdeKind 基于 Cursor 特征命令应返回 cursor（即使 appName 是 Code）', () => {
+            const ide = detectIdeKind('Code', new Set(['composer.newAgentChat']));
+            assert.strictEqual(ide, 'cursor');
+        });
+
+        test('Tier2 — detectIdeKind 基于 Windsurf appName 应返回 windsurf', () => {
+            const ide = detectIdeKind('Windsurf', new Set([]));
+            assert.strictEqual(ide, 'windsurf');
+        });
+
+        test('Tier2 — detectIdeKind 基于 Windsurf 特征命令应返回 windsurf', () => {
+            const ide = detectIdeKind('Code', new Set(['windsurf.prioritizeCascadeView']));
+            assert.strictEqual(ide, 'windsurf');
+        });
+
+        test('Tier2 — detectIdeKind 默认应返回 vscode', () => {
+            const ide = detectIdeKind('Visual Studio Code', new Set(['some.random.command']));
+            assert.strictEqual(ide, 'vscode');
+        });
+
+        test('Tier2 — Cursor 下 composer.newAgentChat 存在时走策略 A（命令调用顺序正确）', async () => {
+            const called: string[] = [];
+            __setExecuteCommandForTest(async (cmd: string) => {
+                called.push(cmd);
+            });
+            const { ctx } = makeCtx(['composer.newAgentChat', 'editor.action.clipboardPasteAction']);
+            const res = await dispatchAiChat('cursor', ctx);
+            assert.strictEqual(res.succeeded, true, '策略 A 应成功');
+            assert.strictEqual(res.strategy, 'cursor.composer.newAgentChat+paste');
+            assert.strictEqual(res.fellBackToClipboard, false);
+            assert.deepStrictEqual(
+                called,
+                ['composer.newAgentChat', 'editor.action.clipboardPasteAction'],
+                '应先调用 composer.newAgentChat 再调用 clipboardPasteAction'
+            );
+        });
+
+        test('Tier2 — Cursor 下 composer.newAgentChat 缺失但 aichat.newchataction 存在应走策略 B', async () => {
+            const called: string[] = [];
+            __setExecuteCommandForTest(async (cmd: string) => {
+                called.push(cmd);
+            });
+            const { ctx } = makeCtx(['aichat.newchataction']);
+            const res = await dispatchAiChat('cursor', ctx);
+            assert.strictEqual(res.succeeded, true);
+            assert.strictEqual(res.strategy, 'cursor.aichat.newchataction+paste');
+            assert.strictEqual(called[0], 'aichat.newchataction');
+        });
+
+        test('Tier2 — Windsurf 下 prioritizeCascadeView 存在时走策略 A', async () => {
+            const called: string[] = [];
+            __setExecuteCommandForTest(async (cmd: string) => {
+                called.push(cmd);
+            });
+            const { ctx } = makeCtx(['windsurf.prioritizeCascadeView']);
+            const res = await dispatchAiChat('windsurf', ctx);
+            assert.strictEqual(res.succeeded, true);
+            assert.strictEqual(res.strategy, 'windsurf.cascade.prioritize+paste');
+            assert.strictEqual(called[0], 'windsurf.prioritizeCascadeView');
+        });
+
+        test('Tier2 — CodeBuddy 下策略 1 成功应调用 startNewChat + sendMessage', async () => {
+            const called: Array<{ cmd: string; args: any }> = [];
+            __setExecuteCommandForTest(async (cmd: string, ...args: any[]) => {
+                called.push({ cmd, args });
+            });
+            const { ctx } = makeCtx([
+                'tencentcloud.codingcopilot.chat.startNewChat',
+                'tencentcloud.codingcopilot.chat.sendMessage'
+            ]);
+            const res = await dispatchAiChat('codebuddy', ctx);
+            assert.strictEqual(res.succeeded, true);
+            assert.strictEqual(res.strategy, 'cb.startNewChat+sendMessage');
+            assert.strictEqual(called[0].cmd, 'tencentcloud.codingcopilot.chat.startNewChat');
+            assert.strictEqual(called[1].cmd, 'tencentcloud.codingcopilot.chat.sendMessage');
+            assert.deepStrictEqual(
+                called[1].args[0],
+                { message: ctx.instruction },
+                'sendMessage 应携带 {message: instruction} 参数'
+            );
+        });
+
+        // ---- Tier 3：BT-aiChat.X 任务特定断言 ----
+
+        test('BT-aiChat.1 CodeBuddy 识别优先级最高（Cursor 命令与 CodeBuddy 命令同时存在时仍判为 codebuddy）', () => {
+            // 场景：用户在 Cursor 里装了 CodeBuddy 扩展，两类命令都可见。
+            // 要求：向下兼容 — 仍走 CodeBuddy 路径（既有用户体验不变）。
+            const ide = detectIdeKind('Cursor', new Set([
+                'tencentcloud.codingcopilot.chat.startNewChat',
+                'composer.newAgentChat'
+            ]));
+            assert.strictEqual(ide, 'codebuddy', 'CodeBuddy 应优先于 Cursor');
+        });
+
+        test('BT-aiChat.2 Cursor 所有策略失败应降级为剪贴板且不抛异常', async () => {
+            __setExecuteCommandForTest(async (_cmd: string) => {
+                throw new Error('simulated failure');
+            });
+            const { ctx, logs } = makeCtx(['composer.newAgentChat', 'aichat.newchataction']);
+            // 关键：dispatchAiChat 必须不抛出（所有异常在内部捕获）
+            const res = await dispatchAiChat('cursor', ctx);
+            assert.strictEqual(res.succeeded, false, '所有策略失败 succeeded 应为 false');
+            assert.strictEqual(res.fellBackToClipboard, true, '应标记 fellBackToClipboard=true');
+            // 日志应记录每条策略的 error
+            assert.ok(
+                logs.some(l => /strategy=cursor\.composer\.newAgentChat\+paste error=simulated failure/.test(l)),
+                '日志应记录策略 A 的失败'
+            );
+            assert.ok(
+                logs.some(l => /strategy=cursor\.aichat\.newchataction\+paste error=simulated failure/.test(l)),
+                '日志应记录策略 B 的失败'
+            );
+        });
+
+        test('BT-aiChat.3 诊断日志应包含 [DIAG:aiChat] 前缀、strategy 行、dispatch result 行', async () => {
+            __setExecuteCommandForTest(async (_cmd: string) => { /* noop */ });
+            const { ctx, logs } = makeCtx(['composer.newAgentChat']);
+            await dispatchAiChat('cursor', ctx);
+            const joined = logs.join('\n');
+            assert.ok(/\[DIAG:aiChat\]/.test(joined), '日志应包含 [DIAG:aiChat] 前缀');
+            assert.ok(/strategy=/.test(joined), '日志应包含 strategy= 行');
+            assert.ok(/dispatch result:/.test(joined), '日志应包含 dispatch result: 汇总行');
+            assert.ok(/succeeded=true/.test(joined), '日志应记录 succeeded 状态');
+        });
+
+        test('BT-aiChat.4 VSCode 默认分支无可用命令时仍降级安全（不抛异常，返回 fallback）', async () => {
+            __setExecuteCommandForTest(async (_cmd: string) => { /* never called */ });
+            const { ctx } = makeCtx([]); // 无任何命令
+            const res = await dispatchAiChat('vscode', ctx);
+            assert.strictEqual(res.succeeded, false);
+            assert.strictEqual(res.fellBackToClipboard, true);
+            assert.strictEqual(res.strategy, 'none', '无任何策略可尝试时 strategy 应为 none');
+        });
+
+        test('BT-aiChat.5 Cursor 策略 A 成功后不应继续尝试策略 B（首条成功即停）', async () => {
+            const called: string[] = [];
+            __setExecuteCommandForTest(async (cmd: string) => { called.push(cmd); });
+            const { ctx } = makeCtx(['composer.newAgentChat', 'aichat.newchataction']);
+            await dispatchAiChat('cursor', ctx);
+            assert.ok(
+                !called.includes('aichat.newchataction'),
+                '策略 A 成功后不应再调用策略 B 的 aichat.newchataction'
             );
         });
     });

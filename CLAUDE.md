@@ -105,7 +105,7 @@ npx vsce package --no-dependencies
 - **前端 JS 兼容性**: 保持 ES5/ES6 兼容，不使用 ES2020+ 特性
 - **国际化**: 所有用户可见文本必须通过 `i18n.js`（前端）或 `package.nls.json` / `package.nls.zh-cn.json`（后端命令/配置描述）进行本地化
 - **打包体积**: `.vsix` 包 < 50MB（使用 `--no-dependencies` 打包，依赖内联）
-- **批注存储**: 自动保存到工作区 `.review/` 目录，JSON 格式，空批注自动删除文件
+- **批注存储**: 自动保存到工作区 `.review/` 目录，JSON 格式，历史版本永久保留（仅用户显式清除时删除）
 
 ## 开发工作流
 
