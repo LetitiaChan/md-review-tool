@@ -11,13 +11,15 @@
 
 **Key Features**: Markdown review, annotation, comment, WYSIWYG editing, AI-powered fix, code highlighting, Mermaid diagrams, KaTeX math, PlantUML, Graphviz, content search, dark/light theme, table of contents, image lightbox, multi-window, auto-save.
 
+> 📦 **Available on VS Code Marketplace & Open VSX Registry** — Works with VS Code and all VS Code–based AI-powered editors, including **Cursor**, **Windsurf**, **CodeBuddy IDE**, **Trae**, and more.
+
 [中文](#chinese)
 
 ## 📸 Screenshots
 
-![intro](assets/intro.gif)
+![intro](https://raw.githubusercontent.com/LetitiaChan/md-review-tool/main/assets/intro.gif)
 
-![Main Page](assets/main_page_en.png) 
+![Main Page](https://raw.githubusercontent.com/LetitiaChan/md-review-tool/main/assets/main_page_en.png) 
 
 ---
 
@@ -104,9 +106,17 @@ This extension's review styles, interaction logic, and AI instruction templates 
 
 **Option 1: Install from Marketplace (Recommended)**
 
-1. Open VSCode or CodeBuddy IDE, go to Extensions panel (`Ctrl+Shift+X`)
+1. Open your editor (VS Code, Cursor, Windsurf, CodeBuddy IDE, Trae, or any VS Code–based AI editor) and go to the Extensions panel (`Ctrl+Shift+X`)
 2. Search for **"MD Human Review"**
 3. Click **Install**
+
+> 💡 **Compatible Editors** — This extension is published on both the **VS Code Marketplace** and the **Open VSX Registry**, so it works out of the box with all VS Code–based AI editors:
+> - [VS Code](https://code.visualstudio.com/)
+> - [Cursor](https://cursor.com/)
+> - [Windsurf](https://codeium.com/windsurf)
+> - [CodeBuddy IDE](https://copilot.tencent.com/)
+> - [Trae](https://www.trae.ai/)
+> - …and other editors built on the VS Code open-source base
 
 **Option 2: Install from Source (Developers)**
 
@@ -122,11 +132,11 @@ This extension's review styles, interaction logic, and AI instruction templates 
    npm run compile
    ```
 
-3. Press `F5` in VSCode / CodeBuddy IDE to launch the Extension Development Host for debugging.
+3. Press `F5` in your editor (VS Code / Cursor / Windsurf / CodeBuddy IDE / Trae, etc.) to launch the Extension Development Host for debugging.
 
 ### Usage
 
-1. Open any `.md` or `.mdc` file in VSCode / CodeBuddy IDE
+1. Open any `.md` or `.mdc` file in your editor (VS Code / Cursor / Windsurf / CodeBuddy IDE / Trae, etc.)
 2. Open the review panel via:
 - **Command Palette**: `Ctrl+Shift+P` → Search "MD Human Review: 打开批阅面板"
    - **Context Menu**: Right-click in the editor or file explorer
@@ -241,13 +251,15 @@ MIT
 
 > 🖊️ 像导师批改论文一样批阅 Markdown —— 评论、删除、插入、所见即所得编辑，一键生成 AI 修改指令。
 
+> 📦 **已发布至 VS Code 插件市场 与 Open VSX（Cursor 市场）** —— 支持 VS Code 及所有基于 VS Code 开源版本构建的 AI 编辑器，包括 **Cursor**、**Windsurf**、**CodeBuddy IDE**、**Trae** 等。
+
 [English](#english)
 
 ## 📸 截图预览
 
-![简介](assets/intro.gif)
+![简介](https://raw.githubusercontent.com/LetitiaChan/md-review-tool/main/assets/intro.gif)
 
-![主界面](assets/main_page_cn.png)
+![主界面](https://raw.githubusercontent.com/LetitiaChan/md-review-tool/main/assets/main_page_cn.png)
 
 ---
 
@@ -334,9 +346,17 @@ MIT
 
 **方式一：从插件市场安装（推荐）**
 
-1. 打开 VSCode 或 CodeBuddy IDE，进入扩展面板（`Ctrl+Shift+X`）
+1. 打开你的编辑器（VS Code、Cursor、Windsurf、CodeBuddy IDE、Trae 或任意基于 VS Code 的 AI 编辑器），进入扩展面板（`Ctrl+Shift+X`）
 2. 搜索 **「MD Human Review」**
 3. 点击 **安装** 即可
+
+> 💡 **兼容的编辑器** —— 本插件同时发布于 **VS Code 插件市场** 与 **Open VSX Registry**，开箱即用地支持所有基于 VS Code 开源版本构建的 AI 编辑器：
+> - [VS Code](https://code.visualstudio.com/)
+> - [Cursor](https://cursor.com/)
+> - [Windsurf](https://codeium.com/windsurf)
+> - [CodeBuddy IDE](https://copilot.tencent.com/)
+> - [Trae](https://www.trae.ai/)
+> - ……以及其他基于 VS Code 开源版本构建的编辑器
 
 **方式二：从源码安装（开发者）**
 
@@ -352,11 +372,11 @@ MIT
    npm run compile
    ```
 
-3. 在 VSCode / CodeBuddy IDE 中按 `F5` 启动扩展开发宿主进行调试。
+3. 在你的编辑器（VS Code / Cursor / Windsurf / CodeBuddy IDE / Trae 等）中按 `F5` 启动扩展开发宿主进行调试。
 
 ### 使用
 
-1. 在 VSCode / CodeBuddy IDE 中打开任意 `.md` 或 `.mdc` 文件
+1. 在你的编辑器（VS Code / Cursor / Windsurf / CodeBuddy IDE / Trae 等）中打开任意 `.md` 或 `.mdc` 文件
 2. 通过以下方式打开批阅面板：
 - **命令面板**：`Ctrl+Shift+P` → 搜索「MD Human Review: 打开批阅面板」
    - **右键菜单**：在编辑器或资源管理器中右键选择
