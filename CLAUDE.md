@@ -12,6 +12,8 @@ MD Human Review 是一个 Markdown 批阅与批注扩展，发布于 **VS Code M
 - **兼容编辑器**: VS Code / Cursor / Windsurf / CodeBuddy IDE / Trae 等（所有基于 VS Code 开源版本的编辑器）
 - **双市场发布**: VS Code Marketplace + Open VSX（Cursor / Windsurf 等从 Open VSX 拉取）
 
+
+
 ## 常用命令
 
 ```bash
@@ -109,7 +111,11 @@ npx vsce package --no-dependencies
 
 ## 开发工作流
 
-本项目采用 **OpenSpec spec-driven 工作流**（详见 `.aikp/rules/project-continuity.mdc`，该文件通过 shim 同时出现在 `.codebuddy/rules/`、`.claude/rules/`、`.cursor/rules/`）：
+本项目采用 **OpenSpec spec-driven 工作流**，完整规则见：
+
+@.aikp/rules/project-continuity.mdc
+
+核心要点：
 
 - **新功能/重大修改**: 必须通过 OpenSpec 流程（`openspec/changes/`），先 propose 再 apply
 - **Hotfix 例外**: 源码文件 <=3 个且改动 <=30 行可直接修改，但必须执行 Hotfix Mini-Pipeline（构建 -> 影响分析 -> 回归测试 -> 测试补全 -> 打包 -> commit -> push）

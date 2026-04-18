@@ -80,25 +80,27 @@ suite('aikit-shim-bridge Suite', () => {
     // Tier 2 — 行为级断言（直接使用仓库现有 .aikp/ 和三个工具目录）
     // ========================================================================
     suite('Tier 2: Behavior', () => {
-        test('BT-aikitShim.2 三工具目录 Stub 数量与 .aikp 源一致', () => {
+        test('BT-aikitShim.2 三工具目录文件数量与 .aikp 源一致（考虑跳过配置）', () => {
             const sources = syncModule.listSourceFiles(AIKP_ROOT);
             assert.ok(sources.length > 0, '.aikp/ 下应至少有一个源文件');
 
             for (const target of syncModule.TARGETS) {
                 const targetAbs = path.join(REPO_ROOT, target);
                 const existing = syncModule.listExistingShims(targetAbs);
-                // 所有 sources 应等于 existing（忽略顺序）
-                const srcSorted = [...sources].sort();
+                // 计算该目标应有的文件列表（排除跳过的子目录）
+                const expectedForTarget = sources.filter(
+                    (rel: string) => !syncModule.shouldSkipForTarget(target, rel)
+                ).sort();
                 const existSorted = [...existing].sort();
                 assert.deepStrictEqual(
                     existSorted,
-                    srcSorted,
-                    `目标 ${target} 下 Shim 列表应与 .aikp/ 源一致`
+                    expectedForTarget,
+                    `目标 ${target} 下文件列表应与 .aikp/ 源一致（考虑跳过配置）`
                 );
             }
         });
 
-        test('BT-aikitShim.3 Stub 正确指向 .aikp 真源路径', () => {
+        test('BT-aikitShim.3 Stub/全量副本正确指向 .aikp 真源路径', () => {
             const sources = syncModule.listSourceFiles(AIKP_ROOT);
             // 抽取 3 个样本
             const samples = [
@@ -111,32 +113,66 @@ suite('aikit-shim-bridge Suite', () => {
 
             for (const rel of samples) {
                 for (const target of syncModule.TARGETS) {
+                    // 跳过配置为不同步的组合
+                    if (syncModule.shouldSkipForTarget(target, rel)) continue;
+
                     const shimAbs = path.join(REPO_ROOT, target, rel);
-                    assert.ok(fs.existsSync(shimAbs), `Shim 应存在: ${target}/${rel}`);
+                    assert.ok(fs.existsSync(shimAbs), `文件应存在: ${target}/${rel}`);
                     const content = fs.readFileSync(shimAbs, 'utf8');
 
-                    // 要素 1：SHIM 警告头
-                    assert.match(
-                        content,
-                        /<!-- SHIM: this file is a bridge to the aikit source of truth -->/,
-                        `${target}/${rel} 应有 SHIM 警告头`
-                    );
-                    // 要素 2：DO NOT EDIT 提示 + 相对路径
-                    assert.ok(
-                        content.includes(`Edit the source at .aikp/${rel}`),
-                        `${target}/${rel} 应包含 "Edit the source at .aikp/${rel}" 提示`
-                    );
-                    // 要素 3：AI 指令段
-                    assert.match(
-                        content,
-                        /For AI tools reading this file/,
-                        `${target}/${rel} 应有 AI 指令段`
-                    );
-                    // 要素 4：Markdown 标题包含目标路径
-                    assert.ok(
-                        content.includes('🔗 Shim → `.aikp/' + rel + '`'),
-                        `${target}/${rel} 应有 Shim 标题指向真源`
-                    );
+                    if (syncModule.FULL_COPY_TARGETS.has(target)) {
+                        // 全量副本：应含 AUTO-GENERATED 标记且包含真源内容
+                        assert.match(
+                            content,
+                            /<!-- AUTO-GENERATED full copy from \.aikp\//,
+                            `${target}/${rel} 应有 AUTO-GENERATED 标记`
+                        );
+                        assert.ok(
+                            content.includes('DO NOT EDIT'),
+                            `${target}/${rel} 应有 DO NOT EDIT 警告`
+                        );
+                        // 内容不应有 shim 标记
+                        assert.ok(
+                            !content.includes('<!-- SHIM:'),
+                            `${target}/${rel} 不应有 SHIM 标记`
+                        );
+                        // 应包含真源的实际内容（至少几个关键字）
+                        const sourceContent = fs.readFileSync(
+                            path.join(AIKP_ROOT, rel),
+                            'utf8'
+                        );
+                        // 取真源第一个非空、非 frontmatter 行作为内容验证
+                        const sourceLines = sourceContent.split('\n');
+                        const contentLine = sourceLines.find(
+                            (l: string) => l.trim() && !l.startsWith('---') && !l.includes(':')
+                        );
+                        if (contentLine) {
+                            assert.ok(
+                                content.includes(contentLine.trim()),
+                                `${target}/${rel} 应包含真源内容行: "${contentLine.trim()}"`
+                            );
+                        }
+                    } else {
+                        // Shim 目标：保持原有断言
+                        assert.match(
+                            content,
+                            /<!-- SHIM: this file is a bridge to the aikit source of truth -->/,
+                            `${target}/${rel} 应有 SHIM 警告头`
+                        );
+                        assert.ok(
+                            content.includes(`Edit the source at .aikp/${rel}`),
+                            `${target}/${rel} 应包含 "Edit the source at .aikp/${rel}" 提示`
+                        );
+                        assert.match(
+                            content,
+                            /For AI tools reading this file/,
+                            `${target}/${rel} 应有 AI 指令段`
+                        );
+                        assert.ok(
+                            content.includes('🔗 Shim → `.aikp/' + rel + '`'),
+                            `${target}/${rel} 应有 Shim 标题指向真源`
+                        );
+                    }
                 }
             }
         });
@@ -151,20 +187,49 @@ suite('aikit-shim-bridge Suite', () => {
             assert.strictEqual(second.created, 0, '第二次运行不应新建文件');
             assert.strictEqual(second.updated, 0, '第二次运行不应更新文件');
             assert.ok(second.skipped > 0, '第二次运行应全部跳过');
-            // 跳过数应 = 源数 × 目标数
+            // 跳过数 = 源数 × 目标数 - 被跳过的组合数
+            let expectedSkipped = 0;
+            for (const target of syncModule.TARGETS) {
+                for (const rel of sources) {
+                    if (!syncModule.shouldSkipForTarget(target, rel)) {
+                        expectedSkipped += 1;
+                    }
+                }
+            }
             assert.strictEqual(
                 second.skipped,
-                sources.length * syncModule.TARGETS.length,
-                '第二次应跳过全部 Shim'
+                expectedSkipped,
+                `第二次应跳过全部同步文件（${expectedSkipped}）`
             );
         });
 
-        test('Stub 文件大小合理（每个 < 2KB）', () => {
-            const target = syncModule.TARGETS[0];
-            const shimAbs = path.join(REPO_ROOT, target, 'rules/project-continuity.mdc');
-            const stat = fs.statSync(shimAbs);
-            assert.ok(stat.size < 2048, `Shim 文件应小于 2KB，实际 ${stat.size} bytes`);
-            assert.ok(stat.size > 200, `Shim 文件应大于 200 字节（至少包含模板头）`);
+        test('Stub/全量副本文件大小合理', () => {
+            // Shim 目标（.codebuddy）：每个 < 2KB
+            const shimTarget = syncModule.TARGETS.find(
+                (t: string) => !syncModule.FULL_COPY_TARGETS.has(t)
+            );
+            const shimAbs = path.join(REPO_ROOT, shimTarget, 'rules/project-continuity.mdc');
+            const shimStat = fs.statSync(shimAbs);
+            assert.ok(shimStat.size < 2048, `Shim 文件应小于 2KB，实际 ${shimStat.size} bytes`);
+            assert.ok(shimStat.size > 200, `Shim 文件应大于 200 字节（至少包含模板头）`);
+
+            // 全量副本目标（.claude）：测试一个非 rules 的文件（skills/auto-test/SKILL.md）
+            const fullCopyTarget = syncModule.TARGETS.find(
+                (t: string) => syncModule.FULL_COPY_TARGETS.has(t)
+            );
+            const fullCopyAbs = path.join(REPO_ROOT, fullCopyTarget, 'skills/auto-test/SKILL.md');
+            const fullCopyContent = fs.readFileSync(fullCopyAbs, 'utf8');
+            const sourceContent = fs.readFileSync(
+                path.join(AIKP_ROOT, 'skills/auto-test/SKILL.md'),
+                'utf8'
+            );
+            // 规范化换行后比较行数
+            const fullCopyLines = fullCopyContent.replace(/\r\n/g, '\n').split('\n').length;
+            const sourceLines = sourceContent.replace(/\r\n/g, '\n').split('\n').length;
+            assert.ok(
+                fullCopyLines >= sourceLines,
+                `全量副本行数应 >= 真源行数（副本 ${fullCopyLines} vs 真源 ${sourceLines}）`
+            );
         });
     });
 
@@ -172,7 +237,7 @@ suite('aikit-shim-bridge Suite', () => {
     // Tier 3 — 任务特定断言（在临时目录中跑脚本以完整闭环验证）
     // ========================================================================
     suite('Tier 3: Task-specific (BT-aikitShim)', () => {
-        test('BT-aikitShim.5 --check 模式能检测漂移', () => {
+        test('BT-aikitShim.5 --check 模式能检测漂移（含全量副本目标）', () => {
             // 使用临时 repo 目录构造 mini aikit，走全流程
             const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aikit-shim-test-'));
             try {
@@ -411,6 +476,112 @@ suite('aikit-shim-bridge Suite', () => {
                         d.indexOf('project-continuity.mdc') !== -1
                 ),
                 `应报告 CODEBUDDY.md 引用了已不存在的真源，实际 drifts=${JSON.stringify(driftsOrphan)}`
+            );
+        });
+
+        // ====================================================================
+        // BT-aikitShim.12/.13/.14 —— 全量复制（.claude/ 目标）专属测试
+        // ====================================================================
+
+        test('BT-aikitShim.12 .claude/ 下生成的是全量副本而非 shim（排除跳过子目录）', () => {
+            const sources = syncModule.listSourceFiles(AIKP_ROOT);
+            for (const rel of sources) {
+                // 跳过不同步到 .claude/ 的子目录（如 rules/）
+                if (syncModule.shouldSkipForTarget('.claude', rel)) continue;
+
+                const claudeAbs = path.join(REPO_ROOT, '.claude', rel);
+                assert.ok(fs.existsSync(claudeAbs), `.claude/${rel} 应存在`);
+                const content = fs.readFileSync(claudeAbs, 'utf8');
+
+                // 不应有 shim 标记
+                assert.ok(
+                    !content.includes('<!-- SHIM:'),
+                    `.claude/${rel} 不应包含 SHIM 标记`
+                );
+                // 应有 AUTO-GENERATED 标记
+                assert.match(
+                    content,
+                    /<!-- AUTO-GENERATED full copy from \.aikp\//,
+                    `.claude/${rel} 应有 AUTO-GENERATED 标记`
+                );
+                // 规范化换行后，全量副本行数应 >= 真源行数（因为添加了 AUTO-GENERATED 标记行）
+                const sourceContent = fs.readFileSync(
+                    path.join(AIKP_ROOT, rel),
+                    'utf8'
+                );
+                const copyLines = content.replace(/\r\n/g, '\n').split('\n').length;
+                const srcLines = sourceContent.replace(/\r\n/g, '\n').split('\n').length;
+                assert.ok(
+                    copyLines >= srcLines,
+                    `.claude/${rel} 全量副本行数应 >= 真源（${copyLines} vs ${srcLines}）`
+                );
+            }
+        });
+
+        test('BT-aikitShim.13 全量副本中保留了 frontmatter', () => {
+            // agents/auto-test.md 有 frontmatter（rules/ 已由 CLAUDE.md @import 替代）
+            const claudeAbs = path.join(REPO_ROOT, '.claude/agents/auto-test.md');
+            const content = fs.readFileSync(claudeAbs, 'utf8');
+            // 应以 --- 开头（frontmatter 开始）
+            assert.ok(
+                content.startsWith('---\n') || content.startsWith('---\r\n'),
+                '全量副本应保留 frontmatter 开头的 ---'
+            );
+            // AUTO-GENERATED 标记应在 frontmatter 之后
+            const fmEndIdx = content.indexOf('\n---\n', 3);
+            assert.ok(fmEndIdx !== -1, '应找到 frontmatter 结束标记');
+            const afterFm = content.slice(fmEndIdx + 5);
+            assert.match(
+                afterFm,
+                /<!-- AUTO-GENERATED full copy from/,
+                'AUTO-GENERATED 标记应在 frontmatter 之后'
+            );
+        });
+
+        test('BT-aikitShim.14 全量副本内容与真源一致（去除 auto-generated 头后）', () => {
+            const claudeAbs = path.join(REPO_ROOT, '.claude/agents/auto-test.md');
+            const content = fs.readFileSync(claudeAbs, 'utf8');
+            let sourceContent = fs.readFileSync(
+                path.join(AIKP_ROOT, 'agents/auto-test.md'),
+                'utf8'
+            );
+            // 统一换行
+            sourceContent = sourceContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            if (!sourceContent.endsWith('\n')) sourceContent += '\n';
+
+            // 从全量副本中移除 AUTO-GENERATED 行后，应与真源内容一致
+            const cleaned = content
+                .replace(/<!-- AUTO-GENERATED full copy from .+? -->\n/, '')
+                .replace(/<!-- To modify, edit the source file and run: npm run sync-aikit -->\n/, '')
+                // 移除 frontmatter 后的额外空行（注入标记时添加的）
+                .replace(/^(---\n[\s\S]*?\n---\n)\n/, '$1');
+            assert.strictEqual(
+                cleaned,
+                sourceContent,
+                '去除 auto-generated 头后应与真源内容完全一致'
+            );
+        });
+
+        test('BT-aikitShim.15 .claude/rules/ 不存在（由 CLAUDE.md @import 替代）', () => {
+            // rules/ 已从 .claude/ 的同步目标中移除
+            const claudeRulesDir = path.join(REPO_ROOT, '.claude/rules');
+            if (fs.existsSync(claudeRulesDir)) {
+                const files = fs.readdirSync(claudeRulesDir);
+                const mdFiles = files.filter((f: string) => {
+                    const ext = path.extname(f).toLowerCase();
+                    return ext === '.md' || ext === '.mdc';
+                });
+                assert.strictEqual(
+                    mdFiles.length,
+                    0,
+                    `.claude/rules/ 下不应有 .md/.mdc 文件（由 CLAUDE.md @import 替代），找到：${mdFiles.join(', ')}`
+                );
+            }
+            // CLAUDE.md 应包含 @.aikp/rules/ 的导入引用
+            const claudeMd = fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8');
+            assert.ok(
+                claudeMd.includes('@.aikp/rules/'),
+                'CLAUDE.md 应包含 @.aikp/rules/ 的导入引用'
             );
         });
     });

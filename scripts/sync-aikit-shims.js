@@ -32,6 +32,18 @@ const EXCLUDE_FILES_AT_ROOT = new Set(['README.md']);
 // 允许的模式参数
 const MODES = new Set(['default', 'check', 'clean']);
 
+// 使用全量复制（而非 shim）的目标目录。
+// Claude Code 声明式加载 .claude/skills/* 等文件，不会跟 shim 中的链接去读真源，
+// 因此需要生成完整内容副本以确保 CC 能看到全部内容。
+const FULL_COPY_TARGETS = new Set(['.claude']);
+
+// 全量复制目标中，跳过同步的子目录。
+// .claude/ 的 rules/ 由 CLAUDE.md 通过 @.aikp/rules/... 语法直接导入，
+// 无需在 .claude/rules/ 中生成副本。
+const FULL_COPY_SKIP_SUBDIRS = {
+    '.claude': new Set(['rules']),
+};
+
 // CODEBUDDY.md 引用块校验配置
 // CODEBUDDY.md 是 CBC 的规则入口文件。它采用"摘要 + 引用"模式：
 // 流程规则的真源在 .aikp/rules/*.mdc，CODEBUDDY.md 中只列出指向真源的链接清单。
@@ -190,6 +202,61 @@ function buildStubContent(targetDir, rel) {
     return lines.join('\n');
 }
 
+/**
+ * 生成全量复制文件内容：读取 .aikp/<rel> 的完整内容，在适当位置注入
+ * auto-generated 头注释（提醒开发者不要手工编辑）。
+ *
+ * 对 .mdc 文件（含 YAML frontmatter `---`...`---`）：保留 frontmatter，注释
+ * 注入在 frontmatter 之后、正文之前。
+ *
+ * 对 .md 文件：注释注入在文件最前面。
+ *
+ * 使用纯 LF 换行保证跨平台一致。
+ */
+function buildFullCopyContent(rel, aikpAbsRoot) {
+    const sourceAbs = path.join(aikpAbsRoot, rel);
+    let sourceContent = fs.readFileSync(sourceAbs, 'utf8');
+    // 统一换行为 LF
+    sourceContent = sourceContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    // 确保末尾有换行
+    if (!sourceContent.endsWith('\n')) {
+        sourceContent += '\n';
+    }
+
+    const marker = [
+        `<!-- AUTO-GENERATED full copy from .aikp/${rel} — DO NOT EDIT -->`,
+        `<!-- To modify, edit the source file and run: npm run sync-aikit -->`,
+        ``,
+    ].join('\n');
+
+    // 检测 YAML frontmatter（以 --- 开头）
+    if (sourceContent.startsWith('---\n') || sourceContent.startsWith('---\r')) {
+        // 找到第二个 ---
+        const endIdx = sourceContent.indexOf('\n---\n', 3);
+        if (endIdx !== -1) {
+            // frontmatter 包含第二个 --- 后的换行
+            const fmEnd = endIdx + 4 + 1; // '\n---\n' 长度 = 5，fmEnd 指向 frontmatter 之后
+            const frontmatter = sourceContent.slice(0, fmEnd);
+            const body = sourceContent.slice(fmEnd);
+            return frontmatter + '\n' + marker + body;
+        }
+    }
+
+    // 非 frontmatter 文件或未找到 frontmatter 结束标记：注释放最前面
+    return marker + sourceContent;
+}
+
+/**
+ * 判断某个源文件相对路径在给定目标下是否应被跳过（不生成同步文件）。
+ * 用于支持 FULL_COPY_SKIP_SUBDIRS 配置。
+ */
+function shouldSkipForTarget(target, rel) {
+    const skipSet = FULL_COPY_SKIP_SUBDIRS[target];
+    if (!skipSet) return false;
+    const topDir = rel.split('/')[0]; // e.g. 'rules', 'skills', 'commands'
+    return skipSet.has(topDir);
+}
+
 function ensureDirSync(absDir) {
     if (!fs.existsSync(absDir)) {
         fs.mkdirSync(absDir, { recursive: true });
@@ -263,11 +330,17 @@ function runDefaultMode(opts) {
     for (const target of TARGETS) {
         const targetAbs = path.join(REPO_ROOT, target);
         ensureDirSync(targetAbs);
+        const isFullCopy = FULL_COPY_TARGETS.has(target);
         for (const rel of sources) {
+            // 跳过配置为不同步的子目录（如 .claude 的 rules/）
+            if (shouldSkipForTarget(target, rel)) continue;
+
             const shimAbs = path.join(targetAbs, rel);
             const shimDir = path.dirname(shimAbs);
             ensureDirSync(shimDir);
-            const expected = buildStubContent(target, rel);
+            const expected = isFullCopy
+                ? buildFullCopyContent(rel, aikpAbs)
+                : buildStubContent(target, rel);
             const existing = readIfExists(shimAbs);
             if (existing === null) {
                 fs.writeFileSync(shimAbs, expected, 'utf8');
@@ -293,10 +366,16 @@ function runCheckMode(opts) {
 
     for (const target of TARGETS) {
         const targetAbs = path.join(REPO_ROOT, target);
+        const isFullCopy = FULL_COPY_TARGETS.has(target);
         // 1. 检查缺失 / 内容不符
         for (const rel of sources) {
+            // 跳过配置为不同步的子目录
+            if (shouldSkipForTarget(target, rel)) continue;
+
             const shimAbs = path.join(targetAbs, rel);
-            const expected = buildStubContent(target, rel);
+            const expected = isFullCopy
+                ? buildFullCopyContent(rel, aikpAbs)
+                : buildStubContent(target, rel);
             const existing = readIfExists(shimAbs);
             if (existing === null) {
                 drifts.push(`missing : ${target}/${rel}`);
@@ -304,11 +383,11 @@ function runCheckMode(opts) {
                 drifts.push(`content : ${target}/${rel}`);
             }
         }
-        // 2. 检查多余（目标目录下存在但 .aikp 没有对应源）
+        // 2. 检查多余（目标目录下存在但 .aikp 没有对应源，或属于跳过子目录的残留）
         if (fs.existsSync(targetAbs)) {
             const existing = listExistingShims(targetAbs);
             for (const rel of existing) {
-                if (!expectedSet.has(rel)) {
+                if (!expectedSet.has(rel) || shouldSkipForTarget(target, rel)) {
                     drifts.push(`orphan  : ${target}/${rel}`);
                 }
             }
@@ -329,7 +408,8 @@ function runCleanMode(opts) {
         if (!fs.existsSync(targetAbs)) continue;
         const existing = listExistingShims(targetAbs);
         for (const rel of existing) {
-            if (!expectedSet.has(rel)) {
+            // 孤儿条件：真源不存在 OR 属于跳过同步的子目录（残留文件应清理）
+            if (!expectedSet.has(rel) || shouldSkipForTarget(target, rel)) {
                 fs.unlinkSync(path.join(targetAbs, rel));
                 cleaned += 1;
             }
@@ -404,12 +484,16 @@ module.exports = {
     AIKP_ROOT,
     TARGETS,
     SHIM_EXTENSIONS,
+    FULL_COPY_TARGETS,
+    FULL_COPY_SKIP_SUBDIRS,
     CODEBUDDY_ENTRY_FILE,
     CODEBUDDY_BLOCK_START,
     CODEBUDDY_BLOCK_END,
     listSourceFiles,
     computeRelLinkFromShim,
     buildStubContent,
+    buildFullCopyContent,
+    shouldSkipForTarget,
     listExistingShims,
     parseArgs,
     runDefaultMode,
