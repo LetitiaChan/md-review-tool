@@ -485,4 +485,95 @@ suite('ReviewPanel Test Suite', () => {
             }
         });
     });
+
+    // ===== Hotfix — 一键 AI 修复不弹出输出窗口 =====
+    suite('23. Hotfix — 一键 AI 修复时输出窗口不应弹出', () => {
+        const extPath23 = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const reviewPanelTs = fs.readFileSync(path.join(extPath23, 'src', 'reviewPanel.ts'), 'utf-8');
+        const reviewPanelJs = fs.existsSync(path.join(extPath23, 'out', 'reviewPanel.js'))
+            ? fs.readFileSync(path.join(extPath23, 'out', 'reviewPanel.js'), 'utf-8')
+            : '';
+
+        // 定位 openCodeBuddyChat 分支：只对 AI Chat 派发这段代码做断言，避免误伤其他 OutputChannel
+        function extractAiChatBlock(src: string): string {
+            const idx = src.indexOf('MD Human Review - AI Chat');
+            if (idx < 0) return '';
+            // 向后截取 2500 个字符足以覆盖整个 case 分支
+            return src.slice(idx, idx + 2500);
+        }
+        const tsBlock = extractAiChatBlock(reviewPanelTs);
+        const jsBlock = extractAiChatBlock(reviewPanelJs);
+
+        // Tier 1 — 存在性/源码关键字断言
+        test('BT-aiChatOutputSilent.1 源码中 AI Chat 分支应已移除 outputChannel.show() 调用（成功路径）', () => {
+            assert.ok(tsBlock.length > 0, 'reviewPanel.ts 中应存在 MD Human Review - AI Chat 分支');
+            assert.ok(
+                !/outputChannel\.show\s*\(/.test(tsBlock),
+                'AI Chat 分支不应再调用 outputChannel.show()，否则输出窗口会弹出'
+            );
+        });
+
+        test('BT-aiChatOutputSilent.2 编译产物中 AI Chat 分支也不应残留 outputChannel.show() 调用', () => {
+            if (!jsBlock) {
+                // 未编译时跳过（CI/本地会先 npm run compile，通常不会命中）
+                assert.ok(true, 'out/reviewPanel.js 未生成，跳过编译产物断言');
+                return;
+            }
+            assert.ok(
+                !/outputChannel\.show\s*\(/.test(jsBlock),
+                '编译产物的 AI Chat 分支不应再调用 outputChannel.show()'
+            );
+        });
+
+        // Tier 2 — 行为级断言：诊断日志仍然写入 OutputChannel（只是不弹出）
+        test('BT-aiChatOutputSilent.3 OutputChannel 仍应被创建以保留诊断日志', () => {
+            // createOutputChannel 行在 "MD Human Review - AI Chat" 字符串之前，
+            // 所以不能用 extractAiChatBlock 截取后的片段，需在全文中断言。
+            assert.ok(
+                /createOutputChannel\(\s*['"`]MD Human Review - AI Chat['"`]\s*\)/.test(reviewPanelTs),
+                '应仍然 createOutputChannel("MD Human Review - AI Chat")，保留日志用于用户主动排查'
+            );
+        });
+
+        test('BT-aiChatOutputSilent.4 [DIAG:aiChat] 诊断日志与 [NEXT-STEP] 指引应仍写入 OutputChannel', () => {
+            assert.ok(
+                /outputChannel\.appendLine\(`\[DIAG:aiChat\] clipboard written/.test(tsBlock),
+                '剪贴板写入诊断日志应保留'
+            );
+            assert.ok(
+                tsBlock.includes('[NEXT-STEP]'),
+                '失败路径的 [NEXT-STEP] 指引日志应保留在 OutputChannel 中'
+            );
+        });
+
+        // Tier 3 — 任务特定断言：明确针对本次需求 "一键AI修复时，输出窗口不要弹出"
+        test('BT-aiChatOutputSilent.5 成功路径 showInformationMessage 之前不应紧邻 outputChannel.show()', () => {
+            // 通过匹配 "if (result.succeeded)" 到 "} else" 之间的片段检查
+            const successMatch = tsBlock.match(/if\s*\(\s*result\.succeeded\s*\)\s*\{([\s\S]*?)\}\s*else/);
+            assert.ok(successMatch, '应能定位 result.succeeded 成功分支');
+            const successBody = successMatch![1];
+            assert.ok(
+                !successBody.includes('outputChannel.show'),
+                '成功路径内不应再有 outputChannel.show 调用，以免弹出输出窗口打断用户'
+            );
+            assert.ok(
+                /showInformationMessage/.test(successBody),
+                '成功路径应仅用 showInformationMessage 通知用户'
+            );
+        });
+
+        test('BT-aiChatOutputSilent.6 失败路径也不应调用 outputChannel.show() 抢焦点', () => {
+            const elseMatch = tsBlock.match(/\}\s*else\s*\{([\s\S]*?)\}\s*\}\s*catch/);
+            assert.ok(elseMatch, '应能定位 else 失败分支');
+            const elseBody = elseMatch![1];
+            assert.ok(
+                !elseBody.includes('outputChannel.show'),
+                '失败路径不应再有 outputChannel.show 调用，改为仅通过 showWarningMessage 通知'
+            );
+            assert.ok(
+                /showWarningMessage/.test(elseBody),
+                '失败路径应仍通过 showWarningMessage 提示用户'
+            );
+        });
+    });
 });

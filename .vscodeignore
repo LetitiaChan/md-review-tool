@@ -1,42 +1,49 @@
+# ===== 编辑器 / 测试运行时配置 =====
 .vscode/**
 .vscode-test/**
 .vscode-test-userdata/**
-.codebuddy/**
-.aikp/**
-.cursor/**
-openspec/**
-AGENT-PROGRESS.md
+.github/**
+
+# ===== 源码与构建脚本（发行包不包含源码） =====
 src/**
 test/**
 scripts/**
-node_modules/**
-.gitignore
-.vscodeignore
-.github/**
-tsconfig.json
 **/*.ts
 **/*.map
-*.vsix
-test_debug.js
-package-lock.json
-todo.md
-test-output*.log
-test-out*.log
-out/reviewPanel_original.js
+tsconfig.json
 
-# 编译产物中的测试文件和重复输出
+# ===== 依赖与打包产物 =====
+node_modules/**
+package-lock.json
+*.vsix
+
+# ===== 编译产物中的测试 / 冗余输出 =====
 out/test/**
 out/src/**
+out/reviewPanel_original.js
 
-# 测试报告和结果
+# ===== 测试报告和临时日志 =====
 playwright-report/**
 test-results/**
+test_debug.js
+test-output*.log
+test-out*.log
 
-# AI 工具配置文件
+# ===== AI 工具 aikit 真源 + shim（仅开发期使用，不打入发行包） =====
+.aikp/**
 .claude/**
+.codebuddy/**
+.cursor/**
+openspec/**
+AGENT-PROGRESS.md
 CLAUDE.md
 CODEBUDDY.md
 llms.txt
+
+# ===== 其他 =====
+.gitignore
+.vscodeignore
+todo.md
 
 # README 引用的大图（改用 GitHub 绝对 URL，不打入包内）
 assets/intro.gif

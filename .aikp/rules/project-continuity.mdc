@@ -1,8 +1,12 @@
 ---
 description: 每次会话开始时必须执行
-globs:
 alwaysApply: true
+type: always
+enabled: true
 ---
+
+> 🤖 读取本文件时输出：`📖 .aikp/project-continuity`
+
 # Project Continuity — 跨会话上下文恢复 + 开发纪律
 
 ## 一、会话启动：读取进度笔记

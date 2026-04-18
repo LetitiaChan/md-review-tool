@@ -486,22 +486,19 @@ export class ReviewPanel {
                         availableCommands: commandSet
                     });
 
-                    // 4. 根据结果决定 toast 文案 + OutputChannel 是否抢焦点
+                    // 4. 根据结果决定 toast 文案；OutputChannel 仅静默写入日志，不主动弹出输出窗口
+                    //    （用户可通过 "视图 → 输出" 手动选择 "MD Human Review - AI Chat" 查看诊断日志）
                     if (result.succeeded) {
-                        // 成功路径：OutputChannel 仅静默出现在面板，不打断用户
-                        outputChannel.show(true);
-
                         // Cursor + 已通过 SendKeys 自动发送 → 专属"已发送"文案
                         const successKey = (ide === 'cursor' && result.autoSubmitted)
                             ? 'ai.chat_success_cursor_autosend'
                             : `ai.chat_success_${ide}`;
                         vscode.window.showInformationMessage(_hostT(successKey));
                     } else {
-                        // 失败路径：追加明确"下一步"指引，并聚焦 OutputChannel 帮助用户自查
+                        // 失败路径：追加明确"下一步"指引到日志中（不弹窗）
                         outputChannel.appendLine('');
                         outputChannel.appendLine('[NEXT-STEP] 自动派发未完成。请在 AI 对话窗口输入框按 Ctrl+V 粘贴，然后按回车发送。');
                         outputChannel.appendLine('[NEXT-STEP] Auto-dispatch did not complete. In the AI chat input, press Ctrl+V to paste, then Enter to send.');
-                        outputChannel.show(false);
                         vscode.window.showWarningMessage(_hostT('ai.chat_fallback'));
                     }
                 } catch (e: any) {
