@@ -1689,6 +1689,136 @@ const Renderer = (() => {
     }
 
     /**
+     * 解析任意 CSS 颜色字符串为 {r,g,b,a}
+     * 支持 #rgb / #rrggbb / #rrggbbaa / rgb() / rgba() / 命名色
+     * 解析失败返回 null
+     */
+    function parseCssColor(str) {
+        if (!str || typeof str !== 'string') return null;
+        const s = str.trim().toLowerCase();
+        if (s === 'none' || s === 'transparent') return null;
+
+        // #rgb / #rgba / #rrggbb / #rrggbbaa
+        if (s[0] === '#') {
+            let hex = s.slice(1);
+            if (hex.length === 3 || hex.length === 4) {
+                hex = hex.split('').map(c => c + c).join('');
+            }
+            if (hex.length === 6 || hex.length === 8) {
+                const r = parseInt(hex.slice(0, 2), 16);
+                const g = parseInt(hex.slice(2, 4), 16);
+                const b = parseInt(hex.slice(4, 6), 16);
+                const a = hex.length === 8 ? parseInt(hex.slice(6, 8), 16) / 255 : 1;
+                if ([r, g, b].every(n => !isNaN(n))) return { r, g, b, a };
+            }
+            return null;
+        }
+
+        // rgb(...) / rgba(...)
+        const m = s.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+%?))?\s*\)$/);
+        if (m) {
+            const r = Math.round(parseFloat(m[1]));
+            const g = Math.round(parseFloat(m[2]));
+            const b = Math.round(parseFloat(m[3]));
+            let a = 1;
+            if (m[4] != null) {
+                a = m[4].endsWith('%') ? parseFloat(m[4]) / 100 : parseFloat(m[4]);
+            }
+            return { r, g, b, a };
+        }
+
+        // 借用浏览器解析命名色（e.g. "orange"）
+        try {
+            const probe = document.createElement('span');
+            probe.style.color = 'rgba(0,0,0,0)';
+            probe.style.color = s;
+            if (!probe.style.color) return null;
+            document.body.appendChild(probe);
+            const rgb = getComputedStyle(probe).color;
+            document.body.removeChild(probe);
+            const mm = rgb.match(/rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+))?\s*\)/);
+            if (mm) {
+                return {
+                    r: Math.round(parseFloat(mm[1])),
+                    g: Math.round(parseFloat(mm[2])),
+                    b: Math.round(parseFloat(mm[3])),
+                    a: mm[4] != null ? parseFloat(mm[4]) : 1,
+                };
+            }
+        } catch (e) { /* noop */ }
+
+        return null;
+    }
+
+    /**
+     * 计算颜色的 WCAG 相对亮度 [0,1]
+     * 参见 https://www.w3.org/TR/WCAG20/#relativeluminancedef
+     */
+    function relativeLuminance(rgb) {
+        const toLin = (c) => {
+            const v = c / 255;
+            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * toLin(rgb.r) + 0.7152 * toLin(rgb.g) + 0.0722 * toLin(rgb.b);
+    }
+
+    /**
+     * Mermaid 渲染后对节点文字做对比度修正：
+     * - 暗色主题：若节点填充色是浅色（亮度 > 0.5），把文字改深色 #1a202c
+     * - 亮色主题：若节点填充色是深色（亮度 <= 0.5），把文字改浅色 #f7fafc
+     * 处理对象：.node / .cluster 中的形状元素（rect/circle/polygon/path/ellipse）及其标签文字
+     */
+    function fixMermaidNodeTextContrast(container, isDark) {
+        const svg = container.querySelector('svg');
+        if (!svg) return;
+
+        const LUMA_THRESHOLD = 0.5;
+        const DARK_TEXT = '#1a202c';
+        const LIGHT_TEXT = '#f7fafc';
+
+        // 同时处理普通节点和 subgraph 集群
+        const targets = svg.querySelectorAll('g.node, g.cluster, .node, .cluster');
+
+        targets.forEach(nodeG => {
+            // 取节点的形状元素，优先读其 fill
+            const shapes = nodeG.querySelectorAll(':scope > rect, :scope > circle, :scope > ellipse, :scope > polygon, :scope > path');
+            let fill = null;
+            for (const sh of shapes) {
+                const f = sh.getAttribute('fill') || sh.style.fill || getComputedStyle(sh).fill;
+                const parsed = parseCssColor(f);
+                if (parsed && parsed.a > 0) { fill = parsed; break; }
+            }
+            if (!fill) return;
+
+            const luma = relativeLuminance(fill);
+            let newColor = null;
+            if (isDark && luma > LUMA_THRESHOLD) {
+                // 暗色主题下遇到浅色填充 → 文字改深色
+                newColor = DARK_TEXT;
+            } else if (!isDark && luma <= LUMA_THRESHOLD) {
+                // 亮色主题下遇到深色填充 → 文字改浅色
+                newColor = LIGHT_TEXT;
+            }
+            if (!newColor) return;
+
+            // 应用到所有文字：SVG <text>/<tspan> 以及 foreignObject 内部的 HTML 标签
+            nodeG.querySelectorAll('text, tspan').forEach(t => {
+                t.setAttribute('fill', newColor);
+                t.style.fill = newColor;
+            });
+            nodeG.querySelectorAll('foreignObject *').forEach(el => {
+                // 仅设置 color，不动背景；用 important 压过 mermaid inline style
+                el.style.setProperty('color', newColor, 'important');
+            });
+            // 部分 mermaid 版本把 label 放在 nodeG 直接子元素 span/div 上
+            const directLabel = nodeG.querySelector(':scope > .nodeLabel, :scope > .label');
+            if (directLabel) {
+                directLabel.style.setProperty('color', newColor, 'important');
+            }
+        });
+    }
+
+    /**
      * 渲染所有 Mermaid 图表占位容器
      * 在 renderBlocks 之后调用
      */
@@ -1800,6 +1930,9 @@ const Renderer = (() => {
                 // 渲染后用最新的源码更新 data-source（确保编辑后的内容被正确保存）
                 const latestBase64 = btoa(unescape(encodeURIComponent(code)));
                 container.innerHTML = `<div class="mermaid-rendered" data-source="${latestBase64}">${svg}</div>`;
+
+                // 对自定义填充节点做文字亮度反色修正（自定义 style fill 常导致文字与背景对比度不足）
+                try { fixMermaidNodeTextContrast(container, isDark); } catch (e) { /* noop */ }
 
                 // 使 SVG 自适应容器宽度
                 const svgEl = container.querySelector('svg');

@@ -1476,6 +1476,29 @@ pre code.language-diff {
     background: transparent;
 }
 
+/* ===== Mermaid 节点文字可读性兜底 =====
+   当用户用 `style X fill:#xxx` 或 classDef 指定自定义填充色时，
+   主题默认文字颜色可能与自定义填充产生对比度不足。
+   JS 后处理（fixMermaidNodeTextContrast）会针对性反色；
+   下面这层薄描边作为兜底，保证未被 JS 命中的场景仍可读。 */
+.mermaid-rendered svg .nodeLabel,
+.mermaid-rendered svg .cluster-label,
+.mermaid-rendered svg text {
+    paint-order: stroke fill;
+}
+.theme-dark .mermaid-rendered svg .nodeLabel,
+.theme-dark .mermaid-rendered svg .cluster-label,
+.theme-dark .mermaid-rendered svg text {
+    stroke: rgba(0, 0, 0, 0.55);
+    stroke-width: 0.6px;
+}
+.theme-light .mermaid-rendered svg .nodeLabel,
+.theme-light .mermaid-rendered svg .cluster-label,
+.theme-light .mermaid-rendered svg text {
+    stroke: rgba(255, 255, 255, 0.55);
+    stroke-width: 0.6px;
+}
+
 /* ===== 暗色主题 — Mermaid 错误提示 ===== */
 .theme-dark .mermaid-error {
     background: rgba(248, 81, 73, 0.12);
