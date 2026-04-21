@@ -1985,7 +1985,7 @@ body.theme-dark * {
     display: none;
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: 35; /* 低于悬浮面板(40)，避免遮挡面板关闭按钮 */
     background: var(--bg-white);
     border-bottom: 1px solid var(--border);
     padding: 6px 16px;
