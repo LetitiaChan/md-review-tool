@@ -1991,6 +1991,7 @@ body.theme-dark * {
     padding: 6px 16px;
     gap: 4px;
     align-items: center;
+    justify-content: center;
     flex-wrap: wrap;
 }
 
@@ -2514,9 +2515,11 @@ body.zen-mode .annotations-panel {
 
 /* ===== 面板嵌入模式 ===== */
 
-/* document-panel 内部改为水平布局（目录在左，文档内容在右） */
+/* document-panel 内部改为网格布局（目录跨全高在左，工具栏+文档内容在右） */
 body.panel-embedded .document-panel {
-    flex-direction: row;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    grid-template-columns: auto 1fr;
     flex: 1;
     min-width: 0;
     overflow: visible;
@@ -2538,12 +2541,16 @@ body.panel-embedded .toc-panel {
     flex-shrink: 0;
     z-index: auto;
     overflow: visible;
+    grid-row: 1 / -1;
+    grid-column: 1;
 }
 
 /* 文档内容区：flex 占满剩余空间，保留 max-width 让文档对齐生效 */
 body.panel-embedded .document-content {
     flex: 1;
     min-width: 0;
+    grid-row: 2;
+    grid-column: 2;
 }
 
 /* 批注面板：从悬浮变为嵌入流式布局 */
@@ -2624,11 +2631,23 @@ body.panel-embedded .annotations-panel.collapsed {
 body.panel-embedded.sidebar-reversed .toc-panel {
     border-right: none;
     border-left: 1px solid var(--border);
-    order: 1; /* 目录移到右侧 */
+    grid-column: 2; /* 目录移到右侧 */
 }
 
 body.panel-embedded.sidebar-reversed .document-content {
-    order: 0; /* 文档内容居中 */
+    grid-column: 1; /* 文档内容移到左侧 */
+}
+
+body.panel-embedded.sidebar-reversed .wysiwyg-toolbar {
+    grid-column: 1; /* 反转时工具栏跟随文档内容列 */
+}
+
+body.panel-embedded.sidebar-reversed .search-bar {
+    grid-column: 1; /* 反转时搜索栏跟随文档内容列 */
+}
+
+body.panel-embedded.sidebar-reversed .btn-scroll-top {
+    grid-column: 1;
 }
 
 body.panel-embedded.sidebar-reversed .annotations-panel {
@@ -2638,12 +2657,29 @@ body.panel-embedded.sidebar-reversed .annotations-panel {
 }
 
 body.panel-embedded.sidebar-reversed .document-panel {
+    grid-template-columns: 1fr auto; /* 反转列顺序 */
     order: 1; /* 文档面板（含目录+内容）移到右侧 */
 }
 
-/* WYSIWYG 工具栏在嵌入模式下需要正确定位 */
+/* WYSIWYG 工具栏在嵌入模式下：只在文档内容列上方，不遮挡左侧目录 header */
 body.panel-embedded .wysiwyg-toolbar {
     z-index: 5;
+    grid-column: 2;
+    grid-row: 1;
+    position: sticky;
+    top: 0;
+}
+
+/* 嵌入模式下搜索栏同样只在文档内容列上方 */
+body.panel-embedded .search-bar {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+/* 嵌入模式下回到顶部按钮放在内容区 */
+body.panel-embedded .btn-scroll-top {
+    grid-row: 1 / -1;
+    grid-column: 2;
 }
 
 /* ===== 文档对齐模式 ===== */
