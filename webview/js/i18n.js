@@ -226,6 +226,9 @@ window.I18n = (() => {
             'help.ui_file_select': '<strong>文件选择器</strong> — 工作区内 Markdown 文件下拉框快速切换',
             'help.ui_file_change': '<strong>文件变更检测</strong> — 源文件修改后显示「文件已更新」徽章，点击刷新按钮重载',
             'help.ui_resize': '<strong>面板拖拽</strong> — 目录和批注面板宽度可拖拽调整',
+            'help.tips_title': '💡 小贴士',
+            'help.tips_reader': '<strong>当作 Markdown 阅读器使用</strong> — 关闭右侧批阅面板（目录 + 批注），即可作为纯 Markdown 阅读器使用，享受完整的渲染效果',
+            'help.tips_styles': '<strong>丰富的样式选择</strong> — 在设置中可自定义字体大小、行高、内容宽度、字体风格、代码主题（15 种）、亮色/暗色主题等，打造个性化阅读体验',
             'help.shortcut_title': '⌨️ 快捷键',
             'help.shortcut_zen': '切换禅模式',
             'help.shortcut_search': '打开正文搜索',
@@ -697,6 +700,9 @@ window.I18n = (() => {
             'help.ui_file_select': '<strong>File Selector</strong> — Dropdown to quickly switch between workspace Markdown files',
             'help.ui_file_change': '<strong>File Change Detection</strong> — Shows "File updated" badge when source file is modified; click refresh to reload',
             'help.ui_resize': '<strong>Panel Resize</strong> — Drag to adjust TOC and annotation panel widths',
+            'help.tips_title': '💡 Tips',
+            'help.tips_reader': '<strong>Use as a Markdown Reader</strong> — Hide the review panels (TOC + Annotations) to use it as a pure Markdown reader with full rendering support',
+            'help.tips_styles': '<strong>Rich Style Options</strong> — Customize font size, line height, content width, font style, code theme (15 options), light/dark theme, and more in Settings for a personalized reading experience',
             'help.shortcut_title': '⌨️ Keyboard Shortcuts',
             'help.shortcut_zen': 'Toggle Zen mode',
             'help.shortcut_search': 'Open content search',
@@ -1124,6 +1130,13 @@ window.I18n = (() => {
         <li>${_t('help.ui_file_select')}</li>
         <li>${_t('help.ui_file_change')}</li>
         <li>${_t('help.ui_resize')}</li>
+    </ul>
+</section>
+<section class="help-section">
+    <h4>${_t('help.tips_title')}</h4>
+    <ul>
+        <li>${_t('help.tips_reader')}</li>
+        <li>${_t('help.tips_styles')}</li>
     </ul>
 </section>
 <section class="help-section">

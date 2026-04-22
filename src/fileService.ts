@@ -525,7 +525,7 @@ console.error('删除批阅记录失败:', fullPath, e);
         const frontmatterMatch = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
         const blocks: string[] = [];
         if (frontmatterMatch) {
-            blocks.push('```yaml\n' + frontmatterMatch[0].trimEnd() + '\n```');
+            blocks.push('%%FRONTMATTER%%\n' + frontmatterMatch[0].trimEnd());
             processedMarkdown = markdown.slice(frontmatterMatch[0].length);
         }
 

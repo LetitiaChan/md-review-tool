@@ -83,9 +83,9 @@ const Renderer = (() => {
         // 脚注定义起始检测：[^id]: content
         const footnoteDefLineRegex = /^\s{0,3}\[\^([^\]\n]+)\]:\s*/;
 
-        // 将 frontmatter 作为第一个块（以代码块样式保留展示）
+        // 将 frontmatter 作为第一个块（使用专属标记，渲染时生成卡片式 UI）
         if (frontmatterBlock) {
-            blocks.push('```yaml\n' + frontmatterBlock + '\n```');
+            blocks.push('%%FRONTMATTER%%\n' + frontmatterBlock);
         }
 
         for (let i = 0; i < lines.length; i++) {
@@ -1006,6 +1006,27 @@ const Renderer = (() => {
             const wrapper = document.createElement('div');
             wrapper.className = 'md-block';
             wrapper.dataset.blockIndex = index;
+
+            // YAML Front Matter 专属渲染：生成卡片式 UI，不走 marked 解析
+            if (block.startsWith('%%FRONTMATTER%%\n')) {
+                const fmRaw = block.slice('%%FRONTMATTER%%\n'.length);
+                // 解析 frontmatter 内容行（去掉 --- 分隔符）
+                const fmLines = fmRaw.split('\n').filter(l => l.trim() !== '---');
+                let propsHtml = '';
+                for (const line of fmLines) {
+                    const colonIdx = line.indexOf(':');
+                    if (colonIdx > 0) {
+                        const key = escapeHtml(line.slice(0, colonIdx).trim());
+                        const val = escapeHtml(line.slice(colonIdx + 1).trim());
+                        propsHtml += `<div class="fm-prop"><span class="fm-key">${key}</span><span class="fm-colon">:</span> <span class="fm-value">${val}</span></div>`;
+                    } else if (line.trim()) {
+                        propsHtml += `<div class="fm-prop"><span class="fm-value">${escapeHtml(line.trim())}</span></div>`;
+                    }
+                }
+                wrapper.innerHTML = `<div class="frontmatter-card"><div class="fm-header"><span class="fm-icon">📄</span><span class="fm-title">YAML Front Matter</span></div><div class="fm-body">${propsHtml}</div></div>`;
+                container.appendChild(wrapper);
+                return; // 跳过后续 marked 解析流程
+            }
 
             // 预处理 → 数学公式占位 → marked 解析 → 后处理
             let preprocessed = preprocessMarkdown(block);

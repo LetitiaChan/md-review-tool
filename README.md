@@ -211,10 +211,15 @@ npm run compile
 npm run watch
 ```
 
+## 💡 Tips
+
+### Use as a Markdown Reader
+Hide the review panels (TOC + Annotations) by toggling them off in the toolbar, and MD Human Review becomes a **beautiful Markdown reader** with full rendering support — code highlighting, Mermaid diagrams, math formulas, PlantUML, Graphviz, and more. Combined with **rich style settings** (font size, line height, content width, font style, 15 code themes, light/dark theme), you can create a personalized reading experience that far surpasses the built-in Markdown preview.
+
 ## ❓ FAQ
 
 ### How is this different from VS Code's built-in Markdown preview?
-The built-in preview is read-only. MD Human Review lets you annotate rendered documents with comments, deletion marks, and content insertions — then generate AI fix instructions with one click.
+The built-in preview is read-only. MD Human Review lets you annotate rendered documents with comments, deletion marks, and content insertions — then generate AI fix instructions with one click. You can also hide the review panels and use it as a powerful Markdown reader with rich customization options.
 
 ### What diagram formats are supported?
 Mermaid (flowcharts, sequence diagrams, Gantt charts, etc.), KaTeX (math formulas), PlantUML (online server rendering), and Graphviz (DOT language, local Viz.js rendering).
@@ -451,10 +456,15 @@ npm run compile
 npm run watch
 ```
 
+## 💡 小贴士
+
+### 当作 Markdown 阅读器使用
+关闭右侧批阅面板（目录 + 批注），MD Human Review 就变成了一个**精美的 Markdown 阅读器**，拥有完整的渲染能力——代码高亮、Mermaid 图表、数学公式、PlantUML、Graphviz 等一应俱全。配合**丰富的样式设置**（字体大小、行高、内容宽度、字体风格、15 种代码主题、亮色/暗色主题），打造远超内置预览的个性化阅读体验。
+
 ## ❓ 常见问题（FAQ）
 
 ### 这个插件和 VS Code 内置 Markdown 预览有什么区别？
-内置预览只能查看，MD Human Review 支持在渲染后的文档上直接批注（评论、删除标记、插入内容），并能一键生成 AI 修改指令。
+内置预览只能查看，MD Human Review 支持在渲染后的文档上直接批注（评论、删除标记、插入内容），并能一键生成 AI 修改指令。同时，关闭批阅面板后还可以当作功能强大的 Markdown 阅读器使用，拥有丰富的自定义样式选项。
 
 ### 支持哪些图表格式？
 Mermaid（流程图、时序图、甘特图等）、KaTeX（数学公式）、PlantUML（通过在线服务器渲染）、Graphviz（DOT 语言，本地 Viz.js 渲染）。
