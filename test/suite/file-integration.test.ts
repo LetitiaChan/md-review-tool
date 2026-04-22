@@ -563,6 +563,67 @@ suite('File Integration Test Suite — 文件系统集成测试', () => {
             }
         });
 
+        test('BT-nestedFence.1 含 4 反引号围栏嵌套 3 反引号代码块 → 整体作为一个块', () => {
+            // 外层用 4 个反引号，内层用 3 个反引号，应作为一个完整代码块
+            const content = '# 标题\n\n说明文字。\n\n````markdown\n> 引用\n\n```lua\nprint("hello")\n```\n\n结论文本\n````\n\n后续内容。\n';
+            const filePath = createTempFile('test-nested-fence.md', content);
+
+            const annotations = [
+                { type: 'comment', selectedText: '后续内容', comment: '测试嵌套围栏', blockIndex: 3, startOffset: 0 }
+            ];
+
+            const result = fileService.applyReview(annotations, filePath, 'test-nested-fence.md');
+            assert.ok(result.success, '含嵌套围栏的文档应能正确处理');
+
+            if (result.aiInstructionFilePath && fs.existsSync(result.aiInstructionFilePath)) {
+                const instructionContent = fs.readFileSync(result.aiInstructionFilePath, 'utf-8');
+                // 块分割：标题(1) + 说明文字(2) + 整个````...````代码块(3) + 后续内容(4)
+                // 后续内容应在第 4 块
+                assert.ok(instructionContent.includes('后续内容'), '后续内容应被正确定位');
+                fs.unlinkSync(result.aiInstructionFilePath);
+            }
+        });
+
+        test('BT-nestedFence.2 围栏嵌套：内层 3 反引号不应截断外层 4 反引号代码块', () => {
+            // 核心行为验证：内层 ``` 不会被误判为外层 ```` 的结束
+            const content = '# 标题\n\n````\nline1\n```\ninner\n```\nline2\n````\n\n尾部段落。\n';
+            const filePath = createTempFile('test-nested-fence2.md', content);
+
+            const annotations = [
+                { type: 'comment', selectedText: '尾部段落', comment: '验证不截断', blockIndex: 2, startOffset: 0 }
+            ];
+
+            const result = fileService.applyReview(annotations, filePath, 'test-nested-fence2.md');
+            assert.ok(result.success);
+
+            if (result.aiInstructionFilePath && fs.existsSync(result.aiInstructionFilePath)) {
+                const instructionContent = fs.readFileSync(result.aiInstructionFilePath, 'utf-8');
+                // 块分割：标题(1) + 整个````...````代码块(2) + 尾部段落(3)
+                // 尾部段落应在第 3 块，如果围栏被错误截断则会在更后面的块
+                assert.ok(instructionContent.includes('尾部段落'), '尾部段落应被正确定位');
+                fs.unlinkSync(result.aiInstructionFilePath);
+            }
+        });
+
+        test('BT-nestedFence.3 5 反引号嵌套 4 反引号和 3 反引号 → 整体一个块', () => {
+            // 多层嵌套场景
+            const content = '# 标题\n\n`````\nouter\n````\nmid\n```\ninner\n```\nmid2\n````\nouter2\n`````\n\n结尾。\n';
+            const filePath = createTempFile('test-nested-fence3.md', content);
+
+            const annotations = [
+                { type: 'comment', selectedText: '结尾', comment: '多层嵌套', blockIndex: 2, startOffset: 0 }
+            ];
+
+            const result = fileService.applyReview(annotations, filePath, 'test-nested-fence3.md');
+            assert.ok(result.success, '多层嵌套围栏应能正确处理');
+
+            if (result.aiInstructionFilePath && fs.existsSync(result.aiInstructionFilePath)) {
+                const instructionContent = fs.readFileSync(result.aiInstructionFilePath, 'utf-8');
+                assert.ok(instructionContent.includes('结尾'), '结尾应被正确定位');
+                fs.unlinkSync(result.aiInstructionFilePath);
+            }
+        });
+
         test('含列表的文档 → 列表作为整体块', () => {
             const content = '# 标题\n\n- 项目 1\n- 项目 2\n- 项目 3\n\n后续段落。\n';
             const filePath = createTempFile('test-list.md', content);

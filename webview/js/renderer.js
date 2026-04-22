@@ -67,6 +67,8 @@ const Renderer = (() => {
         let htmlBlockDepth = 0; // 嵌套深度计数器（处理同名标签嵌套）
         let inList = false; // 追踪列表上下文（含 loose list 中的空行和缩进段落）
         let inListCodeBlock = false; // 追踪列表项内的代码块（缩进的 ```）
+        let codeBlockFenceCount = 0; // 代码块开始围栏的反引号数量（用于匹配结束围栏）
+        let listCodeBlockFenceCount = 0; // 列表内代码块开始围栏的反引号数量
         let inBlockquote = false; // 追踪引用块上下文（含引用块中的空行、列表、代码块等）
         let inFootnote = false; // 追踪脚注定义上下文（含多段落脚注中的空行和缩进续行）
 
@@ -146,14 +148,22 @@ const Renderer = (() => {
             }
 
             // 代码块围栏检测（仅在不处于 HTML 块内时才作为独立块分割）
-            if (line.trim().startsWith('```') && !inHtmlBlock) {
+            // 支持不同长度的反引号围栏（如 ``` vs ````），结束围栏的反引号数 ≥ 开始围栏
+            const fenceMatch = !inHtmlBlock && line.trim().match(/^(`{3,})/);
+            if (fenceMatch) {
+                const fenceCount = fenceMatch[1].length;
                 // 判断是否为列表项内的缩进代码块（行首有空白）
-                const isIndentedFence = /^\s+```/.test(line);
+                const isIndentedFence = /^\s+`/.test(line);
 
                 if (inListCodeBlock) {
-                    // 列表内代码块的结束围栏
-                    current.push(line);
-                    inListCodeBlock = false;
+                    // 列表内代码块的结束围栏 — 仅当反引号数 ≥ 开始围栏且行内无其他非空白内容时才结束
+                    if (fenceCount >= listCodeBlockFenceCount && line.trim().match(/^`{3,}\s*$/)) {
+                        current.push(line);
+                        inListCodeBlock = false;
+                        listCodeBlockFenceCount = 0;
+                    } else {
+                        current.push(line);
+                    }
                     continue;
                 }
 
@@ -161,15 +171,23 @@ const Renderer = (() => {
                     // 列表项内的缩进代码块开始 — 保留在列表块中
                     current.push(line);
                     inListCodeBlock = true;
+                    listCodeBlockFenceCount = fenceCount;
                     continue;
                 }
 
                 if (inCodeBlock) {
-                    current.push(line);
-                    blocks.push(current.join('\n'));
-                    current = [];
-                    inCodeBlock = false;
-                    inList = false;
+                    // 结束围栏：反引号数 ≥ 开始围栏数量，且行内无其他非空白内容
+                    if (fenceCount >= codeBlockFenceCount && line.trim().match(/^`{3,}\s*$/)) {
+                        current.push(line);
+                        blocks.push(current.join('\n'));
+                        current = [];
+                        inCodeBlock = false;
+                        codeBlockFenceCount = 0;
+                        inList = false;
+                    } else {
+                        // 反引号数不够或有其他内容（如 ```lua），视为代码块内的普通行
+                        current.push(line);
+                    }
                     continue;
                 } else {
                     if (current.length > 0) {
@@ -177,6 +195,7 @@ const Renderer = (() => {
                         current = [];
                     }
                     inCodeBlock = true;
+                    codeBlockFenceCount = fenceCount;
                     inList = false;
                     current.push(line);
                     continue;

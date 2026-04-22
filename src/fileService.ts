@@ -532,11 +532,13 @@ console.error('删除批阅记录失败:', fullPath, e);
         const lines = processedMarkdown.split('\n');
         let current: string[] = [];
         let inCodeBlock = false;
+        let codeBlockFenceCount = 0;
         let inHtmlBlock = false;
         let htmlBlockTag = '';
         let htmlBlockDepth = 0;
         let inList = false;
         let inListCodeBlock = false;
+        let listCodeBlockFenceCount = 0;
         let inBlockquote = false;
         let inFootnote = false;
 
@@ -582,17 +584,33 @@ console.error('删除批阅记录失败:', fullPath, e);
                 }
             }
 
-            // 代码块围栏
-            if (line.trim().startsWith('```') && !inHtmlBlock) {
-                const isIndentedFence = /^\s+```/.test(line);
-                if (inListCodeBlock) { current.push(line); inListCodeBlock = false; continue; }
-                if (inList && isIndentedFence) { current.push(line); inListCodeBlock = true; continue; }
+            // 代码块围栏（支持不同长度的反引号围栏，结束围栏的反引号数 ≥ 开始围栏）
+            const fenceMatch = !inHtmlBlock && line.trim().match(/^(`{3,})/);
+            if (fenceMatch) {
+                const fenceCount = fenceMatch[1].length;
+                const isIndentedFence = /^\s+`/.test(line);
+                if (inListCodeBlock) {
+                    if (fenceCount >= listCodeBlockFenceCount && /^`{3,}\s*$/.test(line.trim())) {
+                        current.push(line); inListCodeBlock = false; listCodeBlockFenceCount = 0;
+                    } else {
+                        current.push(line);
+                    }
+                    continue;
+                }
+                if (inList && isIndentedFence) {
+                    current.push(line); inListCodeBlock = true; listCodeBlockFenceCount = fenceCount; continue;
+                }
                 if (inCodeBlock) {
-                    current.push(line); blocks.push(current.join('\n')); current = [];
-                    inCodeBlock = false; inList = false; continue;
+                    if (fenceCount >= codeBlockFenceCount && /^`{3,}\s*$/.test(line.trim())) {
+                        current.push(line); blocks.push(current.join('\n')); current = [];
+                        inCodeBlock = false; codeBlockFenceCount = 0; inList = false;
+                    } else {
+                        current.push(line);
+                    }
+                    continue;
                 } else {
                     if (current.length > 0) { blocks.push(current.join('\n')); current = []; }
-                    inCodeBlock = true; inList = false; current.push(line); continue;
+                    inCodeBlock = true; codeBlockFenceCount = fenceCount; inList = false; current.push(line); continue;
                 }
             }
             if (inCodeBlock) { current.push(line); continue; }
