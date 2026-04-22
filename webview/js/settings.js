@@ -106,8 +106,6 @@ const Settings = (() => {
         } else {
             root.style.removeProperty('--code-font-family');
         }
-        console.log('[DIAG] applyToDOM code font:', { codeFontVal, codeFontCss, cssVar: root.style.getPropertyValue('--code-font-family') });
-
         // 直接设置代码块元素的内联字体
         applyCodeFontToElements();
 
@@ -802,29 +800,8 @@ const Settings = (() => {
         const codeElements = document.querySelectorAll(
             '.document-content code, .document-content kbd, .frontmatter-card, .diagram-edit-textarea'
         );
-        if (codeElements.length > 0) {
-            // 对第一个元素输出详细诊断：设置前后的 computedStyle 对比
-            const firstEl = codeElements[0];
-            const beforeComputed = getComputedStyle(firstEl).fontFamily;
-            const beforeInline = firstEl.style.fontFamily;
-            firstEl.style.fontFamily = codeFontCss;
-            const afterInline = firstEl.style.fontFamily;
-            const afterComputed = getComputedStyle(firstEl).fontFamily;
-            console.log('[DIAG] applyCodeFontToElements:', {
-                codeFontVal,
-                codeFontCss,
-                elementCount: codeElements.length,
-                firstElTag: firstEl.tagName + '.' + firstEl.className,
-                beforeInline,
-                afterInline,
-                beforeComputed,
-                afterComputed,
-                styleAttr: firstEl.getAttribute('style')
-            });
-            // 设置剩余元素
-            for (let i = 1; i < codeElements.length; i++) {
-                codeElements[i].style.fontFamily = codeFontCss;
-            }
+        for (let i = 0; i < codeElements.length; i++) {
+            codeElements[i].style.fontFamily = codeFontCss;
         }
     }
 

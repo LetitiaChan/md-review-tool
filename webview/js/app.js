@@ -1993,10 +1993,8 @@ this.innerHTML = t('modal.ai_result.copied');
                 },
                 replacement: function(content, node) {
                     const codeEl = node.querySelector('pre code');
-                    console.log('[DIAG] turndown codeBlock rule: codeEl found?', !!codeEl, 'node.innerHTML（前200字符）:', node.innerHTML.substring(0, 200));
                     if (!codeEl) return content;
                     const code = codeEl.textContent || '';
-                    console.log('[DIAG] turndown codeBlock rule: code（前100字符）:', code.substring(0, 100), 'code.length:', code.length);
                     // 优先使用 data-lang 属性获取原始语言（避免 highlight.js 自动检测的语言被误用）
                     const dataLang = node.getAttribute('data-lang') || '';
                     let language = dataLang;
@@ -2338,9 +2336,6 @@ this.innerHTML = t('modal.ai_result.copied');
                 const className = codeEl ? (codeEl.getAttribute('class') || '') : '';
                 const dataLang = codeBlockEl.getAttribute('data-lang') || '';
                 codeBlockData.push({ index: idx, plainCode, className, dataLang });
-                console.log('[DIAG] blockHtmlToMarkdown: 从原始 DOM 提取代码块', idx, '内容（前100字符）:', plainCode.substring(0, 100));
-                console.log('[DIAG] blockHtmlToMarkdown: extractRoot tagName:', extractRoot.tagName, 'childNodes 数量:', extractRoot.childNodes.length);
-                if (preEl) console.log('[DIAG] blockHtmlToMarkdown: pre innerHTML（前200字符）:', preEl.innerHTML.substring(0, 200));
             });
 
             // ===== 关键修复：先从原始 DOM 中提取图表编辑区 textarea 的 value =====
@@ -2401,7 +2396,7 @@ this.innerHTML = t('modal.ai_result.copied');
             // 但我们已经从原始 DOM 提取了代码内容，需要确保 tempDiv 中仍有代码块
             if (codeBlockData.length > 0 && tempDiv.querySelectorAll('.code-block').length === 0) {
                 // .code-block 被浏览器修复拆散了，手动重建
-                console.log('[DIAG] blockHtmlToMarkdown: .code-block 在 tempDiv 中消失了！手动重建');
+                // .code-block 被浏览器修复拆散了，手动重建
                 for (const data of codeBlockData) {
                     const newCodeBlock = document.createElement('div');
                     newCodeBlock.className = 'code-block';
@@ -2438,16 +2433,11 @@ this.innerHTML = t('modal.ai_result.copied');
                 }
             });
 
-            console.log('[DIAG] blockHtmlToMarkdown: tempDiv.innerHTML（前500字符）:', tempDiv.innerHTML.substring(0, 500));
-            console.log('[DIAG] blockHtmlToMarkdown: tempDiv 中 .code-block 数量:', tempDiv.querySelectorAll('.code-block').length);
-            const codeBlockInTemp = tempDiv.querySelector('.code-block pre code');
-            if (codeBlockInTemp) console.log('[DIAG] blockHtmlToMarkdown: tempDiv 中 pre>code textContent（前100字符）:', codeBlockInTemp.textContent.substring(0, 100));
             let md = turndownService.turndown(tempDiv.innerHTML);
             // 将图表编辑区占位符还原为实际的 Markdown 代码块
             for (const [placeholder, markdown] of Object.entries(diagramPlaceholders)) {
                 md = md.replace(placeholder, markdown);
             }
-            console.log('[DIAG] blockHtmlToMarkdown: turndown 最终输出（前300字符）:', md.substring(0, 300));
             return md.trim();
         }
 
