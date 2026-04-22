@@ -98,11 +98,20 @@ const Settings = (() => {
 
         // 代码字体
         const codeFontVal = currentSettings.codeFontFamily;
+        const codeFontCss = codeFontVal
+            ? "'" + codeFontVal + "', 'Fira Code', Consolas, 'Courier New', monospace"
+            : '';
         if (codeFontVal) {
-            root.style.setProperty('--code-font-family', "'" + codeFontVal + "', 'Fira Code', Consolas, 'Courier New', monospace");
+            root.style.setProperty('--code-font-family', codeFontCss);
         } else {
             root.style.removeProperty('--code-font-family');
         }
+
+        // 直接设置代码块元素的内联字体（与正文字体处理方式对齐，确保生效）
+        const codeElements = document.querySelectorAll(
+            '.document-content code, .document-content kbd, .frontmatter-card, .diagram-edit-textarea'
+        );
+        codeElements.forEach(el => { el.style.fontFamily = codeFontCss; });
 
         // 应用到文档内容区
         const docContent = document.getElementById('documentContent');

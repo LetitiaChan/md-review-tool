@@ -2368,5 +2368,48 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 `所有 --code-font-family 的 fallback 值应一致，但发现 ${fallbacks.size} 种不同的值: ${[...fallbacks].join(' | ')}`
             );
         });
+
+        test('BT-codeFontVar.7 applyToDOM 应直接设置代码块元素的内联 font-family（Tier 2 — 行为级断言）', () => {
+            // Tier 2 — 行为级断言：验证 applyToDOM 中除了设置 CSS 变量外，还直接遍历代码块元素设置内联样式
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const settingsJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'settings.js'), 'utf-8');
+
+            // 验证 applyToDOM 中包含 querySelectorAll 遍历代码元素的逻辑
+            assert.ok(
+                settingsJs.includes("querySelectorAll(") && settingsJs.includes('.document-content code'),
+                'applyToDOM 应包含 querySelectorAll 遍历 .document-content code 元素的逻辑'
+            );
+
+            // 验证遍历后设置 fontFamily 的逻辑
+            assert.ok(
+                settingsJs.includes('.fontFamily = codeFontCss'),
+                'applyToDOM 应直接设置代码元素的 style.fontFamily'
+            );
+        });
+
+        test('BT-codeFontVar.8 applyToDOM 代码字体内联样式应覆盖所有代码相关元素（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：验证内联样式覆盖了所有代码相关元素选择器
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const settingsJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'settings.js'), 'utf-8');
+
+            // 提取 querySelectorAll 的选择器参数
+            const selectorMatch = settingsJs.match(/querySelectorAll\(\s*['"`]([^'"`]+)['"`]\s*\)/);
+            assert.ok(selectorMatch, 'applyToDOM 中应包含 querySelectorAll 调用');
+            const selector = selectorMatch![1];
+
+            // 验证选择器覆盖了所有代码相关元素
+            const requiredSelectors = [
+                '.document-content code',
+                '.document-content kbd',
+                '.frontmatter-card',
+                '.diagram-edit-textarea'
+            ];
+            for (const required of requiredSelectors) {
+                assert.ok(
+                    selector.includes(required),
+                    `querySelectorAll 选择器应包含 '${required}'，实际选择器: '${selector}'`
+                );
+            }
+        });
     });
 });
