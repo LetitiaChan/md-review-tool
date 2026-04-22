@@ -1023,7 +1023,7 @@ const Renderer = (() => {
                         propsHtml += `<div class="fm-prop"><span class="fm-value">${escapeHtml(line.trim())}</span></div>`;
                     }
                 }
-                wrapper.innerHTML = `<div class="frontmatter-card"><div class="fm-header"><span class="fm-icon">📄</span><span class="fm-title">YAML Front Matter</span></div><div class="fm-body">${propsHtml}</div></div>`;
+wrapper.innerHTML = `<div class="frontmatter-card"><div class="fm-header"><span class="fm-icon">⚙️</span><span class="fm-title">YAML Front Matter</span></div><div class="fm-body">${propsHtml}</div></div>`;
                 container.appendChild(wrapper);
                 return; // 跳过后续 marked 解析流程
             }
