@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Fix document content area missing scrollbar, preventing users from scrolling to bottom via drag
 - Fix "Reset to Defaults" button using stale default values (fontSize/lineHeight/contentMaxWidth) in settings panel
 - Fix edit mode warning tips close button not dismissing immediately (replace inline onclick with addEventListener, clear auto-hide timer on manual close)
+- Fix 7 failing tests with stale default value expectations (fontSize 18→16, lineHeight 1.8→1.6, contentMaxWidth 1200→1100) across 5 test files
 
 ### 🔧 Improvements
 - Adjust default values for font size / line height / max content width to 16px / 1.6 / 1100px

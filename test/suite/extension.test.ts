@@ -57,13 +57,13 @@ suite('Extension Test Suite', () => {
     test('mdReview 配置应有默认的 fontSize', () => {
         const config = vscode.workspace.getConfiguration('mdReview');
         const fontSize = config.get<number>('fontSize');
-        assert.strictEqual(fontSize, 18, '默认字体大小应为 18');
+        assert.strictEqual(fontSize, 16, '默认字体大小应为 16');
     });
 
     test('mdReview 配置应有默认的 lineHeight', () => {
         const config = vscode.workspace.getConfiguration('mdReview');
         const lineHeight = config.get<number>('lineHeight');
-        assert.strictEqual(lineHeight, 1.8, '默认行高应为 1.8');
+        assert.strictEqual(lineHeight, 1.6, '默认行高应为 1.6');
     });
 
     test('mdReview 配置应有默认的 theme', () => {
@@ -75,7 +75,7 @@ suite('Extension Test Suite', () => {
     test('mdReview 配置应有默认的 contentMaxWidth', () => {
         const config = vscode.workspace.getConfiguration('mdReview');
         const maxWidth = config.get<number>('contentMaxWidth');
-        assert.strictEqual(maxWidth, 1200, '默认最大宽度应为 1200');
+        assert.strictEqual(maxWidth, 1100, '默认最大宽度应为 1100');
     });
 
     test('mdReview 配置应有默认的 autoSave', () => {

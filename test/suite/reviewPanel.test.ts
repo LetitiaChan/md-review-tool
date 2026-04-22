@@ -276,8 +276,8 @@ suite('ReviewPanel Test Suite', () => {
             const configProps = ext!.packageJSON.contributes.configuration?.properties;
             assert.ok(configProps);
 
-            assert.strictEqual(configProps['mdReview.fontSize']?.default, 18);
-            assert.strictEqual(configProps['mdReview.lineHeight']?.default, 1.8);
+            assert.strictEqual(configProps['mdReview.fontSize']?.default, 16);
+            assert.strictEqual(configProps['mdReview.lineHeight']?.default, 1.6);
             assert.strictEqual(configProps['mdReview.theme']?.default, 'light');
             assert.strictEqual(configProps['mdReview.autoSave']?.default, true);
             assert.strictEqual(configProps['mdReview.autoSaveDelay']?.default, 1500);

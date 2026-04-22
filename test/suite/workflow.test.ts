@@ -87,8 +87,8 @@ suite('Workflow Test Suite — 完整工作流', () => {
 
         test('配置项应有正确的默认值', () => {
             const config = vscode.workspace.getConfiguration('mdReview');
-            assert.strictEqual(config.get<number>('fontSize'), 18);
-            assert.strictEqual(config.get<number>('lineHeight'), 1.8);
+            assert.strictEqual(config.get<number>('fontSize'), 16);
+            assert.strictEqual(config.get<number>('lineHeight'), 1.6);
             assert.strictEqual(config.get<string>('theme'), 'light');
             assert.strictEqual(config.get<boolean>('autoSave'), true);
             assert.strictEqual(config.get<number>('autoSaveDelay'), 1500);

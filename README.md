@@ -1,6 +1,8 @@
 <a id="english"></a>
 # MD Human Review
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > A powerful Markdown review & annotation extension for VSCode — comment, mark deletions, insert content, WYSIWYG edit, and generate AI fix instructions with one click.
 >
 > 🖊️ 像导师批改论文一样批阅 Markdown —— 评论、删除、插入、所见即所得编辑，一键生成 AI 修改指令。

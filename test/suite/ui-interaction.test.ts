@@ -296,9 +296,9 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
                 codeTheme: config.get<string>('codeTheme')
             };
 
-            assert.strictEqual(settings.fontSize, 18);
-            assert.strictEqual(settings.lineHeight, 1.8);
-            assert.strictEqual(settings.contentMaxWidth, 1200);
+            assert.strictEqual(settings.fontSize, 16);
+            assert.strictEqual(settings.lineHeight, 1.6);
+            assert.strictEqual(settings.contentMaxWidth, 1100);
             assert.strictEqual(settings.fontFamily, '');
             assert.strictEqual(settings.theme, 'light');
             assert.strictEqual(settings.showToc, true);
