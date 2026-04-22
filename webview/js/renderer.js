@@ -585,6 +585,10 @@ const Renderer = (() => {
                 // 去除末尾空行
                 while (lines.length > 0 && lines[lines.length - 1].trim() === '') lines.pop();
                 const isDiff = language === 'diff';
+                // 追踪跨行的未关闭 <span> 标签（hljs 高亮可能产生跨行 span，
+                // 如 markdown 语言中 ```code``` 被包裹在 <span class="hljs-code"> 中）。
+                // 每行结束时补上关闭标签，下一行开头重新打开，确保每个 code-line 内的 HTML 标签平衡。
+                let openSpans = []; // 当前累积的未关闭 span 开标签
                 return lines.map((line, i) => {
                     let lineClass = 'code-line';
                     if (isDiff) {
@@ -598,7 +602,22 @@ const Renderer = (() => {
                             else if (plainText.startsWith('-')) lineClass += ' diff-deletion';
                         }
                     }
-                    return `<span class="${lineClass}" data-line="${i + 1}">${line || ' '}</span>`;
+                    // 在行首重新打开上一行遗留的未关闭 span
+                    const reopenTags = openSpans.join('');
+                    // 扫描当前行的 <span ...> 和 </span>，更新 openSpans 栈
+                    const tagRegex = /<span[^>]*>|<\/span>/g;
+                    let match;
+                    while ((match = tagRegex.exec(line)) !== null) {
+                        if (match[0].startsWith('</')) {
+                            openSpans.pop();
+                        } else {
+                            openSpans.push(match[0]);
+                        }
+                    }
+                    // 在行尾补上关闭标签
+                    const closeTags = '</span>'.repeat(openSpans.length);
+                    const content = (reopenTags + line) || ' ';
+                    return `<span class="${lineClass}" data-line="${i + 1}">${content}${closeTags}</span>`;
                 }).join('\n');
             }
 
