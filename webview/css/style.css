@@ -322,13 +322,6 @@ body {
     padding: 40px;
 }
 
-.welcome-icon {
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .welcome h2 {
     font-size: 24px;
     margin-bottom: 8px;

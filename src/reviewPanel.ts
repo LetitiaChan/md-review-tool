@@ -547,7 +547,8 @@ export class ReviewPanel {
         const exportUri = webviewUri('js/export.js');
         const settingsUri = webviewUri('js/settings.js');
         const appUri = webviewUri('js/app.js');
-const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'assets', 'icons', 'icon-512x512.png')).toString();
+
+
 
         // Read the HTML template
         const htmlPath = path.join(this._extensionUri.fsPath, 'webview', 'index.html');
@@ -577,7 +578,7 @@ const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'as
         html = html.replace(/\$\{exportUri\}/g, exportUri);
         html = html.replace(/\$\{settingsUri\}/g, settingsUri);
         html = html.replace(/\$\{appUri\}/g, appUri);
-        html = html.replace(/\$\{iconUri\}/g, iconUri);
+
 
         return html;
     }

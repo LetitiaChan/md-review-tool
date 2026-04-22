@@ -124,9 +124,6 @@ suite('ReviewPanel Test Suite', () => {
 
         const icon128 = path.join(iconsDir, 'icon-128x128.png');
         assert.ok(fs.existsSync(icon128), 'icon-128x128.png 应存在');
-
-        const icon512 = path.join(iconsDir, 'icon-512x512.png');
-        assert.ok(fs.existsSync(icon512), 'icon-512x512.png 应存在');
     });
 
     // ===== 模板占位符完整性验证（补充） =====
