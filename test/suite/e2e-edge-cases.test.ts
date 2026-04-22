@@ -2369,32 +2369,51 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             );
         });
 
-        test('BT-codeFontVar.7 applyToDOM 应直接设置代码块元素的内联 font-family（Tier 2 — 行为级断言）', () => {
-            // Tier 2 — 行为级断言：验证 applyToDOM 中除了设置 CSS 变量外，还直接遍历代码块元素设置内联样式
+        test('BT-codeFontVar.7 applyCodeFontToElements 应直接设置代码块元素的内联 font-family（Tier 2 — 行为级断言）', () => {
+            // Tier 2 — 行为级断言：验证 applyCodeFontToElements 函数遍历代码块元素设置内联样式
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const settingsJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'settings.js'), 'utf-8');
 
-            // 验证 applyToDOM 中包含 querySelectorAll 遍历代码元素的逻辑
+            // 验证 applyCodeFontToElements 函数存在
             assert.ok(
-                settingsJs.includes("querySelectorAll(") && settingsJs.includes('.document-content code'),
-                'applyToDOM 应包含 querySelectorAll 遍历 .document-content code 元素的逻辑'
+                settingsJs.includes('function applyCodeFontToElements()'),
+                'settings.js 应包含 applyCodeFontToElements 函数定义'
+            );
+
+            // 验证函数中包含 querySelectorAll 遍历代码元素的逻辑
+            // 提取 applyCodeFontToElements 函数体
+            const fnStart = settingsJs.indexOf('function applyCodeFontToElements()');
+            assert.ok(fnStart > -1, 'applyCodeFontToElements 函数应存在');
+            const fnBody = settingsJs.substring(fnStart, fnStart + 800);
+            assert.ok(
+                fnBody.includes('.document-content code'),
+                'applyCodeFontToElements 应包含 .document-content code 选择器'
             );
 
             // 验证遍历后设置 fontFamily 的逻辑
             assert.ok(
-                settingsJs.includes('.fontFamily = codeFontCss'),
-                'applyToDOM 应直接设置代码元素的 style.fontFamily'
+                fnBody.includes('.fontFamily = codeFontCss'),
+                'applyCodeFontToElements 应直接设置代码元素的 style.fontFamily'
+            );
+
+            // 验证 applyCodeFontToElements 被暴露为公共 API
+            assert.ok(
+                settingsJs.includes('applyCodeFontToElements'),
+                'applyCodeFontToElements 应被暴露为公共 API'
             );
         });
 
-        test('BT-codeFontVar.8 applyToDOM 代码字体内联样式应覆盖所有代码相关元素（Tier 3 — 回归断言）', () => {
+        test('BT-codeFontVar.8 applyCodeFontToElements 代码字体内联样式应覆盖所有代码相关元素（Tier 3 — 回归断言）', () => {
             // Tier 3 — 任务特定断言：验证内联样式覆盖了所有代码相关元素选择器
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const settingsJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'settings.js'), 'utf-8');
 
-            // 提取 querySelectorAll 的选择器参数
-            const selectorMatch = settingsJs.match(/querySelectorAll\(\s*['"`]([^'"`]+)['"`]\s*\)/);
-            assert.ok(selectorMatch, 'applyToDOM 中应包含 querySelectorAll 调用');
+            // 提取 applyCodeFontToElements 函数体中的 querySelectorAll 选择器
+            const fnStart = settingsJs.indexOf('function applyCodeFontToElements()');
+            assert.ok(fnStart > -1, 'applyCodeFontToElements 函数应存在');
+            const fnBody = settingsJs.substring(fnStart, fnStart + 800);
+            const selectorMatch = fnBody.match(/querySelectorAll\(\s*['"`]([^'"`]+)['"`]\s*\)/);
+            assert.ok(selectorMatch, 'applyCodeFontToElements 中应包含 querySelectorAll 调用');
             const selector = selectorMatch![1];
 
             // 验证选择器覆盖了所有代码相关元素
@@ -2410,6 +2429,48 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                     `querySelectorAll 选择器应包含 '${required}'，实际选择器: '${selector}'`
                 );
             }
+        });
+
+        test('BT-codeFontVar.9 renderBlocks 完成后应触发渲染完成回调（Tier 2 — 行为级断言）', () => {
+            // Tier 2 — 行为级断言：验证 renderer.js 中 renderBlocks 末尾调用了渲染完成回调
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const rendererJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+
+            // 验证 onRenderComplete 注册方法存在
+            assert.ok(
+                rendererJs.includes('function onRenderComplete('),
+                'renderer.js 应包含 onRenderComplete 注册方法'
+            );
+
+            // 验证 _renderCompleteCallbacks 回调列表存在
+            assert.ok(
+                rendererJs.includes('_renderCompleteCallbacks'),
+                'renderer.js 应包含 _renderCompleteCallbacks 回调列表'
+            );
+
+            // 验证 onRenderComplete 被暴露为公共 API
+            assert.ok(
+                rendererJs.includes('onRenderComplete,') || rendererJs.includes('onRenderComplete }'),
+                'onRenderComplete 应被暴露为公共 API'
+            );
+        });
+
+        test('BT-codeFontVar.10 app.js 应注册渲染完成回调以重新应用代码字体（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：验证 app.js 中注册了 Renderer.onRenderComplete 回调
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // 验证注册了渲染完成回调
+            assert.ok(
+                appJs.includes('Renderer.onRenderComplete('),
+                'app.js 应注册 Renderer.onRenderComplete 回调'
+            );
+
+            // 验证回调中调用了 Settings.applyCodeFontToElements
+            assert.ok(
+                appJs.includes('Settings.applyCodeFontToElements()'),
+                'app.js 的渲染完成回调应调用 Settings.applyCodeFontToElements()'
+            );
         });
     });
 });

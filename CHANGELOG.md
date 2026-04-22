@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.3.9] - 2026-04-22
 
 ### 🐛 Fixes
+- Fix code font setting not applying to dynamically rendered code blocks by adding `onRenderComplete` callback hook in renderer and re-applying inline `font-family` after each `renderBlocks()` call
 - Fix code font setting not taking effect on code blocks by adding direct inline `font-family` style to code elements in `applyToDOM()` (CSS variable alone was insufficient in VS Code webview)
 - Fix code font setting not taking effect on frontmatter card, code theme preview, and diagram edit textarea due to hardcoded `font-family` values instead of using `--code-font-family` CSS variable
 - Fix YAML Front Matter card truncating long text (e.g. comment lines) due to `white-space: nowrap` on `.fm-prop`; replaced with `word-break: break-word` to allow proper wrapping

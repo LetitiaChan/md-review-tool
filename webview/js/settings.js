@@ -106,12 +106,10 @@ const Settings = (() => {
         } else {
             root.style.removeProperty('--code-font-family');
         }
+        console.log('[DIAG] applyToDOM code font:', { codeFontVal, codeFontCss, cssVar: root.style.getPropertyValue('--code-font-family') });
 
-        // 直接设置代码块元素的内联字体（与正文字体处理方式对齐，确保生效）
-        const codeElements = document.querySelectorAll(
-            '.document-content code, .document-content kbd, .frontmatter-card, .diagram-edit-textarea'
-        );
-        codeElements.forEach(el => { el.style.fontFamily = codeFontCss; });
+        // 直接设置代码块元素的内联字体
+        applyCodeFontToElements();
 
         // 应用到文档内容区
         const docContent = document.getElementById('documentContent');
@@ -792,6 +790,24 @@ const Settings = (() => {
         }
     }
 
+    /**
+     * 将当前代码字体设置应用到所有代码相关 DOM 元素的内联样式
+     * 在 renderBlocks 完成后调用，确保新创建的代码元素也能获得正确的字体
+     */
+    function applyCodeFontToElements() {
+        const codeFontVal = currentSettings.codeFontFamily;
+        const codeFontCss = codeFontVal
+            ? "'" + codeFontVal + "', 'Fira Code', Consolas, 'Courier New', monospace"
+            : '';
+        const codeElements = document.querySelectorAll(
+            '.document-content code, .document-content kbd, .frontmatter-card, .diagram-edit-textarea'
+        );
+        if (codeElements.length > 0) {
+            console.log('[DIAG] applyCodeFontToElements:', { codeFontVal, codeFontCss, elementCount: codeElements.length });
+        }
+        codeElements.forEach(el => { el.style.fontFamily = codeFontCss; });
+    }
+
     return {
         init,
         applySettings,
@@ -800,6 +816,7 @@ const Settings = (() => {
         bindEvents,
         getSettings,
         applyToDOM,
+        applyCodeFontToElements,
         onChange
     };
 })();

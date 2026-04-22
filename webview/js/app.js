@@ -177,6 +177,11 @@
             console.error('[App] 设置/渲染器初始化失败:', e);
         }
 
+        // 注册渲染完成回调：每次 renderBlocks 完成后重新应用代码字体内联样式
+        Renderer.onRenderComplete(() => {
+            Settings.applyCodeFontToElements();
+        });
+
         // 监听 Mermaid / 数学公式开关变化，触发文档重新渲染
         Settings.onChange((key, value) => {
             if (key === 'enableMermaid' || key === 'enableMath' || key === 'enablePlantUML' || key === 'enableGraphviz' || key === 'reset') {

@@ -9,6 +9,8 @@
  *   - GitHub 风格告警块 (> [!NOTE] 等)
  *   - 代码块行号（根据设置控制）
  *   - 脚注 ([^1])
+ *
+ * 渲染完成回调：通过 onRenderComplete 注册回调，renderBlocks 完成后自动调用
  *   - 定义列表 (Term\n: Definition)
  *   - 折叠内容区域 (<details>)
  *   - 文本颜色标记 {color:red}text{/color}
@@ -982,6 +984,9 @@ const Renderer = (() => {
         });
     }
 
+    // 渲染完成回调列表
+    const _renderCompleteCallbacks = [];
+
     function renderBlocks(blocks, annotations) {
         const container = document.getElementById('documentContent');
         container.innerHTML = '';
@@ -1105,6 +1110,21 @@ wrapper.innerHTML = `<div class="frontmatter-card"><div class="fm-header"><span 
                     container.appendChild(fnWrapper);
                 }
             }
+        }
+
+        // 渲染完成后调用所有注册的回调（如重新应用代码字体内联样式）
+        for (const cb of _renderCompleteCallbacks) {
+            try { cb(); } catch (e) { console.warn('[Renderer] onRenderComplete callback error:', e); }
+        }
+    }
+
+    /**
+     * 注册渲染完成回调
+     * @param {Function} callback - renderBlocks 完成后调用的回调函数
+     */
+    function onRenderComplete(callback) {
+        if (typeof callback === 'function') {
+            _renderCompleteCallbacks.push(callback);
         }
     }
 
@@ -2355,5 +2375,5 @@ wrapper.innerHTML = `<div class="frontmatter-card"><div class="fm-header"><span 
         }
     }
 
-    return { parseMarkdown, renderBlocks, getBlockIndex, setImageUriCache, getImageUriCache: () => _imageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, restoreMathPlaceholders, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
+    return { parseMarkdown, renderBlocks, onRenderComplete, getBlockIndex, setImageUriCache, getImageUriCache: () => _imageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, restoreMathPlaceholders, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
 })();
