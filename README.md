@@ -389,9 +389,9 @@ MIT
 
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
-| `mdReview.fontSize` | number | 18 | 文档正文字体大小（12-24 px） |
-| `mdReview.lineHeight` | number | 1.8 | 文档正文行高（1.2-2.4） |
-| `mdReview.contentMaxWidth` | number | 1200 | 文档内容区最大宽度（600-1800 px） |
+| `mdReview.fontSize` | number | 16 | 文档正文字体大小（12-24 px） |
+| `mdReview.lineHeight` | number | 1.6 | 文档正文行高（1.2-2.4） |
+| `mdReview.contentMaxWidth` | number | 1100 | 文档内容区最大宽度（600-1800 px） |
 | `mdReview.fontFamily` | string | `""` | 文档正文字体（留空使用系统默认，可输入字体名如 'Microsoft YaHei'） |
 | `mdReview.codeFontFamily` | string | `""` | 代码块字体（留空使用默认等宽字体，可输入字体名如 'Fira Code'） |
 | `mdReview.theme` | string | `"light"` | 界面主题（light / dark / auto） |

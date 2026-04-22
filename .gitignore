@@ -16,12 +16,14 @@ src/**/*.js
 src/**/*.js.map
 
 # AI 工具本地配置：仅忽略用户级 settings，允许追踪 aikit shim 子目录
-.claude/settings.local.json
-.codebuddy/settings.local.json
-.cursor/settings.local.json
+.claude
+.codebuddy
+.cursor
+CODEBUDDY.md
 
 # OpenSpec 工作流产物
 openspec/
+AGENT-PROGRESS.md
 
 # 临时/草稿文件
 todo.md

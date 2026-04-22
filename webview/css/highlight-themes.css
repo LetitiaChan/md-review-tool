@@ -210,7 +210,8 @@ code.hljs {
   color: #c9d1d9;
 }
 [data-code-theme="github-dark"] .hljs-section {
-  color: #1f6feb;
+  /* 由 #1f6feb 提亮至 #58a6ff，修复在 #0d1117 背景下对比度不足（3.06:1 → 7.2:1） */
+  color: #58a6ff;
   font-weight: 700;
 }
 [data-code-theme="github-dark"] .hljs-bullet {
@@ -371,6 +372,7 @@ code.hljs {
 }
 [data-code-theme="vs2015"] .hljs-strong {
   font-weight: 700;
+  color: #ffffff;
 }
 [data-code-theme="vs2015"] .hljs-bullet,
 [data-code-theme="vs2015"] .hljs-selector-tag,
@@ -453,6 +455,7 @@ code.hljs {
 }
 [data-code-theme="atom-one-dark"] .hljs-strong {
   font-weight: 700;
+  color: #e5c07b;
 }
 [data-code-theme="atom-one-dark"] .hljs-link {
   text-decoration: underline;
@@ -594,7 +597,8 @@ code.hljs {
   color: #b45bcf;
 }
 [data-code-theme="dracula"] .hljs-emphasis {
-  color: #b45bcf;
+  /* 由 #b45bcf 提亮至 #d896ea，修复在 #282936 背景下对比度不足（3.7:1 → 5.4:1） */
+  color: #d896ea;
   font-style: italic;
 }
 [data-code-theme="dracula"] .hljs-meta,
@@ -690,6 +694,7 @@ code.hljs {
 }
 [data-code-theme="nord"] .hljs-strong {
   font-weight: bold;
+  color: #eceff4;
 }
 [data-code-theme="nord"] .hljs-link:hover {
   text-decoration: underline;
@@ -840,7 +845,8 @@ code.hljs {
 [data-code-theme="solarized-dark"] .hljs-selector-tag,
 [data-code-theme="solarized-dark"] .hljs-name,
 [data-code-theme="solarized-dark"] .hljs-deletion {
-  color: #dc322f;
+  /* 由 #dc322f 提亮至 #ea6f6b，修复在 #002b36 背景下对比度不足（3.9:1 → 4.9:1） */
+  color: #ea6f6b;
 }
 [data-code-theme="solarized-dark"] .hljs-symbol,
 [data-code-theme="solarized-dark"] .hljs-number,
@@ -885,7 +891,8 @@ code.hljs {
   color: #6c71c4;
 }
 [data-code-theme="solarized-dark"] .hljs-emphasis {
-  color: #6c71c4;
+  /* 由 #6c71c4 调整为 #9a9ed8，修复在 #002b36 背景下对比度不足（3.2:1 → 5.2:1） */
+  color: #9a9ed8;
   font-style: italic;
 }
 [data-code-theme="solarized-dark"] .hljs-meta,
@@ -975,6 +982,7 @@ code.hljs {
 }
 [data-code-theme="tokyo-night"] .hljs-strong {
   font-weight: bold;
+  color: #c0caf5;
 }
 
 /* ==================== One Dark Pro ==================== */
@@ -1039,6 +1047,7 @@ code.hljs {
 }
 [data-code-theme="one-dark-pro"] .hljs-strong {
   font-weight: 700;
+  color: #e5c07b;
 }
 [data-code-theme="one-dark-pro"] .hljs-addition {
   color: #98c379;
@@ -1168,7 +1177,9 @@ code.hljs {
 }
 [data-code-theme="default-dark-modern"] .hljs-keyword.hljs-control,
 [data-code-theme="default-dark-modern"] .hljs-meta .hljs-keyword {
-  color: #C586C0;
+  /* 由 #C586C0 提亮至 #D8A0DC，修复在 #1f1f1f 背景下对比度不足（3.8:1 → 5.1:1），
+     主要影响 markdown 的 ###、**、| 等语法符号的可读性 */
+  color: #D8A0DC;
 }
 [data-code-theme="default-dark-modern"] .hljs-title,
 [data-code-theme="default-dark-modern"] .hljs-title.class_ {
@@ -1245,6 +1256,7 @@ code.hljs {
 }
 [data-code-theme="default-dark-modern"] .hljs-strong {
   font-weight: 700;
+  color: #ffffff;
 }
 [data-code-theme="default-dark-modern"] .hljs-addition {
   color: #b5cea8;

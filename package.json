@@ -140,23 +140,23 @@
     "configuration": {
       "title": "MD Human Review",
       "properties": {
-        "mdReview.fontSize": {
+"mdReview.fontSize": {
           "type": "number",
-          "default": 18,
+          "default": 16,
           "minimum": 12,
           "maximum": 24,
           "description": "%config.fontSize.description%"
         },
-        "mdReview.lineHeight": {
+"mdReview.lineHeight": {
           "type": "number",
-          "default": 1.8,
+          "default": 1.6,
           "minimum": 1.2,
           "maximum": 2.4,
           "description": "%config.lineHeight.description%"
         },
-        "mdReview.contentMaxWidth": {
+"mdReview.contentMaxWidth": {
           "type": "number",
-          "default": 1200,
+          "default": 1100,
           "minimum": 600,
           "maximum": 1800,
           "description": "%config.contentMaxWidth.description%"
