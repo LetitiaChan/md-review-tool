@@ -1,123 +1,123 @@
-# 更新日志
+# Changelog
 
-所有重要的版本变更都将记录在此文件中。
+All notable changes to this project will be documented in this file.
 
 ## [1.3.8] - 2026-04-22
 
-### 🐛 修复
-- 修复围栏代码块嵌套时反引号数量不匹配导致渲染错误
-- 修复代码块行号因 hljs 跨行 span 标签未闭合导致的缩进不对齐
-- 修复帮助页面评论提示文案颜色描述错误（"紫色高亮"→"绿色高亮"）
+### 🐛 Fixes
+- Fix fenced code block nesting where mismatched backtick counts caused rendering errors
+- Fix code block line numbers misaligned due to unclosed hljs cross-line span tags
+- Fix help page comment hint color description ("purple highlight" → "green highlight")
 
-### 🔧 改进
-- 调整字体大小/行高/内容最大宽度默认值为 16px/1.6/1100px
-- 移除欢迎页 512x512 大图标，精简打包体积
+### 🔧 Improvements
+- Adjust default values for font size / line height / max content width to 16px / 1.6 / 1100px
+- Remove welcome page 512x512 icon to reduce package size
 
 ## [1.3.7] - 2026-04-21
 
-### 🐛 修复
-- 修复 mermaid 图自定义填充色时文字对比度不足的可读性问题
-- 修复嵌入模式下编辑工具栏遮挡面板关闭按钮的布局问题
-- 悬浮模式下编辑工具栏不再遮挡左右面板关闭按钮
+### 🐛 Fixes
+- Fix readability issue with mermaid diagrams when custom fill colors cause insufficient text contrast
+- Fix embedded mode edit toolbar overlapping panel close button
+- Floating mode edit toolbar no longer overlaps left/right panel close buttons
 
 ## [1.3.6] - 2026-04-19
 
-### 🔧 改进
-- `.claude/` 目录改用全量复制替代 shim，提升 Claude Code 声明式加载的兼容性
-- `sync-aikit-shims.js` 脚本支持跳过子目录配置（`.claude/rules/` 改由 CLAUDE.md `@import` 替代）
-- 扩充 aikit-shim 测试覆盖全量复制场景（新增 BT-aikitShim.12~15）
+### 🔧 Improvements
+- `.claude/` directory switched from shim to full copy for better Claude Code declarative loading compatibility
+- `sync-aikit-shims.js` script supports skipping subdirectory config (`.claude/rules/` replaced by CLAUDE.md `@import`)
+- Expand aikit-shim test coverage for full copy scenarios (added BT-aikitShim.12~15)
 
-### 📝 文档
-- 修正 README badge 链接，扩充 package.json keywords/categories 改善 Marketplace 搜索可见度
-- CLAUDE.md 开发工作流章节改用 `@.aikp/rules/` 导入语法
+### 📝 Documentation
+- Fix README badge links, expand package.json keywords/categories to improve Marketplace search visibility
+- CLAUDE.md dev workflow section switched to `@.aikp/rules/` import syntax
 
 ## [1.3.5] - 2026-04-19
 
-### ✨ 新增
-- AI Chat 派发适配层支持 Cursor / Windsurf / Trae / Kiro 等基于 VS Code 的 AI 编辑器
-- AI 修复指令追加完成后提示刷新面板
+### ✨ New Features
+- AI Chat dispatch adapter supports Cursor / Windsurf / Trae / Kiro and other VS Code-based AI editors
+- AI fix command appends a prompt to refresh panel after completion
 
-### 🐛 修复
-- 修复打开 md 文件时批注被误删的问题（关闭再开批注丢失）
-- 修复刷新后批阅记录被误删的问题（C-1 历史版本保留策略）
-- 修复 Store 模块缺失 `getRelPath` 导出导致清除批注报 TypeError
-- 修复 AI 修复后新版本号未落盘占位，重开会恢复旧批注的问题
-- 修复关闭期间源文件被外部修改时版本号未升级的问题
-- 一键 AI 修复时不再弹出输出窗口（仅静默写入日志）
+### 🐛 Fixes
+- Fix annotations being accidentally deleted when opening md files (lost after close and reopen)
+- Fix review records being accidentally deleted after refresh (C-1 historical version retention policy)
+- Fix Store module missing `getRelPath` export causing TypeError when clearing annotations
+- Fix AI fix not persisting new version number placeholder, causing old annotations to restore on reopen
+- Fix version number not upgrading when source file is externally modified while panel is closed
+- One-click AI fix no longer pops up output window (silently writes to log only)
 
-### 🔧 其他
-- 新增 `.aikp` 真源目录与 shim 桥接机制，支持 `.codebuddy` / `.claude` / `.cursor` 三工具复用同一份 aikit 规则
+### 🔧 Other
+- Add `.aikp` source-of-truth directory with shim bridge mechanism, supporting `.codebuddy` / `.claude` / `.cursor` triple-tool reuse of the same aikit rules
 
 ## [1.3.0] - 2026-04-08
 
-### ✨ 新增
-- 正文搜索（Ctrl+F）：按 Ctrl+F 弹出搜索栏，支持关键词高亮、匹配计数（"当前/总数"）、上下导航（Enter/Shift+Enter）、Escape 关闭
-- 目录面板搜索框：实时过滤目录项，保持层级结构（匹配项的祖先标题也显示），搜索时自动展开折叠项，清除搜索恢复原始折叠状态
-- 批注面板搜索框：支持多字段搜索（选中文本、评论内容、插入内容），与排序模式兼容，过滤后更新批注计数
+### ✨ New Features
+- Content search (Ctrl+F): Press Ctrl+F to open search bar, supports keyword highlighting, match count ("current/total"), up/down navigation (Enter/Shift+Enter), Escape to close
+- TOC panel search box: Real-time filtering of TOC items while preserving hierarchy (ancestor headings of matched items also shown), auto-expands collapsed items during search, restores original collapse state when search is cleared
+- Annotation panel search box: Multi-field search (selected text, comment content, inserted content), compatible with sort modes, updates annotation count after filtering
 
 ## [1.2.0] - 2026-04-07
 
-### ✨ 新增
-- 支持 PlantUML 图表渲染（通过在线服务器渲染，需网络连接）
-- 支持 Graphviz（DOT 语言）图表渲染（基于 Viz.js 本地渲染）
-- PlantUML / Graphviz 图表支持点击放大查看（Lightbox）
-- 新增 `mdReview.enablePlantUML` 和 `mdReview.enableGraphviz` 设置项
-- 支持多语言（中文/英文），设置中可切换语言，默认跟随 VS Code 语言
-- 新增 `mdReview.language` 设置项
-- 批阅面板支持多窗口——不同文件创建独立面板，同一文件复用已有面板
-- 多窗口同名文件标题自动加父目录区分（如 `README.md — docs`）
-- 字体设置改为下拉选择+自定义输入，正文和代码字体分开设置
-- 新增 `mdReview.codeFontFamily` 设置项
+### ✨ New Features
+- Support PlantUML diagram rendering (via online server, requires network connection)
+- Support Graphviz (DOT language) diagram rendering (local rendering via Viz.js)
+- PlantUML / Graphviz diagrams support click-to-zoom (Lightbox)
+- Add `mdReview.enablePlantUML` and `mdReview.enableGraphviz` settings
+- Multi-language support (Chinese/English), switchable in settings, defaults to VS Code language
+- Add `mdReview.language` setting
+- Review panel supports multi-window — different files create independent panels, same file reuses existing panel
+- Multi-window same-name file titles auto-append parent directory for disambiguation (e.g. `README.md — docs`)
+- Font settings changed to dropdown + custom input, separate settings for body and code fonts
+- Add `mdReview.codeFontFamily` setting
 
-### 🎨 UI 增强
-- 工具栏按钮重新排列，操作更直观
-- 新增悬浮模式 / 嵌入模式切换（`mdReview.panelMode`）
-- 新增文档对齐方式设置（靠左 / 居中 / 靠右，`mdReview.documentAlign`）
-- 面板标题动态显示当前文件名
-- 面板内新增隐藏按钮
-- 帮助弹窗内容改为 i18n 动态渲染，切换语言后帮助页完整翻译
-- 禅模式进入时最大化当前编辑器窗口并关闭下方输出面板，退出时恢复布局
+### 🎨 UI Enhancements
+- Toolbar buttons rearranged for more intuitive operation
+- Add floating mode / embedded mode toggle (`mdReview.panelMode`)
+- Add document alignment setting (left / center / right, `mdReview.documentAlign`)
+- Panel title dynamically displays current filename
+- Add hide button within panel
+- Help modal content switched to i18n dynamic rendering, fully translated when switching language
+- Zen mode maximizes current editor window and closes bottom output panel on enter, restores layout on exit
 
-### 🐛 修复
-- 修复编辑模式下修改引用块内容会导致复制一份引用的问题
-- 修复编辑模式下修改 GitHub 告警块会破坏样式的问题
-- 修复编辑模式下修改代码块会破坏代码样式的问题
-- 修复编辑模式下数学公式显示占位符而非原始文本的问题
-- 修复编辑模式下数学公式和图表显示源码，切回预览时正确渲染
-- 修复编辑模式保存后不重新渲染 DOM 避免破坏图表，切回预览时自动恢复
-- 修复 turndown 列表转换使用 4 空格缩进保持原始嵌套列表格式
-- 修复列表 block 变化时优先用行级文本 diff 替换，保留原始 Markdown 格式和缩进
-- 修复退出编辑模式和一键 AI 修复前立即 await 保存，不等自动保存延迟
-- 修复中英文切换时文件选择下拉框默认文本未实时刷新
-- 修复语言切换后实时刷新禅模式按钮文本和主题按钮标签
-- 修复语言切换无反应——代码被错误嵌套在主题按钮回调内
-- 修复 i18n applyToDOM 对 optgroup 使用 textContent 导致代码高亮主题选项被清空
-- 修复代码字体设置生效——CSS 硬编码改为 CSS 变量统一控制
-- 修复刷新按钮同时同步设置，解决多窗口间设置不一致问题
-- 修复禅模式不再操作编辑器组布局，修复多窗口时文件混淆问题
-- 移除任务列表的删除线样式干扰
+### 🐛 Fixes
+- Fix editing blockquote content in edit mode duplicating the quote
+- Fix editing GitHub alert blocks in edit mode breaking styles
+- Fix editing code blocks in edit mode breaking code styles
+- Fix math formulas showing placeholders instead of raw text in edit mode
+- Fix math formulas and diagrams showing source code in edit mode, correctly rendered when switching back to preview
+- Fix edit mode save no longer re-renders DOM to avoid breaking diagrams, auto-restores when switching back to preview
+- Fix turndown list conversion using 4-space indent to preserve original nested list format
+- Fix list block changes preferring line-level text diff replacement to preserve original Markdown format and indentation
+- Fix exiting edit mode and one-click AI fix now immediately await save, not waiting for auto-save delay
+- Fix file selection dropdown default text not refreshing in real-time when switching languages
+- Fix zen mode button text and theme button label refreshing in real-time after language switch
+- Fix language switch not responding — code was incorrectly nested inside theme button callback
+- Fix i18n applyToDOM using textContent on optgroup clearing code highlight theme options
+- Fix code font setting taking effect — CSS hardcoded values changed to CSS variables for unified control
+- Fix refresh button also syncs settings, resolving settings inconsistency across multiple windows
+- Fix zen mode no longer manipulates editor group layout, fixing file confusion in multi-window scenarios
+- Remove task list strikethrough style interference
 
 ## [1.1.0] - 2025-04-04
 
-### ✨ 新增
-- 初始化 OpenSpec Harness Kit 开发工作流
-- 支持 `.mdc`（Markdown Cursor）文件格式的语法高亮
+### ✨ New Features
+- Initialize OpenSpec Harness Kit development workflow
+- Support `.mdc` (Markdown Cursor) file format syntax highlighting
 
 ## [1.0.0] - 2025-03-31
 
-### 🎉 首次发布
+### 🎉 Initial Release
 
-- 支持 Markdown / MDC 文件的可视化批阅
-- 支持三种批注类型：评论、标记删除、插入内容
-- 支持批注的增删改查与定位跳转
-- 支持导出 AI 可读的结构化修改指令（JSON / 纯文本）
-- 支持亮色 / 暗色 / 跟随系统主题
-- 支持目录导航（TOC）
-- 支持代码高亮（15+ 主题可选）
-- 支持 Mermaid 图表渲染
-- 支持 KaTeX 数学公式渲染
-- 支持自定义字体大小、行高、内容宽度等排版设置
-- 支持批注自动保存
-- 支持侧边栏布局切换（目录/批注左右互换）
-- 支持右键菜单、编辑器标题栏、资源管理器多入口打开
-- 支持快捷键导出（Ctrl+E）
+- Support visual review of Markdown / MDC files
+- Support three annotation types: comment, mark deletion, insert content
+- Support CRUD and navigation for annotations
+- Support exporting AI-readable structured modification instructions (JSON / plain text)
+- Support light / dark / follow system theme
+- Support table of contents navigation (TOC)
+- Support code highlighting (15+ themes available)
+- Support Mermaid diagram rendering
+- Support KaTeX math formula rendering
+- Support custom font size, line height, content width and other typography settings
+- Support auto-save annotations
+- Support sidebar layout toggle (swap TOC/annotations left and right)
+- Support right-click menu, editor title bar, explorer multi-entry open
+- Support keyboard shortcut export (Ctrl+E)
