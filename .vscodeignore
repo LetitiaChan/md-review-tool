@@ -40,6 +40,10 @@ CLAUDE.md
 CODEBUDDY.md
 llms.txt
 
+# ===== 分析缓存与归档（仅开发期使用） =====
+.analysis-cache.md
+.analysis-archive/**
+
 # ===== 其他 =====
 .gitignore
 .vscodeignore

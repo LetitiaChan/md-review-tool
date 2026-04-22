@@ -28,3 +28,7 @@ AGENT-PROGRESS.md
 # 临时/草稿文件
 .review/
 todo.md
+
+# 分析缓存与归档（output-phrasing-engineering skill 产物）
+.analysis-cache.md
+.analysis-archive/

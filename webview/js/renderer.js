@@ -1942,12 +1942,9 @@ const Renderer = (() => {
             // 内部的 D3.js 选择器可能选中旧的 DOM 元素，导致 SVG 内容不正确
             const id = 'mermaid-' + Date.now() + '-' + (++_mermaidCounter);
 
-            // 每次渲染前清理上一次渲染可能残留的临时 DOM 元素
-            // 这对类图等有全局解析器状态的图表类型尤为重要
-            document.querySelectorAll('div[id^="dmermaid-"]').forEach(el => el.remove());
-            document.querySelectorAll('svg[id^="mermaid-"]').forEach(el => {
-                if (!el.closest('.mermaid-container')) el.remove();
-            });
+            // 注意：不在循环内做全局 querySelectorAll 清理（O(n²) 性能问题）
+            // 每次渲染后通过精确的 getElementById 清理当前临时元素（O(1)），
+            // 所有图表渲染完成后再统一做一次全局兜底清理
 
             // 预处理：修复各图表类型中含特殊字符的标识符
             // - sequenceDiagram: ++ 和 -- 是激活/停用操作符
@@ -2012,6 +2009,15 @@ const Renderer = (() => {
                 container.innerHTML = `<div class="mermaid-error"><span class="mermaid-error-icon">⚠️</span> Mermaid 图表渲染失败<pre>${escapeHtml(code)}</pre></div>`;
             }
         }
+
+        // 所有图表渲染完成后，统一清理可能遗漏的临时 DOM 元素（安全网）
+        // 这替代了之前在循环内每次渲染前的全局 querySelectorAll 清理，
+        // 将 O(n²) 降为 O(n)，对包含 10+ 图表的文档性能提升显著
+        document.querySelectorAll('div[id^="dmermaid-"]').forEach(el => el.remove());
+        document.querySelectorAll('svg[id^="mermaid-"]').forEach(el => {
+            if (!el.closest('.mermaid-container')) el.remove();
+        });
+        document.querySelectorAll('iframe[id^="imermaid-"]').forEach(el => el.remove());
     }
 
     /**
