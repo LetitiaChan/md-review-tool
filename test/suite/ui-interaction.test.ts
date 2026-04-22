@@ -1541,6 +1541,41 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(css.includes('.settings-overlay') || css.includes('#settingsOverlay'), '应有设置面板覆盖层样式');
         });
 
+        // Tier 1: 设置面板首屏防闪现 — HTML 内联 display:none 存在性检查
+        test('BT-settings.6 settingsOverlay 应有内联 display:none 防止首屏闪现', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+            assert.ok(
+                html.includes('id="settingsOverlay" style="display:none;"') ||
+                html.includes("id=\"settingsOverlay\" style=\"display:none;\""),
+                'settingsOverlay 元素应有内联 style="display:none;" 防止首屏闪现'
+            );
+        });
+
+        // Tier 1: 设置面板首屏防闪现 — JS show() 中包含 display 清除逻辑
+        test('BT-settings.7 settings.js show() 应包含移除 display:none 的逻辑', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const js = fs.readFileSync(path.join(extPath, 'webview', 'js', 'settings.js'), 'utf-8');
+            assert.ok(
+                js.includes("overlay.style.display = ''") || js.includes("overlay.style.display=''"),
+                'show() 应清除 overlay 的 display:none 以显示面板'
+            );
+        });
+
+        // Tier 1: 设置面板首屏防闪现 — JS hide() 中包含 display:none 恢复逻辑
+        test('BT-settings.8 settings.js hide() 应在过渡结束后恢复 display:none', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const js = fs.readFileSync(path.join(extPath, 'webview', 'js', 'settings.js'), 'utf-8');
+            assert.ok(
+                js.includes("overlay.style.display = 'none'") || js.includes("overlay.style.display='none'"),
+                'hide() 应在过渡结束后将 overlay 设为 display:none'
+            );
+            assert.ok(
+                js.includes('transitionend'),
+                'hide() 应监听 transitionend 事件来恢复 display:none'
+            );
+        });
+
         test('markdown.css 应包含 PlantUML 图表样式', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');

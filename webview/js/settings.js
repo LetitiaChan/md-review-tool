@@ -227,7 +227,11 @@ const Settings = (() => {
     function show() {
         const overlay = document.getElementById('settingsOverlay');
         if (overlay) {
-            overlay.classList.add('visible');
+            // 先移除 display:none（首屏防闪用），再用 rAF 触发过渡动画
+            overlay.style.display = '';
+            requestAnimationFrame(() => {
+                overlay.classList.add('visible');
+            });
             panelVisible = true;
             updatePanelUI();
         }
@@ -241,6 +245,14 @@ const Settings = (() => {
         if (overlay) {
             overlay.classList.remove('visible');
             panelVisible = false;
+            // 过渡结束后恢复 display:none，避免遮挡下层交互
+            const onEnd = () => {
+                overlay.removeEventListener('transitionend', onEnd);
+                if (!panelVisible) {
+                    overlay.style.display = 'none';
+                }
+            };
+            overlay.addEventListener('transitionend', onEnd);
         }
     }
 
