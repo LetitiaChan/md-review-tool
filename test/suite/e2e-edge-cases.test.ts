@@ -2217,4 +2217,156 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             );
         });
     });
+
+    // ===== Suite 26: 代码字体 CSS 变量一致性 =====
+    suite('Suite 26 — 代码字体 CSS 变量一致性', () => {
+        const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+
+        test('BT-codeFontVar.1 所有代码相关 CSS 规则应使用 --code-font-family 变量（Tier 1 — 存在性断言）', () => {
+            // Tier 1 — 源码关键字断言：确保不存在硬编码的等宽字体 font-family（排除非代码元素）
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+
+            const cssFiles = [
+                { name: 'markdown.css', path: path.join(extPath, 'webview', 'css', 'markdown.css') },
+                { name: 'settings.css', path: path.join(extPath, 'webview', 'css', 'settings.css') },
+                { name: 'style.css', path: path.join(extPath, 'webview', 'css', 'style.css') },
+            ];
+
+            // 需要使用 CSS 变量的选择器列表（代码相关元素）
+            const codeSelectors = [
+                { file: 'markdown.css', selector: '.document-content code', desc: '行内代码' },
+                { file: 'markdown.css', selector: '.frontmatter-card', desc: 'frontmatter 卡片' },
+                { file: 'settings.css', selector: '.preview-code-block code', desc: '代码主题预览' },
+                { file: 'style.css', selector: '.diagram-edit-textarea', desc: '图表编辑 textarea' },
+            ];
+
+            for (const { name, path: cssPath } of cssFiles) {
+                const css = fs.readFileSync(cssPath, 'utf-8');
+                const relevantSelectors = codeSelectors.filter(s => s.file === name);
+
+                for (const { selector, desc } of relevantSelectors) {
+                    // 提取包含该选择器的规则块
+                    const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const ruleMatch = css.match(new RegExp(escapedSelector + '\\s*\\{[^}]*\\}'));
+                    if (ruleMatch) {
+                        const rule = ruleMatch[0];
+                        if (rule.includes('font-family')) {
+                            assert.ok(
+                                rule.includes('var(--code-font-family'),
+                                `${name} 中 ${desc}（${selector}）的 font-family 应使用 var(--code-font-family) CSS 变量`
+                            );
+                        }
+                    }
+                }
+            }
+        });
+
+        test('BT-codeFontVar.2 settings.js applyToDOM 应设置 --code-font-family CSS 变量（Tier 2 — 行为级断言）', () => {
+            // Tier 2 — 行为级断言：验证 settings.js 中 applyToDOM 正确设置 CSS 变量
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const settingsJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'settings.js'), 'utf-8');
+
+            // 验证 applyToDOM 中存在 --code-font-family 的 setProperty 调用
+            assert.ok(
+                settingsJs.includes("setProperty('--code-font-family'"),
+                'settings.js 应包含 setProperty(\'--code-font-family\') 调用以设置代码字体 CSS 变量'
+            );
+
+            // 验证存在 removeProperty 调用（用户选择"默认等宽"时清除变量）
+            assert.ok(
+                settingsJs.includes("removeProperty('--code-font-family')"),
+                'settings.js 应包含 removeProperty(\'--code-font-family\') 调用以支持恢复默认字体'
+            );
+
+            // 验证 codeFontFamily 在 DEFAULTS 中有定义
+            assert.ok(
+                settingsJs.includes("codeFontFamily:"),
+                'settings.js DEFAULTS 中应定义 codeFontFamily 默认值'
+            );
+        });
+
+        test('BT-codeFontVar.3 frontmatter-card 应使用 --code-font-family 变量而非硬编码（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：本次修复的核心场景——frontmatter 卡片字体应受设置控制
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
+
+            const fmCardMatch = css.match(/\.frontmatter-card\s*\{[^}]*\}/);
+            assert.ok(fmCardMatch, 'CSS 中应存在 .frontmatter-card 规则');
+            const fmRule = fmCardMatch![0];
+
+            // 必须使用 CSS 变量
+            assert.ok(
+                fmRule.includes('var(--code-font-family'),
+                '.frontmatter-card 的 font-family 必须使用 var(--code-font-family) CSS 变量'
+            );
+            // 不应包含硬编码的 SF Mono（旧代码的特征）
+            assert.ok(
+                !fmRule.includes("'SF Mono'"),
+                '.frontmatter-card 不应硬编码 SF Mono 字体（应通过 CSS 变量控制）'
+            );
+        });
+
+        test('BT-codeFontVar.4 代码主题预览区应使用 --code-font-family 变量而非硬编码（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：代码主题预览区字体应受设置控制
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'settings.css'), 'utf-8');
+
+            const previewMatch = css.match(/\.code-theme-preview\s+\.preview-code-block\s+code\s*\{[^}]*\}/);
+            assert.ok(previewMatch, 'CSS 中应存在 .code-theme-preview .preview-code-block code 规则');
+            const previewRule = previewMatch![0];
+
+            assert.ok(
+                previewRule.includes('var(--code-font-family'),
+                '代码主题预览区的 font-family 必须使用 var(--code-font-family) CSS 变量'
+            );
+        });
+
+        test('BT-codeFontVar.5 图表编辑 textarea 应使用 --code-font-family 变量而非硬编码（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：图表编辑 textarea 字体应受设置控制
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
+
+            const textareaMatch = css.match(/\.diagram-edit-textarea\s*\{[^}]*\}/);
+            assert.ok(textareaMatch, 'CSS 中应存在 .diagram-edit-textarea 规则');
+            const textareaRule = textareaMatch![0];
+
+            assert.ok(
+                textareaRule.includes('var(--code-font-family'),
+                '.diagram-edit-textarea 的 font-family 必须使用 var(--code-font-family) CSS 变量'
+            );
+            // 不应包含硬编码的 Cascadia Code（旧代码的特征）
+            assert.ok(
+                !textareaRule.includes("'Cascadia Code'"),
+                '.diagram-edit-textarea 不应硬编码 Cascadia Code 字体（应通过 CSS 变量控制）'
+            );
+        });
+
+        test('BT-codeFontVar.6 所有 --code-font-family 使用处的 fallback 值应一致（Tier 2 — 行为级断言）', () => {
+            // Tier 2 — 行为级断言：确保所有使用 CSS 变量的地方 fallback 值一致
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+
+            const cssFiles = [
+                path.join(extPath, 'webview', 'css', 'markdown.css'),
+                path.join(extPath, 'webview', 'css', 'settings.css'),
+                path.join(extPath, 'webview', 'css', 'style.css'),
+            ];
+
+            const fallbackPattern = /var\(--code-font-family,\s*([^)]+)\)/g;
+            const fallbacks = new Set<string>();
+
+            for (const cssPath of cssFiles) {
+                const css = fs.readFileSync(cssPath, 'utf-8');
+                let match;
+                while ((match = fallbackPattern.exec(css)) !== null) {
+                    fallbacks.add(match[1].trim());
+                }
+            }
+
+            // 所有 fallback 值应该相同
+            assert.ok(
+                fallbacks.size <= 1,
+                `所有 --code-font-family 的 fallback 值应一致，但发现 ${fallbacks.size} 种不同的值: ${[...fallbacks].join(' | ')}`
+            );
+        });
+    });
 });

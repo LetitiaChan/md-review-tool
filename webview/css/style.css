@@ -1927,7 +1927,7 @@ body.theme-dark * {
     border: none;
     outline: none;
     resize: vertical;
-    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+    font-family: var(--code-font-family, 'Fira Code', 'Consolas', monospace);
     font-size: 13px;
     line-height: 1.6;
     color: var(--text-primary);

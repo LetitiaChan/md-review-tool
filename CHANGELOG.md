@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.3.9] - 2026-04-22
 
 ### 🐛 Fixes
+- Fix code font setting not taking effect on frontmatter card, code theme preview, and diagram edit textarea due to hardcoded `font-family` values instead of using `--code-font-family` CSS variable
 - Fix YAML Front Matter card truncating long text (e.g. comment lines) due to `white-space: nowrap` on `.fm-prop`; replaced with `word-break: break-word` to allow proper wrapping
 - Fix settings panel flashing briefly on every document open by adding inline `display:none` and managing visibility via JS show/hide lifecycle
 - Fix 7 failing tests with stale default value expectations (fontSize 18→16, lineHeight 1.8→1.6, contentMaxWidth 1200→1100) across 5 test files

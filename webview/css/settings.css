@@ -785,7 +785,7 @@ body.theme-dark .slider-row .slider-full {
     padding: 16px 20px;
     font-size: 13px;
     line-height: 1.6;
-    font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+    font-family: var(--code-font-family, 'Fira Code', 'Consolas', monospace);
     overflow-x: auto;
     white-space: pre;
     transition: background-color 0.3s ease;
