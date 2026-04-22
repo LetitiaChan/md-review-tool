@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.3.8] - 2026-04-22
 
 ### 🐛 Fixes
+- Fix YAML Front Matter card truncating long text (e.g. comment lines) due to `white-space: nowrap` on `.fm-prop`; replaced with `word-break: break-word` to allow proper wrapping
 - Fix fenced code block nesting where mismatched backtick counts caused rendering errors
 - Fix code block line numbers misaligned due to unclosed hljs cross-line span tags
 - Fix help page comment hint color description ("purple highlight" → "green highlight")

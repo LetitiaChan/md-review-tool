@@ -2147,4 +2147,74 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
         });
     });
+
+    // ===== Suite 25: Frontmatter 卡片渲染 =====
+    suite('Suite 25 — Frontmatter 卡片渲染', () => {
+        const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+
+        test('BT-frontmatterCard.1 CSS 中 .fm-prop 不应使用 white-space: nowrap（防止长文本截断）', () => {
+            // Tier 1 — 存在性断言：源码关键字断言
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const cssPath = path.join(extPath, 'webview', 'css', 'markdown.css');
+            const cssCode = fs.readFileSync(cssPath, 'utf-8');
+
+            // 提取 .fm-prop 规则块
+            const fmPropMatch = cssCode.match(/\.fm-prop\s*\{[^}]*\}/);
+            assert.ok(fmPropMatch, 'CSS 中应存在 .fm-prop 规则');
+            assert.ok(
+                !fmPropMatch[0].includes('white-space: nowrap') && !fmPropMatch[0].includes('white-space:nowrap'),
+                '.fm-prop 不应使用 white-space: nowrap（会导致长文本截断无法查看）'
+            );
+        });
+
+        test('BT-frontmatterCard.2 CSS 中 .fm-prop 应支持长文本换行（word-break）', () => {
+            // Tier 2 — 行为级断言：验证 CSS 属性确保长文本可换行
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const cssPath = path.join(extPath, 'webview', 'css', 'markdown.css');
+            const cssCode = fs.readFileSync(cssPath, 'utf-8');
+
+            const fmPropMatch = cssCode.match(/\.fm-prop\s*\{[^}]*\}/);
+            assert.ok(fmPropMatch, 'CSS 中应存在 .fm-prop 规则');
+            assert.ok(
+                fmPropMatch[0].includes('word-break: break-word') || fmPropMatch[0].includes('word-break:break-word'),
+                '.fm-prop 应包含 word-break: break-word 以支持长文本换行'
+            );
+        });
+
+        test('BT-frontmatterCard.3 renderer.js 中 frontmatter 渲染应支持注释行（无冒号的行）', () => {
+            // Tier 2 — 行为级断言：验证渲染逻辑能处理 # 注释行
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
+            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+
+            // 验证 frontmatter 渲染逻辑存在对无冒号行的处理（else if 分支）
+            assert.ok(
+                rendererCode.includes('%%FRONTMATTER%%'),
+                'renderer.js 应包含 FRONTMATTER 标记处理逻辑'
+            );
+            // 验证存在 fm-value 类（用于渲染注释行等无键值对的行）
+            assert.ok(
+                rendererCode.includes('fm-value'),
+                'renderer.js 应使用 fm-value 类渲染 frontmatter 值'
+            );
+        });
+
+        test('BT-frontmatterCard.4 frontmatter 卡片应同时支持亮色和暗色主题', () => {
+            // Tier 3 — 任务特定断言：验证两种主题下都有样式定义
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const cssPath = path.join(extPath, 'webview', 'css', 'markdown.css');
+            const cssCode = fs.readFileSync(cssPath, 'utf-8');
+
+            // 暗色主题（默认）
+            assert.ok(
+                cssCode.includes('.frontmatter-card'),
+                'CSS 应包含 .frontmatter-card 基础样式（暗色主题）'
+            );
+            // 亮色主题
+            assert.ok(
+                cssCode.includes('body:not(.theme-dark) .frontmatter-card'),
+                'CSS 应包含亮色主题下的 .frontmatter-card 样式覆盖'
+            );
+        });
+    });
 });

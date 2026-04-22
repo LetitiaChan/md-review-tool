@@ -252,7 +252,7 @@
 
 .fm-prop {
     padding: 2px 0;
-    white-space: nowrap;
+    word-break: break-word;
 }
 
 .fm-key {
