@@ -16,6 +16,9 @@ All notable changes to this project will be documented in this file.
 - Optimize renderMermaid() DOM cleanup from O(n²) to O(n) for documents with many diagrams
 - Change YAML Front Matter card icon from 📄 to ⚙️ to indicate configuration/settings content
 
+### 🔨 Refactor
+- Remove all `[DIAG]` diagnostic console.log statements from `app.js` (46 entries) and `settings.js` (2 entries) after code font bug was confirmed fixed
+
 ### 📖 Docs
 - Add "Use as Markdown Reader" tips to README and help page
 

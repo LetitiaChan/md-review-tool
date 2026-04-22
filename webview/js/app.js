@@ -2456,12 +2456,6 @@ this.innerHTML = t('modal.ai_result.copied');
         const turndownService = createTurndownService();
         const inlineExtractedDefs = Renderer.getInlineExtractedDefs();
 
-        // [DIAG] 诊断日志：block 数量对比
-        console.log('[DIAG] === handleSaveMd block-level diff 开始 ===');
-        console.log('[DIAG] currentMdBlocks.length:', currentMdBlocks.length);
-        console.log('[DIAG] _editSnapshotBlocks.length:', _editSnapshotBlocks.length);
-        console.log('[DIAG] _editSnapshotHtmls.length:', _editSnapshotHtmls.length);
-
         // ===== Block 对齐算法 =====
         // 当用户在编辑模式下删除或新增了整个 block（如删除图片），
         // currentMdBlocks 的数量可能与 _editSnapshotBlocks 不同，
@@ -2500,7 +2494,6 @@ this.innerHTML = t('modal.ai_result.copied');
                 }
                 // 如果没有可用的 snapshot → blockAlignMap[i] 保持 -1（新增 block）
             }
-            console.log('[DIAG] blockAlignMap:', JSON.stringify(blockAlignMap));
         }
 
         for (let i = 0; i < currentMdBlocks.length; i++) {
@@ -2517,15 +2510,10 @@ this.innerHTML = t('modal.ai_result.copied');
                     origMd = origMd + '\n\n' + inlineExtractedDefs[alignedIdx].join('\n');
                 }
                 resultParts.push(origMd);
-                console.log('[DIAG] Block', i, '(aligned→' + alignedIdx + ') → 未变化，保持原始 Markdown（前50字符）:', _editSnapshotBlocks[alignedIdx].substring(0, 50));
             } else {
                 // Block 有变化 → 优先尝试行级精确替换，fallback 到 turndown
                 hasChanges = true;
                 let converted = null;
-                console.log('[DIAG] Block', i, '(aligned→' + alignedIdx + ') → 有变化');
-                console.log('[DIAG] Block', i, 'snapshotHtml === null?', snapshotHtml === null);
-                console.log('[DIAG] Block', i, 'currentHtml（前100字符）:', currentHtml.substring(0, 100));
-                if (snapshotHtml !== null) console.log('[DIAG] Block', i, 'snapshotHtml（前100字符）:', snapshotHtml.substring(0, 100));
 
                 // 尝试行级 diff：如果原始 Markdown 存在且行数相同，逐行对比纯文本
                 // 注意：对于包含引用块、告警块、代码块等复杂结构的 block，
@@ -2566,7 +2554,6 @@ this.innerHTML = t('modal.ai_result.copied');
                     }
 
                     // 只在行数相同时尝试行级替换（结构未变）
-                    console.log('[DIAG] Block', i, '行级 diff: origLines.length=', origLines.length, 'currentLines.length=', currentLines.length);
                     if (origLines.length === currentLines.length) {
                         const patchedLines = [];
                         let canPatch = true;
@@ -2610,10 +2597,7 @@ this.innerHTML = t('modal.ai_result.copied');
 
                 // 行级 diff 失败时 fallback 到 turndown
                 if (converted === null) {
-                    console.log('[DIAG] Block', i, '→ 行级 diff 失败，fallback 到 turndown');
-                    console.log('[DIAG] Block', i, 'innerHTML（前200字符）:', blockEl.innerHTML.substring(0, 200));
                     converted = blockHtmlToMarkdown(blockEl, turndownService);
-                    console.log('[DIAG] Block', i, 'turndown 完整输出:', converted);
 
                     // turndown 不保留原始 Markdown 的前导缩进，
                     // 尝试从原始 Markdown 恢复每行的前导空格
@@ -2631,7 +2615,6 @@ this.innerHTML = t('modal.ai_result.copied');
                                 }
                             }
                             converted = convertedLines.join('\n');
-                            console.log('[DIAG] Block', i, '缩进恢复后 converted:', converted);
                         } else {
                             // 行数不同（新增/删除列表项等）：通过纯文本匹配，
                             // 将 turndown 输出的每行与原始 Markdown 行配对，恢复原始缩进。
@@ -2662,8 +2645,6 @@ this.innerHTML = t('modal.ai_result.copied');
                             // 检测原始 block 是否是列表上下文
                             const listItemRegex = /^(\s*)([-*+]|\d+[.)]) /;
                             const isListBlock = origLines.some(l => listItemRegex.test(l));
-                            console.log('[DIAG] Block', i, '行数不同分支: isListBlock=', isListBlock, 'origLines.length=', origLines.length, 'convertedLines.length=', convertedLines.length);
-                            console.log('[DIAG] Block', i, 'convertedLines:', JSON.stringify(convertedLines));
 
                             // 记录每行是否匹配到了原始行（用于后续处理新增行）
                             const matchedOrigIdx = new Array(convertedLines.length).fill(-1);
@@ -2698,13 +2679,11 @@ this.innerHTML = t('modal.ai_result.copied');
 
                             // 第二遍：处理新增行（没有匹配到原始行的行）
                             // 如果该 block 是列表上下文，为没有列表标记的新增行添加 `- ` 前缀
-                            console.log('[DIAG] Block', i, 'matchedOrigIdx:', JSON.stringify(matchedOrigIdx));
                             if (isListBlock) {
                                 for (let k = 0; k < convertedLines.length; k++) {
                                     if (matchedOrigIdx[k] !== -1) continue; // 已匹配的行跳过
                                     const line = convertedLines[k];
                                     if (!line.trim()) continue; // 空行跳过
-                                    console.log('[DIAG] Block', i, '新增行 k=', k, 'line:', JSON.stringify(line));
 
                                     // 从最近的已匹配列表项邻居继承缩进和标记风格
                                     let neighborIndent = '';
@@ -2731,15 +2710,12 @@ this.innerHTML = t('modal.ai_result.copied');
                                     }
 
                                     const existingMatch = line.match(listItemRegex);
-                                    console.log('[DIAG] Block', i, '新增行 k=', k, 'existingMatch:', !!existingMatch, 'neighborIndent:', JSON.stringify(neighborIndent), 'neighborMarker:', JSON.stringify(neighborMarker));
                                     if (existingMatch) {
                                         // 新增行已有列表标记 → 只修正缩进（继承邻居的缩进）
                                         convertedLines[k] = neighborIndent + line.trimStart();
-                                        console.log('[DIAG] Block', i, '新增行 k=', k, '修正缩进后:', JSON.stringify(convertedLines[k]));
                                     } else {
                                         // 新增行没有列表标记 → 添加标记和缩进
                                         convertedLines[k] = neighborIndent + neighborMarker + line.trim();
-                                        console.log('[DIAG] Block', i, '新增行 k=', k, '添加标记后:', JSON.stringify(convertedLines[k]));
                                     }
                                 }
                             }
@@ -2759,13 +2735,6 @@ this.innerHTML = t('modal.ai_result.copied');
         // 处理新增的 block（用户在编辑模式下新增了内容导致 block 数量增加的情况已在上面循环中处理）
         // 处理删除的 block（当前 block 数量少于快照时，多余的快照 block 自然被忽略）
 
-        // [DIAG] 诊断日志：resultParts 汇总
-        console.log('[DIAG] === resultParts 汇总 ===');
-        console.log('[DIAG] resultParts.length:', resultParts.length);
-        resultParts.forEach((part, idx) => {
-            console.log('[DIAG] resultParts[' + idx + ']（前80字符）:', part.substring(0, 80));
-        });
-
         // 将被过滤掉的引用式链接/脚注定义块插入到正确的位置
         const orphanedDefs = Renderer.getOrphanedDefBlocks();
         const finalParts = [];
@@ -2783,31 +2752,17 @@ this.innerHTML = t('modal.ai_result.copied');
 
         let newContent = finalParts.join('\n\n') + '\n';
 
-        // [DIAG] 诊断日志：最终内容
-        console.log('[DIAG] === newContent 诊断 ===');
-        console.log('[DIAG] newContent.length:', newContent.length);
-        console.log('[DIAG] data.rawMarkdown.length:', data.rawMarkdown.length);
-        console.log('[DIAG] newContent === rawMarkdown?', newContent.trim() === data.rawMarkdown.trim());
-        // 找到代码块围栏的位置，输出前后内容
-        const fenceIdx = newContent.indexOf('```');
-        if (fenceIdx >= 0) {
-            console.log('[DIAG] newContent 中第一个代码围栏位置:', fenceIdx, '前后200字符:', newContent.substring(Math.max(0, fenceIdx - 50), fenceIdx + 200));
-        }
-
         if (newContent.trim() === data.rawMarkdown.trim()) {
-            console.log('[DIAG] newContent 与 rawMarkdown 相同，跳过保存');
             editorDirty = false;
             updateEditStatus('saved', '✓ 已保存');
             setTimeout(() => updateEditStatus('', '编辑模式'), 2000);
             return;
         }
 
-        console.log('[DIAG] newContent 与 rawMarkdown 不同，执行保存');
         updateEditStatus('', '⏳ 保存中...');
 
         try {
             const filePath = data.sourceFilePath || data.fileName;
-            console.log('[DIAG] 保存文件路径:', filePath);
             const result = await callHost('saveFile', { filePath, content: newContent });
 
             if (!result || !result.success) {
