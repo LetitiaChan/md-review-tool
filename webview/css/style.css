@@ -1393,16 +1393,6 @@ textarea:focus {
 }
 
 /* ===== 滚动条 ===== */
-/* 隐藏文档内容区滚动条 */
-.document-content::-webkit-scrollbar {
-    width: 0;
-    display: none;
-}
-.document-content {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
-}
-
 /* 全局滚动条（macOS 风格细长圆角，与目录栏一致） */
 ::-webkit-scrollbar {
     width: 5px;

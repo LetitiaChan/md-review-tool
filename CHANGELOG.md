@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - Fix fenced code block nesting where mismatched backtick counts caused rendering errors
 - Fix code block line numbers misaligned due to unclosed hljs cross-line span tags
 - Fix help page comment hint color description ("purple highlight" → "green highlight")
+- Fix document content area missing scrollbar, preventing users from scrolling to bottom via drag
 
 ### 🔧 Improvements
 - Adjust default values for font size / line height / max content width to 16px / 1.6 / 1100px

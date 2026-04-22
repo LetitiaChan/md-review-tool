@@ -1468,6 +1468,22 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(css.includes('.modal'), '应有弹窗样式');
         });
 
+        test('BT-scrollbar.1 style.css 不应隐藏文档内容区滚动条', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
+
+            // Tier 1: 确保没有隐藏 .document-content 滚动条的规则
+            assert.ok(!css.includes('.document-content::-webkit-scrollbar'), '不应存在隐藏文档内容区 webkit 滚动条的规则');
+            assert.ok(!css.includes('.document-content {\n    scrollbar-width: none'), '不应存在隐藏文档内容区 Firefox 滚动条的规则');
+
+            // Tier 1: 确保 .document-content 有 overflow-y: auto
+            assert.ok(css.includes('overflow-y: auto'), '文档内容区应有 overflow-y: auto 以支持滚动');
+
+            // Tier 1: 确保全局滚动条样式存在
+            assert.ok(css.includes('::-webkit-scrollbar {'), '应有全局 webkit 滚动条样式');
+            assert.ok(css.includes('::-webkit-scrollbar-thumb {'), '应有全局滚动条滑块样式');
+        });
+
         test('settings.css 应包含设置面板样式', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'settings.css'), 'utf-8');
