@@ -294,6 +294,29 @@ body:not(.theme-dark) .fm-value {
     color: #40a02b;
 }
 
+/* 编辑模式下 frontmatter 值的可编辑提示 */
+.wysiwyg-editing .fm-value[contenteditable="true"] {
+    cursor: text;
+    border-radius: 3px;
+    padding: 0 2px;
+    min-width: 2em;
+    display: inline-block;
+}
+.wysiwyg-editing .fm-value[contenteditable="true"]:hover {
+    outline: 1px dashed rgba(166, 227, 161, 0.4);
+}
+.wysiwyg-editing .fm-value[contenteditable="true"]:focus {
+    outline: 1px solid rgba(166, 227, 161, 0.6);
+    background: rgba(166, 227, 161, 0.08);
+}
+body:not(.theme-dark) .wysiwyg-editing .fm-value[contenteditable="true"]:hover {
+    outline-color: rgba(64, 160, 43, 0.4);
+}
+body:not(.theme-dark) .wysiwyg-editing .fm-value[contenteditable="true"]:focus {
+    outline-color: rgba(64, 160, 43, 0.6);
+    background: rgba(64, 160, 43, 0.08);
+}
+
 
 .document-content hr {
     border: none;

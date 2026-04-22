@@ -1467,6 +1467,32 @@
         });
     }
 
+    // ===== 编辑模式：Frontmatter 卡片保护 =====
+    // 让 frontmatter 卡片整体不可编辑，仅 .fm-value 可编辑，
+    // 防止 contentEditable 破坏卡片内部 DOM 结构导致行消失
+    function protectFrontmatterInEditMode() {
+        document.querySelectorAll('.frontmatter-card').forEach(card => {
+            card.contentEditable = 'false';
+            card.querySelectorAll('.fm-value').forEach(val => {
+                val.contentEditable = 'true';
+                // 监听 input 事件以触发编辑状态标记和自动保存
+                val.addEventListener('input', () => {
+                    if (currentMode === 'edit') {
+                        editorDirty = true;
+                        updateEditStatus('modified', t('notification.unsaved'));
+                        scheduleAutoSave();
+                    }
+                });
+                // 阻止 Enter 键在 span 内换行（会破坏 DOM 结构）
+                val.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+    }
+
     // ===== 编辑模式 Tips 提示 =====
     let _editTipsTimer = null;
     function _dismissEditModeTips() {
@@ -1836,6 +1862,8 @@ this.innerHTML = t('modal.ai_result.copied');
             Renderer.restoreMathPlaceholders();
             // 编辑模式下将图表容器转换为可编辑的 textarea 源码区域
             convertDiagramsToEditable();
+            // 编辑模式下保护 frontmatter 卡片 DOM 结构，仅允许编辑 .fm-value
+            protectFrontmatterInEditMode();
             docContent.contentEditable = 'true';
             docContent.classList.add('wysiwyg-editing');
             editorDirty = false;

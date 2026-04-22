@@ -2274,6 +2274,70 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 'app.js 应处理空值属性（如 provider:），只输出 key: 而非 key: undefined'
             );
         });
+
+        test('BT-frontmatterCard.8 编辑模式应保护 frontmatter 卡片 DOM 结构（Tier 1 — 存在性断言）', () => {
+            // Tier 1 — 源码关键字断言：app.js 中应包含 protectFrontmatterInEditMode 函数
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const appPath = path.join(extPath, 'webview', 'js', 'app.js');
+            const appCode = fs.readFileSync(appPath, 'utf-8');
+
+            assert.ok(
+                appCode.includes('protectFrontmatterInEditMode'),
+                'app.js 应包含 protectFrontmatterInEditMode 函数'
+            );
+            // 验证在编辑模式初始化时调用了该函数
+            assert.ok(
+                appCode.includes('protectFrontmatterInEditMode()'),
+                'app.js 应在编辑模式初始化时调用 protectFrontmatterInEditMode()'
+            );
+        });
+
+        test('BT-frontmatterCard.9 frontmatter 卡片应设置 contentEditable=false 保护 DOM（Tier 2 — 行为级断言）', () => {
+            // Tier 2 — 行为级断言：验证 frontmatter 卡片整体不可编辑，仅 .fm-value 可编辑
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const appPath = path.join(extPath, 'webview', 'js', 'app.js');
+            const appCode = fs.readFileSync(appPath, 'utf-8');
+
+            // 验证 .frontmatter-card 设置 contentEditable = 'false'
+            assert.ok(
+                appCode.includes("card.contentEditable = 'false'"),
+                'app.js 应将 .frontmatter-card 设置为 contentEditable=false'
+            );
+            // 验证 .fm-value 设置 contentEditable = 'true'
+            assert.ok(
+                appCode.includes("val.contentEditable = 'true'"),
+                'app.js 应将 .fm-value 设置为 contentEditable=true 以允许编辑值'
+            );
+        });
+
+        test('BT-frontmatterCard.10 编辑模式下 .fm-value 应阻止 Enter 键换行（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：验证 Enter 键被阻止，防止在 span 内换行破坏 DOM
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const appPath = path.join(extPath, 'webview', 'js', 'app.js');
+            const appCode = fs.readFileSync(appPath, 'utf-8');
+
+            // 验证存在 Enter 键拦截逻辑
+            assert.ok(
+                appCode.includes("e.key === 'Enter'") && appCode.includes('e.preventDefault()'),
+                'app.js 应在 .fm-value 的 keydown 事件中阻止 Enter 键以防止换行破坏 DOM'
+            );
+        });
+
+        test('BT-frontmatterCard.11 CSS 应为编辑模式下的 .fm-value 提供可编辑视觉提示（Tier 2 — 行为级断言）', () => {
+            // Tier 2 — 行为级断言：验证 CSS 中存在编辑模式下 .fm-value 的 hover/focus 样式
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const cssPath = path.join(extPath, 'webview', 'css', 'markdown.css');
+            const cssCode = fs.readFileSync(cssPath, 'utf-8');
+
+            assert.ok(
+                cssCode.includes('.wysiwyg-editing .fm-value[contenteditable="true"]'),
+                'CSS 应包含编辑模式下 .fm-value 的基础样式'
+            );
+            assert.ok(
+                cssCode.includes('.wysiwyg-editing .fm-value[contenteditable="true"]:focus'),
+                'CSS 应包含编辑模式下 .fm-value 的 focus 样式'
+            );
+        });
     });
 
     // ===== Suite 26: 代码字体 CSS 变量一致性 =====
