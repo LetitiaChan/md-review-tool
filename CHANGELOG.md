@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Fix help page comment hint color description ("purple highlight" → "green highlight")
 - Fix document content area missing scrollbar, preventing users from scrolling to bottom via drag
 - Fix "Reset to Defaults" button using stale default values (fontSize/lineHeight/contentMaxWidth) in settings panel
+- Fix edit mode warning tips close button not dismissing immediately (replace inline onclick with addEventListener, clear auto-hide timer on manual close)
 
 ### 🔧 Improvements
 - Adjust default values for font size / line height / max content width to 16px / 1.6 / 1100px

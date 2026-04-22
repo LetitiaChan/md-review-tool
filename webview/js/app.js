@@ -1463,6 +1463,12 @@
     }
 
     // ===== 编辑模式 Tips 提示 =====
+    let _editTipsTimer = null;
+    function _dismissEditModeTips() {
+        if (_editTipsTimer) { clearTimeout(_editTipsTimer); _editTipsTimer = null; }
+        const tips = document.getElementById('_editModeTips');
+        if (tips) tips.classList.remove('show');
+    }
     function showEditModeTips() {
         let tips = document.getElementById('_editModeTips');
         if (!tips) {
@@ -1472,21 +1478,28 @@
             tips.innerHTML = `
                 <div class="edit-tips-header">
                     <span>⚠️ ${t('editor.tips_title')}</span>
-                    <button class="edit-tips-close" onclick="this.parentElement.parentElement.classList.remove('show')" title="${t('editor.tips_close')}">✕</button>
+                    <button class="edit-tips-close" title="${t('editor.tips_close')}">✕</button>
                 </div>
                 <div class="edit-tips-body">
                     <div class="edit-tips-item">${t('editor.tips_warning1')}</div>
                     <div class="edit-tips-item">${t('editor.tips_warning2')}</div>
                 </div>
             `;
+            // 关闭按钮事件绑定（避免内联 onclick 被 CSP 或事件冒泡阻止）
+            tips.querySelector('.edit-tips-close').addEventListener('click', (e) => {
+                e.stopPropagation();
+                _dismissEditModeTips();
+            });
             document.body.appendChild(tips);
         }
+        // 清除上一次的自动消失定时器
+        if (_editTipsTimer) { clearTimeout(_editTipsTimer); _editTipsTimer = null; }
         // 重新触发动画
         tips.classList.remove('show');
         void tips.offsetWidth;
         tips.classList.add('show');
         // 8秒后自动消失
-        setTimeout(() => { tips.classList.remove('show'); }, 8000);
+        _editTipsTimer = setTimeout(() => { _dismissEditModeTips(); }, 8000);
     }
 
     // ===== 一键AI修复 =====

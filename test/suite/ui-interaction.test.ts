@@ -887,6 +887,32 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
                 `settings.js contentMaxWidth(${maxWidthMatch![1]}) 应与 package.json(${pkgProps['mdReview.contentMaxWidth'].default}) 一致`);
         });
 
+        test('BT-editTipsDismiss.1 编辑模式提示条关闭按钮应使用 addEventListener 而非内联 onclick', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // Tier 1: showEditModeTips 函数应存在
+            assert.ok(appJs.includes('function showEditModeTips'), 'app.js 应包含 showEditModeTips 函数');
+            // Tier 1: 关闭按钮不应使用内联 onclick（CSP 兼容 + 事件可靠性）
+            assert.ok(!appJs.includes("onclick=\"this.parentElement.parentElement.classList.remove('show')\""),
+                '关闭按钮不应使用内联 onclick，应使用 addEventListener');
+            // Tier 2: 应通过 addEventListener 绑定 click 事件
+            assert.ok(appJs.includes(".edit-tips-close').addEventListener('click'"),
+                '关闭按钮应通过 addEventListener 绑定 click 事件');
+        });
+
+        test('BT-editTipsDismiss.2 showEditModeTips 应保存 setTimeout ID 并在关闭时清除', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // Tier 2: 应有 clearTimeout 调用防止定时器竞态
+            assert.ok(appJs.includes('clearTimeout(_editTipsTimer)'), '应在关闭时清除自动消失定时器');
+            // Tier 3: _dismissEditModeTips 函数应存在，统一处理关闭逻辑
+            assert.ok(appJs.includes('function _dismissEditModeTips'), '应有统一的 _dismissEditModeTips 关闭函数');
+            // Tier 3: setTimeout 应将返回值赋给 _editTipsTimer
+            assert.ok(appJs.includes('_editTipsTimer = setTimeout'), 'setTimeout 返回值应赋给 _editTipsTimer 以便清除');
+        });
+
         test('语言切换应刷新文件选择下拉框默认文本', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
