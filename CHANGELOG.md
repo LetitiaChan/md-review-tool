@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.10] - 2026-04-23
+
+### 🔨 Refactor
+- Remove all `[DIAG]` diagnostic console.log statements from `app.js` and `settings.js` after code font bug was confirmed fixed
+
+### 📖 Docs
+- Streamline project-continuity rule file (388 → 333 lines): compress redundant sections, remove `.aikp` references, retain design rationale
+
 ## [1.3.9] - 2026-04-22
 
 ### 🐛 Fixes
