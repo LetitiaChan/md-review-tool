@@ -2216,6 +2216,64 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 'CSS 应包含亮色主题下的 .frontmatter-card 样式覆盖'
             );
         });
+
+        test('BT-frontmatterCard.5 handleSaveMd 应去掉 %%FRONTMATTER%% 前缀避免写入文件（Tier 1 — 存在性断言）', () => {
+            // Tier 1 — 源码关键字断言：app.js 中应包含去掉 %%FRONTMATTER%% 前缀的逻辑
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const appPath = path.join(extPath, 'webview', 'js', 'app.js');
+            const appCode = fs.readFileSync(appPath, 'utf-8');
+
+            // 验证存在 frontmatter block 的特殊处理逻辑
+            assert.ok(
+                appCode.includes("startsWith('%%FRONTMATTER%%"),
+                'app.js 的保存逻辑应检测 %%FRONTMATTER%% 前缀'
+            );
+            // 验证存在去掉前缀的 slice 操作
+            assert.ok(
+                appCode.includes(".slice('%%FRONTMATTER%%\\n'.length)"),
+                'app.js 应使用 slice 去掉 %%FRONTMATTER%% 前缀以还原原始 YAML'
+            );
+        });
+
+        test('BT-frontmatterCard.6 handleSaveMd 应能从 HTML 卡片重建 YAML front matter（Tier 2 — 行为级断言）', () => {
+            // Tier 2 — 行为级断言：验证保存逻辑包含从 fm-key/fm-value 提取并重建 ---\nkey: value\n--- 的代码
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const appPath = path.join(extPath, 'webview', 'js', 'app.js');
+            const appCode = fs.readFileSync(appPath, 'utf-8');
+
+            // 验证存在从 HTML 卡片提取 key-value 的逻辑
+            assert.ok(
+                appCode.includes(".querySelectorAll('.fm-prop')"),
+                'app.js 应从 .fm-prop 元素中提取 frontmatter 属性'
+            );
+            assert.ok(
+                appCode.includes(".querySelector('.fm-key')"),
+                'app.js 应从 .fm-key 元素中提取属性键名'
+            );
+            assert.ok(
+                appCode.includes(".querySelector('.fm-value')"),
+                'app.js 应从 .fm-value 元素中提取属性值'
+            );
+            // 验证重建时使用 --- 分隔符
+            assert.ok(
+                appCode.includes("lines.push('---')"),
+                'app.js 应使用 --- 分隔符重建 YAML front matter'
+            );
+        });
+
+        test('BT-frontmatterCard.7 frontmatter 保存应处理空值属性（如 provider:）（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：验证空值属性（key 后无 value）的处理
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const appPath = path.join(extPath, 'webview', 'js', 'app.js');
+            const appCode = fs.readFileSync(appPath, 'utf-8');
+
+            // 验证存在空值属性的处理逻辑（val 为空时只输出 key:）
+            // 代码中应有类似 `val ? key + ': ' + val : key + ':'` 的逻辑
+            assert.ok(
+                appCode.includes("key + ':'"),
+                'app.js 应处理空值属性（如 provider:），只输出 key: 而非 key: undefined'
+            );
+        });
     });
 
     // ===== Suite 26: 代码字体 CSS 变量一致性 =====

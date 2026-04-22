@@ -2502,6 +2502,39 @@ this.innerHTML = t('modal.ai_result.copied');
             const alignedIdx = blockAlignMap[i];
             const snapshotHtml = alignedIdx >= 0 && alignedIdx < _editSnapshotHtmls.length ? normalizeHtmlForCompare(_editSnapshotHtmls[alignedIdx]) : null;
 
+            // ===== YAML Front Matter 特殊处理 =====
+            // _editSnapshotBlocks 中的 frontmatter block 带有 %%FRONTMATTER%% 内部标记前缀，
+            // 保存时必须去掉该前缀，还原为原始 YAML front matter（---\nkey: value\n---）。
+            // 如果用户在编辑模式下修改了 frontmatter 卡片内容，需要从 HTML 卡片中提取 key-value 重建。
+            const isFrontmatterBlock = alignedIdx >= 0 && alignedIdx < _editSnapshotBlocks.length
+                && _editSnapshotBlocks[alignedIdx].startsWith('%%FRONTMATTER%%\n');
+            if (isFrontmatterBlock) {
+                if (snapshotHtml !== null && currentHtml === snapshotHtml) {
+                    // Frontmatter 未变化 → 去掉 %%FRONTMATTER%%\n 前缀，保留原始 YAML
+                    resultParts.push(_editSnapshotBlocks[alignedIdx].slice('%%FRONTMATTER%%\n'.length));
+                } else {
+                    // Frontmatter 有变化 → 从 HTML 卡片中提取 key-value，重建 YAML front matter
+                    hasChanges = true;
+                    const fmProps = blockEl.querySelectorAll('.fm-prop');
+                    const lines = ['---'];
+                    fmProps.forEach(prop => {
+                        const keyEl = prop.querySelector('.fm-key');
+                        const valEl = prop.querySelector('.fm-value');
+                        if (keyEl && valEl) {
+                            const key = keyEl.textContent || '';
+                            const val = valEl.textContent || '';
+                            lines.push(val ? key + ': ' + val : key + ':');
+                        } else if (valEl) {
+                            // 无键值对的行（如注释行）
+                            lines.push(valEl.textContent || '');
+                        }
+                    });
+                    lines.push('---');
+                    resultParts.push(lines.join('\n'));
+                }
+                continue;
+            }
+
             if (snapshotHtml !== null && currentHtml === snapshotHtml && alignedIdx < _editSnapshotBlocks.length) {
                 // Block 未变化 → 保持原始 Markdown（含被提取的定义行）
                 let origMd = _editSnapshotBlocks[alignedIdx];

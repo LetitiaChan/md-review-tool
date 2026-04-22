@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [1.3.10] - 2026-04-23
 
+### 🐛 Fixes
+- Fix YAML front matter being corrupted after editing in WYSIWYG mode: `%%FRONTMATTER%%` internal marker prefix was written to file on save, and turndown conversion destroyed `---` delimiters when frontmatter card content was modified
+
 ### 🔨 Refactor
 - Remove all `[DIAG]` diagnostic console.log statements from `app.js` and `settings.js` after code font bug was confirmed fixed
 
