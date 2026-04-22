@@ -863,6 +863,30 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(appJs.includes('updateZenButtonLabel'), 'app.js 应有 updateZenButtonLabel 函数调用');
         });
 
+        test('BT-settingsDefaults.1 settings.js DEFAULTS 应与 package.json 默认值一致', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const settingsJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'settings.js'), 'utf-8');
+            const pkgJson = JSON.parse(fs.readFileSync(path.join(extPath, 'package.json'), 'utf-8'));
+            const pkgProps = pkgJson.contributes.configuration.properties;
+
+            // Tier 1: 提取 settings.js 中 DEFAULTS 的 fontSize / lineHeight / contentMaxWidth
+            const fontSizeMatch = settingsJs.match(/DEFAULTS\s*=\s*\{[^}]*fontSize:\s*(\d+)/);
+            const lineHeightMatch = settingsJs.match(/DEFAULTS\s*=\s*\{[^}]*lineHeight:\s*([\d.]+)/);
+            const maxWidthMatch = settingsJs.match(/DEFAULTS\s*=\s*\{[^}]*contentMaxWidth:\s*(\d+)/);
+
+            assert.ok(fontSizeMatch, 'DEFAULTS 应包含 fontSize');
+            assert.ok(lineHeightMatch, 'DEFAULTS 应包含 lineHeight');
+            assert.ok(maxWidthMatch, 'DEFAULTS 应包含 contentMaxWidth');
+
+            // Tier 3: 与 package.json 默认值交叉验证
+            assert.strictEqual(Number(fontSizeMatch![1]), pkgProps['mdReview.fontSize'].default,
+                `settings.js fontSize(${fontSizeMatch![1]}) 应与 package.json(${pkgProps['mdReview.fontSize'].default}) 一致`);
+            assert.strictEqual(Number(lineHeightMatch![1]), pkgProps['mdReview.lineHeight'].default,
+                `settings.js lineHeight(${lineHeightMatch![1]}) 应与 package.json(${pkgProps['mdReview.lineHeight'].default}) 一致`);
+            assert.strictEqual(Number(maxWidthMatch![1]), pkgProps['mdReview.contentMaxWidth'].default,
+                `settings.js contentMaxWidth(${maxWidthMatch![1]}) 应与 package.json(${pkgProps['mdReview.contentMaxWidth'].default}) 一致`);
+        });
+
         test('语言切换应刷新文件选择下拉框默认文本', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
