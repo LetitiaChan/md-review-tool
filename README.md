@@ -1,6 +1,8 @@
 <a id="english"></a>
 # MD Human Review
 
+[![CI](https://github.com/LetitiaChan/md-review-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/LetitiaChan/md-review-tool/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/visual-studio-marketplace/v/letitia.md-human-review?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > A powerful Markdown review & annotation extension for VSCode — comment, mark deletions, insert content, WYSIWYG edit, and generate AI fix instructions with one click.
