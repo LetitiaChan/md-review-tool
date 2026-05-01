@@ -1991,9 +1991,16 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
 
         test('BT-tableInline.2 table turndown 规则应通过 turndown 转换 cell innerHTML', () => {
             // Tier 2 — 行为级断言：验证使用 ts.turndown(c.innerHTML) 保留行内格式
+            // 注：fix-edit-mode-turndown-safety 引入 htmlNormalized 中间变量（V3a <br> 规范化），
+            //     所以接受 ts.turndown(c.innerHTML) 或 ts.turndown(htmlNormalized) 两种语义等价形式
             assert.ok(
-                appCode.includes('ts.turndown(c.innerHTML)'),
-                'table turndown 规则应使用 ts.turndown(c.innerHTML) 保留行内代码、加粗等格式'
+                /ts\.turndown\(\s*(c\.innerHTML|htmlNormalized)/.test(appCode),
+                'table turndown 规则应使用 ts.turndown(c.innerHTML) 或等价的 ts.turndown(htmlNormalized) 保留行内格式'
+            );
+            // 同时保留 innerHTML 入口的存在性：新代码的 htmlNormalized 来源仍是 c.innerHTML
+            assert.ok(
+                appCode.includes('c.innerHTML'),
+                'table turndown 规则的 cell 处理入口应仍基于 c.innerHTML 而非 c.textContent'
             );
         });
 
@@ -2337,6 +2344,186 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 cssCode.includes('.wysiwyg-editing .fm-value[contenteditable="true"]:focus'),
                 'CSS 应包含编辑模式下 .fm-value 的 focus 样式'
             );
+        });
+    });
+
+    // ===== Suite 14b — 编辑模式 turndown 安全性修补（fix-edit-mode-turndown-safety） =====
+    // 对应 spec: edit-mode-turndown-safety（V1 escape / V2 kbd keep / V3a table br / V3b table align / D4 diag log）
+    // 实证证据来源：一次性 probe 脚本 + jsdom 调用 webview/lib/turndown.js（执行后删除）
+    suite('Suite 14b — 编辑模式 turndown 安全性修补', () => {
+        const extPath14b = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+        const appJsText14b = extPath14b ? fs.readFileSync(path.join(extPath14b, 'webview', 'js', 'app.js'), 'utf-8') : '';
+
+        // Helper: 通过括号深度扫描精确提取 ts.addRule('<ruleName>', { ... }); 的完整闭包体。
+        // 比非贪婪正则更可靠——turndown rule 内部有嵌套 forEach/if/map 产生多层 `}`。
+        // 扫描时跳过字符串字面量（单/双引号、反引号）和正则字面量（/.../flags），处理转义字符。
+        function extractRuleBody(source: string, ruleName: string): string {
+            const anchor = source.indexOf(`ts.addRule('${ruleName}'`);
+            if (anchor < 0) return '';
+            // 定位紧随其后的第一个 `{`
+            let i = source.indexOf('{', anchor);
+            if (i < 0) return '';
+            const start = i;
+            let depth = 1;
+            i++;
+            while (i < source.length && depth > 0) {
+                const ch = source[i];
+                if (ch === "'" || ch === '"' || ch === '`') {
+                    // 跳过字符串字面量（含转义）
+                    const quote = ch;
+                    i++;
+                    while (i < source.length && source[i] !== quote) {
+                        if (source[i] === '\\') i += 2; else i++;
+                    }
+                    i++; // 跳过右引号
+                    continue;
+                }
+                if (ch === '/' && i + 1 < source.length && source[i + 1] === '/') {
+                    // 行注释
+                    while (i < source.length && source[i] !== '\n') i++;
+                    continue;
+                }
+                if (ch === '/' && i + 1 < source.length && source[i + 1] === '*') {
+                    // 块注释
+                    i += 2;
+                    while (i < source.length - 1 && !(source[i] === '*' && source[i + 1] === '/')) i++;
+                    i += 2;
+                    continue;
+                }
+                if (ch === '{') depth++;
+                else if (ch === '}') depth--;
+                i++;
+            }
+            return source.slice(start, i);
+        }
+
+        // ---- V1: 禁用 escape ----
+
+        test('BT-turndownSafety.escape-identity (V1, Tier 1) — createTurndownService 应将 ts.escape 覆盖为恒等函数', () => {
+            assert.ok(extPath14b, '测试环境中扩展路径应可用');
+            assert.ok(
+                /ts\.escape\s*=\s*function\s*\(\s*s\s*\)\s*\{\s*return\s+s\s*;?\s*\}\s*;?/.test(appJsText14b)
+                || /ts\.escape\s*=\s*\(\s*s\s*\)\s*=>\s*s\s*;?/.test(appJsText14b),
+                'app.js 应包含 ts.escape = (s) => s 或等价的恒等覆盖，以禁用 Markdown 转义'
+            );
+        });
+
+        test('BT-turndownSafety.escape-after-color-rule (V1, Tier 2) — escape 覆盖应位于 createTurndownService 的 coloredText 规则之后', () => {
+            // 保证 escape 覆盖不会被后续 addRule 意外覆写
+            const coloredTextIdx = appJsText14b.indexOf("'coloredText'");
+            const escapeIdx = appJsText14b.search(/ts\.escape\s*=/);
+            assert.ok(coloredTextIdx > 0, 'app.js 应包含 coloredText 规则');
+            assert.ok(escapeIdx > coloredTextIdx, 'ts.escape 覆盖应出现在 coloredText addRule 之后，避免被覆写');
+        });
+
+        // ---- V2: <kbd> keep ----
+
+        test('BT-turndownSafety.keep-kbd (V2, Tier 1) — createTurndownService 应将 kbd 加入 keep 清单', () => {
+            assert.ok(
+                /ts\.keep\s*\(\s*\[\s*['"]kbd['"]\s*\]\s*\)/.test(appJsText14b),
+                "app.js 应包含 ts.keep(['kbd']) 使 <kbd> 标签在 turndown 后原样保留"
+            );
+        });
+
+        // ---- V3a: table <br> 规范化 ----
+
+        test('BT-turndownSafety.table-br-normalization (V3a, Tier 2) — table rule 应在 turndown 前将 <br> 替换为两个空格', () => {
+            const tableRuleBody = extractRuleBody(appJsText14b, 'table');
+            assert.ok(tableRuleBody.length > 0, 'app.js 应包含 table rule 完整定义');
+            assert.ok(
+                /<br\\s\*\\\/\?\\s\*>/i.test(tableRuleBody),
+                "table rule 应包含 /<br\\s*\\/?\\s*>/gi 正则以覆盖 <br>、<br/>、<br />"
+            );
+            assert.ok(
+                tableRuleBody.includes("'  '") || tableRuleBody.includes('"  "'),
+                "table rule 中 <br> 应被替换为两个空格字符串"
+            );
+        });
+
+        // ---- V3b: table th[align] 对齐标记 ----
+
+        test('BT-turndownSafety.table-align-reader (V3b, Tier 1) — table rule 应读取 th[align] 属性', () => {
+            const tableRuleBody = extractRuleBody(appJsText14b, 'table');
+            assert.ok(tableRuleBody.length > 0, 'app.js 应包含 table rule');
+            assert.ok(
+                /getAttribute\s*\(\s*['"]align['"]\s*\)/.test(tableRuleBody),
+                "table rule 应调用 getAttribute('align') 读取表头对齐属性"
+            );
+            assert.ok(
+                /alignments/.test(tableRuleBody),
+                "table rule 应维护一个 alignments 数组收集每列对齐信息"
+            );
+        });
+
+        test('BT-turndownSafety.table-align-markers (V3b, Tier 2) — table rule 分隔行应按对齐映射到 :---/:---:/---:/---', () => {
+            const tableRuleBody = extractRuleBody(appJsText14b, 'table');
+            assert.ok(tableRuleBody.length > 0, 'app.js 应包含 table rule');
+            assert.ok(tableRuleBody.includes(':---:'), "对齐映射应包含居中 :---:（center → :---:）");
+            assert.ok(tableRuleBody.includes(':---'), "对齐映射应包含左对齐 :---（left → :---）");
+            assert.ok(tableRuleBody.includes('---:'), "对齐映射应包含右对齐 ---:（right → ---:）");
+        });
+
+        test('BT-turndownSafety.table-feature-flag (V3b, Tier 1) — table rule V2 逻辑应受 __TURNDOWN_TABLE_V2__ flag 守护', () => {
+            const tableRuleBody = extractRuleBody(appJsText14b, 'table');
+            assert.ok(tableRuleBody.length > 0, 'app.js 应包含 table rule');
+            assert.ok(
+                tableRuleBody.includes('__TURNDOWN_TABLE_V2__'),
+                "table rule 应用 window.__TURNDOWN_TABLE_V2__ 作为紧急回滚 feature flag"
+            );
+        });
+
+        // ---- D4: 诊断日志 ----
+
+        test('BT-turndownSafety.diag-whitelist (D4, Tier 1) — handleSaveMd 末尾应包含 32+ 项 known-tags 白名单', () => {
+            const handleSaveMdMatch = appJsText14b.match(/async\s+function\s+handleSaveMd\s*\(\)\s*\{[\s\S]*?^\s{4}\}\s*$/m);
+            const searchScope = handleSaveMdMatch ? handleSaveMdMatch[0] : appJsText14b;
+            const criticalTags = ['p', 'div', 'span', 'strong', 'em', 'code', 'pre', 'ol', 'ul', 'li', 'blockquote', 'table', 'kbd', 'sub', 'sup', 'mark'];
+            for (const tag of criticalTags) {
+                assert.ok(
+                    searchScope.includes("'" + tag + "'"),
+                    `known-tags 白名单应包含 '${tag}'`
+                );
+            }
+        });
+
+        test('BT-turndownSafety.diag-flag-guard (D4, Tier 1) — 诊断日志输出应受 window.__DEBUG_TURNDOWN__ 守护', () => {
+            assert.ok(
+                /window\.__DEBUG_TURNDOWN__\s*===\s*true/.test(appJsText14b),
+                "诊断日志应通过 window.__DEBUG_TURNDOWN__ === true 显式守护，默认关闭"
+            );
+        });
+
+        test('BT-turndownSafety.diag-log-format (D4, Tier 1) — 诊断日志应使用 [DIAG:turndown] 前缀', () => {
+            assert.ok(
+                appJsText14b.includes('[DIAG:turndown] unknown-tags'),
+                "诊断日志格式应与项目约定一致：[DIAG:turndown] unknown-tags: [...]"
+            );
+        });
+
+        test('BT-turndownSafety.diag-error-guarded (D4, Tier 2) — 诊断扫描应被 try/catch 包围，避免阻塞保存', () => {
+            const diagBlockMatch = appJsText14b.match(/__DEBUG_TURNDOWN__\s*===\s*true[\s\S]*?diagProbe[\s\S]*?\}\s*catch/);
+            assert.ok(
+                diagBlockMatch,
+                "诊断日志扫描应在 if (window.__DEBUG_TURNDOWN__ === true) 分支内用 try/catch 包围"
+            );
+        });
+
+        // ---- Fixture 文件存在性（人工 F5 Tier 3 回归前置） ----
+
+        test('BT-turndownSafety.fixtures-present (Tier 1) — test/fixtures/turndown-safety/ 应包含 10 个回归 fixture', () => {
+            assert.ok(extPath14b, '测试环境中扩展路径应可用');
+            const fixtureDir = path.join(extPath14b!, 'test', 'fixtures', 'turndown-safety');
+            const expectedFixtures = [
+                'plain-prose.md', 'nested-lists.md', 'tables-complex.md', 'fenced-codes.md',
+                'math-blocks.md', 'diagrams-mixed.md', 'gh-alerts.md', 'colored-text.md',
+                'frontmatter.md', 'mixed-everything.md'
+            ];
+            for (const name of expectedFixtures) {
+                const p = path.join(fixtureDir, name);
+                assert.ok(fs.existsSync(p), `fixture 文件应存在：${name}`);
+                const content = fs.readFileSync(p, 'utf-8');
+                assert.ok(content.length > 0, `fixture ${name} 不应为空`);
+            }
         });
     });
 

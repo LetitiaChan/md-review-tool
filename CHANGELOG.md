@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.12] - 2026-05-02
+
+### 🐛 Fixes (fix-edit-mode-turndown-safety)
+- Fix edit-mode save path no longer adds backslash escapes to plain prose characters `*`, `_`, and `\`: the default `TurndownService.escape` was backslash-doubling these three characters inside normal prose, breaking Windows paths (`C:\Users\foo` → `C:\\Users\\foo`), snake_case identifiers, and literal asterisks. Override `ts.escape` with an identity function so prose round-trips unchanged. Verified via one-shot jsdom probe: `#`, `|`, `$`, `$$` were NOT actually escaped by default (contrary to common assumption), so the fix targets exactly the three confirmed offenders
+- Fix `<kbd>` HTML tag being silently dropped to plain text during edit-mode save: `<p>Press <kbd>Ctrl</kbd></p>` became `Press Ctrl`, losing the semantic tag. Register `<kbd>` in the turndown keep-list so it survives as raw inline HTML (matching how `<u>`/`<sub>`/`<sup>`/`<mark>`/`<ins>` already work via addRule)
+- Fix table cell `<br>` producing three spaces instead of GFM-standard two-space line break: pre-normalize `<br>`, `<br/>`, `<br />` in cell innerHTML to two spaces before feeding to turndown
+- Fix table column alignment (`<th align="left|center|right">`) being lost during save: always produced `---` separator regardless of alignment. Now reads `align` attribute and emits `:---` / `:---:` / `---:` / `---` accordingly. Wrapped in `window.__TURNDOWN_TABLE_V2__` feature flag (default enabled) for emergency rollback
+
+### ✨ Features
+- Add `[DIAG:turndown] unknown-tags` diagnostic log gated by `window.__DEBUG_TURNDOWN__ === true`: when developers need to investigate user-reported "format lost on save" bugs, enabling this flag in DevTools prints the list of HTML tags encountered during save that did not match any turndown rule or the known-tags whitelist, making gaps in rule coverage observable. Default off, zero noise in production
+
+### 📝 Scope Notes
+- Mathematical formulas (`$x=1$`, `$$E=mc^2$$`) were NOT previously broken by escape — the turndown library does not escape `$` by default (verified empirically). No change needed here
+- Empty table cells `<td></td>` currently output `|  |` with two spaces, which is GFM-compliant. Unchanged to avoid regression risk
+- Block-level diff alignment (`normalizeHtmlForCompare` robustness against `<br>` vs `<br/>` and contenteditable DOM noise) is a known edge that remains scheduled for a separate change (the upcoming dual-mode editor)
+- Known limitation: users manually typing literal `*text*` in Rich Mode and expecting it to render as plain text will now see it interpreted as emphasis; Rich Mode UI does not expose such an entry point, so normal paths are unaffected
+
 ## [1.3.11] - 2026-04-23
 
 ### 🔧 Improvements

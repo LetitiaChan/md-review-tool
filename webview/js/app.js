@@ -2124,17 +2124,36 @@ this.innerHTML = t('modal.ai_result.copied');
                 replacement: function(content, node) {
                     const rows = node.querySelectorAll('tr');
                     if (rows.length === 0) return content;
+                    // V3b: 读取表头 th[align] 收集到 alignments 数组（feature flag 默认 true）
+                    const tableV2Enabled = (typeof window === 'undefined') || (window.__TURNDOWN_TABLE_V2__ !== false);
+                    const alignments = [];
                     const lines = [];
                     rows.forEach((row, rowIdx) => {
                         const cells = row.querySelectorAll('th, td');
-                        // 使用 turndown 转换 cell 内容，保留行内格式（行内代码、加粗等）
+                        // V3a: <br> / <br/> / <br /> 统一替换为 GFM 标准的两个空格换行（在喂给 turndown 之前）
+                        // 再对 turndown 输出中的裸 \n 做单空格兜底，避免串联
                         const cellTexts = Array.from(cells).map(c => {
-                            const cellMd = ts.turndown(c.innerHTML).trim();
-                            // 表格 cell 中不应有换行，替换为空格
+                            const htmlNormalized = tableV2Enabled
+                                ? (c.innerHTML || '').replace(/<br\s*\/?\s*>/gi, '  ')
+                                : (c.innerHTML || '');
+                            const cellMd = ts.turndown(htmlNormalized).trim();
                             return cellMd.replace(/\n/g, ' ');
                         });
+                        // 第一行（表头）同步收集对齐信息
+                        if (rowIdx === 0 && tableV2Enabled) {
+                            cells.forEach(c => {
+                                const align = (c.getAttribute && c.getAttribute('align') || '').toLowerCase().trim();
+                                alignments.push(align === 'left' || align === 'center' || align === 'right' ? align : '');
+                            });
+                        }
                         lines.push('| ' + cellTexts.join(' | ') + ' |');
-                        if (rowIdx === 0) lines.push('| ' + cellTexts.map(() => '---').join(' | ') + ' |');
+                        if (rowIdx === 0) {
+                            // V3b: 按 alignments 映射到 :---, :---:, ---:, --- 默认
+                            const sepCells = tableV2Enabled
+                                ? alignments.map(a => a === 'left' ? ':---' : a === 'center' ? ':---:' : a === 'right' ? '---:' : '---')
+                                : cellTexts.map(() => '---');
+                            lines.push('| ' + sepCells.join(' | ') + ' |');
+                        }
                     });
                     return '\n' + lines.join('\n') + '\n';
                 }
@@ -2278,6 +2297,15 @@ this.innerHTML = t('modal.ai_result.copied');
                     return content;
                 }
             });
+
+            // ===== V1：禁用 Markdown 转义（实证：turndown 默认会给 *、_、\ 三个字符加反斜杠） =====
+            // Rich Mode 的 DOM 来源是项目自己渲染的 HTML，用户不会在该 DOM 中"手写裸 Markdown 期望字面量保留"；
+            // 加粗按钮生成 <strong>，turndown 能正常还原为 **...**；所以 escape 的收益几乎为 0，副作用显著。
+            ts.escape = function(s) { return s; };
+
+            // ===== V2：<kbd> 加入 keep 清单（实证：不在 keep / addRule 中的 <kbd> 会被丢失为纯文本） =====
+            // Markdown 无原生语法，keep 等价"原样输出 <kbd>...</kbd>"，最低成本。
+            ts.keep(['kbd']);
 
             return ts;
         }
@@ -2814,6 +2842,30 @@ this.innerHTML = t('modal.ai_result.copied');
         }
 
         let newContent = finalParts.join('\n\n') + '\n';
+
+        // ===== D4: [DIAG:turndown] 诊断日志（默认静默，由 window.__DEBUG_TURNDOWN__ 开启） =====
+        // 目的：当用户报告 "保存后格式异常"，开发者指导其在 DevTools 执行
+        //       window.__DEBUG_TURNDOWN__ = true; 后再保存一次，即可拿到未命中规则的 tag 清单
+        if (typeof window !== 'undefined' && window.__DEBUG_TURNDOWN__ === true) {
+            try {
+                const knownTags = new Set([
+                    'p','div','span','strong','em','code','pre','ol','ul','li',
+                    'a','img','h1','h2','h3','h4','h5','h6','blockquote','hr',
+                    'table','tr','td','th','thead','tbody','br',
+                    'mark','sub','sup','ins','del','s','u','kbd'
+                ]);
+                const diagProbe = document.createElement('div');
+                diagProbe.innerHTML = Array.from(currentMdBlocks).map(b => b.innerHTML).join('');
+                const unknownTags = new Set();
+                diagProbe.querySelectorAll('*').forEach(el => {
+                    const tag = (el.tagName || '').toLowerCase();
+                    if (tag && !knownTags.has(tag)) unknownTags.add(tag);
+                });
+                if (unknownTags.size > 0) {
+                    console.log('[DIAG:turndown] unknown-tags:', Array.from(unknownTags));
+                }
+            } catch (e) { /* 诊断日志不应阻塞保存 */ }
+        }
 
         if (newContent.trim() === data.rawMarkdown.trim()) {
             editorDirty = false;
