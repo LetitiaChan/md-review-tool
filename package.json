@@ -338,6 +338,7 @@
     "test:ui": "npx playwright test --config test/ui/playwright.config.ts",
     "test:ui:headed": "npx playwright test --config test/ui/playwright.config.ts --headed",
     "test:ui:debug": "npx playwright test --config test/ui/playwright.config.ts --debug",
+    "test:ui:update-snapshots": "npx playwright test --config test/ui/playwright.config.ts --update-snapshots",
     "test:all": "npm test && npm run test:ui",
     "vscode:prepublish": "npm run compile"
   },
