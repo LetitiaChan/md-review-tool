@@ -3129,4 +3129,315 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             );
         });
     });
+
+    // ===== 顶部菜单按钮切换测试 =====
+    suite('7. 顶部菜单按钮切换', () => {
+        // ---------- 目录按钮 (btnToggleToc) ----------
+        test('BT-toolbarToggle.1 toggleTocPanel(show) 应正确切换 collapsed class 和按钮 active 状态（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // toggleTocPanel 应在 show=true 时移除 collapsed，show=false 时添加 collapsed
+            const fnMatch = appJs.match(/function toggleTocPanel\(show\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 toggleTocPanel 函数');
+            const fnBody = fnMatch![0];
+
+            // show=true 分支
+            assert.ok(fnBody.includes("tocPanel.classList.remove('collapsed')"), '展开时应移除 collapsed class');
+            assert.ok(fnBody.includes('tocCollapsed = false'), '展开时应设置 tocCollapsed = false');
+
+            // show=false 分支
+            assert.ok(fnBody.includes("tocPanel.classList.add('collapsed')"), '收起时应添加 collapsed class');
+            assert.ok(fnBody.includes('tocCollapsed = true'), '收起时应设置 tocCollapsed = true');
+
+            // 按钮 active/inactive 状态切换
+            assert.ok(fnBody.includes("'toc-active'"), '应切换 toc-active class');
+            assert.ok(fnBody.includes("'toc-inactive'"), '应切换 toc-inactive class');
+        });
+
+        test('BT-toolbarToggle.2 目录按钮点击应读取 collapsed 状态并取反（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // 点击事件应检查 isCollapsed 并传入 toggleTocPanel
+            const clickMatch = appJs.match(/btnToggleToc.*addEventListener.*click.*\(\)\s*=>\s*\{[\s\S]*?\}\)/);
+            assert.ok(clickMatch, '应存在目录按钮点击事件');
+            assert.ok(clickMatch![0].includes('isCollapsed'), '应读取 collapsed 状态');
+            assert.ok(clickMatch![0].includes('toggleTocPanel'), '应调用 toggleTocPanel');
+        });
+
+        test('BT-toolbarToggle.3 toggleTocPanel 应同步 showToc 设置并通知 Host（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const fnMatch = appJs.match(/function toggleTocPanel\(show\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 toggleTocPanel 函数');
+            const fnBody = fnMatch![0];
+
+            // 应同步设置
+            assert.ok(fnBody.includes('Settings.applySettings'), '应调用 Settings.applySettings 同步设置');
+            assert.ok(fnBody.includes('showToc'), '应同步 showToc 设置项');
+            assert.ok(fnBody.includes("type: 'saveSettings'"), '应通知 Host 保存设置');
+        });
+
+        // ---------- 批注按钮 (btnToggleAnnotations) ----------
+        test('BT-toolbarToggle.4 toggleAnnotationsPanel(show) 应正确切换 collapsed class 和按钮状态（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const fnMatch = appJs.match(/function toggleAnnotationsPanel\(show\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 toggleAnnotationsPanel 函数');
+            const fnBody = fnMatch![0];
+
+            // show=true 分支
+            assert.ok(fnBody.includes("panel.classList.remove('collapsed')"), '展开时应移除 collapsed class');
+            assert.ok(fnBody.includes("toggleBtn.classList.remove('panel-hidden')"), '展开时应移除 panel-hidden class');
+
+            // show=false 分支
+            assert.ok(fnBody.includes("panel.classList.add('collapsed')"), '收起时应添加 collapsed class');
+            assert.ok(fnBody.includes("toggleBtn.classList.add('panel-hidden')"), '收起时应添加 panel-hidden class');
+        });
+
+        test('BT-toolbarToggle.5 批注按钮点击应读取 collapsed 状态并取反（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const clickMatch = appJs.match(/btnToggleAnnotations.*addEventListener.*click.*\(\)\s*=>\s*\{[\s\S]*?\}\)/);
+            assert.ok(clickMatch, '应存在批注按钮点击事件');
+            assert.ok(clickMatch![0].includes('isHidden'), '应读取 collapsed 状态');
+            assert.ok(clickMatch![0].includes('toggleAnnotationsPanel'), '应调用 toggleAnnotationsPanel');
+        });
+
+        test('BT-toolbarToggle.6 toggleAnnotationsPanel 应同步 showAnnotations 设置并通知 Host（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const fnMatch = appJs.match(/function toggleAnnotationsPanel\(show\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 toggleAnnotationsPanel 函数');
+            const fnBody = fnMatch![0];
+
+            assert.ok(fnBody.includes('Settings.applySettings'), '应调用 Settings.applySettings 同步设置');
+            assert.ok(fnBody.includes('showAnnotations'), '应同步 showAnnotations 设置项');
+            assert.ok(fnBody.includes("type: 'saveSettings'"), '应通知 Host 保存设置');
+        });
+
+        // ---------- 禅模式按钮 (btnZenMode) ----------
+        test('BT-toolbarToggle.7 toggleZenMode 应切换 zen-mode class 和 zen-active class（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const fnMatch = appJs.match(/function toggleZenMode\(\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 toggleZenMode 函数');
+            const fnBody = fnMatch![0];
+
+            // 进入禅模式
+            assert.ok(fnBody.includes("body.classList.add('zen-mode')"), '进入时应添加 zen-mode class');
+            assert.ok(fnBody.includes("zenBtn.classList.add('zen-active')"), '进入时应添加 zen-active class');
+
+            // 退出禅模式
+            assert.ok(fnBody.includes("body.classList.remove('zen-mode')"), '退出时应移除 zen-mode class');
+            assert.ok(fnBody.includes("zenBtn.classList.remove('zen-active')"), '退出时应移除 zen-active class');
+        });
+
+        test('BT-toolbarToggle.8 toggleZenMode 切换后按钮 innerHTML 不应包含文字标签（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const fnMatch = appJs.match(/function toggleZenMode\(\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 toggleZenMode 函数');
+            const fnBody = fnMatch![0];
+
+            // innerHTML 赋值不应拼接 t('toolbar.exit_zen') 或 t('toolbar.zen')
+            assert.ok(!fnBody.includes("+ t('toolbar.exit_zen')"), '进入禅模式后 innerHTML 不应拼接退出文字');
+            assert.ok(!fnBody.includes("+ t('toolbar.zen')"), '退出禅模式后 innerHTML 不应拼接禅模式文字');
+        });
+
+        test('BT-toolbarToggle.9 toggleZenMode 应记住并恢复面板状态（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const fnMatch = appJs.match(/function toggleZenMode\(\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 toggleZenMode 函数');
+            const fnBody = fnMatch![0];
+
+            // 进入时应记住面板状态
+            assert.ok(fnBody.includes('_prevTocCollapsed'), '应记住目录面板折叠状态');
+            assert.ok(fnBody.includes('_prevAnnotationsCollapsed'), '应记住批注面板折叠状态');
+
+            // 退出时应恢复面板状态
+            assert.ok(fnBody.includes('toggleTocPanel(true)'), '退出时应恢复目录面板');
+            assert.ok(fnBody.includes('toggleAnnotationsPanel(true)'), '退出时应恢复批注面板');
+        });
+
+        test('BT-toolbarToggle.10 toggleZenMode 应通知 Extension Host 禅模式状态变化（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const fnMatch = appJs.match(/function toggleZenMode\(\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 toggleZenMode 函数');
+            const fnBody = fnMatch![0];
+
+            assert.ok(fnBody.includes("type: 'zenModeChanged'"), '应发送 zenModeChanged 消息');
+            assert.ok(fnBody.includes('entering: true'), '进入时 entering 应为 true');
+            assert.ok(fnBody.includes('entering: false'), '退出时 entering 应为 false');
+        });
+
+        // ---------- 主题按钮 (btnToggleTheme) ----------
+        test('BT-toolbarToggle.11 updateThemeButtonLabel 应根据主题切换 SVG 图标（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const fnMatch = appJs.match(/function updateThemeButtonLabel\(theme\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 updateThemeButtonLabel 函数');
+            const fnBody = fnMatch![0];
+
+            // 应包含 light 和 dark 两套图标
+            assert.ok(fnBody.includes('icons'), '应定义图标映射');
+            assert.ok(fnBody.includes('light:'), '应包含亮色主题图标');
+            assert.ok(fnBody.includes('dark:'), '应包含暗色主题图标');
+
+            // 应处理 auto 模式
+            assert.ok(fnBody.includes("theme === 'auto'"), '应处理 auto 主题模式');
+            assert.ok(fnBody.includes('theme-dark'), '应检测实际显示的主题');
+        });
+
+        test('BT-toolbarToggle.12 主题按钮点击应在 light/dark 之间切换并调用 updateThemeButtonLabel（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // 主题按钮点击事件（多行回调，使用贪婪匹配到闭合括号）
+            const clickStart = appJs.indexOf("getElementById('btnToggleTheme').addEventListener('click'");
+            assert.ok(clickStart !== -1, '应存在主题按钮点击事件');
+            const clickBody = appJs.substring(clickStart, clickStart + 800);
+
+            assert.ok(clickBody.includes('nextTheme'), '应计算下一个主题');
+            assert.ok(clickBody.includes('updateThemeButtonLabel'), '应调用 updateThemeButtonLabel 更新按钮');
+            assert.ok(clickBody.includes('Settings.applySettings'), '应调用 Settings.applySettings 应用设置');
+            assert.ok(clickBody.includes("type: 'saveSettings'"), '应通知 Host 保存设置');
+        });
+
+        test('BT-toolbarToggle.13 主题按钮点击在 auto 模式下应根据实际显示主题决定切换方向（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const clickStart = appJs.indexOf("getElementById('btnToggleTheme').addEventListener('click'");
+            assert.ok(clickStart !== -1, '应存在主题按钮点击事件');
+            const clickBody = appJs.substring(clickStart, clickStart + 800);
+
+            // auto 模式特殊处理
+            assert.ok(clickBody.includes("settings.theme === 'auto'"), '应检测 auto 模式');
+            assert.ok(clickBody.includes('theme-dark'), '应在 auto 模式下检测实际显示主题');
+        });
+
+        // ---------- 预览/编辑模式按钮 (btnModeToggle) ----------
+        test('BT-toolbarToggle.14 switchMode 应切换按钮图标显隐和 mode-edit class（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const fnMatch = appJs.match(/async function switchMode\(mode\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 switchMode 函数');
+            const fnBody = fnMatch![0];
+
+            // 编辑模式
+            assert.ok(fnBody.includes("toggleBtn.classList.add('mode-edit')"), '编辑模式应添加 mode-edit class');
+            assert.ok(fnBody.includes("previewIcon.style.display = 'none'"), '编辑模式应隐藏预览图标');
+
+            // 预览模式
+            assert.ok(fnBody.includes("toggleBtn.classList.remove('mode-edit')"), '预览模式应移除 mode-edit class');
+            assert.ok(fnBody.includes("editIcon.style.display = 'none'"), '预览模式应隐藏编辑图标');
+        });
+
+        test('BT-toolbarToggle.15 模式按钮点击应在 preview/edit 之间切换（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const clickMatch = appJs.match(/btnModeToggle.*addEventListener.*click.*\(\)\s*=>\s*\{[\s\S]*?\}\)/);
+            assert.ok(clickMatch, '应存在模式按钮点击事件');
+            const clickBody = clickMatch![0];
+
+            assert.ok(clickBody.includes("currentMode === 'preview'"), '应检测当前模式');
+            assert.ok(clickBody.includes("'edit'"), '应能切换到编辑模式');
+            assert.ok(clickBody.includes("'preview'"), '应能切换到预览模式');
+            assert.ok(clickBody.includes('switchMode'), '应调用 switchMode');
+        });
+
+        test('BT-toolbarToggle.16 switchMode 编辑→预览应自动保存脏数据（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const fnMatch = appJs.match(/async function switchMode\(mode\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 switchMode 函数');
+            const fnBody = fnMatch![0];
+
+            // 编辑→预览时应自动保存
+            assert.ok(fnBody.includes('editorDirty'), '应检查编辑器脏状态');
+            assert.ok(fnBody.includes('handleSaveMd'), '应调用 handleSaveMd 保存');
+            assert.ok(fnBody.includes('clearAutoSaveTimer'), '应清除自动保存定时器');
+        });
+
+        // ---------- 综合：所有按钮存在性 ----------
+        test('BT-toolbarToggle.17 index.html 应包含所有顶部菜单按钮（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+
+            const requiredButtons = [
+                'btnToggleToc',
+                'btnZenMode',
+                'btnToggleTheme',
+                'btnModeToggle',
+                'btnToggleAnnotations',
+                'btnApplyReview',
+                'btnSettings',
+                'btnRefresh',
+                'btnHelp',
+                'btnSaveMd'
+            ];
+
+            for (const btnId of requiredButtons) {
+                assert.ok(html.includes(`id="${btnId}"`), `应存在按钮 ${btnId}`);
+            }
+        });
+
+        test('BT-toolbarToggle.18 所有切换按钮应注册 click 事件监听器（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const toggleButtons = [
+                'btnToggleToc',
+                'btnZenMode',
+                'btnToggleTheme',
+                'btnModeToggle',
+                'btnToggleAnnotations'
+            ];
+
+            for (const btnId of toggleButtons) {
+                const pattern = new RegExp(`getElementById\\('${btnId}'\\).*addEventListener.*'click'`);
+                assert.ok(pattern.test(appJs), `${btnId} 应注册 click 事件监听器`);
+            }
+        });
+
+        test('BT-toolbarToggle.19 toggleTocPanel 收起时应清除拖拽内联宽度（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const fnMatch = appJs.match(/function toggleTocPanel\(show\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 toggleTocPanel 函数');
+            const fnBody = fnMatch![0];
+
+            // 收起时应清除拖拽设置的内联宽度
+            assert.ok(fnBody.includes("tocPanel.style.width = ''"), '收起时应清除内联宽度');
+        });
+
+        test('BT-toolbarToggle.20 toggleAnnotationsPanel 收起时应清除拖拽内联宽度（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            const fnMatch = appJs.match(/function toggleAnnotationsPanel\(show\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 toggleAnnotationsPanel 函数');
+            const fnBody = fnMatch![0];
+
+            // 收起时应清除拖拽设置的内联宽度
+            assert.ok(fnBody.includes("panel.style.width = ''"), '收起时应清除内联宽度');
+        });
+    });
 });

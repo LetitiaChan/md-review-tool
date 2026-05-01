@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Add visual regression testing (screenshot comparison) using Playwright `toHaveScreenshot()` API: 10 test cases covering basic rendering, tables, code blocks, alert blocks, Mermaid charts, math formulas, dark/light themes, and toolbar; fixed viewport (1280×720) with 1% pixel diff tolerance; `npm run test:ui:update-snapshots` script for baseline regeneration
 
 ### 🐛 Fixes
+- Fix `toggleZenMode()` still appending text labels (`+ t('toolbar.exit_zen')` / `+ t('toolbar.zen')`) to button innerHTML after toggle, inconsistent with `updateZenButtonLabel()` which was already fixed to icon-only
 - Fix YAML front matter being corrupted after editing in WYSIWYG mode: `%%FRONTMATTER%%` internal marker prefix was written to file on save, and turndown conversion destroyed `---` delimiters when frontmatter card content was modified
 - Fix frontmatter card rows disappearing when edited in WYSIWYG mode: set `contentEditable="false"` on the card container and `contentEditable="true"` only on `.fm-value` spans, preventing browser's default editing behavior from destroying the card's DOM structure
 - Fix code blocks incorrectly rendering underscored variable names (e.g. `{cos_name}`, `{file_count}`) with wrong color in dark themes: highlight.js wraps `_xxx_` in `<span class="hljs-emphasis">` (not `<em>`), causing text to become nearly invisible; use regex to strip full `hljs-emphasis`/`hljs-strong` tag pairs while preserving inner text
