@@ -2594,5 +2594,64 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 'app.js 的渲染完成回调应调用 Settings.applyCodeFontToElements()'
             );
         });
+
+        test('BT-hljsCode.1 所有代码高亮主题应定义 .hljs-code 颜色（Tier 1 — 存在性断言）', () => {
+            // Tier 1 — 存在性断言：确保所有主题都有 .hljs-code 定义
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'highlight-themes.css'), 'utf-8');
+
+            const allThemes = [
+                'github', 'github-dark', 'monokai', 'vs2015',
+                'atom-one-dark', 'atom-one-light', 'dracula', 'nord',
+                'solarized-light', 'solarized-dark', 'tokyo-night',
+                'one-dark-pro', 'default-light-modern', 'default-dark-modern'
+            ];
+
+            for (const theme of allThemes) {
+                assert.ok(
+                    css.includes(`[data-code-theme="${theme}"] .hljs-code`),
+                    `主题 ${theme} 应定义 .hljs-code 颜色规则`
+                );
+            }
+        });
+
+        test('BT-hljsCode.2 暗色主题 .hljs-code 颜色应与默认文字色不同以确保区分度（Tier 2 — 行为级断言）', () => {
+            // Tier 2 — 行为级断言：暗色主题的 .hljs-code 颜色不应与默认文字色相同
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'highlight-themes.css'), 'utf-8');
+
+            const darkThemes = [
+                { name: 'default-dark-modern', defaultColor: '#cccccc' },
+                { name: 'atom-one-dark', defaultColor: '#abb2bf' },
+                { name: 'one-dark-pro', defaultColor: '#abb2bf' },
+                { name: 'vs2015', defaultColor: '#dcdcdc' },
+            ];
+
+            for (const { name, defaultColor } of darkThemes) {
+                // 提取 .hljs-code 规则块
+                const pattern = new RegExp(`\\[data-code-theme="${name}"\\]\\s+\\.hljs-code\\s*\\{[^}]*color:\\s*([^;]+);`);
+                const match = css.match(pattern);
+                assert.ok(match, `主题 ${name} 应有 .hljs-code 颜色定义`);
+                const codeColor = match![1].trim().toLowerCase();
+                assert.notStrictEqual(
+                    codeColor, defaultColor.toLowerCase(),
+                    `主题 ${name} 的 .hljs-code 颜色 (${codeColor}) 不应与默认文字色 (${defaultColor}) 相同`
+                );
+            }
+        });
+
+        test('BT-hljsCode.3 default-dark-modern .hljs-code 应使用 #ce9178 字符串色确保 Markdown 内联代码可读（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：验证 default-dark-modern 的 .hljs-code 使用正确的颜色
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'highlight-themes.css'), 'utf-8');
+
+            const pattern = /\[data-code-theme="default-dark-modern"\]\s+\.hljs-code\s*\{[^}]*color:\s*([^;]+);/;
+            const match = css.match(pattern);
+            assert.ok(match, 'default-dark-modern 应有 .hljs-code 颜色定义');
+            assert.strictEqual(
+                match![1].trim().toLowerCase(), '#ce9178',
+                'default-dark-modern .hljs-code 应使用 #ce9178（VS Code 字符串色），确保 Markdown 代码块内反引号内容在暗色背景上清晰可读'
+            );
+        });
     });
 });

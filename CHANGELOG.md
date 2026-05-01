@@ -14,6 +14,7 @@ All notable changes to this project will be documented in this file.
 ### 🔧 Improvements
 - Enhance dark theme table readability: add explicit `color` on `td` cells, add border and enhanced contrast for inline code inside tables, and add explicit `color` for `strong` text inside tables
 - Change default code highlight theme from `default-dark-modern` to `default-light-modern` for better readability in light theme environments
+- Add missing `.hljs-code` color definitions for `default-dark-modern`, `default-light-modern`, `atom-one-dark`, `atom-one-light`, `vs2015`, and `one-dark-pro` themes to ensure Markdown inline code (backtick content) is visually distinct in code blocks
 
 ## [1.3.10] - 2026-04-23
 

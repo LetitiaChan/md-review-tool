@@ -343,6 +343,9 @@ code.hljs {
 [data-code-theme="vs2015"] .hljs-params {
   color: #dcdcdc;
 }
+[data-code-theme="vs2015"] .hljs-code {
+  color: #d69d85;
+}
 [data-code-theme="vs2015"] .hljs-comment,
 [data-code-theme="vs2015"] .hljs-quote {
   color: #57a64a;
@@ -398,6 +401,9 @@ code.hljs {
 [data-code-theme="atom-one-dark"] .hljs {
   color: #abb2bf;
   background: transparent;
+}
+[data-code-theme="atom-one-dark"] .hljs-code {
+  color: #98c379;
 }
 [data-code-theme="atom-one-dark"] .hljs-comment,
 [data-code-theme="atom-one-dark"] .hljs-quote {
@@ -466,6 +472,9 @@ code.hljs {
 [data-code-theme="atom-one-light"] .hljs {
   color: #383a42;
   background: transparent;
+}
+[data-code-theme="atom-one-light"] .hljs-code {
+  color: #50a14f;
 }
 [data-code-theme="atom-one-light"] .hljs-comment,
 [data-code-theme="atom-one-light"] .hljs-quote {
@@ -1013,6 +1022,9 @@ code.hljs {
 [data-code-theme="one-dark-pro"] .hljs-type {
   color: #e5c07b;
 }
+[data-code-theme="one-dark-pro"] .hljs-code {
+  color: #98c379;
+}
 [data-code-theme="one-dark-pro"] .hljs-comment,
 [data-code-theme="one-dark-pro"] .hljs-quote {
   color: #5c6370;
@@ -1097,6 +1109,9 @@ code.hljs {
 }
 [data-code-theme="default-light-modern"] .hljs-type {
   color: #267f99;
+}
+[data-code-theme="default-light-modern"] .hljs-code {
+  color: #a31515;
 }
 [data-code-theme="default-light-modern"] .hljs-comment,
 [data-code-theme="default-light-modern"] .hljs-quote {
@@ -1205,6 +1220,9 @@ code.hljs {
 }
 [data-code-theme="default-dark-modern"] .hljs-type {
   color: #4EC9B0;
+}
+[data-code-theme="default-dark-modern"] .hljs-code {
+  color: #ce9178;
 }
 [data-code-theme="default-dark-modern"] .hljs-comment,
 [data-code-theme="default-dark-modern"] .hljs-quote {
