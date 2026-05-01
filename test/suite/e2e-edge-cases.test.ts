@@ -2653,5 +2653,68 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 'default-dark-modern .hljs-code 应使用 #ce9178（VS Code 字符串色），确保 Markdown 代码块内反引号内容在暗色背景上清晰可读'
             );
         });
+
+        test('BT-mdEmphasis.1 renderer.js 应包含 Markdown 代码块 emphasis 后处理逻辑（Tier 1 — 存在性断言）', () => {
+            // Tier 1 — 存在性断言：验证 renderer.js 中存在 Markdown emphasis 后处理代码
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+
+            assert.ok(
+                rendererCode.includes('hljs-emphasis'),
+                'renderer.js 应包含 hljs-emphasis 后处理逻辑'
+            );
+            assert.ok(
+                rendererCode.includes('hljs-strong'),
+                'renderer.js 应包含 hljs-strong 后处理逻辑'
+            );
+        });
+
+        test('BT-mdEmphasis.2 后处理应仅对 Markdown 语言代码块生效（Tier 2 — 行为级断言）', () => {
+            // Tier 2 — 行为级断言：验证后处理逻辑有语言判断条件
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+
+            // 验证有 Markdown 语言判断条件（不会影响其他语言的代码块）
+            const hasLangCheck = rendererCode.includes("lang === 'markdown'") ||
+                                 rendererCode.includes("lang === 'md'");
+            assert.ok(hasLangCheck, '后处理应有 Markdown 语言判断条件，不影响其他语言');
+
+            // 验证同时处理了 md 别名
+            assert.ok(
+                rendererCode.includes("lang === 'md'"),
+                '后处理应覆盖 md 别名'
+            );
+            assert.ok(
+                rendererCode.includes("lang === 'mkdown'") || rendererCode.includes("lang === 'mkd'"),
+                '后处理应覆盖 mkdown/mkd 别名'
+            );
+        });
+
+        test('BT-mdEmphasis.3 后处理应去掉 em 和 strong 标签以修复下划线变量名渲染（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：验证后处理逻辑正确去掉 emphasis 和 strong 标签
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+
+            // 验证去掉 <em class="hljs-emphasis"> 开标签
+            assert.ok(
+                rendererCode.includes('<em class="hljs-emphasis">'),
+                '后处理应包含去掉 <em class="hljs-emphasis"> 标签的逻辑'
+            );
+            // 验证去掉 </em> 闭标签（正则中写为 <\/em>）
+            assert.ok(
+                rendererCode.includes('<\\/em>'),
+                '后处理应包含去掉 </em> 标签的逻辑'
+            );
+            // 验证去掉 <strong class="hljs-strong"> 开标签
+            assert.ok(
+                rendererCode.includes('<strong class="hljs-strong">'),
+                '后处理应包含去掉 <strong class="hljs-strong"> 标签的逻辑'
+            );
+            // 验证去掉 </strong> 闭标签（正则中写为 <\/strong>）
+            assert.ok(
+                rendererCode.includes('<\\/strong>'),
+                '后处理应包含去掉 </strong> 标签的逻辑'
+            );
+        });
     });
 });
