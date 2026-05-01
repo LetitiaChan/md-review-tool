@@ -25,7 +25,7 @@ const Settings = (() => {
         showLineNumbers: false,
         autoSave: true,
         autoSaveDelay: 1500,
-        codeTheme: 'default-dark-modern',
+codeTheme: 'default-light-modern',
         language: 'zh-CN'
     };
 

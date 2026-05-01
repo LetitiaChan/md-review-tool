@@ -387,7 +387,7 @@ export class ReviewPanel {
                     showLineNumbers: config.get<boolean>('showLineNumbers', false),
                     autoSave: config.get<boolean>('autoSave', true),
                     autoSaveDelay: config.get<number>('autoSaveDelay', 1500),
-                    codeTheme: config.get<string>('codeTheme', 'default-dark-modern'),
+codeTheme: config.get<string>('codeTheme', 'default-light-modern'),
                     language: config.get<string>('language', 'zh-CN')
                 };
                 this.postMessage({ type: 'settingsData', payload: settings, requestId });

@@ -311,7 +311,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.strictEqual(settings.showLineNumbers, false);
             assert.strictEqual(settings.autoSave, true);
             assert.strictEqual(settings.autoSaveDelay, 1500);
-            assert.strictEqual(settings.codeTheme, 'default-dark-modern');
+            assert.strictEqual(settings.codeTheme, 'default-light-modern');
         });
 
         test('配置项应有正确的类型', () => {

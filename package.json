@@ -289,7 +289,7 @@
         },
         "mdReview.codeTheme": {
           "type": "string",
-          "default": "default-dark-modern",
+          "default": "default-light-modern",
           "enum": [
             "auto",
             "github",

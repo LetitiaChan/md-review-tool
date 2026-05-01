@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 
 ### 🔧 Improvements
 - Enhance dark theme table readability: add explicit `color` on `td` cells, add border and enhanced contrast for inline code inside tables, and add explicit `color` for `strong` text inside tables
+- Change default code highlight theme from `default-dark-modern` to `default-light-modern` for better readability in light theme environments
 
 ## [1.3.10] - 2026-04-23
 

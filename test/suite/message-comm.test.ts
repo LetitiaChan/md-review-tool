@@ -109,7 +109,7 @@ suite('Message Communication Test Suite — 消息通信集成', () => {
                     showAnnotations: config.get<boolean>('showAnnotations', true),
                     autoSave: config.get<boolean>('autoSave', true),
                     autoSaveDelay: config.get<number>('autoSaveDelay', 1500),
-                    codeTheme: config.get<string>('codeTheme', 'default-dark-modern')
+                    codeTheme: config.get<string>('codeTheme', 'default-light-modern')
                 };
                 sentMessages.push({ type: 'settingsData', payload: settings, requestId });
                 break;

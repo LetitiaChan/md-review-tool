@@ -127,7 +127,7 @@ suite('Extension Test Suite', () => {
 
     test('mdReview 配置应有默认的 codeTheme', () => {
         const config = vscode.workspace.getConfiguration('mdReview');
-        assert.strictEqual(config.get<string>('codeTheme'), 'default-dark-modern', '默认代码主题应为 default-dark-modern');
+        assert.strictEqual(config.get<string>('codeTheme'), 'default-light-modern', '默认代码主题应为 default-light-modern');
     });
 
     // ===== contributes 验证 =====
