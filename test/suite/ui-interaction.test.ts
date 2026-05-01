@@ -3460,14 +3460,14 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(!fnBody.includes('<rect'), 'updateZenButtonLabel 不应包含 rect 元素');
         });
 
-        test('BT-toolbarToggle.22 工具栏高度应为 44px（Tier 3 — 回归断言）', () => {
+        test('BT-toolbarToggle.22 工具栏高度应为 36px（Tier 3 — 回归断言）', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
 
-            // 主 .toolbar 高度应为 44px
+            // 主 .toolbar 高度应为 36px
             const toolbarMatch = css.match(/\.toolbar\s*\{[^}]*height:\s*(\d+)px/);
             assert.ok(toolbarMatch, '应存在 .toolbar height 定义');
-            assert.strictEqual(toolbarMatch![1], '44', '工具栏高度应为 44px');
+            assert.strictEqual(toolbarMatch![1], '36', '工具栏高度应为 36px');
         });
 
         test('BT-toolbarToggle.23 帮助按钮尺寸应为 22px（Tier 3 — 回归断言）', () => {

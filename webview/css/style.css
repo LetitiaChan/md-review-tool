@@ -52,7 +52,7 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 0 24px;
-    height: 44px;
+    height: 36px;
     background: var(--bg-white);
     border-bottom: 1px solid var(--border);
     box-shadow: var(--shadow-sm);
@@ -1489,7 +1489,7 @@ body.theme-dark * {
 .toolbar {
     flex-wrap: wrap;
     height: auto;
-    min-height: 44px;
+    min-height: 36px;
 }
 
 .toolbar-folder-status {

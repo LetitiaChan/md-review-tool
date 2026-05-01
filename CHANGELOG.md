@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.3.11] - 2026-04-23
 
 ### 🔧 Improvements
+- Reduce toolbar height from 44px to 36px for an even more compact header layout
 - Reduce file selector max-width from 260px to 195px (75% of original) for a more compact toolbar layout
 - Replace Zen Mode button icon from nested rectangles to concentric circles SVG for a cleaner, more intuitive visual metaphor
 - Reduce help button circle size from 28px to 22px for better proportion with other toolbar elements
