@@ -2120,6 +2120,7 @@ body.theme-dark * {
 .modal-help {
     width: 640px;
     max-height: 85vh;
+    overflow-y: hidden;
 }
 
 .help-content {

@@ -3493,5 +3493,40 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(match, '应存在 .file-select max-width 定义');
             assert.strictEqual(match![1], '195', '文件选择控件最大宽度应为 195px');
         });
+
+        test('BT-toolbarToggle.25 帮助弹窗 .modal-help 应设置 overflow-y: hidden 防止双滚动条（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
+
+            // .modal-help 应包含 overflow-y: hidden
+            const match = css.match(/\.modal-help\s*\{[^}]*overflow-y:\s*hidden/);
+            assert.ok(match, '.modal-help 应设置 overflow-y: hidden');
+        });
+
+        test('BT-toolbarToggle.26 帮助弹窗内层 .help-content 应为唯一滚动容器（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
+
+            // .help-content 应有 overflow-y: auto
+            const contentMatch = css.match(/\.help-content\s*\{[^}]*overflow-y:\s*auto/);
+            assert.ok(contentMatch, '.help-content 应设置 overflow-y: auto 作为唯一滚动容器');
+
+            // .modal-help 不应有 overflow-y: auto（应为 hidden）
+            const modalHelpBlock = css.match(/\.modal-help\s*\{[^}]*\}/);
+            assert.ok(modalHelpBlock, '应存在 .modal-help 样式块');
+            assert.ok(!/overflow-y:\s*auto/.test(modalHelpBlock![0]), '.modal-help 不应有 overflow-y: auto');
+        });
+
+        test('BT-toolbarToggle.27 帮助弹窗外层不应产生滚动条（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
+
+            // 基础 .modal 有 overflow-y: auto，但 .modal-help 必须覆盖为 hidden
+            const baseModalMatch = css.match(/\.modal\s*\{[^}]*overflow-y:\s*auto/);
+            assert.ok(baseModalMatch, '基础 .modal 应有 overflow-y: auto');
+
+            const helpOverride = css.match(/\.modal-help\s*\{[^}]*overflow-y:\s*hidden/);
+            assert.ok(helpOverride, '.modal-help 必须覆盖基础 .modal 的 overflow-y 为 hidden，防止双滚动条');
+        });
     });
 });
