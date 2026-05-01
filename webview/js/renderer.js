@@ -2051,7 +2051,10 @@ wrapper.innerHTML = `<div class="frontmatter-card"><div class="fm-header"><span 
             code = preprocessMermaidCode(code);
 
             try {
-                const { svg } = await mermaid.render(id, code);
+                // 传递 container 作为第三个参数，确保 Mermaid 将临时 SVG 插入到可见的 DOM 中
+                // gitGraph 等图表类型在渲染时需要通过 getBBox() 计算文本尺寸，
+                // 如果临时 SVG 不在可见的渲染树中会抛出 "svg element not in render tree" 错误
+                const { svg } = await mermaid.render(id, code, container);
                 // 渲染完成后立即清理 mermaid 创建的临时 DOM 元素
                 // 防止残留元素影响后续图表的渲染（特别是类图的 D3 选择器缓存问题）
                 const tempDiv = document.getElementById('d' + id);

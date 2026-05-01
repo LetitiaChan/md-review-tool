@@ -1707,6 +1707,32 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(topMargin <= 12, `正文上 margin (${topMargin}px) 不应超过 12px`);
         });
 
+        test('BT-gitGraph.1 mermaid.render 调用应传递 container 参数（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const js = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+
+            // mermaid.render 应传递第三个参数 container，确保临时 SVG 在可见的渲染树中
+            assert.ok(
+                js.includes('mermaid.render(id, code, container)'),
+                'mermaid.render 应传递 container 作为第三个参数'
+            );
+        });
+
+        test('BT-gitGraph.2 mermaid.render 传递 container 应防止 gitGraph getBBox 失败回归（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const js = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+
+            // 确保 render 调用中包含 container 参数（不是只传 id 和 code）
+            const renderCallMatch = js.match(/await\s+mermaid\.render\s*\(\s*id\s*,\s*code\s*,\s*container\s*\)/);
+            assert.ok(renderCallMatch, 'mermaid.render 应使用 await mermaid.render(id, code, container) 形式');
+
+            // 确保注释中说明了 gitGraph 需要 container 的原因
+            assert.ok(
+                js.includes('getBBox') || js.includes('render tree'),
+                '应有注释说明传递 container 的原因（getBBox 或 render tree）'
+            );
+        });
+
         test('markdown.css 应包含 PlantUML 图表样式', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');

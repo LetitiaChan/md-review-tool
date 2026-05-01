@@ -131,6 +131,37 @@ test.describe('图表渲染测试', () => {
             expect(svgContent).toContain('Active');
             expect(svgContent).toContain('Inactive');
         });
+
+        test('BT-chart.11 Mermaid gitGraph 应正确渲染', async ({ page }) => {
+            // Tier 2/3：验证 gitGraph 的渲染能力
+            // 这是 mermaid.render(id, code, container) 传递 container 参数的回归测试
+            // gitGraph 在渲染时需要通过 getBBox() 计算文本尺寸，
+            // 如果临时 SVG 不在可见的渲染树中会抛出 "svg element not in render tree" 错误
+            await injectMarkdown(page, [
+                '```mermaid',
+                'gitGraph',
+                '    commit',
+                '    commit',
+                '    branch develop',
+                '    checkout develop',
+                '    commit',
+                '    commit',
+                '    checkout main',
+                '    merge develop',
+                '    commit',
+                '```'
+            ].join('\n'));
+            await waitForRender(page);
+
+            // 应该成功渲染为 SVG，而非显示错误
+            const svgs = page.locator('.mermaid-rendered svg');
+            await expect(svgs.first()).toBeVisible({ timeout: 10000 });
+
+            // 不应显示错误信息
+            const errorContainer = page.locator('.mermaid-error');
+            const errorCount = await errorContainer.count();
+            expect(errorCount).toBe(0);
+        });
     });
 
     test.describe('Graphviz 图表', () => {

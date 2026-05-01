@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - Add visual regression testing (screenshot comparison) using Playwright `toHaveScreenshot()` API: 10 test cases covering basic rendering, tables, code blocks, alert blocks, Mermaid charts, math formulas, dark/light themes, and toolbar; fixed viewport (1280×720) with 1% pixel diff tolerance; `npm run test:ui:update-snapshots` script for baseline regeneration
 
 ### 🐛 Fixes
+- Fix Mermaid gitGraph rendering failure ("svg element not in render tree"): pass `container` as the third argument to `mermaid.render()` so the temporary SVG is inserted into a visible DOM element, allowing `getBBox()` to compute text dimensions correctly
 - Fix help modal showing double scrollbars by setting `overflow-y: hidden` on `.modal-help` so only the inner `.help-content` scrolls
 - Fix `toggleZenMode()` still appending text labels (`+ t('toolbar.exit_zen')` / `+ t('toolbar.zen')`) to button innerHTML after toggle, inconsistent with `updateZenButtonLabel()` which was already fixed to icon-only
 - Fix YAML front matter being corrupted after editing in WYSIWYG mode: `%%FRONTMATTER%%` internal marker prefix was written to file on save, and turndown conversion destroyed `---` delimiters when frontmatter card content was modified
