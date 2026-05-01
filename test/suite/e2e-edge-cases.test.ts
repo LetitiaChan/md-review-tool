@@ -2717,5 +2717,29 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 '后处理应使用正则捕获组 $1 保留标签内的内容文本'
             );
         });
+
+        test('BT-mdEmphasis.4 后处理应去掉跨越空行的 hljs-quote span 以修复引用块吞掉后续内容（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：验证后处理逻辑能检测并去掉跨越空行的 hljs-quote span
+            // 场景：> 直接修改 node_modules\n\n### 错误 (CAUTION)
+            // hljs 输出中 hljs-quote 因未闭合的 _ 导致 emphasis 跨行，连带 quote 也跨行吞掉 ### 标题
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+
+            // 验证存在 hljs-quote 跨行检测逻辑
+            assert.ok(
+                rendererCode.includes('hljs-quote'),
+                '后处理应包含 hljs-quote 跨行检测逻辑'
+            );
+            // 验证通过检测 \\n\\n（空行）来判断是否跨行
+            assert.ok(
+                rendererCode.includes("'\\n\\n'"),
+                '后处理应通过检测空行（\\n\\n）来判断 hljs-quote 是否跨行'
+            );
+            // 验证跨行时去掉 span 保留内容，正常时保留 span
+            assert.ok(
+                rendererCode.includes('? inner : match'),
+                '后处理应在 hljs-quote 跨行时去掉 span 保留内容，正常时保留 span'
+            );
+        });
     });
 });

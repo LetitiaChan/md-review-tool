@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Fix YAML front matter being corrupted after editing in WYSIWYG mode: `%%FRONTMATTER%%` internal marker prefix was written to file on save, and turndown conversion destroyed `---` delimiters when frontmatter card content was modified
 - Fix frontmatter card rows disappearing when edited in WYSIWYG mode: set `contentEditable="false"` on the card container and `contentEditable="true"` only on `.fm-value` spans, preventing browser's default editing behavior from destroying the card's DOM structure
 - Fix code blocks incorrectly rendering underscored variable names (e.g. `{cos_name}`, `{file_count}`) with wrong color in dark themes: highlight.js wraps `_xxx_` in `<span class="hljs-emphasis">` (not `<em>`), causing text to become nearly invisible; use regex to strip full `hljs-emphasis`/`hljs-strong` tag pairs while preserving inner text
+- Fix `hljs-quote` span swallowing subsequent content in markdown code blocks: when a `>` blockquote line contains an unclosed `_` (e.g. `node_modules`), highlight.js emphasis spans across paragraph boundaries, causing the outer `hljs-quote` to also span across blank lines and incorrectly color subsequent headings/text; detect and strip `hljs-quote` spans whose content crosses blank lines (`\n\n`)
 
 ### 🔧 Improvements
 - Enhance dark theme table readability: add explicit `color` on `td` cells, add border and enhanced contrast for inline code inside tables, and add explicit `color` for `strong` text inside tables

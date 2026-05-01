@@ -650,6 +650,13 @@ const Renderer = (() => {
                     .replace(/<span class="hljs-strong">([\s\S]*?)<\/span>/g, '$1')
                     .replace(/<em class="hljs-emphasis">([\s\S]*?)<\/em>/g, '$1')
                     .replace(/<strong class="hljs-strong">([\s\S]*?)<\/strong>/g, '$1');
+                // 修复 hljs-quote 跨行吞掉后续内容的问题：
+                // 当 > 引用行中含未闭合的 _ 时，emphasis 跨行导致外层 hljs-quote 也跨行，
+                // 去掉 emphasis 后 hljs-quote 仍包裹了后续段落（如 ### 标题）。
+                // 检测 hljs-quote 内容是否跨越空行（\n\n），如果是则去掉 span 保留内容。
+                highlighted = highlighted.replace(/<span class="hljs-quote">([\s\S]*?)<\/span>/g, function(match, inner) {
+                    return inner.includes('\n\n') ? inner : match;
+                });
             }
 
             const codeContent = highlighted || escapeHtml(code);
