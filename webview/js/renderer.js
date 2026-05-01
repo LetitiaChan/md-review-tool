@@ -657,6 +657,26 @@ const Renderer = (() => {
                 highlighted = highlighted.replace(/<span class="hljs-quote">([\s\S]*?)<\/span>/g, function(match, inner) {
                     return inner.includes('\n\n') ? inner : match;
                 });
+                // 修复被 emphasis/quote 吞掉的 markdown 结构失去高亮的问题：
+                // 去掉错误的 span 后，被吞掉的 # 标题 / > 引用 / - 列表等变成了纯文本，
+                // 丢失了本应有的 hljs-section/hljs-quote/hljs-bullet 高亮。
+                // 对 markdown 语言的代码块，逐行重新识别裸的 markdown 结构并补上高亮标签。
+                if (lang === 'markdown' || lang === 'md') {
+                    highlighted = highlighted.split('\n').map(function(line) {
+                        // 已包含 hljs span 的行说明已正确高亮，跳过
+                        if (/<span class="hljs-/.test(line)) return line;
+                        // 标题：# / ## / ### ... 最多 6 级
+                        var m = line.match(/^(#{1,6}\s.*)$/);
+                        if (m) return '<span class="hljs-section">' + m[1] + '</span>';
+                        // 引用：&gt; ...（HTML 转义后的 >）
+                        m = line.match(/^(&gt;\s.*)$/);
+                        if (m) return '<span class="hljs-quote">' + m[1] + '</span>';
+                        // 无序列表：- / * / +
+                        m = line.match(/^(\s*)([-*+])(\s.*)$/);
+                        if (m) return m[1] + '<span class="hljs-bullet">' + m[2] + '</span>' + m[3];
+                        return line;
+                    }).join('\n');
+                }
             }
 
             const codeContent = highlighted || escapeHtml(code);

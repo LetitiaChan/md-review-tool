@@ -2741,5 +2741,39 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 '后处理应在 hljs-quote 跨行时去掉 span 保留内容，正常时保留 span'
             );
         });
+
+        test('BT-mdEmphasis.5 后处理应为被 emphasis 吞掉的 markdown 结构重新打标恢复高亮（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：验证对 markdown 语言的代码块，
+            // 去掉错误的 emphasis/quote span 后，能识别裸的标题/引用/列表并补上 hljs-section/hljs-quote/hljs-bullet 高亮
+            // 场景：rules_PT\n\n# 标题 — emphasis 吞掉 # 标题 导致标题失去高亮色
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+
+            // 验证存在 markdown 语言的特殊处理分支
+            assert.ok(
+                rendererCode.includes("lang === 'markdown'") || rendererCode.includes("lang === 'md'"),
+                '后处理应针对 markdown/md 语言进行结构重新打标'
+            );
+            // 验证识别标题结构 # / ## / ### ...
+            assert.ok(
+                rendererCode.includes('#{1,6}'),
+                '后处理应识别裸的 markdown 标题结构（# 至 ######）'
+            );
+            // 验证为标题补上 hljs-section 高亮
+            assert.ok(
+                rendererCode.includes('hljs-section'),
+                '后处理应为被吞掉的标题补上 hljs-section 高亮'
+            );
+            // 验证为列表项补上 hljs-bullet 高亮
+            assert.ok(
+                rendererCode.includes('hljs-bullet'),
+                '后处理应为被吞掉的列表项补上 hljs-bullet 高亮'
+            );
+            // 验证跳过已经有 hljs span 的行（避免重复打标）
+            assert.ok(
+                rendererCode.includes('<span class="hljs-'),
+                '后处理应跳过已经包含 hljs span 的行，避免重复打标'
+            );
+        });
     });
 });
