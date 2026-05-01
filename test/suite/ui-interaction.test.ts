@@ -1672,6 +1672,41 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.strictEqual(settingsBodyMatch![1].trim(), '16px 32px', '设置内容区 padding 应为 16px 32px');
         });
 
+        test('BT-docContent.1 正文文档区域 padding 应为紧凑值 20px 48px（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
+
+            const match = css.match(/\.document-content\s*\{[^}]*padding:\s*([^;]+)/);
+            assert.ok(match, '应存在 .document-content padding 定义');
+            assert.strictEqual(match![1].trim(), '20px 48px', '正文文档区域 padding 应为 20px 48px');
+        });
+
+        test('BT-docContent.2 正文文档区域 margin 应为紧凑值 8px auto（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
+
+            const match = css.match(/\.document-content\s*\{[^}]*margin:\s*([^;]+)/);
+            assert.ok(match, '应存在 .document-content margin 定义');
+            assert.strictEqual(match![1].trim(), '8px auto', '正文文档区域 margin 应为 8px auto');
+        });
+
+        test('BT-docContent.3 正文文档区域上下间距应保持紧凑防止间距过大回归（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
+
+            // 提取 padding 的上下值，确保不超过 24px
+            const paddingMatch = css.match(/\.document-content\s*\{[^}]*padding:\s*(\d+)px/);
+            assert.ok(paddingMatch, '应存在 .document-content padding 定义');
+            const topPadding = parseInt(paddingMatch![1], 10);
+            assert.ok(topPadding <= 24, `正文上 padding (${topPadding}px) 不应超过 24px`);
+
+            // 提取 margin 的上下值，确保不超过 12px
+            const marginMatch = css.match(/\.document-content\s*\{[^}]*margin:\s*(\d+)px/);
+            assert.ok(marginMatch, '应存在 .document-content margin 定义');
+            const topMargin = parseInt(marginMatch![1], 10);
+            assert.ok(topMargin <= 12, `正文上 margin (${topMargin}px) 不应超过 12px`);
+        });
+
         test('markdown.css 应包含 PlantUML 图表样式', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');

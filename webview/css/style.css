@@ -1093,10 +1093,10 @@ body.theme-dark .toc-item-text mark {
 .document-content {
     flex: 1;
     overflow-y: auto;
-    padding: 32px 48px;
+    padding: 20px 48px;
     background: var(--bg-white);
     max-width: 900px;
-    margin: 16px auto;
+    margin: 8px auto;
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     width: calc(100% - 32px);
