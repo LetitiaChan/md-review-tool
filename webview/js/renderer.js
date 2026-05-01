@@ -645,6 +645,10 @@ const Renderer = (() => {
             // highlight.js 输出 <span class="hljs-emphasis">...</span>（部分版本可能用 <em>/<strong>），
             // 后处理：用正则匹配完整标签对并去掉（保留内容文本），代码块中不应有 Markdown 格式化效果。
             if (highlighted) {
+                // 检测是否存在"跨段 emphasis/strong"（内部含空行 \n\n）—— 这是一切误识别的根源信号。
+                // 当出现时，同一代码块内其他结构化 hljs span（如 hljs-code 配对）也高概率错误，应一并清理。
+                const hasRunawayEmphasis = /<span class="hljs-(emphasis|strong)">[\s\S]*?\n\n[\s\S]*?<\/span>/.test(highlighted);
+
                 highlighted = highlighted
                     .replace(/<span class="hljs-emphasis">([\s\S]*?)<\/span>/g, '$1')
                     .replace(/<span class="hljs-strong">([\s\S]*?)<\/span>/g, '$1')
@@ -657,23 +661,36 @@ const Renderer = (() => {
                 highlighted = highlighted.replace(/<span class="hljs-quote">([\s\S]*?)<\/span>/g, function(match, inner) {
                     return inner.includes('\n\n') ? inner : match;
                 });
+                // 修复 hljs-code 被 emphasis 错配导致跨越普通文字的问题：
+                // 当 emphasis 跨段吞噬发生时，同代码块的 inline code 反引号配对也会错乱
+                // （例如 `node_modules` 被拆散后，hljs 把下一段 `npm install` 的结尾反引号误认为闭合点，
+                //  导致中间一大段正常文字被染上 hljs-code 颜色）。
+                // 策略：hasRunawayEmphasis 为 true 时清除所有 hljs-code；否则仅清除跨行的 hljs-code。
+                if (hasRunawayEmphasis) {
+                    highlighted = highlighted.replace(/<span class="hljs-code">([\s\S]*?)<\/span>/g, '$1');
+                } else {
+                    highlighted = highlighted.replace(/<span class="hljs-code">([\s\S]*?)<\/span>/g, function(match, inner) {
+                        return inner.includes('\n') ? inner : match;
+                    });
+                }
                 // 修复被 emphasis/quote 吞掉的 markdown 结构失去高亮的问题：
                 // 去掉错误的 span 后，被吞掉的 # 标题 / > 引用 / - 列表等变成了纯文本，
                 // 丢失了本应有的 hljs-section/hljs-quote/hljs-bullet 高亮。
                 // 对 markdown 语言的代码块，逐行重新识别裸的 markdown 结构并补上高亮标签。
                 if (lang === 'markdown' || lang === 'md') {
                     highlighted = highlighted.split('\n').map(function(line) {
-                        // 已包含 hljs span 的行说明已正确高亮，跳过
-                        if (/<span class="hljs-/.test(line)) return line;
-                        // 标题：# / ## / ### ... 最多 6 级
-                        var m = line.match(/^(#{1,6}\s.*)$/);
-                        if (m) return '<span class="hljs-section">' + m[1] + '</span>';
-                        // 引用：&gt; ...（HTML 转义后的 >）
-                        m = line.match(/^(&gt;\s.*)$/);
-                        if (m) return '<span class="hljs-quote">' + m[1] + '</span>';
-                        // 无序列表：- / * / +
-                        m = line.match(/^(\s*)([-*+])(\s.*)$/);
-                        if (m) return m[1] + '<span class="hljs-bullet">' + m[2] + '</span>' + m[3];
+                        // 标题与列表：仅当整行不含任何 hljs span 时才补标（避免包裹已有结构）
+                        if (!/<span class="hljs-/.test(line)) {
+                            var m = line.match(/^(#{1,6}\s.*)$/);
+                            if (m) return '<span class="hljs-section">' + m[1] + '</span>';
+                            m = line.match(/^(\s*)([-*+])(\s.*)$/);
+                            if (m) return m[1] + '<span class="hljs-bullet">' + m[2] + '</span>' + m[3];
+                        }
+                        // 引用：&gt; 开头且尚未被 hljs-quote 包裹，则整行包裹为 quote
+                        // （即使行内已有其他 hljs span，如 hljs-code，仍应补 quote，因为 quote 可嵌套）
+                        if (/^&gt;\s/.test(line) && !/^<span class="hljs-quote">/.test(line)) {
+                            return '<span class="hljs-quote">' + line + '</span>';
+                        }
                         return line;
                     }).join('\n');
                 }

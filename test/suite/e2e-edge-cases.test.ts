@@ -2775,5 +2775,46 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 '后处理应跳过已经包含 hljs span 的行，避免重复打标'
             );
         });
+
+        test('BT-mdEmphasis.6 跨段 emphasis 触发时应清除 hljs-code 误染并为 &gt; 行补 hljs-quote 高亮（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：验证对"原始含跨段 emphasis"的信号检测，
+            // 以及引用行（&gt;）即使行内含其他 hljs span 也能补上 hljs-quote 高亮
+            // 场景：
+            //   rules_PT
+            //
+            //   # 标题
+            //
+            //   > [!WARNING]
+            //   > 这是一条**警告信息**...
+            //   > 直接修改 `node_modules` 中的文件...下次 `npm install` 后修改将丢失
+            // 根因：emphasis 跨段后 inline code 反引号配对错乱，最后一行失去 hljs-quote 且中段被染为 hljs-code
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+
+            // 验证存在"跨段 emphasis"的前置检测逻辑
+            assert.ok(
+                rendererCode.includes('hasRunawayEmphasis'),
+                '后处理应先检测是否存在跨段 emphasis/strong（根源信号）'
+            );
+            // 验证检测模式包含 \\n\\n（内部含空行 = 跨段）
+            assert.ok(
+                /hljs-\(emphasis\|strong\)[\s\S]{0,80}\\n\\n/.test(rendererCode),
+                '后处理应通过检测 emphasis/strong 内部是否含空行来判定跨段'
+            );
+            // 验证跨段触发时对 hljs-code 整体清除（防止 inline code 配对错乱误染大段文字）
+            assert.ok(
+                rendererCode.includes('hljs-code'),
+                '后处理应针对 hljs-code 做清理'
+            );
+            // 验证引用行即使含其他 hljs span 也能补 hljs-quote（不再简单跳过）
+            assert.ok(
+                rendererCode.includes('/^&gt;\\s/'),
+                '后处理应识别 &gt; 开头的行并补 hljs-quote 高亮'
+            );
+            assert.ok(
+                rendererCode.includes('!/^<span class="hljs-quote">/'),
+                '后处理应避免对已包裹 hljs-quote 的行重复打标'
+            );
+        });
     });
 });
