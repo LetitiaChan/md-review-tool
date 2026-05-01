@@ -1079,6 +1079,17 @@ body.theme-dark .toc-item-text mark {
     font-variant-numeric: tabular-nums;
 }
 
+.annotation-count-badge {
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    min-width: 14px;
+    text-align: center;
+}
+
+.annotation-count-badge:empty {
+    display: none;
+}
+
 .document-content {
     flex: 1;
     overflow-y: auto;

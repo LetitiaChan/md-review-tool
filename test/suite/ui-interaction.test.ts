@@ -816,10 +816,11 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(modeBtnMatch, '应存在预览/编辑按钮');
             assert.ok(!modeBtnMatch![0].includes('mode-toggle-label'), '预览/编辑按钮不应包含文字 span');
 
-            // 批注按钮不应包含文字 span
+            // 批注按钮应包含计数 badge 但不包含文字标签
             const annBtnMatch = html.match(/<button[^>]*id="btnToggleAnnotations"[^>]*>[\s\S]*?<\/button>/);
             assert.ok(annBtnMatch, '应存在批注按钮');
-            assert.ok(!annBtnMatch![0].includes('annotationCount'), '批注按钮不应包含文字 span');
+            assert.ok(annBtnMatch![0].includes('annotationCount'), '批注按钮应包含计数 badge');
+            assert.ok(!annBtnMatch![0].includes('data-i18n="toolbar.annotations"'), '批注按钮不应包含文字标签 span');
 
             // 禅模式按钮不应包含文字 span
             const zenBtnMatch = html.match(/<button[^>]*id="btnZenMode"[^>]*>[\s\S]*?<\/button>/);
