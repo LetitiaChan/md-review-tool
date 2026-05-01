@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file.
 - Fix YAML front matter being corrupted after editing in WYSIWYG mode: `%%FRONTMATTER%%` internal marker prefix was written to file on save, and turndown conversion destroyed `---` delimiters when frontmatter card content was modified
 - Fix frontmatter card rows disappearing when edited in WYSIWYG mode: set `contentEditable="false"` on the card container and `contentEditable="true"` only on `.fm-value` spans, preventing browser's default editing behavior from destroying the card's DOM structure
 
+### 🔧 Improvements
+- Enhance dark theme table readability: add explicit `color` on `td` cells, add border and enhanced contrast for inline code inside tables, and add explicit `color` for `strong` text inside tables
+
 ## [1.3.10] - 2026-04-23
 
 ### 🔨 Refactor

@@ -1606,6 +1606,39 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(css.includes('.theme-dark .graphviz-source'), '应有 Graphviz 源码暗色样式');
             assert.ok(css.includes('.theme-dark .graphviz-error'), '应有 Graphviz 错误暗色样式');
         });
+
+        test('BT-darkTable.1 markdown.css 应包含暗色主题表格 td 显式颜色（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
+
+            assert.ok(css.includes('.theme-dark .document-content .table-wrapper td'), '应有暗色主题表格 td 样式');
+        });
+
+        test('BT-darkTable.2 暗色主题表格 td 应设置显式文字颜色以确保可读性（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
+
+            // 提取暗色主题表格 td 的独立规则块（不含 th 合并选择器）
+            const tdColorMatch = css.match(/\.theme-dark\s+\.document-content\s+\.table-wrapper\s+td\s*\{[^}]*color\s*:/);
+            assert.ok(tdColorMatch, '暗色主题表格 td 应有显式 color 属性');
+        });
+
+        test('BT-darkTable.3 暗色主题表格内行内代码应有增强对比度样式（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
+
+            assert.ok(
+                css.includes('.theme-dark .document-content .table-wrapper code:not(.hljs)'),
+                '应有暗色主题表格内行内代码样式'
+            );
+            // 确保有 border 属性增强视觉区分
+            const codeBlock = css.substring(
+                css.indexOf('.theme-dark .document-content .table-wrapper code:not(.hljs)'),
+                css.indexOf('}', css.indexOf('.theme-dark .document-content .table-wrapper code:not(.hljs)')) + 1
+            );
+            assert.ok(codeBlock.includes('border'), '暗色主题表格内行内代码应有 border 增强视觉区分');
+            assert.ok(codeBlock.includes('color'), '暗色主题表格内行内代码应有显式 color');
+        });
     });
 
     // ===== 13. 批注验证逻辑 =====
