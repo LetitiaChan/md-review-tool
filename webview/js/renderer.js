@@ -639,17 +639,17 @@ const Renderer = (() => {
                 }
             }
 
-            // 修复代码块中下划线变量名被错误渲染为斜体/加粗的问题：
+            // 修复代码块中下划线变量名被错误渲染的问题：
             // highlight.js 的 Markdown 语法将 _xxx_ 识别为 emphasis、__xxx__ 识别为 strong，
-            // 导致 {file_count}、{zip_size_kb} 等含下划线的变量名被错误解析（跨行匹配吞掉大量文本）。
-            // 对所有代码块去掉 hljs-emphasis 和 hljs-strong 标签（保留内容文本），
-            // 因为代码块中显示的是源码，不应有 Markdown 格式化效果。
+            // 导致 {file_count}、{cos_name} 等含下划线的变量名被错误解析（跨行匹配吞掉大量文本）。
+            // highlight.js 输出 <span class="hljs-emphasis">...</span>（部分版本可能用 <em>/<strong>），
+            // 后处理：用正则匹配完整标签对并去掉（保留内容文本），代码块中不应有 Markdown 格式化效果。
             if (highlighted) {
                 highlighted = highlighted
-                    .replace(/<em class="hljs-emphasis">/g, '')
-                    .replace(/<\/em>/g, '')
-                    .replace(/<strong class="hljs-strong">/g, '')
-                    .replace(/<\/strong>/g, '');
+                    .replace(/<span class="hljs-emphasis">([\s\S]*?)<\/span>/g, '$1')
+                    .replace(/<span class="hljs-strong">([\s\S]*?)<\/span>/g, '$1')
+                    .replace(/<em class="hljs-emphasis">([\s\S]*?)<\/em>/g, '$1')
+                    .replace(/<strong class="hljs-strong">([\s\S]*?)<\/strong>/g, '$1');
             }
 
             const codeContent = highlighted || escapeHtml(code);

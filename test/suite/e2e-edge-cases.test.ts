@@ -2687,30 +2687,34 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             );
         });
 
-        test('BT-mdEmphasis.3 后处理应去掉 em 和 strong 标签以修复下划线变量名渲染（Tier 3 — 回归断言）', () => {
-            // Tier 3 — 任务特定断言：验证后处理逻辑正确去掉 emphasis 和 strong 标签
+        test('BT-mdEmphasis.3 后处理应用正则匹配完整标签对去掉 emphasis/strong 标签（Tier 3 — 回归断言）', () => {
+            // Tier 3 — 任务特定断言：验证后处理逻辑正确去掉 emphasis 和 strong 的完整标签对
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
 
-            // 验证去掉 <em class="hljs-emphasis"> 开标签
+            // 验证去掉 <span class="hljs-emphasis">...</span> 完整标签对（highlight.js 实际输出格式）
+            assert.ok(
+                rendererCode.includes('<span class="hljs-emphasis">'),
+                '后处理应包含去掉 <span class="hljs-emphasis"> 标签的逻辑'
+            );
+            // 验证去掉 <span class="hljs-strong">...</span> 完整标签对
+            assert.ok(
+                rendererCode.includes('<span class="hljs-strong">'),
+                '后处理应包含去掉 <span class="hljs-strong"> 标签的逻辑'
+            );
+            // 验证同时兼容 <em>/<strong> 格式（部分 hljs 版本可能使用）
             assert.ok(
                 rendererCode.includes('<em class="hljs-emphasis">'),
-                '后处理应包含去掉 <em class="hljs-emphasis"> 标签的逻辑'
+                '后处理应兼容 <em class="hljs-emphasis"> 标签格式'
             );
-            // 验证去掉 </em> 闭标签（正则中写为 <\/em>）
-            assert.ok(
-                rendererCode.includes('<\\/em>'),
-                '后处理应包含去掉 </em> 标签的逻辑'
-            );
-            // 验证去掉 <strong class="hljs-strong"> 开标签
             assert.ok(
                 rendererCode.includes('<strong class="hljs-strong">'),
-                '后处理应包含去掉 <strong class="hljs-strong"> 标签的逻辑'
+                '后处理应兼容 <strong class="hljs-strong"> 标签格式'
             );
-            // 验证去掉 </strong> 闭标签（正则中写为 <\/strong>）
+            // 验证使用正则捕获组 $1 保留内容文本
             assert.ok(
-                rendererCode.includes('<\\/strong>'),
-                '后处理应包含去掉 </strong> 标签的逻辑'
+                rendererCode.includes("'$1'"),
+                '后处理应使用正则捕获组 $1 保留标签内的内容文本'
             );
         });
     });
