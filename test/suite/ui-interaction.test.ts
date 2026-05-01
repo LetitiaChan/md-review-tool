@@ -754,7 +754,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             // 工具栏元素
             const toolbarIds = [
                 'fileSelect', 'fileName', 'editStatus', 'btnSaveMd',
-                'btnToggleAnnotations', 'annotationCount', 'btnToggleToc',
+                'btnToggleAnnotations', 'btnToggleToc',
                 'btnSettings', 'btnHelp'
             ];
             for (const id of toolbarIds) {
@@ -795,6 +795,57 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(html.includes('id="settingEnableGraphviz"'), '应包含 Graphviz 设置开关');
             assert.ok(html.includes('PlantUML 图表渲染'), '应包含 PlantUML 设置标签');
             assert.ok(html.includes('Graphviz 图表渲染'), '应包含 Graphviz 设置标签');
+        });
+
+        test('BT-toolbarIconOnly.1 工具栏按钮（目录/主题/预览/批注）应仅含图标无文字 span（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+
+            // 目录按钮不应包含文字 span
+            const tocBtnMatch = html.match(/<button[^>]*id="btnToggleToc"[^>]*>[\s\S]*?<\/button>/);
+            assert.ok(tocBtnMatch, '应存在目录按钮');
+            assert.ok(!tocBtnMatch![0].includes('data-i18n="toolbar.toc"'), '目录按钮不应包含文字 span');
+
+            // 主题按钮不应包含文字 span
+            const themeBtnMatch = html.match(/<button[^>]*id="btnToggleTheme"[^>]*>[\s\S]*?<\/button>/);
+            assert.ok(themeBtnMatch, '应存在主题按钮');
+            assert.ok(!themeBtnMatch![0].includes('data-i18n="toolbar.theme"'), '主题按钮不应包含文字 span');
+
+            // 预览/编辑按钮不应包含文字 span
+            const modeBtnMatch = html.match(/<button[^>]*id="btnModeToggle"[^>]*>[\s\S]*?<\/button>/);
+            assert.ok(modeBtnMatch, '应存在预览/编辑按钮');
+            assert.ok(!modeBtnMatch![0].includes('mode-toggle-label'), '预览/编辑按钮不应包含文字 span');
+
+            // 批注按钮不应包含文字 span
+            const annBtnMatch = html.match(/<button[^>]*id="btnToggleAnnotations"[^>]*>[\s\S]*?<\/button>/);
+            assert.ok(annBtnMatch, '应存在批注按钮');
+            assert.ok(!annBtnMatch![0].includes('annotationCount'), '批注按钮不应包含文字 span');
+
+            // 禅模式按钮不应包含文字 span
+            const zenBtnMatch = html.match(/<button[^>]*id="btnZenMode"[^>]*>[\s\S]*?<\/button>/);
+            assert.ok(zenBtnMatch, '应存在禅模式按钮');
+            assert.ok(!zenBtnMatch![0].includes('data-i18n="toolbar.zen"'), '禅模式按钮不应包含文字 span');
+        });
+
+        test('BT-toolbarIconOnly.2 updateThemeButtonLabel 应仅输出 SVG 图标无文字（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // updateThemeButtonLabel 中 btn.innerHTML 赋值不应拼接文字标签
+            const themeInnerHtml = appJs.match(/btn\.innerHTML\s*=\s*(?:icons\[displayTheme\]|icons\.light)[^;]*/);
+            assert.ok(themeInnerHtml, '应存在主题按钮 innerHTML 赋值');
+            assert.ok(!themeInnerHtml![0].includes('labels['), '主题按钮 innerHTML 不应拼接文字标签');
+        });
+
+        test('BT-toolbarIconOnly.3 updateZenButtonLabel 应仅输出 SVG 图标无文字（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // updateZenButtonLabel 中 zenBtn.innerHTML 赋值不应拼接 t('toolbar.zen') 或 t('toolbar.exit_zen')
+            const zenFnMatch = appJs.match(/function updateZenButtonLabel\(\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(zenFnMatch, '应存在 updateZenButtonLabel 函数');
+            assert.ok(!zenFnMatch![0].includes("+ t('toolbar.zen')"), '禅模式按钮 innerHTML 不应拼接禅模式文字');
+            assert.ok(!zenFnMatch![0].includes("+ t('toolbar.exit_zen')"), '禅模式按钮 innerHTML 不应拼接退出禅模式文字');
         });
 
         test('index.html 应包含所有 JS 脚本占位符', () => {

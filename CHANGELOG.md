@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [1.3.11] - 2026-04-23
 
+### 🔧 Improvements
+- Remove text labels from toolbar buttons (TOC, Zen Mode, Theme, Preview/Edit mode, Annotations) to show icons only, reducing toolbar clutter; also remove dynamically updated text on theme/zen mode toggle so buttons remain icon-only after state changes
+
 ### ✨ Features
 - Add visual regression testing (screenshot comparison) using Playwright `toHaveScreenshot()` API: 10 test cases covering basic rendering, tables, code blocks, alert blocks, Mermaid charts, math formulas, dark/light themes, and toolbar; fixed viewport (1280×720) with 1% pixel diff tolerance; `npm run test:ui:update-snapshots` script for baseline regeneration
 

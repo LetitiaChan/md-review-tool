@@ -741,7 +741,8 @@ const Annotations = (() => {
                         <p>${t('annotations.no_results')}</p>
                     </div>
                 `;
-                document.getElementById('annotationCount').textContent = t('toolbar.annotations_count', { count: 0 });
+                const countEl0 = document.getElementById('annotationCount');
+                if (countEl0) countEl0.textContent = t('toolbar.annotations_count', { count: 0 });
             } else {
                 list.innerHTML = `
                     <div class="empty-annotations">
@@ -749,12 +750,14 @@ const Annotations = (() => {
                         <p class="hint">${t('annotations.empty_hint')}</p>
                     </div>
                 `;
-                document.getElementById('annotationCount').textContent = t('toolbar.annotations_zero');
+                const countElZ = document.getElementById('annotationCount');
+                if (countElZ) countElZ.textContent = t('toolbar.annotations_zero');
             }
             return;
         }
 
-        document.getElementById('annotationCount').textContent = t('toolbar.annotations_count', { count: sortedAnnotations.length });
+        const countEl = document.getElementById('annotationCount');
+        if (countEl) countEl.textContent = t('toolbar.annotations_count', { count: sortedAnnotations.length });
 
         list.innerHTML = sortedAnnotations.map(ann => {
             const typeLabel = ann.type === 'comment' ? t('annotation.type_comment') : ann.type === 'delete' ? t('annotation.type_delete') : (ann.insertPosition === 'before' ? t('annotation.type_insert_before') : t('annotation.type_insert_after'));
