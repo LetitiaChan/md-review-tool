@@ -94,7 +94,7 @@ body {
     background: var(--bg-white);
     color: var(--text);
     cursor: pointer;
-    max-width: 260px;
+    max-width: 195px;
     outline: none;
     transition: border-color 0.15s;
 }

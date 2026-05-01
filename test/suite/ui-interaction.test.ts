@@ -3483,5 +3483,15 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(helpHeightMatch, '应存在 .btn-help height 定义');
             assert.strictEqual(helpHeightMatch![1], '22', '帮助按钮高度应为 22px');
         });
+
+        test('BT-toolbarToggle.24 文件选择控件最大宽度应为 195px（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
+
+            // .file-select max-width 应为 195px
+            const match = css.match(/\.file-select\s*\{[^}]*max-width:\s*(\d+)px/);
+            assert.ok(match, '应存在 .file-select max-width 定义');
+            assert.strictEqual(match![1], '195', '文件选择控件最大宽度应为 195px');
+        });
     });
 });
