@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [1.3.11] - 2026-04-23
 
 ### 🔧 Improvements
+- Replace Zen Mode button icon from nested rectangles to concentric circles SVG for a cleaner, more intuitive visual metaphor
+- Reduce help button circle size from 28px to 22px for better proportion with other toolbar elements
+- Reduce toolbar height from 56px to 44px for a more compact header layout
 - Remove text labels from toolbar buttons (TOC, Zen Mode, Theme, Preview/Edit mode, Annotations) to show icons only, reducing toolbar clutter; also remove dynamically updated text on theme/zen mode toggle so buttons remain icon-only after state changes
 - Rename "一键AI修复" button label to "AI Fix" for shorter display; restore annotation count badge on annotations button (number-only, hidden when zero)
 

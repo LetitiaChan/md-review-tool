@@ -1938,10 +1938,10 @@ this.innerHTML = t('modal.ai_result.copied');
         const zenBtn = document.getElementById('btnZenMode');
         if (!zenBtn) return;
         if (zenMode) {
-            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M4 4h8v8H4z" fill="currentColor" opacity="0.3"/><path d="M1.5 1.5l13 13M14.5 1.5l-13 13" stroke="currentColor" stroke-width="0.6" opacity="0.4"/></svg>';
+            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.2" fill="currentColor" opacity="0.3"/><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" stroke-width="0.7" opacity="0.5"/></svg>';
             zenBtn.title = t('toolbar.exit_zen');
         } else {
-            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><rect x="4" y="4" width="8" height="8" rx="1" fill="currentColor" opacity="0.15" stroke="currentColor" stroke-width="0.8"/></svg>';
+            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.2"/></svg>';
             zenBtn.title = t('toolbar.zen_title');
         }
     }
@@ -3263,7 +3263,7 @@ this.innerHTML = t('modal.ai_result.copied');
 
             body.classList.add('zen-mode');
             zenBtn.classList.add('zen-active');
-            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M4 4h8v8H4z" fill="currentColor" opacity="0.3"/><path d="M1.5 1.5l13 13M14.5 1.5l-13 13" stroke="currentColor" stroke-width="0.6" opacity="0.4"/></svg>';
+            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.2" fill="currentColor" opacity="0.3"/><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" stroke-width="0.7" opacity="0.5"/></svg>';
             zenBtn.title = t('toolbar.exit_zen');
 
             // 通知 Extension Host 隐藏 IDE 侧边栏
@@ -3271,7 +3271,7 @@ this.innerHTML = t('modal.ai_result.copied');
         } else {
             body.classList.remove('zen-mode');
             zenBtn.classList.remove('zen-active');
-            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><rect x="4" y="4" width="8" height="8" rx="1" fill="currentColor" opacity="0.15" stroke="currentColor" stroke-width="0.8"/></svg>';
+            zenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.2"/></svg>';
             zenBtn.title = t('toolbar.zen_title');
 
             // 通知 Extension Host 恢复 IDE 侧边栏

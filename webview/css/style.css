@@ -52,7 +52,7 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 0 24px;
-    height: 56px;
+    height: 44px;
     background: var(--bg-white);
     border-bottom: 1px solid var(--border);
     box-shadow: var(--shadow-sm);
@@ -1489,7 +1489,7 @@ body.theme-dark * {
 .toolbar {
     flex-wrap: wrap;
     height: auto;
-    min-height: 56px;
+    min-height: 44px;
 }
 
 .toolbar-folder-status {
@@ -2098,9 +2098,9 @@ body.theme-dark * {
     color: #555;
     border: 1px solid #ccc;
     background: #f5f5f5;
-    font-size: 12px;
-    width: 28px;
-    height: 28px;
+    font-size: 11px;
+    width: 22px;
+    height: 22px;
     padding: 0;
     border-radius: 50%;
     cursor: pointer;

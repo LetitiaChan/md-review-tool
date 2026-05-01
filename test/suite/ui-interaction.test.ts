@@ -3439,5 +3439,49 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             // 收起时应清除拖拽设置的内联宽度
             assert.ok(fnBody.includes("panel.style.width = ''"), '收起时应清除内联宽度');
         });
+
+        test('BT-toolbarToggle.21 禅模式按钮图标应为同心圆 SVG（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // index.html 初始图标应为同心圆（两个 circle 元素）
+            const zenBtnMatch = html.match(/id="btnZenMode"[\s\S]*?<\/button>/);
+            assert.ok(zenBtnMatch, '应存在禅模式按钮');
+            const zenBtnHtml = zenBtnMatch![0];
+            assert.ok((zenBtnHtml.match(/<circle/g) || []).length >= 2, '初始图标应包含至少两个 circle 元素（同心圆）');
+            assert.ok(!zenBtnHtml.includes('<rect'), '初始图标不应包含 rect 元素');
+
+            // updateZenButtonLabel 正常状态也应为同心圆
+            const fnMatch = appJs.match(/function updateZenButtonLabel\(\)[\s\S]*?^\s{4}\}/m);
+            assert.ok(fnMatch, '应存在 updateZenButtonLabel 函数');
+            const fnBody = fnMatch![0];
+            assert.ok((fnBody.match(/<circle/g) || []).length >= 4, 'updateZenButtonLabel 应包含同心圆图标（两种状态各至少2个circle）');
+            assert.ok(!fnBody.includes('<rect'), 'updateZenButtonLabel 不应包含 rect 元素');
+        });
+
+        test('BT-toolbarToggle.22 工具栏高度应为 44px（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
+
+            // 主 .toolbar 高度应为 44px
+            const toolbarMatch = css.match(/\.toolbar\s*\{[^}]*height:\s*(\d+)px/);
+            assert.ok(toolbarMatch, '应存在 .toolbar height 定义');
+            assert.strictEqual(toolbarMatch![1], '44', '工具栏高度应为 44px');
+        });
+
+        test('BT-toolbarToggle.23 帮助按钮尺寸应为 22px（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
+
+            // .btn-help 宽高应为 22px
+            const helpMatch = css.match(/\.btn-help\s*\{[^}]*width:\s*(\d+)px/);
+            assert.ok(helpMatch, '应存在 .btn-help width 定义');
+            assert.strictEqual(helpMatch![1], '22', '帮助按钮宽度应为 22px');
+
+            const helpHeightMatch = css.match(/\.btn-help\s*\{[^}]*height:\s*(\d+)px/);
+            assert.ok(helpHeightMatch, '应存在 .btn-help height 定义');
+            assert.strictEqual(helpHeightMatch![1], '22', '帮助按钮高度应为 22px');
+        });
     });
 });
