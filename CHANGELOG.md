@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Reduce toolbar height from 56px to 44px for a more compact header layout
 - Remove text labels from toolbar buttons (TOC, Zen Mode, Theme, Preview/Edit mode, Annotations) to show icons only, reducing toolbar clutter; also remove dynamically updated text on theme/zen mode toggle so buttons remain icon-only after state changes
 - Rename "一键AI修复" button label to "AI Fix" for shorter display; restore annotation count badge on annotations button (number-only, hidden when zero)
+- Compact settings panel layout: reduce header padding (20px→14px top, 16px→10px bottom), title font (22px→20px), body padding/gap, card header/body padding and gap for a denser settings UI
 
 ### ✨ Features
 - Add visual regression testing (screenshot comparison) using Playwright `toHaveScreenshot()` API: 10 test cases covering basic rendering, tables, code blocks, alert blocks, Mermaid charts, math formulas, dark/light themes, and toolbar; fixed viewport (1280×720) with 1% pixel diff tolerance; `npm run test:ui:update-snapshots` script for baseline regeneration

@@ -44,7 +44,7 @@
 /* 渐变头部 - 紫蓝渐变主题 */
 .settings-header {
     background: linear-gradient(135deg, #059669 0%, #047857 100%);
-    padding: 20px 32px 16px;
+    padding: 14px 32px 10px;
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
@@ -82,7 +82,7 @@
 
 .settings-header h2 {
     color: #fff;
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
     margin: 0;
     display: flex;
@@ -128,10 +128,10 @@
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 20px 32px;
+    padding: 16px 32px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
 }
 
 /* 设置卡片 */
@@ -152,7 +152,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 16px 20px 12px;
+    padding: 12px 20px 8px;
     border-bottom: 1px solid var(--border-light);
 }
 
@@ -196,10 +196,10 @@
 }
 
 .settings-card-body {
-    padding: 16px 20px 20px;
+    padding: 12px 20px 14px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 10px;
 }
 
 /* 设置项 */
@@ -1010,7 +1010,7 @@ body.theme-dark .doc-align-btn.active {
     align-items: center;
     gap: 10px;
     width: 100%;
-    margin-top: 6px;
+    margin-top: 4px;
 }
 
 .slider-row .slider-full {

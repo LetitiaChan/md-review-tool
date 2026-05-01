@@ -1628,6 +1628,50 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             );
         });
 
+        test('BT-settings.9 设置面板头部 padding 应为紧凑值 14px 32px 10px（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'settings.css'), 'utf-8');
+
+            const match = css.match(/\.settings-header\s*\{[^}]*padding:\s*([^;]+)/);
+            assert.ok(match, '应存在 .settings-header padding 定义');
+            assert.strictEqual(match![1].trim(), '14px 32px 10px', '设置面板头部 padding 应为 14px 32px 10px');
+        });
+
+        test('BT-settings.10 设置面板卡片间距和内部间距应为紧凑值（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'settings.css'), 'utf-8');
+
+            // .settings-body gap 应为 12px
+            const bodyMatch = css.match(/\.settings-body\s*\{[^}]*gap:\s*(\d+)px/);
+            assert.ok(bodyMatch, '应存在 .settings-body gap 定义');
+            assert.strictEqual(bodyMatch![1], '12', '卡片间距应为 12px');
+
+            // .settings-card-body gap 应为 10px
+            const cardBodyMatch = css.match(/\.settings-card-body\s*\{[^}]*gap:\s*(\d+)px/);
+            assert.ok(cardBodyMatch, '应存在 .settings-card-body gap 定义');
+            assert.strictEqual(cardBodyMatch![1], '10', '设置项间距应为 10px');
+        });
+
+        test('BT-settings.11 设置面板各区域 padding 应为紧凑值防止间距过大（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'settings.css'), 'utf-8');
+
+            // .settings-card-header padding 应为 12px 20px 8px
+            const headerMatch = css.match(/\.settings-card-header\s*\{[^}]*padding:\s*([^;]+)/);
+            assert.ok(headerMatch, '应存在 .settings-card-header padding 定义');
+            assert.strictEqual(headerMatch![1].trim(), '12px 20px 8px', '卡片头部 padding 应为 12px 20px 8px');
+
+            // .settings-card-body padding 应为 12px 20px 14px
+            const bodyMatch = css.match(/\.settings-card-body\s*\{[^}]*padding:\s*([^;]+)/);
+            assert.ok(bodyMatch, '应存在 .settings-card-body padding 定义');
+            assert.strictEqual(bodyMatch![1].trim(), '12px 20px 14px', '卡片内容 padding 应为 12px 20px 14px');
+
+            // .settings-body padding 应为 16px 32px
+            const settingsBodyMatch = css.match(/\.settings-body\s*\{[^}]*padding:\s*([^;]+)/);
+            assert.ok(settingsBodyMatch, '应存在 .settings-body padding 定义');
+            assert.strictEqual(settingsBodyMatch![1].trim(), '16px 32px', '设置内容区 padding 应为 16px 32px');
+        });
+
         test('markdown.css 应包含 PlantUML 图表样式', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
