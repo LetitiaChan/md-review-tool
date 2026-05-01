@@ -639,12 +639,12 @@ const Renderer = (() => {
                 }
             }
 
-            // 修复 Markdown 代码块中下划线变量名被错误渲染为斜体/加粗的问题：
+            // 修复代码块中下划线变量名被错误渲染为斜体/加粗的问题：
             // highlight.js 的 Markdown 语法将 _xxx_ 识别为 emphasis、__xxx__ 识别为 strong，
             // 导致 {file_count}、{zip_size_kb} 等含下划线的变量名被错误解析（跨行匹配吞掉大量文本）。
-            // 后处理：去掉 Markdown 语言中 hljs-emphasis 和 hljs-strong 的标签（保留内容文本）。
-            // 注意：这同时也去掉了 *斜体* 和 **加粗** 的视觉效果，但代码块中源码可读性优先。
-            if (highlighted && (lang === 'markdown' || lang === 'md' || lang === 'mkdown' || lang === 'mkd')) {
+            // 对所有代码块去掉 hljs-emphasis 和 hljs-strong 标签（保留内容文本），
+            // 因为代码块中显示的是源码，不应有 Markdown 格式化效果。
+            if (highlighted) {
                 highlighted = highlighted
                     .replace(/<em class="hljs-emphasis">/g, '')
                     .replace(/<\/em>/g, '')

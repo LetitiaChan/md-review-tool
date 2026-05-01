@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 ### 🐛 Fixes
 - Fix YAML front matter being corrupted after editing in WYSIWYG mode: `%%FRONTMATTER%%` internal marker prefix was written to file on save, and turndown conversion destroyed `---` delimiters when frontmatter card content was modified
 - Fix frontmatter card rows disappearing when edited in WYSIWYG mode: set `contentEditable="false"` on the card container and `contentEditable="true"` only on `.fm-value` spans, preventing browser's default editing behavior from destroying the card's DOM structure
-- Fix Markdown code blocks incorrectly rendering underscored variable names (e.g. `{file_count}`, `{zip_size_kb}`) as italic/bold: highlight.js Markdown grammar treats `_xxx_` as emphasis, causing cross-line matching that swallows text; added post-processing to strip `hljs-emphasis` and `hljs-strong` tags from Markdown language code blocks
+- Fix code blocks incorrectly rendering underscored variable names (e.g. `{file_count}`, `{cos_name}`) as italic/bold: highlight.js Markdown grammar treats `_xxx_` as emphasis, causing cross-line matching that swallows text; added post-processing to strip `hljs-emphasis` and `hljs-strong` tags from all code blocks (including auto-detected language)
 
 ### 🔧 Improvements
 - Enhance dark theme table readability: add explicit `color` on `td` cells, add border and enhanced contrast for inline code inside tables, and add explicit `color` for `strong` text inside tables

@@ -2669,24 +2669,21 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             );
         });
 
-        test('BT-mdEmphasis.2 后处理应仅对 Markdown 语言代码块生效（Tier 2 — 行为级断言）', () => {
-            // Tier 2 — 行为级断言：验证后处理逻辑有语言判断条件
+        test('BT-mdEmphasis.2 后处理应对所有代码块生效以防止下划线变量名被错误渲染（Tier 2 — 行为级断言）', () => {
+            // Tier 2 — 行为级断言：验证后处理逻辑对所有 highlighted 输出生效
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
 
-            // 验证有 Markdown 语言判断条件（不会影响其他语言的代码块）
-            const hasLangCheck = rendererCode.includes("lang === 'markdown'") ||
-                                 rendererCode.includes("lang === 'md'");
-            assert.ok(hasLangCheck, '后处理应有 Markdown 语言判断条件，不影响其他语言');
-
-            // 验证同时处理了 md 别名
+            // 验证后处理条件是 if (highlighted)，对所有代码块生效
             assert.ok(
-                rendererCode.includes("lang === 'md'"),
-                '后处理应覆盖 md 别名'
+                rendererCode.includes('if (highlighted)'),
+                '后处理应对所有 highlighted 输出生效（不限制语言）'
             );
+
+            // 验证同时处理了 em 和 strong 标签
             assert.ok(
-                rendererCode.includes("lang === 'mkdown'") || rendererCode.includes("lang === 'mkd'"),
-                '后处理应覆盖 mkdown/mkd 别名'
+                rendererCode.includes('hljs-emphasis') && rendererCode.includes('hljs-strong'),
+                '后处理应同时处理 hljs-emphasis 和 hljs-strong'
             );
         });
 
