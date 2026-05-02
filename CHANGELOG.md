@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [1.3.12] - 2026-05-02
 
+### 🏗️ Build (add-webview-bundler-and-esm-modules)
+- Introduce `esbuild` as the webview bundler (devDependency `esbuild@^0.24.0`). The new build script `webview/build.config.mjs` produces IIFE bundles targeting ES2020, chained into `npm run compile`. Two additional commands `build:webview` and `build:webview:watch` are available for standalone/hot-reload development
+- Migrate `webview/js/*.js` (7 modules: i18n, store, renderer, annotations, export, settings, app) to ESM: each module now ends with `export { ModuleName };`; `app.js` is refactored from an immediately-invoked IIFE to `export function initApp()`, started explicitly by a unified entry `webview/src/entries/main.entry.js`. Function bodies unchanged — only the top-level wrappers and export statements differ
+- Reserve bundler entry slots `cm6.entry.js` and `pm.entry.js` (placeholder exports only in this change) for the upcoming dual-mode editor (CodeMirror 6 + ProseMirror) planned in the next change
+- Simplify `webview/index.html` script loading: replaces 7 `<script src="${xxxUri}">` tags with a single `<script src="${appBundleUri}"></script>`. `src/reviewPanel.ts` updated accordingly (1 URI instead of 7). Existing CSP stays intact (`script-src 'nonce-${nonce}' ${cspSource}` covers the same-origin bundle)
+- Zero user-visible change: all rendering, annotation, export, search, i18n, theme, and diagram (Mermaid/PlantUML/Graphviz/KaTeX) behaviors remain byte-identical to the pre-change baseline
+- Test coverage: 726 existing regression tests remain green; +13 new assertions under new suite `webview-build-system.test.ts` (Tier 1: 7 existence checks + Tier 2: 1 structural check + Tier 3: 5 BT-BuildSystem.* behavioral checks). Total: 739 passing, 0 failing
+
 ### 🐛 Fixes (fix-edit-mode-turndown-safety)
 - Fix edit-mode save path no longer adds backslash escapes to plain prose characters `*`, `_`, and `\`: the default `TurndownService.escape` was backslash-doubling these three characters inside normal prose, breaking Windows paths (`C:\Users\foo` → `C:\\Users\\foo`), snake_case identifiers, and literal asterisks. Override `ts.escape` with an identity function so prose round-trips unchanged. Verified via one-shot jsdom probe: `#`, `|`, `$`, `$$` were NOT actually escaped by default (contrary to common assumption), so the fix targets exactly the three confirmed offenders
 - Fix `<kbd>` HTML tag being silently dropped to plain text during edit-mode save: `<p>Press <kbd>Ctrl</kbd></p>` became `Press Ctrl`, losing the semantic tag. Register `<kbd>` in the turndown keep-list so it survives as raw inline HTML (matching how `<u>`/`<sub>`/`<sup>`/`<mark>`/`<ins>` already work via addRule)

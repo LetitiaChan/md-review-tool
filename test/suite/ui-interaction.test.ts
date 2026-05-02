@@ -853,13 +853,9 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
 
-            const jsPlaceholders = [
-                '${storeUri}', '${rendererUri}', '${annotationsUri}',
-                '${exportUri}', '${settingsUri}', '${appUri}'
-            ];
-            for (const ph of jsPlaceholders) {
-                assert.ok(html.includes(ph), `应包含 JS 占位符 ${ph}`);
-            }
+            // 业务脚本已合并为单一 bundle（由 Change add-webview-bundler-and-esm-modules 引入）
+            // 旧的 6 个占位符统一替换为 appBundleUri
+            assert.ok(html.includes('${appBundleUri}'), '应包含 appBundleUri 占位符（bundle 时代单一入口）');
 
             // Viz.js 脚本占位符（Graphviz 渲染依赖）
             assert.ok(html.includes('${vizUri}'), '应包含 Viz.js 脚本占位符');
@@ -2360,10 +2356,8 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
         const storeJsPath = path.join(extPath, 'webview', 'js', 'store.js');
         const appJsPath = path.join(extPath, 'webview', 'js', 'app.js');
-        const storeJsText = fs.readFileSync(storeJsPath, 'utf-8');
+        const storeJsText = fs.readFileSync(storeJsPath, 'utf-8').replace(/\r?\n\/\/[^\n]*\r?\n\s*export\s*\{[^}]+\}\s*;?\s*$/, '');
         const appJsText = fs.readFileSync(appJsPath, 'utf-8');
-
-        // ---- Tier 1：存在性断言（源码关键字） ----
 
         test('BT-storeExports.1 Tier1 — store.js 应定义 getRelPath 函数', () => {
             assert.ok(
@@ -2470,7 +2464,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         const extPath20 = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
         const exportJsText20 = fs.readFileSync(path.join(extPath20, 'webview', 'js', 'export.js'), 'utf-8');
         const appJsText20 = fs.readFileSync(path.join(extPath20, 'webview', 'js', 'app.js'), 'utf-8');
-        const storeJsText20 = fs.readFileSync(path.join(extPath20, 'webview', 'js', 'store.js'), 'utf-8');
+            const storeJsText20 = fs.readFileSync(path.join(extPath20, 'webview', 'js', 'store.js'), 'utf-8').replace(/\r?\n\/\/[^\n]*\r?\n\s*export\s*\{[^}]+\}\s*;?\s*$/, '');
 
         // 本地 extractFunctionBody（与 Suite 18 同实现，因作用域隔离需复制）
         function extractFunctionBody20(source: string, anchorRegex: RegExp): string {
@@ -2641,7 +2635,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         const extPath21 = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
         const exportJsText21 = fs.readFileSync(path.join(extPath21, 'webview', 'js', 'export.js'), 'utf-8');
         const appJsText21 = fs.readFileSync(path.join(extPath21, 'webview', 'js', 'app.js'), 'utf-8');
-        const storeJsText21 = fs.readFileSync(path.join(extPath21, 'webview', 'js', 'store.js'), 'utf-8');
+            const storeJsText21 = fs.readFileSync(path.join(extPath21, 'webview', 'js', 'store.js'), 'utf-8').replace(/\r?\n\/\/[^\n]*\r?\n\s*export\s*\{[^}]+\}\s*;?\s*$/, '');
         const fileServiceText21 = fs.readFileSync(path.join(extPath21, 'out', 'fileService.js'), 'utf-8');
         const i18nJsText21 = fs.readFileSync(path.join(extPath21, 'webview', 'js', 'i18n.js'), 'utf-8');
 

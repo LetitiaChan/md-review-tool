@@ -883,13 +883,7 @@
             window.__pendingErrors = [];
         }
     </script>
-    <!-- 应用脚本 -->
-    <script src="${i18nUri}"></script>
-    <script src="${storeUri}"></script>
-    <script src="${rendererUri}"></script>
-    <script src="${annotationsUri}"></script>
-    <script src="${exportUri}"></script>
-    <script src="${settingsUri}"></script>
-    <script src="${appUri}"></script>
+    <!-- 应用脚本（由 webview/build.config.mjs 打包为 webview/dist/app.bundle.js）-->
+    <script src="${appBundleUri}"></script>
 </body>
 </html>

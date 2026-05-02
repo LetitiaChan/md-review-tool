@@ -122,16 +122,11 @@
         var vscode = acquireVsCodeApi();
     </script>
 
-    <!-- 生产 JS（原样加载，顺序与 index.html 一致） -->
-    <script src="../../webview/js/i18n.js"></script>
-    <script src="../../webview/js/store.js"></script>
-    <script src="../../webview/js/renderer.js"></script>
-    <script src="../../webview/js/annotations.js"></script>
-    <script src="../../webview/js/export.js"></script>
-    <script src="../../webview/js/settings.js"></script>
+    <!-- 生产 JS 已合并为 bundle（由 webview/build.config.mjs 打包） -->
+    <!-- 注意：bundle 加载时会立即调用 initApp()，依赖 DOM 元素存在，因此必须在下方 placeholder 创建脚本之后加载 -->
 
-    <!-- 在 app.js 加载前，动态创建所有缺失的 DOM 元素占位符 -->
-    <!-- app.js 的 IIFE 会在加载时立即绑定 DOM 事件，缺失元素会导致 null.addEventListener 报错 -->
+    <!-- 在 bundle 加载前，动态创建所有缺失的 DOM 元素占位符 -->
+    <!-- initApp 会在加载时立即绑定 DOM 事件，缺失元素会导致 null.addEventListener 报错 -->
     <script>
         (function() {
             // app.js 中通过 getElementById 绑定 addEventListener 的所有元素 ID
@@ -167,16 +162,17 @@
         })();
     </script>
 
-    <script src="../../webview/js/app.js"></script>
+    <!-- 加载打包后的 bundle（包含 i18n/store/renderer/annotations/export/settings/app 全部模块） -->
+    <script src="../../webview/dist/app.bundle.js"></script>
 
-    <!-- 将 const 声明的全局变量挂载到 window 上，供 Playwright page.evaluate() 访问 -->
-    <!-- （const 在 <script> 顶层不会自动成为 window 属性，但 Playwright 的 evaluate 需要通过 window 访问） -->
+    <!-- 将 globalThis 挂载的业务模块再同步到 window 上（bundle 已挂 globalThis，此处冗余但保险） -->
+    <!-- Playwright 的 page.evaluate 通过 window 访问，保持与迁移前的行为一致 -->
     <script>
-        window.Renderer = Renderer;
-        window.Store = Store;
-        window.Annotations = Annotations;
-        window.Settings = Settings;
-        window.I18n = I18n;
+        if (typeof globalThis.Renderer !== 'undefined') window.Renderer = globalThis.Renderer;
+        if (typeof globalThis.Store !== 'undefined') window.Store = globalThis.Store;
+        if (typeof globalThis.Annotations !== 'undefined') window.Annotations = globalThis.Annotations;
+        if (typeof globalThis.Settings !== 'undefined') window.Settings = globalThis.Settings;
+        if (typeof globalThis.I18n !== 'undefined') window.I18n = globalThis.I18n;
         if (typeof ExportManager !== 'undefined') window.ExportManager = ExportManager;
         if (typeof EMOJI_MAP !== 'undefined') window.EMOJI_MAP = EMOJI_MAP;
     </script>

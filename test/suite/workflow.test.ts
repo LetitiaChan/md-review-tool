@@ -802,7 +802,8 @@ suite('Workflow Test Suite — 完整工作流', () => {
             assert.ok(extPath);
 
             const html = fs.readFileSync(path.join(extPath!, 'webview', 'index.html'), 'utf-8');
-            const requiredPlaceholders = ['${nonce}', '${cspSource}', '${styleUri}', '${appUri}'];
+            // 业务脚本合并为单一 bundle（appBundleUri），由 Change add-webview-bundler-and-esm-modules 引入
+            const requiredPlaceholders = ['${nonce}', '${cspSource}', '${styleUri}', '${appBundleUri}'];
             for (const ph of requiredPlaceholders) {
                 assert.ok(html.includes(ph), `HTML 应包含占位符 ${ph}`);
             }

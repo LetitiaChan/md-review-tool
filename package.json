@@ -330,9 +330,11 @@
     }
   },
   "scripts": {
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && npm run build:webview",
     "compile:test": "tsc -p ./test/tsconfig.json",
     "watch": "tsc -watch -p ./",
+    "build:webview": "node webview/build.config.mjs",
+    "build:webview:watch": "node webview/build.config.mjs --watch",
     "pretest": "npm run compile && npm run compile:test",
     "test": "node ./out/test/runTest.js",
     "test:ui": "npx playwright test --config test/ui/playwright.config.ts",
@@ -349,6 +351,7 @@
     "@types/vscode": "^1.74.0",
     "@viz-js/viz": "^3.25.0",
     "@vscode/test-electron": "^2.3.8",
+    "esbuild": "^0.24.2",
     "glob": "^10.3.10",
     "marked": "^15.0.12",
     "mocha": "^10.2.0",

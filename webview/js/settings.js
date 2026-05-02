@@ -817,3 +817,6 @@ codeTheme: 'default-light-modern',
         onChange
     };
 })();
+
+// ===== ESM export (for webview bundler) =====
+export { Settings };

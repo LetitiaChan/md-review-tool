@@ -132,6 +132,8 @@ This extension's review styles, interaction logic, and AI instruction templates 
    npm run compile
    ```
 
+   > Note: `npm run compile` now runs `tsc -p ./ && npm run build:webview`. The webview bundler (esbuild) produces `webview/dist/app.bundle.js` that consolidates all 7 webview JS modules. For webview-only hot reload during development, use `npm run build:webview:watch` in a separate terminal.
+
 3. Press `F5` in your editor (VS Code / Cursor / Windsurf / CodeBuddy IDE / Trae, etc.) to launch the Extension Development Host for debugging.
 
 ### Usage
@@ -376,6 +378,8 @@ MIT
    ```bash
    npm run compile
    ```
+
+   > 注：`npm run compile` 已升级为 `tsc -p ./ && npm run build:webview`。Webview 打包器（esbuild）会产出 `webview/dist/app.bundle.js`，整合 webview 的 7 个 JS 模块。开发调试 webview 时可单独开另一个终端跑 `npm run build:webview:watch` 实现热重建。
 
 3. 在你的编辑器（VS Code / Cursor / Windsurf / CodeBuddy IDE / Trae 等）中按 `F5` 启动扩展开发宿主进行调试。
 

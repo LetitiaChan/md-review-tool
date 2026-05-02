@@ -2437,3 +2437,6 @@ wrapper.innerHTML = `<div class="frontmatter-card"><div class="fm-header"><span 
 
     return { parseMarkdown, renderBlocks, onRenderComplete, getBlockIndex, setImageUriCache, getImageUriCache: () => _imageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, restoreMathPlaceholders, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
 })();
+
+// ===== ESM export (for webview bundler) =====
+export { Renderer };

@@ -540,13 +540,8 @@ codeTheme: config.get<string>('codeTheme', 'default-light-modern'),
         const settingsCssUri = webviewUri('css/settings.css');
         const highlightThemesCssUri = webviewUri('css/highlight-themes.css');
         const katexCssUri = webviewUri('css/katex.min.css');
-        const storeUri = webviewUri('js/store.js');
-        const i18nUri = webviewUri('js/i18n.js');
-        const rendererUri = webviewUri('js/renderer.js');
-        const annotationsUri = webviewUri('js/annotations.js');
-        const exportUri = webviewUri('js/export.js');
-        const settingsUri = webviewUri('js/settings.js');
-        const appUri = webviewUri('js/app.js');
+        // 业务脚本已合并为单一 bundle（由 webview/build.config.mjs 打包）
+        const appBundleUri = webviewUri('dist/app.bundle.js');
 
 
 
@@ -571,13 +566,7 @@ codeTheme: config.get<string>('codeTheme', 'default-light-modern'),
         html = html.replace(/\$\{settingsCssUri\}/g, settingsCssUri);
         html = html.replace(/\$\{highlightThemesCssUri\}/g, highlightThemesCssUri);
         html = html.replace(/\$\{katexCssUri\}/g, katexCssUri);
-        html = html.replace(/\$\{storeUri\}/g, storeUri);
-        html = html.replace(/\$\{i18nUri\}/g, i18nUri);
-        html = html.replace(/\$\{rendererUri\}/g, rendererUri);
-        html = html.replace(/\$\{annotationsUri\}/g, annotationsUri);
-        html = html.replace(/\$\{exportUri\}/g, exportUri);
-        html = html.replace(/\$\{settingsUri\}/g, settingsUri);
-        html = html.replace(/\$\{appUri\}/g, appUri);
+        html = html.replace(/\$\{appBundleUri\}/g, appBundleUri);
 
 
         return html;

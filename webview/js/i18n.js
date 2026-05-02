@@ -1177,3 +1177,8 @@ window.I18n = (() => {
 
 // Global shortcut
 const t = window.I18n.t;
+
+// ===== ESM exports (for webview bundler, see openspec/changes/archive/.../webview-build-system) =====
+// window.I18n 副作用保留，供 bundle 外部或尚未迁移的调用点使用
+const I18n = window.I18n;
+export { I18n, t };

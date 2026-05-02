@@ -255,3 +255,6 @@ const Store = (() => {
         forceBumpVersion
     };
 })();
+
+// ===== ESM export (for webview bundler) =====
+export { Store };

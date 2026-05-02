@@ -909,3 +909,6 @@ const Annotations = (() => {
         init, renderAnnotationsList, refreshView, setBlocks, updateToolbarState
     };
 })();
+
+// ===== ESM export (for webview bundler) =====
+export { Annotations };

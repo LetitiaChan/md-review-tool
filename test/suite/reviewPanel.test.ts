@@ -86,7 +86,8 @@ suite('ReviewPanel Test Suite', () => {
         assert.ok(html.includes('${nonce}'), 'HTML 应包含 nonce 占位符');
         assert.ok(html.includes('${cspSource}'), 'HTML 应包含 cspSource 占位符');
         assert.ok(html.includes('${styleUri}'), 'HTML 应包含 styleUri 占位符');
-        assert.ok(html.includes('${appUri}'), 'HTML 应包含 appUri 占位符');
+        // 业务脚本已合并为单一 bundle（由 Change add-webview-bundler-and-esm-modules 引入）
+        assert.ok(html.includes('${appBundleUri}'), 'HTML 应包含 appBundleUri 占位符');
     });
 
     // ===== 菜单配置验证 =====
@@ -150,13 +151,16 @@ suite('ReviewPanel Test Suite', () => {
             const htmlPath = path.join(extPath!, 'webview', 'index.html');
             const html = fs.readFileSync(htmlPath, 'utf-8');
 
-            // 验证 JS 相关占位符
-            assert.ok(html.includes('${storeUri}'), '应包含 storeUri 占位符');
-            assert.ok(html.includes('${rendererUri}'), '应包含 rendererUri 占位符');
-            assert.ok(html.includes('${annotationsUri}'), '应包含 annotationsUri 占位符');
-            assert.ok(html.includes('${exportUri}'), '应包含 exportUri 占位符');
-            assert.ok(html.includes('${settingsUri}'), '应包含 settingsUri 占位符');
-            assert.ok(html.includes('${appUri}'), '应包含 appUri 占位符');
+            // 业务脚本已合并为单一 bundle（由 Change add-webview-bundler-and-esm-modules 引入）
+            // 旧的 7 个占位符（storeUri / rendererUri / annotationsUri / exportUri / settingsUri / i18nUri / appUri）已全部替换为 appBundleUri
+            assert.ok(html.includes('${appBundleUri}'), '应包含 appBundleUri 占位符（bundle 时代，单一导入点）');
+            assert.ok(!html.includes('${storeUri}'), '不应再包含旧 storeUri 占位符');
+            assert.ok(!html.includes('${rendererUri}'), '不应再包含旧 rendererUri 占位符');
+            assert.ok(!html.includes('${annotationsUri}'), '不应再包含旧 annotationsUri 占位符');
+            assert.ok(!html.includes('${exportUri}'), '不应再包含旧 exportUri 占位符');
+            assert.ok(!html.includes('${settingsUri}'), '不应再包含旧 settingsUri 占位符');
+            assert.ok(!html.includes('${i18nUri}'), '不应再包含旧 i18nUri 占位符');
+            assert.ok(!html.includes('${appUri}'), '不应再包含旧 appUri 占位符');
         });
 
         test('index.html 应包含 KaTeX CSS 占位符', () => {

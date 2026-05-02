@@ -2,8 +2,12 @@
  * app.js - 应用主控模块（VSCode 插件版）
  * 初始化、事件绑定、流程控制
  * 通过 postMessage 与 Extension Host 通信
+ *
+ * 注：由 Change `add-webview-bundler-and-esm-modules` 从 IIFE 重构为
+ * `export function initApp()`，由 webview/src/entries/main.entry.js 在
+ * 所有依赖模块 import 完成后显式调用启动。内部原有的 DOM ready 检测保留。
  */
-(() => {
+export function initApp() {
     let blocks = [];
     let serverFileList = [];
     let currentMode = 'preview';
@@ -3561,4 +3565,4 @@ this.innerHTML = t('modal.ai_result.copied');
     } else {
         init();
     }
-})();
+}

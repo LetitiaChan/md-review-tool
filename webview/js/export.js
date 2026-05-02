@@ -364,3 +364,6 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
         enableAutoSave, disableAutoSave, triggerAutoSave, isAutoSaveEnabled
     };
 })();
+
+// ===== ESM export (for webview bundler) =====
+export { Exporter };
