@@ -544,6 +544,8 @@ codeTheme: config.get<string>('codeTheme', 'default-light-modern'),
         const appBundleUri = webviewUri('dist/app.bundle.js');
         // CodeMirror 6 bundle（Source Mode 引擎，Phase A 新增）
         const cm6BundleUri = webviewUri('dist/cm6.bundle.js');
+        // ProseMirror bundle（Rich Mode 引擎，Phase B 新增）
+        const pmBundleUri = webviewUri('dist/pm.bundle.js');
 
 
 
@@ -570,6 +572,7 @@ codeTheme: config.get<string>('codeTheme', 'default-light-modern'),
         html = html.replace(/\$\{katexCssUri\}/g, katexCssUri);
         html = html.replace(/\$\{appBundleUri\}/g, appBundleUri);
         html = html.replace(/\$\{cm6BundleUri\}/g, cm6BundleUri);
+        html = html.replace(/\$\{pmBundleUri\}/g, pmBundleUri);
 
 
         return html;

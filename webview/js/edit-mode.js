@@ -1,34 +1,39 @@
 /**
- * edit-mode.js — Source Mode 状态机
+ * edit-mode.js — 双模式编辑器状态机
  *
- * 管理 sourceModeActive 布尔态与当前 CodeMirror 6 编辑器实例句柄。
- * 与 app.js 的 currentMode ∈ {preview, edit} 二态解耦，作为"第三并存态"覆盖视图层。
+ * 管理三态模式：inactive / source / rich
+ * 与 app.js 的 currentMode ∈ {preview, rich, source} 配合。
  *
- * Change: add-dual-mode-editor-phase-a-cm6-source
+ * Change: add-dual-mode-editor-phase-b-pm-rich（从 Phase A 二态扩展为三态）
  *
  * 依赖：
- * - globalThis.CM6.createEditor（由 cm6.entry.js 提供）
+ * - globalThis.CM6.createEditor（由 cm6.entry.js 提供，Source Mode）
+ * - globalThis.PM.createRichEditor（由 pm.entry.js 提供，Rich Mode）
  * - globalThis.Store（Store.getData, Store.setRawMarkdown，由 store.js 提供）
  * - globalThis.handleSaveMd（由 app.js 暴露，Ctrl+S 保存路径）
  * - globalThis.triggerAutoSave（由 app.js 暴露，onChange 节流保存路径，可选）
  */
 
-let _active = false;
-let _editor = null;
-let _container = null;
+// ===== 模式枚举 =====
+const MODE = { INACTIVE: 'inactive', SOURCE: 'source', RICH: 'rich' };
 
-const CONTAINER_ID = 'sourceModeContainer';
-const BODY_ACTIVE_CLASS = 'source-mode-active';
+let _mode = MODE.INACTIVE;
+let _editor = null;       // CM6 或 PM 实例句柄
+let _container = null;    // Source Mode 容器
 
-/**
- * 获取或创建 Source Mode 的独立容器（避免污染 #documentContent 的 preview 渲染 DOM）
- */
-function ensureContainer() {
+const SOURCE_CONTAINER_ID = 'sourceModeContainer';
+const RICH_CONTAINER_ID = 'richModeContainer';
+const SOURCE_BODY_CLASS = 'source-mode-active';
+const RICH_BODY_CLASS = 'rich-mode-active';
+
+// ===== Source Mode 容器管理 =====
+
+function ensureSourceContainer() {
     if (_container && _container.isConnected) return _container;
-    let el = document.getElementById(CONTAINER_ID);
+    let el = document.getElementById(SOURCE_CONTAINER_ID);
     if (!el) {
         el = document.createElement('div');
-        el.id = CONTAINER_ID;
+        el.id = SOURCE_CONTAINER_ID;
         const docContent = document.getElementById('documentContent');
         if (docContent && docContent.parentNode) {
             docContent.parentNode.insertBefore(el, docContent.nextSibling);
@@ -40,11 +45,25 @@ function ensureContainer() {
     return el;
 }
 
-/**
- * 进入 Source Mode：读 Store → 挂载 CM6 → 加 body class
- */
+function ensureRichContainer() {
+    let el = document.getElementById(RICH_CONTAINER_ID);
+    if (!el) {
+        el = document.createElement('div');
+        el.id = RICH_CONTAINER_ID;
+        const docContent = document.getElementById('documentContent');
+        if (docContent && docContent.parentNode) {
+            docContent.parentNode.insertBefore(el, docContent.nextSibling);
+        } else {
+            document.body.appendChild(el);
+        }
+    }
+    return el;
+}
+
+// ===== Source Mode =====
+
 function enterSource() {
-    if (_active) return;
+    if (_mode !== MODE.INACTIVE) return;
     if (!globalThis.CM6 || typeof globalThis.CM6.createEditor !== 'function') {
         console.warn('[edit-mode] CM6 not loaded, cannot enter source mode');
         return;
@@ -56,23 +75,20 @@ function enterSource() {
     }
 
     const doc = (store.getData().rawMarkdown) || '';
-    const container = ensureContainer();
+    const container = ensureSourceContainer();
 
     _editor = globalThis.CM6.createEditor({
         parent: container,
         doc,
         onChange: (newDoc) => {
-            // 回写真相源（B1 决策：markdown 单一真相源）
             if (typeof store.setRawMarkdown === 'function') {
                 store.setRawMarkdown(newDoc);
             }
-            // 触发既有 autosave timer（如已暴露）
             if (typeof globalThis.triggerAutoSave === 'function') {
                 globalThis.triggerAutoSave();
             }
         },
         onSave: () => {
-            // Ctrl+S：先同步最新 doc 到 Store，再走既有 handleSaveMd 路径
             if (_editor && typeof store.setRawMarkdown === 'function') {
                 store.setRawMarkdown(_editor.getDoc());
             }
@@ -82,18 +98,14 @@ function enterSource() {
         },
     });
 
-    document.body.classList.add(BODY_ACTIVE_CLASS);
-    _active = true;
+    document.body.classList.add(SOURCE_BODY_CLASS);
+    _mode = MODE.SOURCE;
 
-    // focus 让用户立即可输入
     try { _editor.focus(); } catch (e) { /* jsdom 等环境可能抛 */ }
 }
 
-/**
- * 退出 Source Mode：写回 Store → 销毁 CM6 → 移除 body class → 通知 app.js 重渲染
- */
 function exitSource() {
-    if (!_active) return;
+    if (_mode !== MODE.SOURCE) return;
 
     const store = globalThis.Store;
     let finalDoc = '';
@@ -106,26 +118,101 @@ function exitSource() {
         _editor = null;
     }
 
-    // 清理容器 DOM
     if (_container && _container.parentNode) {
         try { _container.parentNode.removeChild(_container); } catch (e) { /* 容错 */ }
     }
     _container = null;
 
-    document.body.classList.remove(BODY_ACTIVE_CLASS);
-    _active = false;
+    document.body.classList.remove(SOURCE_BODY_CLASS);
+    _mode = MODE.INACTIVE;
 
-    // 通知 app.js：Source 退出，需根据 currentMode 重渲染 preview/edit
     try {
         window.dispatchEvent(new CustomEvent('source-mode-exit', { detail: { finalDoc } }));
     } catch (e) { /* 容错 */ }
 }
 
-/**
- * 查询是否处于 Source Mode
- */
-function isSourceActive() {
-    return _active;
+// ===== Rich Mode =====
+
+function enterRich() {
+    if (_mode !== MODE.INACTIVE) return;
+    if (!globalThis.PM || typeof globalThis.PM.createRichEditor !== 'function') {
+        console.warn('[edit-mode] PM not loaded, cannot enter rich mode');
+        return;
+    }
+    const store = globalThis.Store;
+    if (!store || typeof store.getData !== 'function') {
+        console.warn('[edit-mode] Store not loaded');
+        return;
+    }
+
+    const markdown = (store.getData().rawMarkdown) || '';
+    const annotations = store.getAnnotations ? store.getAnnotations() : [];
+    const container = ensureRichContainer();
+
+    _editor = globalThis.PM.createRichEditor({
+        parent: container,
+        markdown,
+        annotations,
+        onChange: (newMarkdown) => {
+            if (typeof store.setRawMarkdown === 'function') {
+                store.setRawMarkdown(newMarkdown);
+            }
+            if (typeof globalThis.triggerAutoSave === 'function') {
+                globalThis.triggerAutoSave();
+            }
+        },
+        onSave: () => {
+            if (_editor && typeof store.setRawMarkdown === 'function') {
+                store.setRawMarkdown(_editor.getMarkdown());
+            }
+            if (typeof globalThis.handleSaveMd === 'function') {
+                globalThis.handleSaveMd();
+            }
+        },
+    });
+
+    document.body.classList.add(RICH_BODY_CLASS);
+    _mode = MODE.RICH;
+
+    try { _editor.focus(); } catch (e) { /* 容错 */ }
 }
 
-export const EditMode = { enterSource, exitSource, isSourceActive };
+function exitRich() {
+    if (_mode !== MODE.RICH) return;
+
+    const store = globalThis.Store;
+    let finalMarkdown = '';
+    if (_editor) {
+        try { finalMarkdown = _editor.getMarkdown(); } catch (e) { finalMarkdown = ''; }
+        if (store && typeof store.setRawMarkdown === 'function') {
+            store.setRawMarkdown(finalMarkdown);
+        }
+        try { _editor.destroy(); } catch (e) { /* 容错 */ }
+        _editor = null;
+    }
+
+    // 清理 Rich Mode 容器
+    const richContainer = document.getElementById(RICH_CONTAINER_ID);
+    if (richContainer && richContainer.parentNode) {
+        try { richContainer.parentNode.removeChild(richContainer); } catch (e) { /* 容错 */ }
+    }
+
+    document.body.classList.remove(RICH_BODY_CLASS);
+    _mode = MODE.INACTIVE;
+
+    try {
+        window.dispatchEvent(new CustomEvent('rich-mode-exit', { detail: { finalMarkdown } }));
+    } catch (e) { /* 容错 */ }
+}
+
+// ===== 查询函数 =====
+
+function isSourceActive() { return _mode === MODE.SOURCE; }
+function isRichActive() { return _mode === MODE.RICH; }
+function isAnyEditorActive() { return _mode !== MODE.INACTIVE; }
+
+export const EditMode = {
+    enterSource, exitSource, isSourceActive,
+    enterRich, exitRich, isRichActive,
+    isAnyEditorActive,
+};

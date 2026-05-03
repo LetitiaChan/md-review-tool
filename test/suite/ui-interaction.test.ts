@@ -3438,11 +3438,11 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             const fnBody = fnMatch![0];
 
             // 编辑模式
-            assert.ok(fnBody.includes("toggleBtn.classList.add('mode-edit')"), '编辑模式应添加 mode-edit class');
+            assert.ok(fnBody.includes("toggleBtn.classList.add('mode-rich')"), '编辑模式应添加 mode-rich class');
             assert.ok(fnBody.includes("previewIcon.style.display = 'none'"), '编辑模式应隐藏预览图标');
 
             // 预览模式
-            assert.ok(fnBody.includes("toggleBtn.classList.remove('mode-edit')"), '预览模式应移除 mode-edit class');
+            assert.ok(fnBody.includes("toggleBtn.classList.remove('mode-rich')"), '预览模式应移除 mode-rich class');
             assert.ok(fnBody.includes("editIcon.style.display = 'none'"), '预览模式应隐藏编辑图标');
         });
 
@@ -3455,7 +3455,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             const clickBody = clickMatch![0];
 
             assert.ok(clickBody.includes("currentMode === 'preview'"), '应检测当前模式');
-            assert.ok(clickBody.includes("'edit'"), '应能切换到编辑模式');
+            assert.ok(clickBody.includes("'rich'"), '应能切换到富文本模式');
             assert.ok(clickBody.includes("'preview'"), '应能切换到预览模式');
             assert.ok(clickBody.includes('switchMode'), '应调用 switchMode');
         });

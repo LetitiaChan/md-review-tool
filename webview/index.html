@@ -889,6 +889,8 @@
     </script>
     <!-- CodeMirror 6 bundle（Source Mode 引擎）——挂 globalThis.CM6，appBundleUri 依赖它 -->
     <script src="${cm6BundleUri}"></script>
+    <!-- ProseMirror bundle（Rich Mode 引擎）——挂 globalThis.PM，appBundleUri 依赖它 -->
+    <script src="${pmBundleUri}"></script>
     <!-- 应用脚本（由 webview/build.config.mjs 打包为 webview/dist/app.bundle.js）-->
     <script src="${appBundleUri}"></script>
 </body>

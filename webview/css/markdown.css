@@ -1718,3 +1718,204 @@ body.source-mode-active .annotation-highlight {
     background: var(--vscode-button-background);
     color: var(--vscode-button-foreground);
 }
+
+/* ===== Rich Mode (Phase B) ===== */
+/* 当 document.body 带有 rich-mode-active class 时：
+ *   1. 隐藏原 preview 视图的 documentContent
+ *   2. 展示独立的 #richModeContainer（PM 挂载点）
+ *   3. 显示 WYSIWYG 工具栏
+ *   4. PM 编辑器使用 VS Code 主题色
+ */
+body.rich-mode-active #documentContent {
+    display: none !important;
+}
+body.rich-mode-active #richModeContainer {
+    display: block;
+    height: 100%;
+    width: 100%;
+    overflow: auto;
+}
+#richModeContainer {
+    display: none;
+    height: 100%;
+}
+#richModeContainer .ProseMirror {
+    min-height: 100%;
+    padding: 20px 32px;
+    font-family: var(--vscode-editor-fontFamily, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+    font-size: var(--vscode-editor-fontSize, 14px);
+    line-height: 1.6;
+    color: var(--vscode-editor-foreground);
+    background: var(--vscode-editor-background);
+    outline: none;
+}
+#richModeContainer .ProseMirror:focus {
+    outline: none;
+}
+/* PM 编辑器内的基础排版 */
+#richModeContainer .ProseMirror p {
+    margin: 0.5em 0;
+}
+#richModeContainer .ProseMirror h1,
+#richModeContainer .ProseMirror h2,
+#richModeContainer .ProseMirror h3,
+#richModeContainer .ProseMirror h4,
+#richModeContainer .ProseMirror h5,
+#richModeContainer .ProseMirror h6 {
+    margin: 1em 0 0.5em;
+    font-weight: 600;
+}
+#richModeContainer .ProseMirror pre {
+    background: var(--vscode-textCodeBlock-background, #1e1e1e);
+    padding: 12px 16px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+    font-size: 13px;
+}
+#richModeContainer .ProseMirror code {
+    background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.15));
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+    font-size: 0.9em;
+}
+#richModeContainer .ProseMirror pre code {
+    background: none;
+    padding: 0;
+}
+#richModeContainer .ProseMirror blockquote {
+    border-left: 3px solid var(--vscode-textBlockQuote-border, #007acc);
+    margin: 0.5em 0;
+    padding: 0.5em 1em;
+    color: var(--vscode-textBlockQuote-foreground);
+}
+#richModeContainer .ProseMirror table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.5em 0;
+}
+#richModeContainer .ProseMirror th,
+#richModeContainer .ProseMirror td {
+    border: 1px solid var(--vscode-editorGroup-border, #444);
+    padding: 6px 12px;
+}
+#richModeContainer .ProseMirror th {
+    background: var(--vscode-editorGroupHeader-tabsBackground, #252526);
+    font-weight: 600;
+}
+#richModeContainer .ProseMirror hr {
+    border: none;
+    border-top: 1px solid var(--vscode-editorGroup-border, #444);
+    margin: 1em 0;
+}
+#richModeContainer .ProseMirror img {
+    max-width: 100%;
+    height: auto;
+}
+/* 图表 NodeView 样式 */
+#richModeContainer .diagram-nodeview {
+    margin: 0.5em 0;
+    border: 1px solid var(--vscode-editorGroup-border, #444);
+    border-radius: 4px;
+    overflow: hidden;
+}
+#richModeContainer .diagram-nodeview .diagram-edit-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background: var(--vscode-editorGroupHeader-tabsBackground, #252526);
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+}
+#richModeContainer .diagram-nodeview .diagram-preview {
+    padding: 8px;
+    min-height: 60px;
+}
+#richModeContainer .diagram-nodeview .diagram-edit-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px;
+    border: none;
+    background: var(--vscode-input-background, #3c3c3c);
+    color: var(--vscode-input-foreground, #ccc);
+    font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+    font-size: 13px;
+    resize: vertical;
+}
+/* 批注 decoration 样式 */
+#richModeContainer .annotation-highlight {
+    background: rgba(255, 213, 79, 0.25);
+    border-bottom: 2px solid rgba(255, 213, 79, 0.6);
+}
+#richModeContainer .annotation-comment {
+    background: rgba(79, 195, 247, 0.2);
+    border-bottom: 2px solid rgba(79, 195, 247, 0.5);
+}
+#richModeContainer .annotation-delete {
+    background: rgba(239, 83, 80, 0.2);
+    border-bottom: 2px solid rgba(239, 83, 80, 0.5);
+    text-decoration: line-through;
+}
+#richModeContainer .annotation-insert {
+    background: rgba(102, 187, 106, 0.2);
+    border-bottom: 2px solid rgba(102, 187, 106, 0.5);
+}
+/* ProseMirror gapcursor */
+.ProseMirror-gapcursor {
+    display: none;
+    pointer-events: none;
+    position: absolute;
+}
+.ProseMirror-gapcursor:after {
+    content: '';
+    display: block;
+    position: absolute;
+    top: -2px;
+    width: 20px;
+    border-top: 1px solid var(--vscode-editorCursor-foreground, #fff);
+    animation: ProseMirror-cursor-blink 1.1s steps(2, start) infinite;
+}
+@keyframes ProseMirror-cursor-blink {
+    to { visibility: hidden; }
+}
+.ProseMirror-focused .ProseMirror-gapcursor {
+    display: block;
+}
+/* GH Alert 样式 */
+#richModeContainer .gh-alert {
+    border-left: 3px solid;
+    margin: 0.5em 0;
+    padding: 0.5em 1em;
+    border-radius: 4px;
+}
+#richModeContainer .gh-alert.alert-note { border-color: #58a6ff; background: rgba(88, 166, 255, 0.1); }
+#richModeContainer .gh-alert.alert-tip { border-color: #3fb950; background: rgba(63, 185, 80, 0.1); }
+#richModeContainer .gh-alert.alert-important { border-color: #a371f7; background: rgba(163, 113, 247, 0.1); }
+#richModeContainer .gh-alert.alert-warning { border-color: #d29922; background: rgba(210, 153, 34, 0.1); }
+#richModeContainer .gh-alert.alert-caution { border-color: #f85149; background: rgba(248, 81, 73, 0.1); }
+/* Frontmatter 样式 */
+#richModeContainer .frontmatter {
+    background: var(--vscode-textCodeBlock-background, #1e1e1e);
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+    font-size: 13px;
+    border: 1px dashed var(--vscode-editorGroup-border, #444);
+    margin-bottom: 1em;
+}
+/* Math 样式 */
+#richModeContainer .math-inline {
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.15));
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+#richModeContainer .math-display {
+    text-align: center;
+    padding: 8px;
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.1));
+    border-radius: 4px;
+    margin: 0.5em 0;
+}

@@ -288,7 +288,7 @@ export function initApp() {
         document.getElementById('btnRefresh').addEventListener('click', handleRefresh);
 
         document.getElementById('btnModeToggle').addEventListener('click', () => {
-            switchMode(currentMode === 'preview' ? 'edit' : 'preview');
+            switchMode(currentMode === 'preview' ? 'rich' : 'preview');
         });
 
         // Source Mode 切换按钮（Phase A）
@@ -308,15 +308,21 @@ export function initApp() {
         // Source Mode 退出后重渲染当前 currentMode 的视图
         window.addEventListener('source-mode-exit', () => {
             const mode = currentMode;
-            // 通过伪切换强制重渲染（先切到 否之再切回）
-            currentMode = mode === 'preview' ? 'edit' : 'preview';
+            currentMode = mode === 'preview' ? 'rich' : 'preview';
+            switchMode(mode);
+        });
+
+        // Rich Mode 退出后重渲染 preview
+        window.addEventListener('rich-mode-exit', () => {
+            const mode = currentMode;
+            currentMode = mode === 'preview' ? 'rich' : 'preview';
             switchMode(mode);
         });
 
         document.getElementById('btnSaveMd').addEventListener('click', handleSaveMd);
 
         document.getElementById('documentContent').addEventListener('input', () => {
-            if (currentMode === 'edit') {
+            if (currentMode === 'rich') {
                 editorDirty = true;
                 updateEditStatus('modified', t('notification.unsaved'));
                 scheduleAutoSave();
@@ -326,7 +332,7 @@ export function initApp() {
 
         // 编辑模式下点击 task checkbox 切换勾选状态
         document.getElementById('documentContent').addEventListener('click', (e) => {
-            if (currentMode !== 'edit') return;
+            if (currentMode !== 'rich') return;
             const checkboxSpan = e.target.closest('.task-checkbox');
             if (!checkboxSpan) return;
 
@@ -658,7 +664,7 @@ export function initApp() {
             }
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
-                if (currentMode === 'edit' && editorDirty) {
+                if (currentMode === 'rich' && editorDirty) {
                     clearAutoSaveTimer();
                     handleSaveMd();
                 }
@@ -667,7 +673,7 @@ export function initApp() {
                 e.preventDefault();
                 const data = Store.getData();
                 if (data.rawMarkdown) {
-                    switchMode(currentMode === 'preview' ? 'edit' : 'preview');
+            switchMode(currentMode === 'preview' ? 'rich' : 'preview');
                 }
             }
         });
@@ -688,11 +694,11 @@ export function initApp() {
         const value = e.target.value;
         if (!value) return;
 
-        if (currentMode === 'edit' && editorDirty) {
+        if (currentMode === 'rich' && editorDirty) {
             clearAutoSaveTimer();
             await handleSaveMd();
         }
-        if (currentMode === 'edit') {
+        if (currentMode === 'rich') {
             editorDirty = false;
             switchMode('preview');
         }
@@ -1467,7 +1473,7 @@ export function initApp() {
                 textarea.addEventListener('input', () => {
                     autoResizeTextarea(textarea);
                     // 触发编辑状态标记和自动保存（Task 2.5）
-                    if (currentMode === 'edit') {
+                    if (currentMode === 'rich') {
                         editorDirty = true;
                         updateEditStatus('modified', t('notification.unsaved'));
                         scheduleAutoSave();
@@ -1507,7 +1513,7 @@ export function initApp() {
                 val.contentEditable = 'true';
                 // 监听 input 事件以触发编辑状态标记和自动保存
                 val.addEventListener('input', () => {
-                    if (currentMode === 'edit') {
+                    if (currentMode === 'rich') {
                         editorDirty = true;
                         updateEditStatus('modified', t('notification.unsaved'));
                         scheduleAutoSave();
@@ -1566,7 +1572,7 @@ export function initApp() {
     // ===== 一键AI修复 =====
     async function handleApplyReview() {
         // 如果在编辑模式且有未保存内容，先立即保存
-        if (currentMode === 'edit' && editorDirty) {
+        if (currentMode === 'rich' && editorDirty) {
             clearAutoSaveTimer();
             await handleSaveMd();
         }
@@ -1730,7 +1736,7 @@ this.innerHTML = t('modal.ai_result.copied');
         const tableMenu = document.getElementById('tableContextMenu');
 
         docContent.addEventListener('contextmenu', (e) => {
-            if (currentMode !== 'edit') return;
+            if (currentMode !== 'rich') return;
             const cell = e.target.closest('td, th');
             if (!cell) return;
             const row = cell.parentElement;
@@ -1851,12 +1857,12 @@ this.innerHTML = t('modal.ai_result.copied');
 
     async function switchMode(mode) {
         if (mode === currentMode) return;
-        // Source Mode 激活时不错开底层 preview/edit 切换（早返）
-        if (globalThis.EditMode && EditMode.isSourceActive()) return;
+        // 编辑器激活时不错开底层 preview/rich 切换（早返）
+        if (globalThis.EditMode && EditMode.isAnyEditorActive()) return;
         const data = Store.getData();
         if (!data.fileName) { showNotification('请先打开一个 MD 文件'); return; }
 
-        if (currentMode === 'edit' && mode === 'preview' && editorDirty) {
+        if (currentMode === 'rich' && mode === 'preview' && editorDirty) {
             clearAutoSaveTimer();
             await handleSaveMd();
         }
@@ -1869,13 +1875,13 @@ this.innerHTML = t('modal.ai_result.copied');
         const previewIcon = toggleBtn.querySelector('.mode-icon-preview');
         const editIcon = toggleBtn.querySelector('.mode-icon-edit');
         const modeLabel = toggleBtn.querySelector('.mode-toggle-label');
-        if (mode === 'edit') {
-            toggleBtn.classList.add('mode-edit');
+        if (mode === 'rich') {
+            toggleBtn.classList.add('mode-rich');
             previewIcon.style.display = 'none';
             editIcon.style.display = '';
             if (modeLabel) modeLabel.textContent = '编辑';
         } else {
-            toggleBtn.classList.remove('mode-edit');
+            toggleBtn.classList.remove('mode-rich');
             previewIcon.style.display = '';
             editIcon.style.display = 'none';
             if (modeLabel) modeLabel.textContent = '预览';
@@ -1885,7 +1891,7 @@ this.innerHTML = t('modal.ai_result.copied');
         const saveBtn = document.getElementById('btnSaveMd');
         const wysiwygToolbar = document.getElementById('wysiwygToolbar');
 
-        if (mode === 'edit') {
+        if (mode === 'rich') {
             saveBtn.style.display = 'none';
             wysiwygToolbar.classList.add('visible');
             const cleanBlocks = Renderer.parseMarkdown(data.rawMarkdown);
@@ -1983,8 +1989,9 @@ this.innerHTML = t('modal.ai_result.copied');
         clearAutoSaveTimer();
         autoSaveTimer = setTimeout(() => {
             // Source Mode 下亦可落盘（走 handleSaveMd 通用路径）；若当前既非 edit 也非 source 则不做
-            if (currentMode === 'edit' && editorDirty) handleSaveMd();
+            if (currentMode === 'rich' && editorDirty) handleSaveMd();
             else if (globalThis.EditMode && EditMode.isSourceActive()) handleSaveMd();
+            else if (globalThis.EditMode && EditMode.isRichActive()) handleSaveMd();
         }, AUTO_SAVE_DELAY);
     }
 
@@ -2005,6 +2012,22 @@ this.innerHTML = t('modal.ai_result.copied');
                 setTimeout(() => updateEditStatus('', ''), 1500);
             } catch (e) {
                 console.error('[source-mode] save failed', e);
+                updateEditStatus('error', t('notification.save_failed') || 'Save failed');
+            }
+            return;
+        }
+
+        // Rich Mode 下走 PM serializer 路径：直接用 Store 里的 rawMarkdown（edit-mode.js 的 onChange 已将最新 PM doc 序列化写入）
+        if (globalThis.EditMode && EditMode.isRichActive()) {
+            const dataPm = Store.getData();
+            if (!dataPm.fileName) { showNotification(t('notification.no_open_file')); return; }
+            try {
+                await Exporter.saveViaHost(dataPm.rawMarkdown);
+                editorDirty = false;
+                updateEditStatus('saved', t('notification.saved'));
+                setTimeout(() => updateEditStatus('', ''), 1500);
+            } catch (e) {
+                console.error('[rich-mode] save failed', e);
                 updateEditStatus('error', t('notification.save_failed') || 'Save failed');
             }
             return;

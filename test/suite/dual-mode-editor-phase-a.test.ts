@@ -196,10 +196,10 @@ suite('Dual-Mode Editor Phase A — CM6 Source Mode Test Suite', () => {
                 'CSP script-src 不应引入 unsafe-inline');
         });
 
-        test('BT-DualModePhaseA.3 edit-mode.js 默认 _active 初值为 false', () => {
+        test('BT-DualModePhaseA.3 edit-mode.js 默认 _mode 初值为 INACTIVE', () => {
             const content = fs.readFileSync(path.join(extPath, 'webview', 'js', 'edit-mode.js'), 'utf-8');
-            assert.ok(/let\s+_active\s*=\s*false/.test(content),
-                'edit-mode.js 应有 let _active = false 初值');
+            assert.ok(/let\s+_mode\s*=\s*MODE\.INACTIVE/.test(content),
+                'edit-mode.js 应有 let _mode = MODE.INACTIVE 初值');
             // app.js 的 init 路径不应主动调用 enterSource
             const appContent = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
             // 仅允许在 click handler 中调 enterSource，init 路径 grep 不到
@@ -239,7 +239,7 @@ suite('Dual-Mode Editor Phase A — CM6 Source Mode Test Suite', () => {
 
             assert.ok(appSize > 100 * 1024, `app.bundle.js 应 > 100KB，实际 ${appSize}`);
             assert.ok(cm6Size > 100 * 1024, `cm6.bundle.js 应 > 100KB（真盘），实际 ${cm6Size}`);
-            assert.ok(pmSize < 300, `pm.bundle.js 应仍为占位 < 300B，实际 ${pmSize}`);
+            assert.ok(pmSize > 100 * 1024, `pm.bundle.js 应 > 100KB（Phase B 真盘），实际 ${pmSize}`);
         });
 
         test('BT-DualModePhaseA.7 Store 应暴露 setRawMarkdown setter', () => {
