@@ -27280,11 +27280,70 @@
       }
     });
   }
+  function htmlTagConverterPlugin(md2) {
+    const markTagMap = {
+      "kbd": "kbd",
+      "mark": "mark",
+      "sub": "subscript",
+      "sup": "superscript",
+      "ins": "underline",
+      "u": "underline"
+    };
+    function classifyHtmlInline(content) {
+      const trimmed = content.trim();
+      if (/^<br\s*\/?\s*>$/i.test(trimmed)) {
+        return { kind: "br" };
+      }
+      const openMatch = trimmed.match(/^<([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>$/);
+      if (openMatch) {
+        const tag = openMatch[1].toLowerCase();
+        if (markTagMap[tag]) return { kind: "mark_open", markName: markTagMap[tag] };
+      }
+      const closeMatch = trimmed.match(/^<\/([a-zA-Z][a-zA-Z0-9]*)\s*>$/);
+      if (closeMatch) {
+        const tag = closeMatch[1].toLowerCase();
+        if (markTagMap[tag]) return { kind: "mark_close", markName: markTagMap[tag] };
+      }
+      return { kind: "text", text: content };
+    }
+    md2.core.ruler.after("inline", "html_tag_converter", function(state) {
+      const Token2 = state.Token;
+      for (const tok of state.tokens) {
+        if (tok.type !== "inline" || !tok.children || !tok.children.length) continue;
+        const newChildren = [];
+        for (const child of tok.children) {
+          if (child.type === "html_inline") {
+            const info = classifyHtmlInline(child.content);
+            if (info.kind === "br") {
+              const t = new Token2("hardbreak", "br", 0);
+              newChildren.push(t);
+            } else if (info.kind === "mark_open") {
+              const t = new Token2(info.markName + "_open", "", 1);
+              t.markup = child.content;
+              newChildren.push(t);
+            } else if (info.kind === "mark_close") {
+              const t = new Token2(info.markName + "_close", "", -1);
+              t.markup = child.content;
+              newChildren.push(t);
+            } else {
+              const t = new Token2("text", "", 0);
+              t.content = info.text;
+              newChildren.push(t);
+            }
+          } else {
+            newChildren.push(child);
+          }
+        }
+        tok.children = newChildren;
+      }
+    });
+  }
   md.use(frontmatterPlugin);
   md.use(mathPlugin);
   md.use(ghAlertPlugin);
   md.use(coloredTextPlugin);
   md.use(diagramPlugin);
+  md.use(htmlTagConverterPlugin);
   var parser = new MarkdownParser(schema, md, {
     blockquote: { block: "blockquote" },
     paragraph: { block: "paragraph" },
@@ -27301,6 +27360,11 @@
       alt: tok.children && tok.children[0] && tok.children[0].content || null
     }) },
     hardbreak: { node: "hard_break" },
+    // HTML token 兜底：html_inline 已在 htmlTagConverterPlugin 中被转换为 hardbreak/mark/text token，
+    // 理论上不会到达 parser；此处映射为 ignore 作为最后一道保险。
+    // html_block（整块 HTML）统一 ignore，避免解析失败；如果将来需要保留原文可改为自定义节点。
+    html_inline: { ignore: true },
+    html_block: { ignore: true },
     // 表格节点（markdown-it table 插件 → prosemirror-tables schema）
     table: { block: "table" },
     thead: { ignore: true },
@@ -27338,7 +27402,13 @@
       const style = tok.attrGet("style") || "";
       const match2 = style.match(/color\s*:\s*([^;]+)/i);
       return { color: match2 ? match2[1].trim() : "" };
-    } }
+    } },
+    // HTML 标签对应的 mark（由 htmlTagConverterPlugin 注入的合成 token）
+    kbd: { mark: "kbd" },
+    mark: { mark: "mark" },
+    subscript: { mark: "subscript" },
+    superscript: { mark: "superscript" },
+    underline: { mark: "underline" }
   });
   var serializer = new MarkdownSerializer(
     // 节点序列化器

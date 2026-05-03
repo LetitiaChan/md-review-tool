@@ -235,12 +235,94 @@ function diagramPlugin(md) {
     });
 }
 
+/**
+ * HTML inline 标签转换插件：将已知的 HTML 标签（<br>, <kbd>, <mark>, <sub>, <sup>, <ins>, <u>）
+ * 转换为对应的 PM mark/node token，避免 MarkdownParser 抛出 "html_inline not supported"。
+ * 未识别的 HTML 标签降级为纯文本（text token），保证 parser 不崩溃。
+ *
+ * 工作在 inline token children 层面：md.core 规则遍历 inline token 的 children，
+ * 识别 html_inline 并原地替换/插入新 token。
+ */
+function htmlTagConverterPlugin(md) {
+    // 已知的 HTML mark 标签 → PM mark 名称
+    const markTagMap = {
+        'kbd': 'kbd',
+        'mark': 'mark',
+        'sub': 'subscript',
+        'sup': 'superscript',
+        'ins': 'underline',
+        'u': 'underline',
+    };
+
+    /**
+     * 解析单个 html_inline token 的 content，返回描述对象：
+     *  - { kind: 'br' }
+     *  - { kind: 'mark_open' | 'mark_close', markName }
+     *  - { kind: 'text', text }   (无法识别，降级为文本)
+     */
+    function classifyHtmlInline(content) {
+        const trimmed = content.trim();
+        // <br>, <br/>, <br />
+        if (/^<br\s*\/?\s*>$/i.test(trimmed)) {
+            return { kind: 'br' };
+        }
+        // <tag> or <tag attrs...>
+        const openMatch = trimmed.match(/^<([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>$/);
+        if (openMatch) {
+            const tag = openMatch[1].toLowerCase();
+            if (markTagMap[tag]) return { kind: 'mark_open', markName: markTagMap[tag] };
+        }
+        // </tag>
+        const closeMatch = trimmed.match(/^<\/([a-zA-Z][a-zA-Z0-9]*)\s*>$/);
+        if (closeMatch) {
+            const tag = closeMatch[1].toLowerCase();
+            if (markTagMap[tag]) return { kind: 'mark_close', markName: markTagMap[tag] };
+        }
+        // 其他未识别 HTML 标签 → 降级为文本
+        return { kind: 'text', text: content };
+    }
+
+    md.core.ruler.after('inline', 'html_tag_converter', function (state) {
+        const Token = state.Token;
+        for (const tok of state.tokens) {
+            if (tok.type !== 'inline' || !tok.children || !tok.children.length) continue;
+            const newChildren = [];
+            for (const child of tok.children) {
+                if (child.type === 'html_inline') {
+                    const info = classifyHtmlInline(child.content);
+                    if (info.kind === 'br') {
+                        const t = new Token('hardbreak', 'br', 0);
+                        newChildren.push(t);
+                    } else if (info.kind === 'mark_open') {
+                        const t = new Token(info.markName + '_open', '', 1);
+                        t.markup = child.content;
+                        newChildren.push(t);
+                    } else if (info.kind === 'mark_close') {
+                        const t = new Token(info.markName + '_close', '', -1);
+                        t.markup = child.content;
+                        newChildren.push(t);
+                    } else {
+                        // 降级：html_inline → text，保留原始内容但不崩溃
+                        const t = new Token('text', '', 0);
+                        t.content = info.text;
+                        newChildren.push(t);
+                    }
+                } else {
+                    newChildren.push(child);
+                }
+            }
+            tok.children = newChildren;
+        }
+    });
+}
+
 // 注册插件
 md.use(frontmatterPlugin);
 md.use(mathPlugin);
 md.use(ghAlertPlugin);
 md.use(coloredTextPlugin);
 md.use(diagramPlugin);
+md.use(htmlTagConverterPlugin);
 
 // ===== MarkdownParser 配置 =====
 const parser = new MarkdownParser(schema, md, {
@@ -259,6 +341,11 @@ const parser = new MarkdownParser(schema, md, {
         alt: (tok.children && tok.children[0] && tok.children[0].content) || null,
     }) },
     hardbreak: { node: 'hard_break' },
+    // HTML token 兜底：html_inline 已在 htmlTagConverterPlugin 中被转换为 hardbreak/mark/text token，
+    // 理论上不会到达 parser；此处映射为 ignore 作为最后一道保险。
+    // html_block（整块 HTML）统一 ignore，避免解析失败；如果将来需要保留原文可改为自定义节点。
+    html_inline: { ignore: true },
+    html_block: { ignore: true },
     // 表格节点（markdown-it table 插件 → prosemirror-tables schema）
     table: { block: 'table' },
     thead: { ignore: true },
@@ -297,6 +384,12 @@ const parser = new MarkdownParser(schema, md, {
         const match = style.match(/color\s*:\s*([^;]+)/i);
         return { color: match ? match[1].trim() : '' };
     }},
+    // HTML 标签对应的 mark（由 htmlTagConverterPlugin 注入的合成 token）
+    kbd: { mark: 'kbd' },
+    mark: { mark: 'mark' },
+    subscript: { mark: 'subscript' },
+    superscript: { mark: 'superscript' },
+    underline: { mark: 'underline' },
 });
 
 // ===== MarkdownSerializer 配置 =====

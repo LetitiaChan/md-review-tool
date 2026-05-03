@@ -324,4 +324,55 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
             assert.ok(/text-align/.test(bridge), 'getAttrs 应解析 text-align 样式');
         });
     });
+
+    // ===== Hotfix: HTML inline/block token 映射修复 =====
+    suite('HTML token 映射', () => {
+        test('BT-HtmlToken.1 pm-markdown-bridge.js 应包含 html_inline/html_block 兜底映射（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const bridge = fs.readFileSync(path.join(extPath, 'webview', 'js', 'pm-markdown-bridge.js'), 'utf-8');
+            assert.ok(/html_inline:\s*\{\s*ignore:\s*true\s*\}/.test(bridge),
+                'parser 应包含 html_inline → ignore 兜底映射');
+            assert.ok(/html_block:\s*\{\s*ignore:\s*true\s*\}/.test(bridge),
+                'parser 应包含 html_block → ignore 兜底映射');
+        });
+
+        test('BT-HtmlToken.2 应注册 htmlTagConverterPlugin 和 mark token 映射（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const bridge = fs.readFileSync(path.join(extPath, 'webview', 'js', 'pm-markdown-bridge.js'), 'utf-8');
+            // htmlTagConverterPlugin 应被定义并注册
+            assert.ok(/function\s+htmlTagConverterPlugin\s*\(/.test(bridge),
+                'bridge 应定义 htmlTagConverterPlugin');
+            assert.ok(/md\.use\(htmlTagConverterPlugin\)/.test(bridge),
+                'bridge 应通过 md.use 注册 htmlTagConverterPlugin');
+            // parser 应有 kbd/mark/subscript/superscript/underline 的 mark 映射
+            assert.ok(/kbd:\s*\{\s*mark:\s*'kbd'\s*\}/.test(bridge), 'parser 应映射 kbd → mark');
+            assert.ok(/subscript:\s*\{\s*mark:\s*'subscript'\s*\}/.test(bridge), 'parser 应映射 subscript → mark');
+            assert.ok(/superscript:\s*\{\s*mark:\s*'superscript'\s*\}/.test(bridge), 'parser 应映射 superscript → mark');
+            assert.ok(/underline:\s*\{\s*mark:\s*'underline'\s*\}/.test(bridge), 'parser 应映射 underline → mark');
+        });
+
+        test('BT-HtmlToken.3 htmlTagConverterPlugin 应识别 <br>/<kbd>/<mark>/<sub>/<sup>/<ins>/<u>（Tier 3 — 任务特定断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const bridge = fs.readFileSync(path.join(extPath, 'webview', 'js', 'pm-markdown-bridge.js'), 'utf-8');
+            // markTagMap 应覆盖 kbd/mark/sub/sup/ins/u
+            const mapRegion = bridge.substring(
+                bridge.indexOf('markTagMap'),
+                bridge.indexOf('markTagMap') + 400
+            );
+            assert.ok(/'kbd'\s*:\s*'kbd'/.test(mapRegion), 'markTagMap 应映射 kbd');
+            assert.ok(/'mark'\s*:\s*'mark'/.test(mapRegion), 'markTagMap 应映射 mark');
+            assert.ok(/'sub'\s*:\s*'subscript'/.test(mapRegion), 'markTagMap 应映射 sub → subscript');
+            assert.ok(/'sup'\s*:\s*'superscript'/.test(mapRegion), 'markTagMap 应映射 sup → superscript');
+            assert.ok(/'ins'\s*:\s*'underline'/.test(mapRegion), 'markTagMap 应映射 ins → underline');
+            assert.ok(/'u'\s*:\s*'underline'/.test(mapRegion), 'markTagMap 应映射 u → underline');
+            // <br> 应被转为 hardbreak
+            assert.ok(/kind:\s*'br'/.test(bridge) && /hardbreak/.test(bridge),
+                '<br> 应被转换为 hardbreak token');
+            // 未识别标签应降级为 text（保证不崩溃）
+            assert.ok(/kind:\s*'text'/.test(bridge), '未识别 HTML 标签应降级为 text token');
+        });
+    });
 });

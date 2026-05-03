@@ -46,6 +46,12 @@ export class ReviewPanel {
     private _currentFilePath: string | undefined;
     private _watcher: vscode.FileSystemWatcher | undefined;
     private _webviewReady = false;
+    // 记录进入禅模式时被本扩展关闭过的 IDE 栏，用于退出禅模式时按需恢复
+    private _zenClosedBars: { sidebar: boolean; auxiliary: boolean; panel: boolean } = {
+        sidebar: false,
+        auxiliary: false,
+        panel: false,
+    };
 
     public static createOrShow(context: vscode.ExtensionContext, filePath?: string) {
         const column = vscode.ViewColumn.Active;
@@ -357,12 +363,26 @@ export class ReviewPanel {
                 if (entering) {
                     // 进入禅模式：隐藏 IDE 辅助区域，腾出更多空间给编辑器
                     // 注意：不使用 maximizeEditor，避免多窗口时编辑器组合并导致文件混淆
+                    // close* 命令是幂等的（已关闭时无副作用），此处记录"本扩展发起了关闭动作"
+                    // 以便退出禅模式时对称地恢复这三个区域
                     vscode.commands.executeCommand('workbench.action.closeSidebar');
                     vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
                     vscode.commands.executeCommand('workbench.action.closePanel');
+                    this._zenClosedBars = { sidebar: true, auxiliary: true, panel: true };
                 } else {
-                    // 退出禅模式：恢复 IDE 侧边栏
-                    vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
+                    // 退出禅模式：对称恢复进入时关闭的三个区域（左侧栏、右侧辅助栏、底部面板）
+                    // VS Code 未提供可见性查询 API，采用 toggle 命令恢复；
+                    // 已在进入时 close 过，此时 toggle 会将其重新打开
+                    if (this._zenClosedBars.sidebar) {
+                        vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
+                    }
+                    if (this._zenClosedBars.auxiliary) {
+                        vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
+                    }
+                    if (this._zenClosedBars.panel) {
+                        vscode.commands.executeCommand('workbench.action.togglePanel');
+                    }
+                    this._zenClosedBars = { sidebar: false, auxiliary: false, panel: false };
                 }
                 break;
             }
