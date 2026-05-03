@@ -3890,4 +3890,97 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             );
         });
     });
+
+    // ========= Suite: Hotfix — 退出 Rich Mode 后自动刷新文档 =========
+    suite('Hotfix — 退出 Rich Mode 后自动刷新文档', () => {
+        const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const appJsPath = path.join(extPath, 'webview', 'js', 'app.js');
+        const appJsText = fs.readFileSync(appJsPath, 'utf-8');
+        const bundlePath = path.join(extPath, 'webview', 'dist', 'app.bundle.js');
+        const bundleText = fs.readFileSync(bundlePath, 'utf-8');
+
+        // ---- Tier 1：存在性断言 ----
+
+        test('BT-richExitRefresh.1 Tier1 — app.js rich-mode-exit 监听器应包含 refreshCurrentView 调用', () => {
+            const exitIdx = appJsText.indexOf("'rich-mode-exit'");
+            assert.ok(exitIdx > 0, '应有 rich-mode-exit 事件监听');
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 500);
+            assert.ok(
+                afterExit.includes('refreshCurrentView()'),
+                'rich-mode-exit 监听器应调用 refreshCurrentView() 刷新文档'
+            );
+        });
+
+        test('BT-richExitRefresh.2 Tier1 — bundle 中 rich-mode-exit 监听器应包含 refreshCurrentView', () => {
+            // 搜索 addEventListener("rich-mode-exit" 而非仅 "rich-mode-exit"，避免匹配到 dispatchEvent
+            const exitIdx = bundleText.indexOf('addEventListener("rich-mode-exit"');
+            assert.ok(exitIdx > 0, 'bundle 中应有 rich-mode-exit 事件监听');
+            const afterExit = bundleText.slice(exitIdx, exitIdx + 500);
+            assert.ok(
+                afterExit.includes('refreshCurrentView()'),
+                'bundle 中 rich-mode-exit 监听器应调用 refreshCurrentView()'
+            );
+        });
+
+        // ---- Tier 2：行为级断言 ----
+
+        test('BT-richExitRefresh.3 Tier2 — rich-mode-exit 监听器不应再调用 switchMode', () => {
+            const exitIdx = appJsText.indexOf("'rich-mode-exit'");
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 500);
+            // 提取到下一个 addEventListener 或函数结束
+            const nextListener = afterExit.indexOf('addEventListener', 10);
+            const block = nextListener > 0 ? afterExit.slice(0, nextListener) : afterExit;
+            assert.ok(
+                !block.includes('switchMode('),
+                'rich-mode-exit 监听器不应调用 switchMode（旧逻辑会导致不刷新文档）'
+            );
+        });
+
+        test('BT-richExitRefresh.4 Tier2 — rich-mode-exit 监听器应将 currentMode 设为 preview', () => {
+            const exitIdx = appJsText.indexOf("'rich-mode-exit'");
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 500);
+            assert.ok(
+                afterExit.includes("currentMode = 'preview'"),
+                'rich-mode-exit 监听器应将 currentMode 设为 preview'
+            );
+        });
+
+        test('BT-richExitRefresh.5 Tier2 — rich-mode-exit 监听器应重置 editorDirty', () => {
+            const exitIdx = appJsText.indexOf("'rich-mode-exit'");
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 500);
+            assert.ok(
+                afterExit.includes('editorDirty = false'),
+                'rich-mode-exit 监听器应将 editorDirty 重置为 false'
+            );
+        });
+
+        // ---- Tier 3：任务特定断言 ----
+
+        test('BT-richExitRefresh.6 Tier3 — refreshCurrentView 函数应重新解析 rawMarkdown 并渲染', () => {
+            const funcIdx = appJsText.indexOf('function refreshCurrentView()');
+            assert.ok(funcIdx > 0, '应有 refreshCurrentView 函数');
+            const funcBody = appJsText.slice(funcIdx, funcIdx + 500);
+            assert.ok(
+                funcBody.includes('Renderer.parseMarkdown(data.rawMarkdown)'),
+                'refreshCurrentView 应调用 Renderer.parseMarkdown(data.rawMarkdown)'
+            );
+            assert.ok(
+                funcBody.includes('Renderer.renderBlocks('),
+                'refreshCurrentView 应调用 Renderer.renderBlocks'
+            );
+            assert.ok(
+                funcBody.includes('refreshToc()'),
+                'refreshCurrentView 应调用 refreshToc() 更新目录'
+            );
+        });
+
+        test('BT-richExitRefresh.7 Tier3 — rich-mode-exit 监听器应清除编辑状态提示', () => {
+            const exitIdx = appJsText.indexOf("'rich-mode-exit'");
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 500);
+            assert.ok(
+                afterExit.includes("updateEditStatus('', '')"),
+                'rich-mode-exit 监听器应清除编辑状态提示文字'
+            );
+        });
+    });
 });

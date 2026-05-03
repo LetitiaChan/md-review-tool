@@ -5253,9 +5253,10 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       window.addEventListener("rich-mode-exit", () => {
         const btn = document.getElementById("btnToggleRich");
         if (btn) btn.classList.remove("active");
-        const mode = currentMode;
-        currentMode = mode === "preview" ? "rich" : "preview";
-        switchMode(mode);
+        currentMode = "preview";
+        editorDirty = false;
+        updateEditStatus("", "");
+        refreshCurrentView();
       });
       document.getElementById("btnSaveMd").addEventListener("click", handleSaveMd);
       document.getElementById("documentContent").addEventListener("input", () => {

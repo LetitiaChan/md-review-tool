@@ -303,9 +303,11 @@ export function initApp() {
         window.addEventListener('rich-mode-exit', () => {
             const btn = document.getElementById('btnToggleRich');
             if (btn) btn.classList.remove('active');
-            const mode = currentMode;
-            currentMode = mode === 'preview' ? 'rich' : 'preview';
-            switchMode(mode);
+            currentMode = 'preview';
+            editorDirty = false;
+            updateEditStatus('', '');
+            // 退出编辑后用最新的 rawMarkdown 重新渲染文档
+            refreshCurrentView();
         });
 
         document.getElementById('btnSaveMd').addEventListener('click', handleSaveMd);
