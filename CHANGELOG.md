@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 
 ### ✨ Changes
 - **Rich Mode icon updated** — The Rich Mode toolbar button icon changed from a paragraph mark (`¶`) to a pencil (`✎`), reflecting its new status as the sole editor
+- **Rich Mode pencil icon refined** — Replaced the minimal two-stroke pencil SVG with a more detailed and recognizable pencil icon (closed path with tip, body, and edit-line indicator)
 - **Rich Mode is now the only editor** — Click the pencil button to enter structured rich-text editing. All Rich Mode features (PM schema, diagram NodeView, annotation decorations, smart paste) remain unchanged
 
 ### 🗑️ Removed

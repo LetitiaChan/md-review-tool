@@ -106,8 +106,8 @@ suite('Remove Source Mode — Regression Test Suite', () => {
             assert.ok(html.includes('id="btnToggleRich"'),
                 'index.html 应包含 id="btnToggleRich" 按钮');
             // 铅笔 SVG 路径特征
-            assert.ok(html.includes('M12.5 3.5'),
-                'btnToggleRich 的 SVG path 应包含铅笔路径 M12.5 3.5');
+            assert.ok(html.includes('M11.4 1.6'),
+                'btnToggleRich 的 SVG path 应包含铅笔路径 M11.4 1.6');
         });
 
         test('T2.2 edit-mode.js 应导出 EditMode 对象，包含 enterRich/exitRich/isRichActive/isAnyEditorActive', () => {
