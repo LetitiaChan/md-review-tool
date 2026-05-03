@@ -25,6 +25,7 @@
         "toolbar.mode_edit": "\u7F16\u8F91",
         "edit_mode.source": "\u6E90\u7801",
         "edit_mode.source_toggle_tooltip": "\u6E90\u7801\u6A21\u5F0F\uFF08\u76F4\u63A5\u7F16\u8F91 Markdown\uFF0CCtrl+S \u4FDD\u5B58\uFF09",
+        "edit_mode.rich_toggle_tooltip": "\u5BCC\u6587\u672C\u6A21\u5F0F\uFF08\u7ED3\u6784\u5316\u7F16\u8F91\uFF0C\u652F\u6301\u56FE\u8868\u9884\u89C8\u548C\u6279\u6CE8\u88C5\u9970\uFF09",
         "edit_mode.source_hint": "\u5DF2\u8FDB\u5165\u6E90\u7801\u6A21\u5F0F \xB7 Ctrl+S \u4FDD\u5B58",
         "edit_mode.source_exit_hint": "\u5DF2\u9000\u51FA\u6E90\u7801\u6A21\u5F0F",
         "edit_mode.rich": "\u5BCC\u6587\u672C",
@@ -482,6 +483,7 @@
         "toolbar.mode_edit": "Edit",
         "edit_mode.source": "Source",
         "edit_mode.source_toggle_tooltip": "Source Mode (edit raw Markdown, Ctrl+S to save)",
+        "edit_mode.rich_toggle_tooltip": "Rich Mode (structured editing with diagram preview and annotation decorations)",
         "edit_mode.source_hint": "Entered Source Mode \xB7 Ctrl+S to save",
         "edit_mode.source_exit_hint": "Exited Source Mode",
         "edit_mode.rich": "Rich",
@@ -5333,12 +5335,28 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           }
         });
       }
+      const btnToggleRich = document.getElementById("btnToggleRich");
+      if (btnToggleRich && globalThis.EditMode) {
+        btnToggleRich.addEventListener("click", () => {
+          if (EditMode.isRichActive()) {
+            EditMode.exitRich();
+            btnToggleRich.classList.remove("active");
+          } else {
+            EditMode.enterRich();
+            btnToggleRich.classList.add("active");
+          }
+        });
+      }
       window.addEventListener("source-mode-exit", () => {
+        const btn = document.getElementById("btnToggleSource");
+        if (btn) btn.classList.remove("active");
         const mode = currentMode;
         currentMode = mode === "preview" ? "rich" : "preview";
         switchMode(mode);
       });
       window.addEventListener("rich-mode-exit", () => {
+        const btn = document.getElementById("btnToggleRich");
+        if (btn) btn.classList.remove("active");
         const mode = currentMode;
         currentMode = mode === "preview" ? "rich" : "preview";
         switchMode(mode);

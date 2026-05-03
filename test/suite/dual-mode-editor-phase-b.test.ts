@@ -257,4 +257,41 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
                 'markdown.css 应含 .ProseMirror 样式');
         });
     });
+
+    // ===== Hotfix: Rich Mode 按钮入口恢复 =====
+    suite('Rich Mode 按钮入口', () => {
+        test('BT-RichModeBtn.1 index.html 应包含 btnToggleRich 按钮（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+            assert.ok(html.includes('id="btnToggleRich"'), 'index.html 应包含 btnToggleRich 按钮');
+        });
+
+        test('BT-RichModeBtn.2 app.js 应注册 btnToggleRich click 事件并调用 EditMode.enterRich（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+            assert.ok(appJs.includes("getElementById('btnToggleRich')"), 'app.js 应获取 btnToggleRich 元素');
+            assert.ok(appJs.includes('EditMode.enterRich()'), 'app.js 应调用 EditMode.enterRich()');
+            assert.ok(appJs.includes('EditMode.exitRich()'), 'app.js 应调用 EditMode.exitRich()');
+        });
+
+        test('BT-RichModeBtn.3 i18n 应包含 rich_toggle_tooltip 翻译（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const i18n = fs.readFileSync(path.join(extPath, 'webview', 'js', 'i18n.js'), 'utf-8');
+            assert.ok(i18n.includes('edit_mode.rich_toggle_tooltip'), 'i18n 应包含 rich_toggle_tooltip 翻译键');
+        });
+
+        test('BT-RichModeBtn.4 rich-mode-exit 事件应清除 btnToggleRich active 状态（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+            // rich-mode-exit handler 应获取 btnToggleRich 并移除 active class
+            assert.ok(appJs.includes("rich-mode-exit"), 'app.js 应监听 rich-mode-exit 事件');
+            const exitHandler = appJs.substring(appJs.indexOf("rich-mode-exit"), appJs.indexOf("rich-mode-exit") + 300);
+            assert.ok(exitHandler.includes("btnToggleRich") && exitHandler.includes("remove('active')"),
+                'rich-mode-exit handler 应清除 btnToggleRich 的 active 状态');
+        });
+    });
 });

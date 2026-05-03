@@ -17,6 +17,9 @@ All notable changes to this project will be documented in this file.
 - **Remove `turndown.js` vendored library** — No code path references turndown anymore. PM serializer handles Rich→Markdown; Source Mode works with raw text directly
 - **Remove turndown-safety spec** — The `edit-mode-turndown-safety` capability spec (escape identity, kbd keep, table br/align, diag log) is archived as the entire turndown pipeline no longer exists
 
+### 🐛 Fixes
+- Fix Rich Mode (ProseMirror) having no UI entry button after Phase C cleanup: the `#btnModeToggle` button was incorrectly removed as legacy code, but Phase B had repurposed it as the Rich Mode toggle. Added a dedicated `#btnToggleRich` button with proper click handler calling `EditMode.enterRich()`/`EditMode.exitRich()`, matching the existing `#btnToggleSource` pattern. Added `rich_toggle_tooltip` i18n key (zh/en). Updated `source-mode-exit` and `rich-mode-exit` event handlers to clear button active states
+
 ### 🏗️ Build
 - `app.bundle.js` reduced from 370KB to 329KB (~11% smaller) after dead code removal
 - `cm6.bundle.js` = 1.0MB (CodeMirror 6 + Markdown language support)

@@ -299,8 +299,24 @@ export function initApp() {
             });
         }
 
+        // Rich Mode 切换按钮（Phase B）
+        const btnToggleRich = document.getElementById('btnToggleRich');
+        if (btnToggleRich && globalThis.EditMode) {
+            btnToggleRich.addEventListener('click', () => {
+                if (EditMode.isRichActive()) {
+                    EditMode.exitRich();
+                    btnToggleRich.classList.remove('active');
+                } else {
+                    EditMode.enterRich();
+                    btnToggleRich.classList.add('active');
+                }
+            });
+        }
+
         // Source Mode 退出后重渲染当前 currentMode 的视图
         window.addEventListener('source-mode-exit', () => {
+            const btn = document.getElementById('btnToggleSource');
+            if (btn) btn.classList.remove('active');
             const mode = currentMode;
             currentMode = mode === 'preview' ? 'rich' : 'preview';
             switchMode(mode);
@@ -308,6 +324,8 @@ export function initApp() {
 
         // Rich Mode 退出后重渲染 preview
         window.addEventListener('rich-mode-exit', () => {
+            const btn = document.getElementById('btnToggleRich');
+            if (btn) btn.classList.remove('active');
             const mode = currentMode;
             currentMode = mode === 'preview' ? 'rich' : 'preview';
             switchMode(mode);
