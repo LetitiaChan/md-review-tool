@@ -4129,4 +4129,79 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             );
         });
     });
+
+    // ========= Suite: 编辑模式下隐藏目录和批注面板 =========
+    suite('编辑模式下隐藏目录和批注面板', () => {
+        const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const markdownCssPath = path.join(extPath, 'webview', 'css', 'markdown.css');
+        const cssText = fs.readFileSync(markdownCssPath, 'utf-8');
+
+        // ---- Tier 1：存在性断言 ----
+
+        test('BT-richHidePanels.1 Tier1 — markdown.css 应包含 rich-mode-active .toc-panel 隐藏规则', () => {
+            assert.ok(
+                cssText.includes('body.rich-mode-active .toc-panel'),
+                'markdown.css 应包含 body.rich-mode-active .toc-panel 选择器'
+            );
+        });
+
+        test('BT-richHidePanels.2 Tier1 — markdown.css 应包含 rich-mode-active .annotations-panel 隐藏规则', () => {
+            assert.ok(
+                cssText.includes('body.rich-mode-active .annotations-panel'),
+                'markdown.css 应包含 body.rich-mode-active .annotations-panel 选择器'
+            );
+        });
+
+        // ---- Tier 2：行为级断言 ----
+
+        test('BT-richHidePanels.3 Tier2 — toc-panel 在编辑模式下应设置 width: 0', () => {
+            const ruleIdx = cssText.indexOf('body.rich-mode-active .toc-panel');
+            assert.ok(ruleIdx > 0);
+            const afterRule = cssText.slice(ruleIdx, ruleIdx + 300);
+            assert.ok(
+                afterRule.includes('width: 0'),
+                'toc-panel 在 rich-mode-active 下应设置 width: 0'
+            );
+        });
+
+        test('BT-richHidePanels.4 Tier2 — 面板在编辑模式下应设置 pointer-events: none', () => {
+            const ruleIdx = cssText.indexOf('body.rich-mode-active .toc-panel');
+            const afterRule = cssText.slice(ruleIdx, ruleIdx + 300);
+            assert.ok(
+                afterRule.includes('pointer-events: none'),
+                '面板在 rich-mode-active 下应设置 pointer-events: none 防止误触'
+            );
+        });
+
+        test('BT-richHidePanels.5 Tier2 — 面板在编辑模式下应设置 opacity: 0', () => {
+            const ruleIdx = cssText.indexOf('body.rich-mode-active .toc-panel');
+            const afterRule = cssText.slice(ruleIdx, ruleIdx + 300);
+            assert.ok(
+                afterRule.includes('opacity: 0'),
+                '面板在 rich-mode-active 下应设置 opacity: 0 完全隐藏'
+            );
+        });
+
+        // ---- Tier 3：任务特定断言 ----
+
+        test('BT-richHidePanels.6 Tier3 — 编辑模式面板隐藏规则应使用 !important 确保优先级', () => {
+            const ruleIdx = cssText.indexOf('body.rich-mode-active .toc-panel');
+            const afterRule = cssText.slice(ruleIdx, ruleIdx + 300);
+            assert.ok(
+                afterRule.includes('width: 0 !important'),
+                '面板隐藏规则应使用 !important 确保不被其他样式覆盖'
+            );
+        });
+
+        test('BT-richHidePanels.7 Tier3 — 退出编辑模式后面板应自动恢复（通过移除 body class）', () => {
+            // 验证 edit-mode.js exitRich 中移除了 rich-mode-active class
+            const editModePath = path.join(extPath, 'webview', 'js', 'edit-mode.js');
+            const editModeText = fs.readFileSync(editModePath, 'utf-8');
+            assert.ok(
+                editModeText.includes("document.body.classList.remove('rich-mode-active')") ||
+                editModeText.includes("document.body.classList.remove(RICH_BODY_CLASS)"),
+                'exitRich 应移除 rich-mode-active class，使面板自动恢复可见'
+            );
+        });
+    });
 });

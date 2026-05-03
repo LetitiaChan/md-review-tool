@@ -1652,6 +1652,15 @@ pre code.language-diff {
 body.rich-mode-active #documentContent {
     display: none !important;
 }
+body.rich-mode-active .toc-panel,
+body.rich-mode-active .annotations-panel {
+    width: 0 !important;
+    border: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+}
 body.rich-mode-active #richModeContainer {
     display: block;
     height: 100%;
