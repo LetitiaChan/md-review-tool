@@ -19,6 +19,7 @@ All notable changes to this project will be documented in this file.
 
 ### 🐛 Fixes
 - Fix Rich Mode (ProseMirror) having no UI entry button after Phase C cleanup: the `#btnModeToggle` button was incorrectly removed as legacy code, but Phase B had repurposed it as the Rich Mode toggle. Added a dedicated `#btnToggleRich` button with proper click handler calling `EditMode.enterRich()`/`EditMode.exitRich()`, matching the existing `#btnToggleSource` pattern. Added `rich_toggle_tooltip` i18n key (zh/en). Updated `source-mode-exit` and `rich-mode-exit` event handlers to clear button active states
+- Fix Rich Mode crash on documents containing tables: `MarkdownParser` token mapping was missing `table`, `thead`, `tbody`, `tr`, `th`, `td` entries, causing `Token type 'table_open' not supported` error. Added all 6 table token mappings (`table`→`table`, `tr`→`table_row`, `th`→`table_header`, `td`→`table_cell`, `thead`/`tbody`→`ignore`) with `align` attribute extraction from `text-align` style
 
 ### 🏗️ Build
 - `app.bundle.js` reduced from 370KB to 329KB (~11% smaller) after dead code removal

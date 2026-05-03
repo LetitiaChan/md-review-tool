@@ -294,4 +294,34 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
                 'rich-mode-exit handler 应清除 btnToggleRich 的 active 状态');
         });
     });
+
+    // ===== Hotfix: Table token 映射修复 =====
+    suite('Table token 映射', () => {
+        test('BT-TableParse.1 pm-markdown-bridge.js 应包含 table/tr/th/td token 映射（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const bridge = fs.readFileSync(path.join(extPath, 'webview', 'js', 'pm-markdown-bridge.js'), 'utf-8');
+            assert.ok(/table:\s*\{\s*block:\s*'table'\s*\}/.test(bridge), 'parser 应映射 table → table 节点');
+            assert.ok(/tr:\s*\{\s*block:\s*'table_row'\s*\}/.test(bridge), 'parser 应映射 tr → table_row 节点');
+            assert.ok(/th:\s*\{[^}]*block:\s*'table_header'/.test(bridge), 'parser 应映射 th → table_header 节点');
+            assert.ok(/td:\s*\{[^}]*block:\s*'table_cell'/.test(bridge), 'parser 应映射 td → table_cell 节点');
+        });
+
+        test('BT-TableParse.2 thead/tbody 应被 ignore（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const bridge = fs.readFileSync(path.join(extPath, 'webview', 'js', 'pm-markdown-bridge.js'), 'utf-8');
+            assert.ok(/thead:\s*\{\s*ignore:\s*true\s*\}/.test(bridge), 'parser 应 ignore thead token');
+            assert.ok(/tbody:\s*\{\s*ignore:\s*true\s*\}/.test(bridge), 'parser 应 ignore tbody token');
+        });
+
+        test('BT-TableParse.3 th/td 映射应提取 align 属性（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const bridge = fs.readFileSync(path.join(extPath, 'webview', 'js', 'pm-markdown-bridge.js'), 'utf-8');
+            assert.ok(/th:\s*\{[^}]*getAttrs/.test(bridge), 'th 映射应有 getAttrs');
+            assert.ok(/td:\s*\{[^}]*getAttrs/.test(bridge), 'td 映射应有 getAttrs');
+            assert.ok(/text-align/.test(bridge), 'getAttrs 应解析 text-align 样式');
+        });
+    });
 });

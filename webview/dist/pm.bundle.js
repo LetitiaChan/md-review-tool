@@ -27301,6 +27301,21 @@
       alt: tok.children && tok.children[0] && tok.children[0].content || null
     }) },
     hardbreak: { node: "hard_break" },
+    // 表格节点（markdown-it table 插件 → prosemirror-tables schema）
+    table: { block: "table" },
+    thead: { ignore: true },
+    tbody: { ignore: true },
+    tr: { block: "table_row" },
+    th: { block: "table_header", getAttrs: (tok) => {
+      const style = tok.attrGet("style") || "";
+      const match2 = style.match(/text-align\s*:\s*(\w+)/);
+      return { align: match2 ? match2[1] : null };
+    } },
+    td: { block: "table_cell", getAttrs: (tok) => {
+      const style = tok.attrGet("style") || "";
+      const match2 = style.match(/text-align\s*:\s*(\w+)/);
+      return { align: match2 ? match2[1] : null };
+    } },
     // 自定义节点
     frontmatter: { node: "frontmatter", getAttrs: (tok) => ({ content: tok.content }) },
     math_display: { node: "math_display", getAttrs: (tok) => ({ formula: tok.content }) },
