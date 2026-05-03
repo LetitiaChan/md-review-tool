@@ -277,7 +277,7 @@ export function initApp() {
 
     // ===== 事件绑定 =====
     function bindEvents() {
-        // \u66b4\u9732 Source Mode \u6240\u9700\u7684\u51fd\u6570\u7ed9 edit-mode.js\uff08Phase A\uff09
+        // 暴露保存函数给 edit-mode.js
         globalThis.handleSaveMd = handleSaveMd;
         globalThis.triggerAutoSave = scheduleAutoSave;
 
@@ -285,21 +285,7 @@ export function initApp() {
         document.getElementById('btnRefresh').addEventListener('click', handleRefresh);
 
 
-        // Source Mode 切换按钮（Phase A）
-        const btnToggleSource = document.getElementById('btnToggleSource');
-        if (btnToggleSource && globalThis.EditMode) {
-            btnToggleSource.addEventListener('click', () => {
-                if (EditMode.isSourceActive()) {
-                    EditMode.exitSource();
-                    btnToggleSource.classList.remove('active');
-                } else {
-                    EditMode.enterSource();
-                    btnToggleSource.classList.add('active');
-                }
-            });
-        }
-
-        // Rich Mode 切换按钮（Phase B）
+        // Rich Mode 切换按钮（扩展内唯一编辑器）
         const btnToggleRich = document.getElementById('btnToggleRich');
         if (btnToggleRich && globalThis.EditMode) {
             btnToggleRich.addEventListener('click', () => {
@@ -312,15 +298,6 @@ export function initApp() {
                 }
             });
         }
-
-        // Source Mode 退出后重渲染当前 currentMode 的视图
-        window.addEventListener('source-mode-exit', () => {
-            const btn = document.getElementById('btnToggleSource');
-            if (btn) btn.classList.remove('active');
-            const mode = currentMode;
-            currentMode = mode === 'preview' ? 'rich' : 'preview';
-            switchMode(mode);
-        });
 
         // Rich Mode 退出后重渲染 preview
         window.addEventListener('rich-mode-exit', () => {
@@ -1720,14 +1697,12 @@ this.innerHTML = t('modal.ai_result.copied');
     }
 
 
-    // switchMode is now a no-op stub — editing is handled by EditMode (Source/Rich)
+    // switchMode is now a no-op stub — editing is handled by EditMode (Rich Mode only)
     // Kept for backward compatibility with any remaining callers
     async function switchMode(mode) {
         // Legacy mode values are no longer supported
         if (mode === 'edit' || mode === 'rich') return;
         if (mode === 'preview' && globalThis.EditMode && EditMode.isAnyEditorActive()) {
-            // Exit whichever editor is active
-            if (EditMode.isSourceActive()) EditMode.exitSource();
             if (EditMode.isRichActive()) EditMode.exitRich();
         }
     }
@@ -1772,9 +1747,8 @@ this.innerHTML = t('modal.ai_result.copied');
     function scheduleAutoSave() {
         clearAutoSaveTimer();
         autoSaveTimer = setTimeout(() => {
-            // Source Mode 下亦可落盘（走 handleSaveMd 通用路径）；若当前既非 edit 也非 source 则不做
+            // Rich Mode 下自动保存
             if (currentMode === 'rich' && editorDirty) handleSaveMd();
-            else if (globalThis.EditMode && EditMode.isSourceActive()) handleSaveMd();
             else if (globalThis.EditMode && EditMode.isRichActive()) handleSaveMd();
         }, AUTO_SAVE_DELAY);
     }
@@ -1784,21 +1758,6 @@ this.innerHTML = t('modal.ai_result.copied');
     }
 
     async function handleSaveMd() {
-        // Source Mode 下走简化路径：直接用 Store 里的 rawMarkdown（edit-mode.js 的 onChange 已将最新 CM6 doc 写入）
-        if (globalThis.EditMode && EditMode.isSourceActive()) {
-            const dataSrc = Store.getData();
-            if (!dataSrc.fileName) { showNotification(t('notification.no_open_file')); return; }
-            try {
-                await Exporter.saveViaHost(dataSrc.rawMarkdown);
-                updateEditStatus('saved', t('notification.saved'));
-                setTimeout(() => updateEditStatus('', ''), 1500);
-            } catch (e) {
-                console.error('[source-mode] save failed', e);
-                updateEditStatus('error', t('notification.save_failed') || 'Save failed');
-            }
-            return;
-        }
-
         // Rich Mode 下走 PM serializer 路径：直接用 Store 里的 rawMarkdown（edit-mode.js 的 onChange 已将最新 PM doc 序列化写入）
         if (globalThis.EditMode && EditMode.isRichActive()) {
             const dataPm = Store.getData();

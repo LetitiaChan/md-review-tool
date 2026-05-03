@@ -23,11 +23,7 @@
         "toolbar.mode_title": "\u5207\u6362\u9884\u89C8/\u7F16\u8F91\u6A21\u5F0F",
         "toolbar.mode_preview": "\u9884\u89C8",
         "toolbar.mode_edit": "\u7F16\u8F91",
-        "edit_mode.source": "\u6E90\u7801",
-        "edit_mode.source_toggle_tooltip": "\u6E90\u7801\u6A21\u5F0F\uFF08\u76F4\u63A5\u7F16\u8F91 Markdown\uFF0CCtrl+S \u4FDD\u5B58\uFF09",
-        "edit_mode.rich_toggle_tooltip": "\u5BCC\u6587\u672C\u6A21\u5F0F\uFF08\u7ED3\u6784\u5316\u7F16\u8F91\uFF0C\u652F\u6301\u56FE\u8868\u9884\u89C8\u548C\u6279\u6CE8\u88C5\u9970\uFF09",
-        "edit_mode.source_hint": "\u5DF2\u8FDB\u5165\u6E90\u7801\u6A21\u5F0F \xB7 Ctrl+S \u4FDD\u5B58",
-        "edit_mode.source_exit_hint": "\u5DF2\u9000\u51FA\u6E90\u7801\u6A21\u5F0F",
+        "edit_mode.rich_toggle_tooltip": "\u7F16\u8F91\u6A21\u5F0F\uFF08\u7ED3\u6784\u5316\u7F16\u8F91\uFF0C\u652F\u6301\u56FE\u8868\u9884\u89C8\u548C\u6279\u6CE8\u88C5\u9970\uFF09",
         "edit_mode.rich": "\u5BCC\u6587\u672C",
         "edit_mode.rich_hint": "\u5DF2\u8FDB\u5165\u5BCC\u6587\u672C\u7F16\u8F91\u6A21\u5F0F",
         "toolbar.annotations_title": "\u5C55\u5F00/\u6536\u8D77\u6279\u6CE8\u5217\u8868",
@@ -481,11 +477,7 @@
         "toolbar.mode_title": "Toggle preview/edit mode",
         "toolbar.mode_preview": "Preview",
         "toolbar.mode_edit": "Edit",
-        "edit_mode.source": "Source",
-        "edit_mode.source_toggle_tooltip": "Source Mode (edit raw Markdown, Ctrl+S to save)",
-        "edit_mode.rich_toggle_tooltip": "Rich Mode (structured editing with diagram preview and annotation decorations)",
-        "edit_mode.source_hint": "Entered Source Mode \xB7 Ctrl+S to save",
-        "edit_mode.source_exit_hint": "Exited Source Mode",
+        "edit_mode.rich_toggle_tooltip": "Edit Mode (structured editing with diagram preview and annotation decorations)",
         "edit_mode.rich": "Rich",
         "edit_mode.rich_hint": "Entered Rich Text editing mode",
         "toolbar.annotations_title": "Toggle annotations panel",
@@ -4903,30 +4895,11 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
   })();
 
   // webview/js/edit-mode.js
-  var MODE = { INACTIVE: "inactive", SOURCE: "source", RICH: "rich" };
+  var MODE = { INACTIVE: "inactive", RICH: "rich" };
   var _mode = MODE.INACTIVE;
   var _editor = null;
-  var _container = null;
-  var SOURCE_CONTAINER_ID = "sourceModeContainer";
   var RICH_CONTAINER_ID = "richModeContainer";
-  var SOURCE_BODY_CLASS = "source-mode-active";
   var RICH_BODY_CLASS = "rich-mode-active";
-  function ensureSourceContainer() {
-    if (_container && _container.isConnected) return _container;
-    let el = document.getElementById(SOURCE_CONTAINER_ID);
-    if (!el) {
-      el = document.createElement("div");
-      el.id = SOURCE_CONTAINER_ID;
-      const docContent = document.getElementById("documentContent");
-      if (docContent && docContent.parentNode) {
-        docContent.parentNode.insertBefore(el, docContent.nextSibling);
-      } else {
-        document.body.appendChild(el);
-      }
-    }
-    _container = el;
-    return el;
-  }
   function ensureRichContainer() {
     let el = document.getElementById(RICH_CONTAINER_ID);
     if (!el) {
@@ -4940,79 +4913,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
     }
     return el;
-  }
-  function enterSource() {
-    if (_mode !== MODE.INACTIVE) return;
-    if (!globalThis.CM6 || typeof globalThis.CM6.createEditor !== "function") {
-      console.warn("[edit-mode] CM6 not loaded, cannot enter source mode");
-      return;
-    }
-    const store = globalThis.Store;
-    if (!store || typeof store.getData !== "function") {
-      console.warn("[edit-mode] Store not loaded");
-      return;
-    }
-    const doc = store.getData().rawMarkdown || "";
-    const container = ensureSourceContainer();
-    _editor = globalThis.CM6.createEditor({
-      parent: container,
-      doc,
-      onChange: (newDoc) => {
-        if (typeof store.setRawMarkdown === "function") {
-          store.setRawMarkdown(newDoc);
-        }
-        if (typeof globalThis.triggerAutoSave === "function") {
-          globalThis.triggerAutoSave();
-        }
-      },
-      onSave: () => {
-        if (_editor && typeof store.setRawMarkdown === "function") {
-          store.setRawMarkdown(_editor.getDoc());
-        }
-        if (typeof globalThis.handleSaveMd === "function") {
-          globalThis.handleSaveMd();
-        }
-      }
-    });
-    document.body.classList.add(SOURCE_BODY_CLASS);
-    _mode = MODE.SOURCE;
-    try {
-      _editor.focus();
-    } catch (e) {
-    }
-  }
-  function exitSource() {
-    if (_mode !== MODE.SOURCE) return;
-    const store = globalThis.Store;
-    let finalDoc = "";
-    if (_editor) {
-      try {
-        finalDoc = _editor.getDoc();
-      } catch (e) {
-        finalDoc = "";
-      }
-      if (store && typeof store.setRawMarkdown === "function") {
-        store.setRawMarkdown(finalDoc);
-      }
-      try {
-        _editor.destroy();
-      } catch (e) {
-      }
-      _editor = null;
-    }
-    if (_container && _container.parentNode) {
-      try {
-        _container.parentNode.removeChild(_container);
-      } catch (e) {
-      }
-    }
-    _container = null;
-    document.body.classList.remove(SOURCE_BODY_CLASS);
-    _mode = MODE.INACTIVE;
-    try {
-      window.dispatchEvent(new CustomEvent("source-mode-exit", { detail: { finalDoc } }));
-    } catch (e) {
-    }
   }
   function enterRich() {
     if (_mode !== MODE.INACTIVE) return;
@@ -5089,9 +4989,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     } catch (e) {
     }
   }
-  function isSourceActive() {
-    return _mode === MODE.SOURCE;
-  }
   function isRichActive() {
     return _mode === MODE.RICH;
   }
@@ -5099,9 +4996,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     return _mode !== MODE.INACTIVE;
   }
   var EditMode2 = {
-    enterSource,
-    exitSource,
-    isSourceActive,
     enterRich,
     exitRich,
     isRichActive,
@@ -5323,18 +5217,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       globalThis.triggerAutoSave = scheduleAutoSave;
       document.getElementById("fileSelect").addEventListener("change", handleFileSelectChange);
       document.getElementById("btnRefresh").addEventListener("click", handleRefresh);
-      const btnToggleSource = document.getElementById("btnToggleSource");
-      if (btnToggleSource && globalThis.EditMode) {
-        btnToggleSource.addEventListener("click", () => {
-          if (EditMode.isSourceActive()) {
-            EditMode.exitSource();
-            btnToggleSource.classList.remove("active");
-          } else {
-            EditMode.enterSource();
-            btnToggleSource.classList.add("active");
-          }
-        });
-      }
       const btnToggleRich = document.getElementById("btnToggleRich");
       if (btnToggleRich && globalThis.EditMode) {
         btnToggleRich.addEventListener("click", () => {
@@ -5347,13 +5229,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           }
         });
       }
-      window.addEventListener("source-mode-exit", () => {
-        const btn = document.getElementById("btnToggleSource");
-        if (btn) btn.classList.remove("active");
-        const mode = currentMode;
-        currentMode = mode === "preview" ? "rich" : "preview";
-        switchMode(mode);
-      });
       window.addEventListener("rich-mode-exit", () => {
         const btn = document.getElementById("btnToggleRich");
         if (btn) btn.classList.remove("active");
@@ -6543,7 +6418,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     async function switchMode(mode) {
       if (mode === "edit" || mode === "rich") return;
       if (mode === "preview" && globalThis.EditMode && EditMode.isAnyEditorActive()) {
-        if (EditMode.isSourceActive()) EditMode.exitSource();
         if (EditMode.isRichActive()) EditMode.exitRich();
       }
     }
@@ -6581,7 +6455,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       clearAutoSaveTimer();
       autoSaveTimer = setTimeout(() => {
         if (currentMode === "rich" && editorDirty) handleSaveMd();
-        else if (globalThis.EditMode && EditMode.isSourceActive()) handleSaveMd();
         else if (globalThis.EditMode && EditMode.isRichActive()) handleSaveMd();
       }, AUTO_SAVE_DELAY);
     }
@@ -6592,22 +6465,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
     }
     async function handleSaveMd() {
-      if (globalThis.EditMode && EditMode.isSourceActive()) {
-        const dataSrc = Store.getData();
-        if (!dataSrc.fileName) {
-          showNotification(t("notification.no_open_file"));
-          return;
-        }
-        try {
-          await Exporter.saveViaHost(dataSrc.rawMarkdown);
-          updateEditStatus("saved", t("notification.saved"));
-          setTimeout(() => updateEditStatus("", ""), 1500);
-        } catch (e) {
-          console.error("[source-mode] save failed", e);
-          updateEditStatus("error", t("notification.save_failed") || "Save failed");
-        }
-        return;
-      }
       if (globalThis.EditMode && EditMode.isRichActive()) {
         const dataPm = Store.getData();
         if (!dataPm.fileName) {

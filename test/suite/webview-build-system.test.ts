@@ -49,27 +49,22 @@ suite('Webview Build System Test Suite — Change add-webview-bundler-and-esm-mo
                 'build.config.mjs 应使用 target: es2020');
         });
 
-        test('T10.3 webview/src/entries/{main,cm6,pm}.entry.js 三文件应存在', () => {
+        test('T10.3 webview/src/entries/{main,pm}.entry.js 两文件应存在', () => {
             const entryDir = path.join(extPath, 'webview', 'src', 'entries');
             assert.ok(fs.existsSync(path.join(entryDir, 'main.entry.js')),
                 'main.entry.js 应存在');
-            assert.ok(fs.existsSync(path.join(entryDir, 'cm6.entry.js')),
-                'cm6.entry.js 应存在（本 change 占位）');
             assert.ok(fs.existsSync(path.join(entryDir, 'pm.entry.js')),
-                'pm.entry.js 应存在（本 change 占位）');
+                'pm.entry.js 应存在');
         });
 
-        test('T10.4 webview/dist/{app,cm6,pm}.bundle.js 三产物应存在且非空', () => {
+        test('T10.4 webview/dist/{app,pm}.bundle.js 两产物应存在且非空', () => {
             const distDir = path.join(extPath, 'webview', 'dist');
             const appBundle = path.join(distDir, 'app.bundle.js');
-            const cm6Bundle = path.join(distDir, 'cm6.bundle.js');
             const pmBundle = path.join(distDir, 'pm.bundle.js');
             assert.ok(fs.existsSync(appBundle), 'app.bundle.js 应已生成');
-            assert.ok(fs.existsSync(cm6Bundle), 'cm6.bundle.js 应已生成');
             assert.ok(fs.existsSync(pmBundle), 'pm.bundle.js 应已生成');
             assert.ok(fs.statSync(appBundle).size > 1000,
-                'app.bundle.js 应大于 1KB（包含 7 个业务模块，实际 ~361KB）');
-            assert.ok(fs.statSync(cm6Bundle).size > 0, 'cm6.bundle.js 应非空');
+                'app.bundle.js 应大于 1KB');
             assert.ok(fs.statSync(pmBundle).size > 0, 'pm.bundle.js 应非空');
         });
 
@@ -177,9 +172,9 @@ suite('Webview Build System Test Suite — Change add-webview-bundler-and-esm-mo
                 `compile 的执行顺序应为 tsc 先 → build:webview 后（实际: "${compileScript}"）`);
         });
 
-        test('BT-BuildSystem.3 cm6/pm 占位 bundle 应为合法 IIFE（以 "(() => {" 开头且可构造 vm Script）', () => {
+        test('BT-BuildSystem.3 pm bundle 应为合法 IIFE（以 "(() => {" 开头且可构造 vm Script）', () => {
             const vm = require('vm');
-            const bundles = ['cm6.bundle.js', 'pm.bundle.js'];
+            const bundles = ['pm.bundle.js'];
             for (const name of bundles) {
                 const text = fs.readFileSync(
                     path.join(extPath, 'webview', 'dist', name),

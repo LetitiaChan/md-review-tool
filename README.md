@@ -29,8 +29,7 @@
 - **💬 Add Comments** — Select text to add comments with image attachments (click, drag, or Ctrl+V paste)
 - **🗑️ Mark Deletion** — Select text to mark as pending deletion, displayed with strikethrough
 - **➕ Insert Content** — Select anchor text to insert new content (supports Markdown), with before/after insertion options
-- **✏️ Dual-Mode Editor** — Source Mode (CodeMirror 6) for direct Markdown editing, Rich Mode (ProseMirror) for structured editing with syntax highlighting, diagram preview, smart paste, and annotation decorations
-- **🔤 Source Mode** — Click the `< />` toolbar button to enter a full-fledged CodeMirror 6 Markdown source editor with syntax highlighting, line numbers, bracket matching, and search. Press `Ctrl+S` to save directly to disk. Annotations are temporarily hidden in Source Mode and restored when you switch back.
+- **✏️ Rich Mode Editor** — Click the pencil (✎) toolbar button to enter a ProseMirror-based structured editor with syntax highlighting, diagram preview, smart paste, and annotation decorations
 - **📊 Table Editing** — Right-click tables in edit mode to insert/delete rows and columns
 - **📈 Diagram Source Editing** — In edit mode, Mermaid / PlantUML / Graphviz diagrams are converted to editable source code areas for direct modification
 - **🔄 Smart Edit Preservation** — Editing blockquotes, GitHub alert blocks, code blocks, math formulas, and diagrams preserves their original Markdown structure
@@ -133,7 +132,7 @@ This extension's review styles, interaction logic, and AI instruction templates 
    npm run compile
    ```
 
-   > Note: `npm run compile` now runs `tsc -p ./ && npm run build:webview`. The webview bundler (esbuild) produces `webview/dist/app.bundle.js` (7 webview modules) and `webview/dist/cm6.bundle.js` (CodeMirror 6 engine for Source Mode, added in Phase A of the dual-mode editor). For webview-only hot reload during development, use `npm run build:webview:watch` in a separate terminal.
+   > Note: `npm run compile` now runs `tsc -p ./ && npm run build:webview`. The webview bundler (esbuild) produces `webview/dist/app.bundle.js` (7 webview modules) and `webview/dist/pm.bundle.js` (ProseMirror Rich Mode editor engine). For webview-only hot reload during development, use `npm run build:webview:watch` in a separate terminal.
 
 3. Press `F5` in your editor (VS Code / Cursor / Windsurf / CodeBuddy IDE / Trae, etc.) to launch the Extension Development Host for debugging.
 
@@ -277,8 +276,7 @@ MIT
 - **💬 添加评论** — 选中文字后添加评论，支持在评论中插入图片（点击、拖拽或 Ctrl+V 粘贴）
 - **🗑️ 标记删除** — 选中文字标记为待删除，以删除线样式展示
 - **➕ 插入内容** — 选中锚点文字后插入新内容（支持 Markdown 格式），可选择在锚点之前或之后插入
-- **✏️ 双模式编辑器** — 源码模式（CodeMirror 6）直接编辑 Markdown 源码，富文本模式（ProseMirror）结构化编辑，支持语法高亮、图表预览、智能粘贴、批注装饰
-- **🔤 源码模式** — 点击工具栏的 `< />` 按钮可进入基于 CodeMirror 6 的完整 Markdown 源码编辑器，支持语法高亮、行号、括号配对、搜索等功能。`Ctrl+S` 直接保存到磁盘。源码模式下批注会暂时隐藏，切回预览/编辑模式后自动恢复。
+- **✏️ 富文本编辑器** — 点击工具栏的铅笔（✎）按钮进入基于 ProseMirror 的结构化编辑器，支持语法高亮、图表预览、智能粘贴、批注装饰
 - **📊 表格编辑** — 编辑模式下右键表格可插入/删除行列
 - **📈 图表源码编辑** — 编辑模式下 Mermaid / PlantUML / Graphviz 图表自动转换为可编辑的源码区域，支持直接修改图表代码
 - **🔄 智能编辑保护** — 编辑引用块、GitHub 告警块、代码块、数学公式和图表时，保留原始 Markdown 结构不被破坏
@@ -381,7 +379,7 @@ MIT
    npm run compile
    ```
 
-   > 注：`npm run compile` 已升级为 `tsc -p ./ && npm run build:webview`。Webview 打包器（esbuild）会产出 `webview/dist/app.bundle.js`（整合 7 个业务模块）和 `webview/dist/cm6.bundle.js`（CodeMirror 6 源码模式引擎，双模式编辑器 Phase A 新增）。开发调试 webview 时可单独开另一个终端跑 `npm run build:webview:watch` 实现热重建。
+   > 注：`npm run compile` 已升级为 `tsc -p ./ && npm run build:webview`。Webview 打包器（esbuild）会产出 `webview/dist/app.bundle.js`（整合 7 个业务模块）和 `webview/dist/pm.bundle.js`（ProseMirror 富文本编辑器引擎）。开发调试 webview 时可单独开另一个终端跑 `npm run build:webview:watch` 实现热重建。
 
 3. 在你的编辑器（VS Code / Cursor / Windsurf / CodeBuddy IDE / Trae 等）中按 `F5` 启动扩展开发宿主进行调试。
 

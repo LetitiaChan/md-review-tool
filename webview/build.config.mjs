@@ -5,8 +5,7 @@
  *
  * 产出（webview/dist/）：
  *   - app.bundle.js  : 主应用 bundle（i18n + store + renderer + annotations + export + settings + app）
- *   - cm6.bundle.js  : CodeMirror 6 入口占位（Change 2 将替换为真实依赖）
- *   - pm.bundle.js   : ProseMirror 入口占位（Change 2 将替换为真实依赖）
+ *   - pm.bundle.js   : ProseMirror Rich Mode 编辑器引擎
  *
  * 用法：
  *   node webview/build.config.mjs            一次性构建
@@ -35,7 +34,6 @@ const projectRoot = path.resolve(__dirname, '..');
 const buildOptions = {
   entryPoints: {
     'app.bundle': path.join(__dirname, 'src/entries/main.entry.js'),
-    'cm6.bundle': path.join(__dirname, 'src/entries/cm6.entry.js'),
     'pm.bundle':  path.join(__dirname, 'src/entries/pm.entry.js'),
   },
   bundle: true,

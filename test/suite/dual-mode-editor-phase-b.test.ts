@@ -136,11 +136,11 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
             }
         });
 
-        test('T11.3 edit-mode.js 三态状态机 — MODE 枚举应含 INACTIVE/SOURCE/RICH', () => {
+        test('T11.3 edit-mode.js 二态状态机 — MODE 枚举应含 INACTIVE/RICH（不含 SOURCE）', () => {
             const content = fs.readFileSync(path.join(extPath, 'webview', 'js', 'edit-mode.js'), 'utf-8');
             assert.ok(/INACTIVE/.test(content), 'edit-mode.js 应含 MODE.INACTIVE');
-            assert.ok(/SOURCE/.test(content), 'edit-mode.js 应含 MODE.SOURCE');
             assert.ok(/RICH/.test(content), 'edit-mode.js 应含 MODE.RICH');
+            assert.ok(!/MODE\s*=\s*\{[^}]*SOURCE[^}]*\}/.test(content), 'edit-mode.js MODE 枚举不应含 SOURCE');
         });
 
         test('T11.4 edit-mode.js 的 enterRich 应读 Store rawMarkdown + 调 PM.createRichEditor', () => {

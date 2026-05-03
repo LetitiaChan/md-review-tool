@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-05-03
+
+### 💥 Breaking Changes
+- **Remove Source Mode editor** — The CodeMirror 6 Source Mode (`</>` toolbar button) has been completely removed. Users who need raw Markdown editing can open the `.md` file directly in VS Code / Cursor's native editor (same window, adjacent tab)
+- **Remove `#btnToggleSource` button** — The Source Mode toggle button no longer exists in the toolbar
+- **Remove `EditMode.enterSource()` / `exitSource()` / `isSourceActive()` API** — The state machine in `edit-mode.js` is now two-state (`INACTIVE` / `RICH`) instead of three-state
+
+### ✨ Changes
+- **Rich Mode icon updated** — The Rich Mode toolbar button icon changed from a paragraph mark (`¶`) to a pencil (`✎`), reflecting its new status as the sole editor
+- **Rich Mode is now the only editor** — Click the pencil button to enter structured rich-text editing. All Rich Mode features (PM schema, diagram NodeView, annotation decorations, smart paste) remain unchanged
+
+### 🗑️ Removed
+- `webview/src/entries/cm6.entry.js` — CodeMirror 6 entry point (deleted)
+- `webview/dist/cm6.bundle.js` — ~1 MB CodeMirror 6 bundle output (no longer built)
+- 7 production dependencies removed: `@codemirror/commands`, `@codemirror/lang-markdown`, `@codemirror/language`, `@codemirror/search`, `@codemirror/state`, `@codemirror/view`, `@lezer/markdown`
+- Source Mode CSS rules (`body.source-mode-active`, `#sourceModeContainer`, `#btnToggleSource.active`) removed from `markdown.css`
+- Source Mode i18n keys (`edit_mode.source_toggle_tooltip`, `edit_mode.source`, `edit_mode.source_hint`, `edit_mode.source_exit_hint`) removed from both zh and en locales
+- `test/suite/dual-mode-editor-phase-a.test.ts` — 42 Source Mode test assertions (deleted)
+- `cm6.bundle` esbuild entry removed from `webview/build.config.mjs`
+- `cm6BundleUri` variable and placeholder replacement removed from `src/reviewPanel.ts`
+
+### 📝 Migration
+- Users who previously used Source Mode for raw Markdown editing can open the `.md` file in VS Code / Cursor's built-in editor — the file is already open in a tab adjacent to the review panel
+- No data migration required — both engines always read/wrote the same `Store.rawMarkdown`
+
 ## [1.4.0] - 2026-05-03
 
 ### ✨ Dual-Mode Editor (Phase A + B + C)
@@ -34,7 +59,7 @@ All notable changes to this project will be documented in this file.
 - 710 tests passing, 0 failing (73 legacy turndown/WYSIWYG tests removed, net reduction from 783)
 - Published to both VS Code Marketplace and Open VSX Registry
 
-## [1.3.12] - 2026-05-02
+## [1.3.12] - 2026-04-29
 
 ### 🏗️ Build (add-webview-bundler-and-esm-modules)
 - Introduce `esbuild` as the webview bundler (devDependency `esbuild@^0.24.0`). The new build script `webview/build.config.mjs` produces IIFE bundles targeting ES2020, chained into `npm run compile`. Two additional commands `build:webview` and `build:webview:watch` are available for standalone/hot-reload development
