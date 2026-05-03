@@ -5,11 +5,11 @@
 [![Version](https://img.shields.io/visual-studio-marketplace/v/letitia.md-human-review?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> A powerful Markdown review & annotation extension for VSCode — comment, mark deletions, insert content, WYSIWYG edit, and generate AI fix instructions with one click.
+> A powerful Markdown review & annotation extension for VSCode — comment, mark deletions, insert content, dual-mode editor (Source + Rich), and generate AI fix instructions with one click.
 >
-> 🖊️ 像导师批改论文一样批阅 Markdown —— 评论、删除、插入、所见即所得编辑，一键生成 AI 修改指令。
+> 🖊️ 像导师批改论文一样批阅 Markdown —— 评论、删除、插入、双模式编辑器（源码+富文本），一键生成 AI 修改指令。
 
-**Key Features**: Markdown review, annotation, comment, WYSIWYG editing, AI-powered fix, code highlighting, Mermaid diagrams, KaTeX math, PlantUML, Graphviz, content search, dark/light theme, table of contents, image lightbox, multi-window, auto-save.
+**Key Features**: Markdown review, annotation, comment, dual-mode editing (Source + Rich), AI-powered fix, code highlighting, Mermaid diagrams, KaTeX math, PlantUML, Graphviz, content search, dark/light theme, table of contents, image lightbox, multi-window, auto-save.
 
 > 📦 **Available on VS Code Marketplace & Open VSX Registry** — Works with VS Code and all VS Code–based AI-powered editors, including **Cursor**, **Windsurf**, **CodeBuddy IDE**, **Trae**, and more.
 
@@ -29,7 +29,7 @@
 - **💬 Add Comments** — Select text to add comments with image attachments (click, drag, or Ctrl+V paste)
 - **🗑️ Mark Deletion** — Select text to mark as pending deletion, displayed with strikethrough
 - **➕ Insert Content** — Select anchor text to insert new content (supports Markdown), with before/after insertion options
-- **✏️ WYSIWYG Editing** — Switch to edit mode to modify content directly on the rendered document, with a toolbar (bold, italic, strikethrough, headings, lists, blockquote, horizontal rule, undo/redo)
+- **✏️ Dual-Mode Editor** — Source Mode (CodeMirror 6) for direct Markdown editing, Rich Mode (ProseMirror) for structured editing with syntax highlighting, diagram preview, smart paste, and annotation decorations
 - **🔤 Source Mode** — Click the `< />` toolbar button to enter a full-fledged CodeMirror 6 Markdown source editor with syntax highlighting, line numbers, bracket matching, and search. Press `Ctrl+S` to save directly to disk. Annotations are temporarily hidden in Source Mode and restored when you switch back.
 - **📊 Table Editing** — Right-click tables in edit mode to insert/delete rows and columns
 - **📈 Diagram Source Editing** — In edit mode, Mermaid / PlantUML / Graphviz diagrams are converted to editable source code areas for direct modification
@@ -257,7 +257,7 @@ MIT
 <a id="chinese"></a>
 # MD Human Review
 
-> 🖊️ 像导师批改论文一样批阅 Markdown —— 评论、删除、插入、所见即所得编辑，一键生成 AI 修改指令。
+> 🖊️ 像导师批改论文一样批阅 Markdown —— 评论、删除、插入、双模式编辑器（源码+富文本），一键生成 AI 修改指令。
 
 > 📦 **已发布至 VS Code 插件市场 与 Open VSX（Cursor 市场）** —— 支持 VS Code 及所有基于 VS Code 开源版本构建的 AI 编辑器，包括 **Cursor**、**Windsurf**、**CodeBuddy IDE**、**Trae** 等。
 
@@ -277,7 +277,7 @@ MIT
 - **💬 添加评论** — 选中文字后添加评论，支持在评论中插入图片（点击、拖拽或 Ctrl+V 粘贴）
 - **🗑️ 标记删除** — 选中文字标记为待删除，以删除线样式展示
 - **➕ 插入内容** — 选中锚点文字后插入新内容（支持 Markdown 格式），可选择在锚点之前或之后插入
-- **✏️ 所见即所得编辑** — 切换编辑模式，直接在渲染后的文档上修改内容，支持 WYSIWYG 工具栏（加粗、斜体、删除线、标题、列表、引用、分隔线、撤销/重做）
+- **✏️ 双模式编辑器** — 源码模式（CodeMirror 6）直接编辑 Markdown 源码，富文本模式（ProseMirror）结构化编辑，支持语法高亮、图表预览、智能粘贴、批注装饰
 - **🔤 源码模式** — 点击工具栏的 `< />` 按钮可进入基于 CodeMirror 6 的完整 Markdown 源码编辑器，支持语法高亮、行号、括号配对、搜索等功能。`Ctrl+S` 直接保存到磁盘。源码模式下批注会暂时隐藏，切回预览/编辑模式后自动恢复。
 - **📊 表格编辑** — 编辑模式下右键表格可插入/删除行列
 - **📈 图表源码编辑** — 编辑模式下 Mermaid / PlantUML / Graphviz 图表自动转换为可编辑的源码区域，支持直接修改图表代码

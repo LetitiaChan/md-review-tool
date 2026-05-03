@@ -529,7 +529,6 @@ codeTheme: config.get<string>('codeTheme', 'default-light-modern'),
         const markedUri = webviewUri('lib/marked.min.js');
         const markedFootnoteUri = webviewUri('lib/marked-footnote.umd.js');
         const hljsUri = webviewUri('lib/highlight.min.js');
-        const turndownUri = webviewUri('lib/turndown.js');
         const katexUri = webviewUri('lib/katex.min.js');
         const mermaidUri = webviewUri('lib/mermaid.min.js');
         const vizUri = webviewUri('lib/viz-global.js');
@@ -559,7 +558,6 @@ codeTheme: config.get<string>('codeTheme', 'default-light-modern'),
         html = html.replace(/\$\{markedUri\}/g, markedUri);
         html = html.replace(/\$\{markedFootnoteUri\}/g, markedFootnoteUri);
         html = html.replace(/\$\{hljsUri\}/g, hljsUri);
-        html = html.replace(/\$\{turndownUri\}/g, turndownUri);
         html = html.replace(/\$\{katexUri\}/g, katexUri);
         html = html.replace(/\$\{mermaidUri\}/g, mermaidUri);
         html = html.replace(/\$\{vizUri\}/g, vizUri);

@@ -1832,63 +1832,7 @@ body.theme-dark * {
     background: var(--primary-light);
 }
 
-/* ===== WYSIWYG 所见即所得编辑样式 ===== */
-.document-content.wysiwyg-editing {
-    cursor: text;
-    outline: none;
-    border: 2px solid var(--primary);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow), 0 0 0 3px rgba(5, 150, 105, 0.1);
-    background: #fffef8;
-    min-height: 400px;
-}
 
-.document-content.wysiwyg-editing:focus {
-    box-shadow: var(--shadow), 0 0 0 3px rgba(5, 150, 105, 0.18);
-}
-
-/* 编辑模式下的段落间距优化 */
-.document-content.wysiwyg-editing .md-block {
-    padding: 2px 4px;
-    border-radius: 3px;
-    transition: background 0.1s;
-}
-
-.document-content.wysiwyg-editing .md-block:hover {
-    background: rgba(5, 150, 105, 0.04);
-}
-
-/* 编辑模式下空段落的占位 */
-.document-content.wysiwyg-editing .md-block:empty::before {
-    content: var(--i18n-placeholder-edit, '点击此处输入内容...');
-    color: var(--text-light);
-    font-style: italic;
-}
-
-/* 编辑模式下表格的交互样式 */
-.document-content.wysiwyg-editing table {
-    cursor: text;
-}
-
-.document-content.wysiwyg-editing td,
-.document-content.wysiwyg-editing th {
-    min-width: 40px;
-    min-height: 24px;
-    position: relative;
-    transition: background 0.1s;
-}
-
-.document-content.wysiwyg-editing td:hover,
-.document-content.wysiwyg-editing th:hover {
-    background: rgba(5, 150, 105, 0.06);
-}
-
-.document-content.wysiwyg-editing td:focus,
-.document-content.wysiwyg-editing th:focus {
-    outline: 2px solid var(--primary);
-    outline-offset: -2px;
-    background: rgba(5, 150, 105, 0.04);
-}
 
 /* ===== 编辑模式下图表源码编辑区 ===== */
 .diagram-edit-wrapper {
@@ -1974,71 +1918,7 @@ body.theme-dark * {
     color: #e0e0e0;
 }
 
-/* ===== WYSIWYG 编辑工具栏 ===== */
-.wysiwyg-toolbar {
-    display: none;
-    position: sticky;
-    top: 0;
-    z-index: 35; /* 低于悬浮面板(40)，避免遮挡面板关闭按钮 */
-    background: var(--bg-white);
-    border-bottom: 1px solid var(--border);
-    padding: 6px 16px;
-    gap: 4px;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
-}
 
-.wysiwyg-toolbar.visible {
-    display: flex;
-}
-
-.wysiwyg-toolbar .toolbar-group {
-    display: flex;
-    gap: 2px;
-    padding: 0 6px;
-    border-right: 1px solid var(--border-light);
-}
-
-.wysiwyg-toolbar .toolbar-group:last-child {
-    border-right: none;
-}
-
-.wysiwyg-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border: none;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.1s;
-    padding: 0;
-}
-
-.wysiwyg-btn:hover {
-    background: var(--primary-light);
-    color: var(--primary);
-}
-
-.wysiwyg-btn:active {
-    background: rgba(5, 150, 105, 0.15);
-}
-
-.wysiwyg-btn.active {
-    background: var(--primary-light);
-    color: var(--primary);
-}
-
-.wysiwyg-btn svg {
-    width: 16px;
-    height: 16px;
-}
 
 /* ===== 保存按钮 ===== */
 .btn-save-md {
@@ -2378,24 +2258,7 @@ body.theme-dark .edit-tips-item b {
     color: #f59e0b;
 }
 
-/* --- WYSIWYG编辑 --- */
-body.theme-dark .document-content.wysiwyg-editing {
-    background: #1a1a1a;
-}
 
-body.theme-dark .document-content.wysiwyg-editing .md-block:hover {
-    background: rgba(110, 231, 183, 0.06);
-}
-
-body.theme-dark .document-content.wysiwyg-editing td:hover,
-body.theme-dark .document-content.wysiwyg-editing th:hover {
-    background: rgba(110, 231, 183, 0.08);
-}
-
-body.theme-dark .document-content.wysiwyg-editing td:focus,
-body.theme-dark .document-content.wysiwyg-editing th:focus {
-    background: rgba(110, 231, 183, 0.06);
-}
 
 /* --- 选中提示浮层 --- */
 body.theme-dark .selection-tooltip {
@@ -2633,9 +2496,7 @@ body.panel-embedded.sidebar-reversed .document-content {
     grid-column: 1; /* 文档内容移到左侧 */
 }
 
-body.panel-embedded.sidebar-reversed .wysiwyg-toolbar {
-    grid-column: 1; /* 反转时工具栏跟随文档内容列 */
-}
+
 
 body.panel-embedded.sidebar-reversed .search-bar {
     grid-column: 1; /* 反转时搜索栏跟随文档内容列 */
@@ -2656,14 +2517,7 @@ body.panel-embedded.sidebar-reversed .document-panel {
     order: 1; /* 文档面板（含目录+内容）移到右侧 */
 }
 
-/* WYSIWYG 工具栏在嵌入模式下：只在文档内容列上方，不遮挡左侧目录 header */
-body.panel-embedded .wysiwyg-toolbar {
-    z-index: 5;
-    grid-column: 2;
-    grid-row: 1;
-    position: sticky;
-    top: 0;
-}
+
 
 /* 嵌入模式下搜索栏同样只在文档内容列上方 */
 body.panel-embedded .search-bar {

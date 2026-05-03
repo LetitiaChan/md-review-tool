@@ -50,11 +50,7 @@
             <button class="btn-toolbar-text" id="btnToggleTheme" data-i18n-title="toolbar.theme_title" title="切换亮色/暗色主题">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
             </button>
-            <!-- 预览/编辑切换按钮 -->
-            <button class="btn-mode-toggle" id="btnModeToggle" data-i18n-title="toolbar.mode_title" title="切换预览/编辑模式">
-                <svg class="mode-icon mode-icon-preview" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3C4 3 1 8 1 8s3 5 7 5 7-5 7-5-3-5-7-5z" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
-                <svg class="mode-icon mode-icon-edit" width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:none;"><path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-            </button>
+
             <!-- 源码模式切换按钮（Phase A：Source Mode，CodeMirror 6 引擎）-->
             <button class="btn-toolbar-text" id="btnToggleSource" data-i18n-title="edit_mode.source_toggle_tooltip" title="源码模式（直接编辑 Markdown）">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -164,42 +160,7 @@
                     </div>
                 </div>
 
-                <div class="wysiwyg-toolbar" id="wysiwygToolbar">
-                    <div class="toolbar-group">
-                        <button class="wysiwyg-btn" data-command="bold" title="加粗 (Ctrl+B)"><b>B</b></button>
-                        <button class="wysiwyg-btn" data-command="italic" title="斜体 (Ctrl+I)"><i>I</i></button>
-                        <button class="wysiwyg-btn" data-command="strikeThrough" title="删除线"><s>S</s></button>
-                    </div>
-                    <div class="toolbar-group">
-                        <button class="wysiwyg-btn" data-command="heading" data-value="H1" title="一级标题" style="font-size:15px;">H1</button>
-                        <button class="wysiwyg-btn" data-command="heading" data-value="H2" title="二级标题" style="font-size:14px;">H2</button>
-                        <button class="wysiwyg-btn" data-command="heading" data-value="H3" title="三级标题" style="font-size:13px;">H3</button>
-                    </div>
-                    <div class="toolbar-group">
-                        <button class="wysiwyg-btn" data-command="insertUnorderedList" title="无序列表">
-                            <svg viewBox="0 0 16 16" fill="none"><circle cx="3" cy="4" r="1.2" fill="currentColor"/><circle cx="3" cy="8" r="1.2" fill="currentColor"/><circle cx="3" cy="12" r="1.2" fill="currentColor"/><line x1="6" y1="4" x2="14" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.5"/></svg>
-                        </button>
-                        <button class="wysiwyg-btn" data-command="insertOrderedList" data-i18n-title="editor.ol_title" title="有序列表">
-                            <svg viewBox="0 0 16 16" fill="none"><text x="1" y="5.5" font-size="5" fill="currentColor" font-weight="600">1.</text><text x="1" y="9.5" font-size="5" fill="currentColor" font-weight="600">2.</text><text x="1" y="13.5" font-size="5" fill="currentColor" font-weight="600">3.</text><line x1="6" y1="4" x2="14" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.5"/></svg>
-                        </button>
-                    </div>
-                    <div class="toolbar-group">
-                        <button class="wysiwyg-btn" data-command="formatBlock" data-value="blockquote" data-i18n-title="editor.quote_title" title="引用块">
-                            <svg viewBox="0 0 16 16" fill="none"><path d="M3 4h4v4H5l-2 3V8H3V4zm6 0h4v4h-2l-2 3V8H9V4z" fill="currentColor" opacity="0.7"/></svg>
-                        </button>
-                        <button class="wysiwyg-btn" data-command="insertHorizontalRule" data-i18n-title="editor.hr_title" title="分隔线">
-                            <svg viewBox="0 0 16 16" fill="none"><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="2"/></svg>
-                        </button>
-                    </div>
-                    <div class="toolbar-group">
-                        <button class="wysiwyg-btn" data-command="undo" data-i18n-title="editor.undo_title" title="撤销 (Ctrl+Z)">
-                            <svg viewBox="0 0 16 16" fill="none"><path d="M3 7h7a3 3 0 110 6H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6 4L3 7l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        </button>
-                        <button class="wysiwyg-btn" data-command="redo" data-i18n-title="editor.redo_title" title="重做 (Ctrl+Y)">
-                            <svg viewBox="0 0 16 16" fill="none"><path d="M13 7H6a3 3 0 100 6h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        </button>
-                    </div>
-                </div>
+
                 <!-- 正文搜索栏 -->
                 <div class="search-bar" id="searchBar" style="display:none;">
                     <div class="search-bar-inner">
@@ -829,7 +790,7 @@
     <script src="${markedUri}"></script>
     <script src="${markedFootnoteUri}"></script>
     <script src="${hljsUri}"></script>
-    <script src="${turndownUri}"></script>
+
     <script src="${katexUri}"></script>
     <script src="${mermaidUri}"></script>
     <script src="${vizUri}"></script>

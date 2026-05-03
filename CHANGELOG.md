@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-05-03
+
+### ✨ Dual-Mode Editor (Phase A + B + C)
+- **New: Source Mode** — CodeMirror 6 engine for direct Markdown source editing. Toggle via the `</>` toolbar button. Features: syntax highlighting, line numbers, search (Ctrl+F), VS Code theme integration, keyboard shortcut passthrough (Ctrl+E/Alt+Z/F5 forwarded to host)
+- **New: Rich Mode** — ProseMirror engine for structured rich-text editing. Toggle via the `¶` toolbar button. Features: full PM schema (20 nodes + 11 marks covering all Markdown features), Markdown↔PM bidirectional bridge (5 custom markdown-it plugins, completely bypasses turndown), diagram NodeView (preview + double-click to edit), annotation decorations (visible and drift-aware in Rich Mode), smart paste (HTML→Markdown→PM doc normalization)
+- **Three-state machine** — `edit-mode.js` manages `inactive` / `source` / `rich` states with mutual exclusion. Only one editor mode can be active at a time
+- **Markdown as single source of truth** — Both modes read from and write back to `Store.getData().rawMarkdown`. Source Mode uses CM6 `onChange` callback; Rich Mode uses PM serializer. No intermediate HTML→Markdown conversion needed
+
+### 🗑️ Removed (BREAKING)
+- **Remove legacy contenteditable WYSIWYG editing** — The old editing path that set `contenteditable="true"` on `#documentContent` and used turndown for HTML→Markdown conversion has been completely removed. This eliminates ~1,200 lines of dead code including: `createTurndownService()`, `blockHtmlToMarkdown()`, `extractTextFromNode()`, block-level snapshot/diff system, `convertDiagramsToEditable()`, `protectFrontmatterInEditMode()`, `showEditModeTips()`, and the WYSIWYG toolbar
+- **Remove `#btnModeToggle` button** — The old pencil/eye toggle button is replaced by dedicated Source (`</>`) and Rich (`¶`) buttons
+- **Remove `#wysiwygToolbar`** — The old formatting toolbar (Bold/Italic/Heading/List/Quote/Undo/Redo) is removed. Rich Mode provides its own PM-native editing commands
+- **Remove `turndown.js` vendored library** — No code path references turndown anymore. PM serializer handles Rich→Markdown; Source Mode works with raw text directly
+- **Remove turndown-safety spec** — The `edit-mode-turndown-safety` capability spec (escape identity, kbd keep, table br/align, diag log) is archived as the entire turndown pipeline no longer exists
+
+### 🏗️ Build
+- `app.bundle.js` reduced from 370KB to 329KB (~11% smaller) after dead code removal
+- `cm6.bundle.js` = 1.0MB (CodeMirror 6 + Markdown language support)
+- `pm.bundle.js` = 1.1MB (ProseMirror + schema + serializer + markdown-it plugins)
+- 12 new npm dependencies for ProseMirror (`prosemirror-*`), 7 for CodeMirror (`@codemirror/*` + `@lezer/markdown`)
+
+### 📝 Notes
+- Version bump: `1.3.12` → `1.4.0` (minor release — significant new capability)
+- 710 tests passing, 0 failing (73 legacy turndown/WYSIWYG tests removed, net reduction from 783)
+- Published to both VS Code Marketplace and Open VSX Registry
+
 ## [1.3.12] - 2026-05-02
 
 ### 🏗️ Build (add-webview-bundler-and-esm-modules)

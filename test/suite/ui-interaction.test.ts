@@ -811,11 +811,6 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(themeBtnMatch, '应存在主题按钮');
             assert.ok(!themeBtnMatch![0].includes('data-i18n="toolbar.theme"'), '主题按钮不应包含文字 span');
 
-            // 预览/编辑按钮不应包含文字 span
-            const modeBtnMatch = html.match(/<button[^>]*id="btnModeToggle"[^>]*>[\s\S]*?<\/button>/);
-            assert.ok(modeBtnMatch, '应存在预览/编辑按钮');
-            assert.ok(!modeBtnMatch![0].includes('mode-toggle-label'), '预览/编辑按钮不应包含文字 span');
-
             // 批注按钮应包含计数 badge 但不包含文字标签
             const annBtnMatch = html.match(/<button[^>]*id="btnToggleAnnotations"[^>]*>[\s\S]*?<\/button>/);
             assert.ok(annBtnMatch, '应存在批注按钮');
@@ -935,31 +930,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
                 `settings.js contentMaxWidth(${maxWidthMatch![1]}) 应与 package.json(${pkgProps['mdReview.contentMaxWidth'].default}) 一致`);
         });
 
-        test('BT-editTipsDismiss.1 编辑模式提示条关闭按钮应使用 addEventListener 而非内联 onclick', () => {
-            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
-            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
 
-            // Tier 1: showEditModeTips 函数应存在
-            assert.ok(appJs.includes('function showEditModeTips'), 'app.js 应包含 showEditModeTips 函数');
-            // Tier 1: 关闭按钮不应使用内联 onclick（CSP 兼容 + 事件可靠性）
-            assert.ok(!appJs.includes("onclick=\"this.parentElement.parentElement.classList.remove('show')\""),
-                '关闭按钮不应使用内联 onclick，应使用 addEventListener');
-            // Tier 2: 应通过 addEventListener 绑定 click 事件
-            assert.ok(appJs.includes(".edit-tips-close').addEventListener('click'"),
-                '关闭按钮应通过 addEventListener 绑定 click 事件');
-        });
-
-        test('BT-editTipsDismiss.2 showEditModeTips 应保存 setTimeout ID 并在关闭时清除', () => {
-            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
-            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
-
-            // Tier 2: 应有 clearTimeout 调用防止定时器竞态
-            assert.ok(appJs.includes('clearTimeout(_editTipsTimer)'), '应在关闭时清除自动消失定时器');
-            // Tier 3: _dismissEditModeTips 函数应存在，统一处理关闭逻辑
-            assert.ok(appJs.includes('function _dismissEditModeTips'), '应有统一的 _dismissEditModeTips 关闭函数');
-            // Tier 3: setTimeout 应将返回值赋给 _editTipsTimer
-            assert.ok(appJs.includes('_editTipsTimer = setTimeout'), 'setTimeout 返回值应赋给 _editTipsTimer 以便清除');
-        });
 
         test('语言切换应刷新文件选择下拉框默认文本', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
@@ -3428,51 +3399,6 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(clickBody.includes('theme-dark'), '应在 auto 模式下检测实际显示主题');
         });
 
-        // ---------- 预览/编辑模式按钮 (btnModeToggle) ----------
-        test('BT-toolbarToggle.14 switchMode 应切换按钮图标显隐和 mode-edit class（Tier 2 — 行为级断言）', () => {
-            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
-            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
-
-            const fnMatch = appJs.match(/async function switchMode\(mode\)[\s\S]*?^\s{4}\}/m);
-            assert.ok(fnMatch, '应存在 switchMode 函数');
-            const fnBody = fnMatch![0];
-
-            // 编辑模式
-            assert.ok(fnBody.includes("toggleBtn.classList.add('mode-rich')"), '编辑模式应添加 mode-rich class');
-            assert.ok(fnBody.includes("previewIcon.style.display = 'none'"), '编辑模式应隐藏预览图标');
-
-            // 预览模式
-            assert.ok(fnBody.includes("toggleBtn.classList.remove('mode-rich')"), '预览模式应移除 mode-rich class');
-            assert.ok(fnBody.includes("editIcon.style.display = 'none'"), '预览模式应隐藏编辑图标');
-        });
-
-        test('BT-toolbarToggle.15 模式按钮点击应在 preview/edit 之间切换（Tier 3 — 回归断言）', () => {
-            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
-            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
-
-            const clickMatch = appJs.match(/btnModeToggle.*addEventListener.*click.*\(\)\s*=>\s*\{[\s\S]*?\}\)/);
-            assert.ok(clickMatch, '应存在模式按钮点击事件');
-            const clickBody = clickMatch![0];
-
-            assert.ok(clickBody.includes("currentMode === 'preview'"), '应检测当前模式');
-            assert.ok(clickBody.includes("'rich'"), '应能切换到富文本模式');
-            assert.ok(clickBody.includes("'preview'"), '应能切换到预览模式');
-            assert.ok(clickBody.includes('switchMode'), '应调用 switchMode');
-        });
-
-        test('BT-toolbarToggle.16 switchMode 编辑→预览应自动保存脏数据（Tier 3 — 回归断言）', () => {
-            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
-            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
-
-            const fnMatch = appJs.match(/async function switchMode\(mode\)[\s\S]*?^\s{4}\}/m);
-            assert.ok(fnMatch, '应存在 switchMode 函数');
-            const fnBody = fnMatch![0];
-
-            // 编辑→预览时应自动保存
-            assert.ok(fnBody.includes('editorDirty'), '应检查编辑器脏状态');
-            assert.ok(fnBody.includes('handleSaveMd'), '应调用 handleSaveMd 保存');
-            assert.ok(fnBody.includes('clearAutoSaveTimer'), '应清除自动保存定时器');
-        });
 
         // ---------- 综合：所有按钮存在性 ----------
         test('BT-toolbarToggle.17 index.html 应包含所有顶部菜单按钮（Tier 1 — 存在性断言）', () => {
@@ -3483,7 +3409,6 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
                 'btnToggleToc',
                 'btnZenMode',
                 'btnToggleTheme',
-                'btnModeToggle',
                 'btnToggleAnnotations',
                 'btnApplyReview',
                 'btnSettings',
@@ -3505,7 +3430,6 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
                 'btnToggleToc',
                 'btnZenMode',
                 'btnToggleTheme',
-                'btnModeToggle',
                 'btnToggleAnnotations'
             ];
 
