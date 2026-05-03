@@ -322,6 +322,32 @@ export class ReviewPanel {
                 this.postMessage({ type: 'imageUris', payload: uriMap, requestId });
                 break;
             }
+            case 'pickImage': {
+                // 通过 VS Code 原生文件选择对话框选择图片（绕过 webview <input type="file"> 限制）
+                try {
+                    const uris = await vscode.window.showOpenDialog({
+                        canSelectMany: true,
+                        filters: { 'Images': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg'] },
+                        title: 'Select Image'
+                    });
+                    if (!uris || uris.length === 0) {
+                        this.postMessage({ type: 'pickImageResult', payload: { success: true, images: [] }, requestId });
+                        break;
+                    }
+                    const images: { success: boolean; imagePath: string }[] = [];
+                    for (const uri of uris) {
+                        const fileBuffer = fs.readFileSync(uri.fsPath);
+                        const ext = path.extname(uri.fsPath).slice(1).toLowerCase() || 'png';
+                        const base64Data = `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${fileBuffer.toString('base64')}`;
+                        const result = this._fileService.saveAnnotationImage(base64Data, undefined, payload.sourceDir);
+                        images.push(result);
+                    }
+                    this.postMessage({ type: 'pickImageResult', payload: { success: true, images }, requestId });
+                } catch (e: any) {
+                    this.postMessage({ type: 'pickImageResult', payload: { success: false, error: e.message, images: [] }, requestId });
+                }
+                break;
+            }
             case 'saveAnnotationImage': {
                 try {
                     const result = this._fileService.saveAnnotationImage(payload.base64Data, payload.fileName, payload.sourceDir);

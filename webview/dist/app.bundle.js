@@ -3513,9 +3513,27 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       document.getElementById("btnCloseModal").addEventListener("click", closeCommentModal);
       document.getElementById("btnCancelComment").addEventListener("click", closeCommentModal);
       document.getElementById("btnSubmitComment").addEventListener("click", submitComment);
-      uploadZone.addEventListener("click", (e) => {
+      uploadZone.addEventListener("click", async (e) => {
         if (e.target === imageInput) return;
-        imageInput.click();
+        try {
+          const sourceDir = Store.getSourceDir();
+          const result = await _callHost("pickImage", { sourceDir });
+          if (result && result.success && result.images && result.images.length > 0) {
+            for (const img of result.images) {
+              if (img.success && img.imagePath) {
+                pendingImages.push(img.imagePath);
+              }
+            }
+            const pathImages = pendingImages.filter((p) => !isBase64Image(p) && !_annotationImageUriCache[p]);
+            if (pathImages.length > 0) {
+              await resolveAnnotationImageUris(pathImages);
+            }
+            renderImagePreviews();
+          }
+        } catch (err) {
+          console.warn("[annotations] pickImage \u5931\u8D25\uFF0C\u964D\u7EA7\u5C1D\u8BD5 file input:", err);
+          imageInput.click();
+        }
       });
       uploadZone.addEventListener("dragover", (e) => {
         e.preventDefault();

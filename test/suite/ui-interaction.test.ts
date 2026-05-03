@@ -3626,4 +3626,99 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(helpOverride, '.modal-help 必须覆盖基础 .modal 的 overflow-y 为 hidden，防止双滚动条');
         });
     });
+
+    // ========= Suite: Hotfix — 评论弹窗图片上传通过 Extension Host pickImage 绕过 webview file input 限制 =========
+    suite('Hotfix — pickImage 图片选择功能', () => {
+        const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const reviewPanelTsPath = path.join(extPath, 'out', 'src', 'reviewPanel.js');
+        const reviewPanelText = fs.readFileSync(reviewPanelTsPath, 'utf-8');
+        const annotationsJsPath = path.join(extPath, 'webview', 'js', 'annotations.js');
+        const annotationsText = fs.readFileSync(annotationsJsPath, 'utf-8');
+        const bundlePath = path.join(extPath, 'webview', 'dist', 'app.bundle.js');
+        const bundleText = fs.readFileSync(bundlePath, 'utf-8');
+
+        // ---- Tier 1：存在性断言 ----
+
+        test('BT-pickImage.1 Tier1 — reviewPanel 编译产物应包含 pickImage 消息处理器', () => {
+            assert.ok(
+                reviewPanelText.includes("case 'pickImage'"),
+                'reviewPanel.js 应包含 pickImage case'
+            );
+        });
+
+        test('BT-pickImage.2 Tier1 — reviewPanel 应调用 showOpenDialog 选择图片', () => {
+            assert.ok(
+                reviewPanelText.includes('showOpenDialog'),
+                'pickImage 处理器应调用 vscode.window.showOpenDialog'
+            );
+        });
+
+        test('BT-pickImage.3 Tier1 — reviewPanel pickImage 应回复 pickImageResult 类型', () => {
+            assert.ok(
+                reviewPanelText.includes('pickImageResult'),
+                'pickImage 处理器应回复 pickImageResult 消息类型'
+            );
+        });
+
+        test('BT-pickImage.4 Tier1 — annotations.js 应包含 pickImage 调用', () => {
+            assert.ok(
+                annotationsText.includes("_callHost('pickImage'"),
+                'annotations.js uploadZone click handler 应调用 _callHost(pickImage)'
+            );
+        });
+
+        test('BT-pickImage.5 Tier1 — app.bundle.js 应包含 pickImage 调用', () => {
+            assert.ok(
+                bundleText.includes('pickImage'),
+                'app.bundle.js 应包含 pickImage 相关代码'
+            );
+        });
+
+        // ---- Tier 2：行为级断言 ----
+
+        test('BT-pickImage.6 Tier2 — uploadZone click handler 应为 async 函数（支持 await _callHost）', () => {
+            // 在 annotations.js 中，uploadZone click handler 应该是 async
+            const asyncClickMatch = annotationsText.match(/uploadZone\.addEventListener\('click',\s*async/);
+            assert.ok(asyncClickMatch, 'uploadZone click handler 应为 async 函数');
+        });
+
+        test('BT-pickImage.7 Tier2 — pickImage 失败时应降级尝试 imageInput.click()', () => {
+            // 在 catch 分支中应有 imageInput.click() 降级
+            const catchIdx = annotationsText.indexOf("pickImage 失败");
+            assert.ok(catchIdx > 0, '应有 pickImage 失败的 catch 处理');
+            const afterCatch = annotationsText.slice(catchIdx, catchIdx + 200);
+            assert.ok(
+                afterCatch.includes('imageInput.click()'),
+                'pickImage 失败时应降级调用 imageInput.click()'
+            );
+        });
+
+        test('BT-pickImage.8 Tier2 — showOpenDialog filters 应限制为图片类型', () => {
+            const filtersMatch = reviewPanelText.match(/filters.*Images.*png.*jpg.*jpeg.*gif/);
+            assert.ok(filtersMatch, 'showOpenDialog 的 filters 应限制为常见图片格式');
+        });
+
+        // ---- Tier 3：任务特定断言 ----
+
+        test('BT-pickImage.9 Tier3 — pickImage 处理器应支持多选（canSelectMany: true）', () => {
+            assert.ok(
+                reviewPanelText.includes('canSelectMany: true') || reviewPanelText.includes('canSelectMany:true'),
+                'pickImage 应支持多选图片'
+            );
+        });
+
+        test('BT-pickImage.10 Tier3 — pickImage 用户取消时应返回空 images 数组', () => {
+            // 检查源码中处理 uris 为空的逻辑
+            const emptyCheck = reviewPanelText.includes('images: []');
+            assert.ok(emptyCheck, 'pickImage 用户取消时应返回 { success: true, images: [] }');
+        });
+
+        test('BT-pickImage.11 Tier3 — pickImage 结果中每个 image 应包含 success 和 imagePath 字段', () => {
+            // annotations.js 中应检查 img.success && img.imagePath
+            assert.ok(
+                annotationsText.includes('img.success') && annotationsText.includes('img.imagePath'),
+                'annotations.js 应检查每个图片结果的 success 和 imagePath 字段'
+            );
+        });
+    });
 });

@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [1.5.0] - 2026-05-03
 
+### 🐛 Bug Fixes
+- **Fix image upload in comment modal** — The "Add Image" click zone in the comment modal now uses `vscode.window.showOpenDialog` via Extension Host instead of relying on `<input type="file">` which may not work in certain VS Code webview environments (Cursor, CodeBuddy, etc.). Drag-and-drop and Ctrl+V paste remain as alternative upload methods. Falls back to native file input if `showOpenDialog` fails.
+
 ### 💥 Breaking Changes
 - **Remove Source Mode editor** — The CodeMirror 6 Source Mode (`</>` toolbar button) has been completely removed. Users who need raw Markdown editing can open the `.md` file directly in VS Code / Cursor's native editor (same window, adjacent tab)
 - **Remove `#btnToggleSource` button** — The Source Mode toggle button no longer exists in the toolbar

@@ -376,9 +376,30 @@ const Annotations = (() => {
         document.getElementById('btnCancelComment').addEventListener('click', closeCommentModal);
         document.getElementById('btnSubmitComment').addEventListener('click', submitComment);
 
-        uploadZone.addEventListener('click', (e) => {
+        uploadZone.addEventListener('click', async (e) => {
             if (e.target === imageInput) return; // 防止 input 的 click 冒泡导致重复打开
-            imageInput.click();
+            // 通过 Extension Host 调用 VS Code 原生文件选择对话框（绕过 webview file input 限制）
+            try {
+                const sourceDir = Store.getSourceDir();
+                const result = await _callHost('pickImage', { sourceDir });
+                if (result && result.success && result.images && result.images.length > 0) {
+                    for (const img of result.images) {
+                        if (img.success && img.imagePath) {
+                            pendingImages.push(img.imagePath);
+                        }
+                    }
+                    // 解析路径为 webview URI
+                    const pathImages = pendingImages.filter(p => !isBase64Image(p) && !_annotationImageUriCache[p]);
+                    if (pathImages.length > 0) {
+                        await resolveAnnotationImageUris(pathImages);
+                    }
+                    renderImagePreviews();
+                }
+            } catch (err) {
+                console.warn('[annotations] pickImage 失败，降级尝试 file input:', err);
+                // 降级：尝试使用原生 file input（可能在某些环境下仍然可用）
+                imageInput.click();
+            }
         });
         uploadZone.addEventListener('dragover', (e) => {
             e.preventDefault();
