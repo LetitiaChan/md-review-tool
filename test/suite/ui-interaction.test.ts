@@ -3721,4 +3721,90 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             );
         });
     });
+
+    // ========= Suite: Hotfix — Rich Mode 保存使用 callHost('saveFile') 而非 Exporter.saveViaHost =========
+    suite('Hotfix — Rich Mode handleSaveMd 使用 saveFile 消息', () => {
+        const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const appJsPath = path.join(extPath, 'webview', 'js', 'app.js');
+        const appJsText = fs.readFileSync(appJsPath, 'utf-8');
+        const bundlePath = path.join(extPath, 'webview', 'dist', 'app.bundle.js');
+        const bundleText = fs.readFileSync(bundlePath, 'utf-8');
+
+        // ---- Tier 1：存在性断言 ----
+
+        test('BT-richSave.1 Tier1 — app.js handleSaveMd 不应调用 Exporter.saveViaHost', () => {
+            // 确认旧的错误调用已被移除
+            assert.ok(
+                !appJsText.includes('Exporter.saveViaHost'),
+                'app.js 中不应再有 Exporter.saveViaHost 调用（该函数未被导出）'
+            );
+        });
+
+        test('BT-richSave.2 Tier1 — app.js handleSaveMd 应使用 callHost saveFile', () => {
+            // 确认新的正确调用存在
+            assert.ok(
+                appJsText.includes("callHost('saveFile'"),
+                'app.js handleSaveMd 应使用 callHost(saveFile) 保存源文件'
+            );
+        });
+
+        test('BT-richSave.3 Tier1 — bundle 中不应有 Exporter.saveViaHost 调用', () => {
+            assert.ok(
+                !bundleText.includes('Exporter.saveViaHost') && !bundleText.includes('Exporter2.saveViaHost'),
+                'bundle 中不应有 Exporter.saveViaHost 调用'
+            );
+        });
+
+        // ---- Tier 2：行为级断言 ----
+
+        test('BT-richSave.4 Tier2 — handleSaveMd 应传递 filePath 和 content 参数', () => {
+            // 检查 callHost('saveFile', { filePath, content: ... }) 的参数结构
+            const saveFileCallIdx = appJsText.indexOf("callHost('saveFile'");
+            assert.ok(saveFileCallIdx > 0, '应有 callHost(saveFile) 调用');
+            const afterCall = appJsText.slice(saveFileCallIdx, saveFileCallIdx + 200);
+            assert.ok(
+                afterCall.includes('filePath') && afterCall.includes('content'),
+                'callHost(saveFile) 应传递 filePath 和 content 参数'
+            );
+        });
+
+        test('BT-richSave.5 Tier2 — handleSaveMd 应使用 sourceFilePath 作为 filePath', () => {
+            const handleSaveMdIdx = appJsText.indexOf('async function handleSaveMd');
+            assert.ok(handleSaveMdIdx > 0, '应有 handleSaveMd 函数');
+            const funcBody = appJsText.slice(handleSaveMdIdx, handleSaveMdIdx + 800);
+            assert.ok(
+                funcBody.includes('sourceFilePath'),
+                'handleSaveMd 应使用 sourceFilePath 作为保存路径'
+            );
+        });
+
+        test('BT-richSave.6 Tier2 — handleSaveMd 应检查 result.success', () => {
+            const handleSaveMdIdx = appJsText.indexOf('async function handleSaveMd');
+            const funcBody = appJsText.slice(handleSaveMdIdx, handleSaveMdIdx + 800);
+            assert.ok(
+                funcBody.includes('result.success') || funcBody.includes('result && result.success'),
+                'handleSaveMd 应检查保存结果的 success 字段'
+            );
+        });
+
+        // ---- Tier 3：任务特定断言 ----
+
+        test('BT-richSave.7 Tier3 — handleSaveMd 保存失败时应显示错误状态', () => {
+            const handleSaveMdIdx = appJsText.indexOf('async function handleSaveMd');
+            const funcBody = appJsText.slice(handleSaveMdIdx, handleSaveMdIdx + 1500);
+            assert.ok(
+                funcBody.includes("updateEditStatus('error'"),
+                'handleSaveMd 保存失败时应调用 updateEditStatus(error)'
+            );
+        });
+
+        test('BT-richSave.8 Tier3 — handleSaveMd 保存成功时应重置 editorDirty', () => {
+            const handleSaveMdIdx = appJsText.indexOf('async function handleSaveMd');
+            const funcBody = appJsText.slice(handleSaveMdIdx, handleSaveMdIdx + 800);
+            assert.ok(
+                funcBody.includes('editorDirty = false'),
+                'handleSaveMd 保存成功时应将 editorDirty 设为 false'
+            );
+        });
+    });
 });

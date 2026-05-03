@@ -1763,10 +1763,16 @@ this.innerHTML = t('modal.ai_result.copied');
             const dataPm = Store.getData();
             if (!dataPm.fileName) { showNotification(t('notification.no_open_file')); return; }
             try {
-                await Exporter.saveViaHost(dataPm.rawMarkdown);
-                editorDirty = false;
-                updateEditStatus('saved', t('notification.saved'));
-                setTimeout(() => updateEditStatus('', ''), 1500);
+                const filePath = dataPm.sourceFilePath || dataPm.fileName;
+                const result = await callHost('saveFile', { filePath, content: dataPm.rawMarkdown });
+                if (result && result.success) {
+                    editorDirty = false;
+                    updateEditStatus('saved', t('notification.saved'));
+                    setTimeout(() => updateEditStatus('', ''), 1500);
+                } else {
+                    console.error('[rich-mode] save failed:', result && result.error);
+                    updateEditStatus('error', t('notification.save_failed') || 'Save failed');
+                }
             } catch (e) {
                 console.error('[rich-mode] save failed', e);
                 updateEditStatus('error', t('notification.save_failed') || 'Save failed');
