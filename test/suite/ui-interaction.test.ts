@@ -3352,6 +3352,80 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(fnBody.includes('entering: false'), '退出时 entering 应为 false');
         });
 
+        // ---------- 禅模式 IDE 栏恢复（Extension Host 侧） ----------
+        // 修复场景：退出禅模式时未恢复 VS Code 右侧辅助栏（Auxiliary Bar）和底部面板
+        // 原因：旧实现退出时只调用 toggleSidebarVisibility，遗漏 auxiliary bar 与 bottom panel
+
+        test('BT-zenModeRestore.1 reviewPanel.js 应在 zenModeChanged handler 中同时引用三个 IDE 区域的命令（Tier 1 — 存在性断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const reviewPanelJs = fs.readFileSync(path.join(extPath, 'out', 'reviewPanel.js'), 'utf-8');
+
+            // 进入禅模式时应关闭三个区域
+            assert.ok(reviewPanelJs.includes('workbench.action.closeSidebar'), '应引用 closeSidebar 命令');
+            assert.ok(reviewPanelJs.includes('workbench.action.closeAuxiliaryBar'), '应引用 closeAuxiliaryBar 命令');
+            assert.ok(reviewPanelJs.includes('workbench.action.closePanel'), '应引用 closePanel 命令');
+
+            // 退出禅模式时应恢复三个区域（toggle 系命令）
+            assert.ok(reviewPanelJs.includes('workbench.action.toggleSidebarVisibility'), '应引用 toggleSidebarVisibility 命令');
+            assert.ok(reviewPanelJs.includes('workbench.action.toggleAuxiliaryBar'), '应引用 toggleAuxiliaryBar 命令（修复：原先缺失）');
+            assert.ok(reviewPanelJs.includes('workbench.action.togglePanel'), '应引用 togglePanel 命令（修复：原先缺失）');
+        });
+
+        test('BT-zenModeRestore.2 退出禅模式应按记录的关闭状态对称恢复三个 IDE 区域（Tier 2 — 行为级断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const reviewPanelJs = fs.readFileSync(path.join(extPath, 'out', 'reviewPanel.js'), 'utf-8');
+
+            // 定位 zenModeChanged case 的实现体（截取 1200 字节上下文）
+            const caseStart = reviewPanelJs.indexOf("'zenModeChanged'");
+            assert.ok(caseStart !== -1, '应存在 zenModeChanged case');
+            const caseBody = reviewPanelJs.substring(caseStart, caseStart + 1500);
+
+            // 应存在记录字段 _zenClosedBars，用于对称恢复
+            assert.ok(
+                caseBody.includes('_zenClosedBars') || reviewPanelJs.includes('_zenClosedBars'),
+                '应存在 _zenClosedBars 实例字段以记录本扩展发起的关闭动作'
+            );
+
+            // 进入分支：三个 close 命令应同时出现
+            assert.ok(caseBody.includes('closeSidebar'), '进入分支应调用 closeSidebar');
+            assert.ok(caseBody.includes('closeAuxiliaryBar'), '进入分支应调用 closeAuxiliaryBar');
+            assert.ok(caseBody.includes('closePanel'), '进入分支应调用 closePanel');
+
+            // 退出分支：三个 toggle 命令应同时出现
+            assert.ok(caseBody.includes('toggleSidebarVisibility'), '退出分支应调用 toggleSidebarVisibility');
+            assert.ok(caseBody.includes('toggleAuxiliaryBar'), '退出分支应调用 toggleAuxiliaryBar（修复：原先缺失）');
+            assert.ok(caseBody.includes('togglePanel'), '退出分支应调用 togglePanel（修复：原先缺失）');
+        });
+
+        test('BT-zenModeRestore.3 退出禅模式应基于 _zenClosedBars 字段有条件地恢复各栏（Tier 3 — 回归断言）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const reviewPanelJs = fs.readFileSync(path.join(extPath, 'out', 'reviewPanel.js'), 'utf-8');
+
+            // 回归断言 1：_zenClosedBars 应具备 sidebar / auxiliary / panel 三个布尔字段
+            assert.ok(reviewPanelJs.includes('sidebar'), '_zenClosedBars 应含 sidebar 键');
+            assert.ok(reviewPanelJs.includes('auxiliary'), '_zenClosedBars 应含 auxiliary 键');
+            // 'panel' 在多处使用，下面通过结构校验
+
+            // 回归断言 2：退出分支的 toggle 调用应被 if (this._zenClosedBars.xxx) 保护，
+            // 避免把用户原本未打开的栏误开
+            const caseStart = reviewPanelJs.indexOf("'zenModeChanged'");
+            assert.ok(caseStart !== -1, '应存在 zenModeChanged case');
+            const caseBody = reviewPanelJs.substring(caseStart, caseStart + 1500);
+
+            assert.ok(
+                /_zenClosedBars\.sidebar[\s\S]{0,120}toggleSidebarVisibility/.test(caseBody),
+                'toggleSidebarVisibility 应受 _zenClosedBars.sidebar 保护'
+            );
+            assert.ok(
+                /_zenClosedBars\.auxiliary[\s\S]{0,120}toggleAuxiliaryBar/.test(caseBody),
+                'toggleAuxiliaryBar 应受 _zenClosedBars.auxiliary 保护'
+            );
+            assert.ok(
+                /_zenClosedBars\.panel[\s\S]{0,120}togglePanel/.test(caseBody),
+                'togglePanel 应受 _zenClosedBars.panel 保护'
+            );
+        });
+
         // ---------- 主题按钮 (btnToggleTheme) ----------
         test('BT-toolbarToggle.11 updateThemeButtonLabel 应根据主题切换 SVG 图标（Tier 2 — 行为级断言）', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
