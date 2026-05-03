@@ -29,7 +29,7 @@
 - **💬 Add Comments** — Select text to add comments with image attachments (click, drag, or Ctrl+V paste)
 - **🗑️ Mark Deletion** — Select text to mark as pending deletion, displayed with strikethrough
 - **➕ Insert Content** — Select anchor text to insert new content (supports Markdown), with before/after insertion options
-- **✏️ Rich Mode Editor** — Click the pencil (✎) toolbar button to enter a ProseMirror-based structured editor with syntax highlighting, diagram preview, smart paste, and annotation decorations
+- **✏️ Rich Mode Editor** — Click the pencil (✎) toolbar button to enter a ProseMirror-based structured editor with a formatting toolbar (Bold, Italic, Headings, Lists, etc.), syntax highlighting, diagram preview, smart paste, and annotation decorations
 - **📊 Table Editing** — Right-click tables in edit mode to insert/delete rows and columns
 - **📈 Diagram Source Editing** — In edit mode, Mermaid / PlantUML / Graphviz diagrams are converted to editable source code areas for direct modification
 - **🔄 Smart Edit Preservation** — Editing blockquotes, GitHub alert blocks, code blocks, math formulas, and diagrams preserves their original Markdown structure

@@ -4931,7 +4931,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     }
     return el;
   }
-  function enterRich() {
+  function enterRich(options) {
     if (_mode !== MODE.INACTIVE) return;
     if (!globalThis.PM || typeof globalThis.PM.createRichEditor !== "function") {
       console.warn("[edit-mode] PM not loaded, cannot enter rich mode");
@@ -4945,7 +4945,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     const markdown = store.getData().rawMarkdown || "";
     const annotations = store.getAnnotations ? store.getAnnotations() : [];
     const container = ensureRichContainer();
-    _editor = globalThis.PM.createRichEditor({
+    const editorOptions = {
       parent: container,
       markdown,
       annotations,
@@ -4965,7 +4965,11 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           globalThis.handleSaveMd();
         }
       }
-    });
+    };
+    if (options && typeof options.onSelectionChange === "function") {
+      editorOptions.onSelectionChange = options.onSelectionChange;
+    }
+    _editor = globalThis.PM.createRichEditor(editorOptions);
     document.body.classList.add(RICH_BODY_CLASS);
     _mode = MODE.RICH;
     try {
@@ -5006,6 +5010,10 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     } catch (e) {
     }
   }
+  function execCommand(name, attrs) {
+    if (_mode !== MODE.RICH || !_editor || typeof _editor.execCommand !== "function") return false;
+    return _editor.execCommand(name, attrs);
+  }
   function isRichActive() {
     return _mode === MODE.RICH;
   }
@@ -5016,7 +5024,8 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     enterRich,
     exitRich,
     isRichActive,
-    isAnyEditorActive
+    isAnyEditorActive,
+    execCommand
   };
 
   // webview/js/app.js
@@ -5241,8 +5250,21 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
             EditMode.exitRich();
             btnToggleRich.classList.remove("active");
           } else {
-            EditMode.enterRich();
+            EditMode.enterRich({
+              onSelectionChange: updateEditorToolbarState
+            });
             btnToggleRich.classList.add("active");
+          }
+        });
+      }
+      const editorToolbar = document.getElementById("editorToolbar");
+      if (editorToolbar && globalThis.EditMode) {
+        editorToolbar.addEventListener("click", (e) => {
+          const btn = e.target.closest(".editor-toolbar-btn");
+          if (!btn) return;
+          const cmd = btn.getAttribute("data-cmd");
+          if (cmd && EditMode.isRichActive()) {
+            EditMode.execCommand(cmd);
           }
         });
       }
@@ -5252,6 +5274,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         currentMode = "preview";
         editorDirty = false;
         updateEditStatus("", "");
+        clearEditorToolbarState();
         refreshCurrentView();
       });
       document.getElementById("btnSaveMd").addEventListener("click", handleSaveMd);
@@ -6305,11 +6328,11 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
       }
     }
-    let tableMenuTarget = { table: null, row: null, cell: null, rowIndex: -1, colIndex: -1 };
+    let tableMenuCoords = { left: 0, top: 0 };
     function setupTableContextMenu() {
       const docContent = document.getElementById("documentContent");
       const tableMenu = document.getElementById("tableContextMenu");
-      docContent.addEventListener("contextmenu", (e) => {
+      function handleTableContextMenu(e) {
         if (currentMode !== "rich") return;
         const cell = e.target.closest("td, th");
         if (!cell) return;
@@ -6317,9 +6340,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         const table = cell.closest("table");
         if (!table || !row) return;
         e.preventDefault();
-        const rowIndex = Array.from(table.querySelectorAll("tr")).indexOf(row);
-        const colIndex = Array.from(row.children).indexOf(cell);
-        tableMenuTarget = { table, row, cell, rowIndex, colIndex };
+        tableMenuCoords = { left: e.clientX, top: e.clientY };
         tableMenu.style.display = "block";
         tableMenu.style.left = Math.min(e.clientX, window.innerWidth - 220) + "px";
         tableMenu.style.top = Math.min(e.clientY, window.innerHeight - 320) + "px";
@@ -6329,86 +6350,41 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         document.getElementById("tableMenuDeleteRow").style.pointerEvents = totalRows <= 1 ? "none" : "auto";
         document.getElementById("tableMenuDeleteCol").style.opacity = totalCols <= 1 ? "0.4" : "1";
         document.getElementById("tableMenuDeleteCol").style.pointerEvents = totalCols <= 1 ? "none" : "auto";
+      }
+      docContent.addEventListener("contextmenu", handleTableContextMenu);
+      document.addEventListener("contextmenu", (e) => {
+        const richContainer = document.getElementById("richModeContainer");
+        if (richContainer && richContainer.contains(e.target)) {
+          handleTableContextMenu(e);
+        }
       });
       document.addEventListener("click", (e) => {
         if (!tableMenu.contains(e.target)) tableMenu.style.display = "none";
       });
       document.getElementById("tableMenuInsertRowAbove").addEventListener("click", () => {
         tableMenu.style.display = "none";
-        tableInsertRow("above");
+        EditMode.execCommand("tableInsertRowAbove", { coords: tableMenuCoords });
       });
       document.getElementById("tableMenuInsertRowBelow").addEventListener("click", () => {
         tableMenu.style.display = "none";
-        tableInsertRow("below");
+        EditMode.execCommand("tableInsertRowBelow", { coords: tableMenuCoords });
       });
       document.getElementById("tableMenuInsertColLeft").addEventListener("click", () => {
         tableMenu.style.display = "none";
-        tableInsertCol("left");
+        EditMode.execCommand("tableInsertColLeft", { coords: tableMenuCoords });
       });
       document.getElementById("tableMenuInsertColRight").addEventListener("click", () => {
         tableMenu.style.display = "none";
-        tableInsertCol("right");
+        EditMode.execCommand("tableInsertColRight", { coords: tableMenuCoords });
       });
       document.getElementById("tableMenuDeleteRow").addEventListener("click", () => {
         tableMenu.style.display = "none";
-        tableDeleteRow();
+        EditMode.execCommand("tableDeleteRow", { coords: tableMenuCoords });
       });
       document.getElementById("tableMenuDeleteCol").addEventListener("click", () => {
         tableMenu.style.display = "none";
-        tableDeleteCol();
+        EditMode.execCommand("tableDeleteCol", { coords: tableMenuCoords });
       });
-    }
-    function tableInsertRow(position) {
-      const { table, row } = tableMenuTarget;
-      if (!table || !row) return;
-      const colCount = row.children.length;
-      const newRow = document.createElement("tr");
-      const isHeaderRow = row.querySelector("th") !== null;
-      const cellTag = position === "above" && isHeaderRow ? "th" : "td";
-      for (let i = 0; i < colCount; i++) {
-        const cell = document.createElement(cellTag);
-        cell.innerHTML = "<br>";
-        newRow.appendChild(cell);
-      }
-      if (position === "above") row.parentNode.insertBefore(newRow, row);
-      else row.parentNode.insertBefore(newRow, row.nextSibling);
-      markTableEdited();
-    }
-    function tableInsertCol(position) {
-      const { table, colIndex } = tableMenuTarget;
-      if (!table || colIndex < 0) return;
-      table.querySelectorAll("tr").forEach((row) => {
-        const cells = Array.from(row.children);
-        const refCell = cells[colIndex];
-        if (!refCell) return;
-        const newCell = document.createElement(refCell.tagName === "TH" ? "th" : "td");
-        newCell.innerHTML = "<br>";
-        if (position === "left") row.insertBefore(newCell, refCell);
-        else row.insertBefore(newCell, refCell.nextSibling);
-      });
-      markTableEdited();
-    }
-    function tableDeleteRow() {
-      const { table, row } = tableMenuTarget;
-      if (!table || !row || table.querySelectorAll("tr").length <= 1) return;
-      row.remove();
-      markTableEdited();
-    }
-    function tableDeleteCol() {
-      const { table, colIndex } = tableMenuTarget;
-      if (!table || colIndex < 0) return;
-      const rows = table.querySelectorAll("tr");
-      if (rows[0] && rows[0].children.length <= 1) return;
-      rows.forEach((row) => {
-        const cells = Array.from(row.children);
-        if (cells[colIndex]) cells[colIndex].remove();
-      });
-      markTableEdited();
-    }
-    function markTableEdited() {
-      editorDirty = true;
-      updateEditStatus("modified", t("notification.unsaved"));
-      scheduleAutoSave();
     }
     function getScrollAnchor() {
       const docContent = document.getElementById("documentContent");
@@ -6443,6 +6419,35 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       const el = document.getElementById("editStatus");
       el.className = "edit-status" + (className ? " " + className : "");
       el.textContent = text;
+    }
+    const _toolbarMarkMap = { bold: "strong", italic: "em", strikethrough: "strikethrough" };
+    const _toolbarBlockMap = { h1: { type: "heading", level: 1 }, h2: { type: "heading", level: 2 }, h3: { type: "heading", level: 3 } };
+    function updateEditorToolbarState(state) {
+      const toolbar = document.getElementById("editorToolbar");
+      if (!toolbar) return;
+      const { activeMarks, blockType, blockAttrs } = state;
+      const btns = toolbar.querySelectorAll(".editor-toolbar-btn");
+      for (const btn of btns) {
+        const cmd = btn.getAttribute("data-cmd");
+        if (!cmd) continue;
+        let isActive = false;
+        if (_toolbarMarkMap[cmd]) {
+          isActive = activeMarks.includes(_toolbarMarkMap[cmd]);
+        }
+        if (_toolbarBlockMap[cmd]) {
+          const expected = _toolbarBlockMap[cmd];
+          isActive = blockType === expected.type && blockAttrs.level === expected.level;
+        }
+        btn.classList.toggle("active", isActive);
+      }
+    }
+    function clearEditorToolbarState() {
+      const toolbar = document.getElementById("editorToolbar");
+      if (!toolbar) return;
+      const btns = toolbar.querySelectorAll(".editor-toolbar-btn");
+      for (const btn of btns) {
+        btn.classList.remove("active");
+      }
     }
     function updateThemeButtonLabel(theme) {
       const btn = document.getElementById("btnToggleTheme");

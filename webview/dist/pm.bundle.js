@@ -17932,6 +17932,48 @@
   }
   var selectTextblockStart = selectTextblockSide(-1);
   var selectTextblockEnd = selectTextblockSide(1);
+  function wrapIn(nodeType, attrs2 = null) {
+    return function(state, dispatch) {
+      let { $from, $to } = state.selection;
+      let range = $from.blockRange($to), wrapping = range && findWrapping(range, nodeType, attrs2);
+      if (!wrapping)
+        return false;
+      if (dispatch)
+        dispatch(state.tr.wrap(range, wrapping).scrollIntoView());
+      return true;
+    };
+  }
+  function setBlockType2(nodeType, attrs2 = null) {
+    return function(state, dispatch) {
+      let applicable = false;
+      for (let i = 0; i < state.selection.ranges.length && !applicable; i++) {
+        let { $from: { pos: from2 }, $to: { pos: to } } = state.selection.ranges[i];
+        state.doc.nodesBetween(from2, to, (node, pos) => {
+          if (applicable)
+            return false;
+          if (!node.isTextblock || node.hasMarkup(nodeType, attrs2))
+            return;
+          if (node.type == nodeType) {
+            applicable = true;
+          } else {
+            let $pos = state.doc.resolve(pos), index = $pos.index();
+            applicable = $pos.parent.canReplaceWith(index, index + 1, nodeType);
+          }
+        });
+      }
+      if (!applicable)
+        return false;
+      if (dispatch) {
+        let tr = state.tr;
+        for (let i = 0; i < state.selection.ranges.length; i++) {
+          let { $from: { pos: from2 }, $to: { pos: to } } = state.selection.ranges[i];
+          tr.setBlockType(from2, to, nodeType, attrs2);
+        }
+        dispatch(tr.scrollIntoView());
+      }
+      return true;
+    };
+  }
   function markApplies(doc3, ranges, type, enterAtoms) {
     for (let i = 0; i < ranges.length; i++) {
       let { $from, $to } = ranges[i];
@@ -18730,6 +18772,58 @@
   }
 
   // node_modules/prosemirror-schema-list/dist/index.js
+  function wrapInList(listType, attrs2 = null) {
+    return function(state, dispatch) {
+      let { $from, $to } = state.selection;
+      let range = $from.blockRange($to);
+      if (!range)
+        return false;
+      let tr = dispatch ? state.tr : null;
+      if (!wrapRangeInList(tr, range, listType, attrs2))
+        return false;
+      if (dispatch)
+        dispatch(tr.scrollIntoView());
+      return true;
+    };
+  }
+  function wrapRangeInList(tr, range, listType, attrs2 = null) {
+    let doJoin = false, outerRange = range, doc3 = range.$from.doc;
+    if (range.depth >= 2 && range.$from.node(range.depth - 1).type.compatibleContent(listType) && range.startIndex == 0) {
+      if (range.$from.index(range.depth - 1) == 0)
+        return false;
+      let $insert = doc3.resolve(range.start - 2);
+      outerRange = new NodeRange($insert, $insert, range.depth);
+      if (range.endIndex < range.parent.childCount)
+        range = new NodeRange(range.$from, doc3.resolve(range.$to.end(range.depth)), range.depth);
+      doJoin = true;
+    }
+    let wrap2 = findWrapping(outerRange, listType, attrs2, range);
+    if (!wrap2)
+      return false;
+    if (tr)
+      doWrapInList(tr, range, wrap2, doJoin, listType);
+    return true;
+  }
+  function doWrapInList(tr, range, wrappers, joinBefore, listType) {
+    let content = Fragment.empty;
+    for (let i = wrappers.length - 1; i >= 0; i--)
+      content = Fragment.from(wrappers[i].type.create(wrappers[i].attrs, content));
+    tr.step(new ReplaceAroundStep(range.start - (joinBefore ? 2 : 0), range.end, range.start, range.end, new Slice(content, 0, 0), wrappers.length, true));
+    let found2 = 0;
+    for (let i = 0; i < wrappers.length; i++)
+      if (wrappers[i].type == listType)
+        found2 = i + 1;
+    let splitDepth = wrappers.length - found2;
+    let splitPos = range.start + wrappers.length - (joinBefore ? 2 : 0), parent = range.parent;
+    for (let i = range.startIndex, e = range.endIndex, first = true; i < e; i++, first = false) {
+      if (!first && canSplit(tr.doc, splitPos, splitDepth)) {
+        tr.split(splitPos, splitDepth);
+        splitPos += 2 * splitDepth;
+      }
+      splitPos += parent.child(i).nodeSize;
+    }
+    return tr;
+  }
   function splitListItem(itemType, itemAttrs) {
     return function(state, dispatch) {
       let { $from, $to, node } = state.selection;
@@ -19450,6 +19544,22 @@
     }
     return result;
   }
+  function addColSpan(attrs2, pos, n = 1) {
+    const result = {
+      ...attrs2,
+      colspan: attrs2.colspan + n
+    };
+    if (result.colwidth) {
+      result.colwidth = result.colwidth.slice();
+      for (let i = 0; i < n; i++) result.colwidth.splice(pos, 0, 0);
+    }
+    return result;
+  }
+  function columnIsHeader(map3, table2, col) {
+    const headerCell = tableNodeTypes(table2.type.schema).header_cell;
+    for (let row = 0; row < map3.height; row++) if (table2.nodeAt(map3.map[col + row * map3.width]).type != headerCell) return false;
+    return true;
+  }
   var CellSelection = class CellSelection2 extends Selection {
     constructor($anchorCell, $headCell = $anchorCell) {
       const table2 = $anchorCell.node(-1);
@@ -19780,6 +19890,166 @@
       map: map3,
       table: table2
     };
+  }
+  function addColumn(tr, { map: map3, tableStart, table: table2 }, col) {
+    let refColumn = col > 0 ? -1 : 0;
+    if (columnIsHeader(map3, table2, col + refColumn)) refColumn = col == 0 || col == map3.width ? null : 0;
+    for (let row = 0; row < map3.height; row++) {
+      const index = row * map3.width + col;
+      if (col > 0 && col < map3.width && map3.map[index - 1] == map3.map[index]) {
+        const pos = map3.map[index];
+        const cell = table2.nodeAt(pos);
+        tr.setNodeMarkup(tr.mapping.map(tableStart + pos), null, addColSpan(cell.attrs, col - map3.colCount(pos)));
+        row += cell.attrs.rowspan - 1;
+      } else {
+        const type = refColumn == null ? tableNodeTypes(table2.type.schema).cell : table2.nodeAt(map3.map[index + refColumn]).type;
+        const pos = map3.positionAt(row, col, table2);
+        tr.insert(tr.mapping.map(tableStart + pos), type.createAndFill());
+      }
+    }
+    return tr;
+  }
+  function addColumnBefore(state, dispatch) {
+    if (!isInTable(state)) return false;
+    if (dispatch) {
+      const rect = selectedRect(state);
+      dispatch(addColumn(state.tr, rect, rect.left));
+    }
+    return true;
+  }
+  function addColumnAfter(state, dispatch) {
+    if (!isInTable(state)) return false;
+    if (dispatch) {
+      const rect = selectedRect(state);
+      dispatch(addColumn(state.tr, rect, rect.right));
+    }
+    return true;
+  }
+  function removeColumn(tr, { map: map3, table: table2, tableStart }, col) {
+    const mapStart = tr.mapping.maps.length;
+    for (let row = 0; row < map3.height; ) {
+      const index = row * map3.width + col;
+      const pos = map3.map[index];
+      const cell = table2.nodeAt(pos);
+      const attrs2 = cell.attrs;
+      if (col > 0 && map3.map[index - 1] == pos || col < map3.width - 1 && map3.map[index + 1] == pos) tr.setNodeMarkup(tr.mapping.slice(mapStart).map(tableStart + pos), null, removeColSpan(attrs2, col - map3.colCount(pos)));
+      else {
+        const start = tr.mapping.slice(mapStart).map(tableStart + pos);
+        tr.delete(start, start + cell.nodeSize);
+      }
+      row += attrs2.rowspan;
+    }
+  }
+  function deleteColumn(state, dispatch) {
+    if (!isInTable(state)) return false;
+    if (dispatch) {
+      const rect = selectedRect(state);
+      const tr = state.tr;
+      if (rect.left == 0 && rect.right == rect.map.width) return false;
+      for (let i = rect.right - 1; ; i--) {
+        removeColumn(tr, rect, i);
+        if (i == rect.left) break;
+        const table2 = rect.tableStart ? tr.doc.nodeAt(rect.tableStart - 1) : tr.doc;
+        if (!table2) throw new RangeError("No table found");
+        rect.table = table2;
+        rect.map = TableMap.get(table2);
+      }
+      dispatch(tr);
+    }
+    return true;
+  }
+  function rowIsHeader(map3, table2, row) {
+    var _table$nodeAt;
+    const headerCell = tableNodeTypes(table2.type.schema).header_cell;
+    for (let col = 0; col < map3.width; col++) if (((_table$nodeAt = table2.nodeAt(map3.map[col + row * map3.width])) === null || _table$nodeAt === void 0 ? void 0 : _table$nodeAt.type) != headerCell) return false;
+    return true;
+  }
+  function addRow(tr, { map: map3, tableStart, table: table2 }, row) {
+    let rowPos = tableStart;
+    for (let i = 0; i < row; i++) rowPos += table2.child(i).nodeSize;
+    const cells = [];
+    let refRow = row > 0 ? -1 : 0;
+    if (rowIsHeader(map3, table2, row + refRow)) refRow = row == 0 || row == map3.height ? null : 0;
+    for (let col = 0, index = map3.width * row; col < map3.width; col++, index++) if (row > 0 && row < map3.height && map3.map[index] == map3.map[index - map3.width]) {
+      const pos = map3.map[index];
+      const attrs2 = table2.nodeAt(pos).attrs;
+      tr.setNodeMarkup(tableStart + pos, null, {
+        ...attrs2,
+        rowspan: attrs2.rowspan + 1
+      });
+      col += attrs2.colspan - 1;
+    } else {
+      var _table$nodeAt2;
+      const type = refRow == null ? tableNodeTypes(table2.type.schema).cell : (_table$nodeAt2 = table2.nodeAt(map3.map[index + refRow * map3.width])) === null || _table$nodeAt2 === void 0 ? void 0 : _table$nodeAt2.type;
+      const node = type === null || type === void 0 ? void 0 : type.createAndFill();
+      if (node) cells.push(node);
+    }
+    tr.insert(rowPos, tableNodeTypes(table2.type.schema).row.create(null, cells));
+    return tr;
+  }
+  function addRowBefore(state, dispatch) {
+    if (!isInTable(state)) return false;
+    if (dispatch) {
+      const rect = selectedRect(state);
+      dispatch(addRow(state.tr, rect, rect.top));
+    }
+    return true;
+  }
+  function addRowAfter(state, dispatch) {
+    if (!isInTable(state)) return false;
+    if (dispatch) {
+      const rect = selectedRect(state);
+      dispatch(addRow(state.tr, rect, rect.bottom));
+    }
+    return true;
+  }
+  function removeRow(tr, { map: map3, table: table2, tableStart }, row) {
+    let rowPos = 0;
+    for (let i = 0; i < row; i++) rowPos += table2.child(i).nodeSize;
+    const nextRow = rowPos + table2.child(row).nodeSize;
+    const mapFrom = tr.mapping.maps.length;
+    tr.delete(rowPos + tableStart, nextRow + tableStart);
+    const seen = /* @__PURE__ */ new Set();
+    for (let col = 0, index = row * map3.width; col < map3.width; col++, index++) {
+      const pos = map3.map[index];
+      if (seen.has(pos)) continue;
+      seen.add(pos);
+      if (row > 0 && pos == map3.map[index - map3.width]) {
+        const attrs2 = table2.nodeAt(pos).attrs;
+        tr.setNodeMarkup(tr.mapping.slice(mapFrom).map(pos + tableStart), null, {
+          ...attrs2,
+          rowspan: attrs2.rowspan - 1
+        });
+        col += attrs2.colspan - 1;
+      } else if (row < map3.height && pos == map3.map[index + map3.width]) {
+        const cell = table2.nodeAt(pos);
+        const attrs2 = cell.attrs;
+        const copy2 = cell.type.create({
+          ...attrs2,
+          rowspan: cell.attrs.rowspan - 1
+        }, cell.content);
+        const newPos = map3.positionAt(row + 1, col, table2);
+        tr.insert(tr.mapping.slice(mapFrom).map(tableStart + newPos), copy2);
+        col += attrs2.colspan - 1;
+      }
+    }
+  }
+  function deleteRow(state, dispatch) {
+    if (!isInTable(state)) return false;
+    if (dispatch) {
+      const rect = selectedRect(state), tr = state.tr;
+      if (rect.top == 0 && rect.bottom == rect.map.height) return false;
+      for (let i = rect.bottom - 1; ; i--) {
+        removeRow(tr, rect, i);
+        if (i == rect.top) break;
+        const table2 = rect.tableStart ? tr.doc.nodeAt(rect.tableStart - 1) : tr.doc;
+        if (!table2) throw new RangeError("No table found");
+        rect.table = table2;
+        rect.map = TableMap.get(rect.table);
+      }
+      dispatch(tr);
+    }
+    return true;
   }
   function deprecated_toggleHeader(type) {
     return function(state, dispatch) {
@@ -27908,7 +28178,7 @@
     }
     return false;
   }
-  function createRichEditor({ parent, markdown, onChange, onSave, annotations }) {
+  function createRichEditor({ parent, markdown, onChange, onSave, annotations, onSelectionChange }) {
     const doc3 = parseMarkdown(markdown || "");
     const { plugin: annotationPlugin, setAnnotations } = buildAnnotationPlugin();
     if (annotations) setAnnotations(annotations);
@@ -27939,7 +28209,28 @@
         props: {
           handlePaste: handlePaste2
         }
-      })
+      }),
+      // 选区/文档变化监听（用于工具栏按钮状态更新）
+      ...typeof onSelectionChange === "function" ? [new Plugin({
+        view() {
+          return {
+            update(view2, prevState) {
+              if (view2.state.selection.eq(prevState.selection) && view2.state.doc.eq(prevState.doc)) return;
+              const state2 = view2.state;
+              const { $from } = state2.selection;
+              const activeMarks = [];
+              const storedMarks = state2.storedMarks || $from.marks();
+              for (const mark of storedMarks) {
+                activeMarks.push(mark.type.name);
+              }
+              const parentNode2 = $from.parent;
+              const blockType = parentNode2.type.name;
+              const blockAttrs = parentNode2.attrs || {};
+              onSelectionChange({ activeMarks, blockType, blockAttrs });
+            }
+          };
+        }
+      })] : []
     ];
     const state = EditorState.create({ doc: doc3, plugins });
     const view = new EditorView(parent, {
@@ -27950,6 +28241,100 @@
         }
       }
     });
+    function setCellSelection(view2, coords) {
+      const posInfo = view2.posAtCoords({ left: coords.left, top: coords.top });
+      if (!posInfo) return;
+      const pos = posInfo.pos;
+      const $pos = view2.state.doc.resolve(pos);
+      for (let d = $pos.depth; d > 0; d--) {
+        const node = $pos.node(d);
+        if (node.type.name === "table_cell" || node.type.name === "table_header") {
+          const cellStart = $pos.start(d);
+          const tr = view2.state.tr.setSelection(Selection.near(view2.state.doc.resolve(cellStart)));
+          view2.dispatch(tr);
+          return;
+        }
+      }
+    }
+    const commandMap = {
+      bold: (state2, dispatch) => toggleMark(schema.marks.strong)(state2, dispatch),
+      italic: (state2, dispatch) => toggleMark(schema.marks.em)(state2, dispatch),
+      strikethrough: (state2, dispatch) => toggleMark(schema.marks.strikethrough)(state2, dispatch),
+      h1: (state2, dispatch) => {
+        if (state2.selection.$from.parent.type === schema.nodes.heading && state2.selection.$from.parent.attrs.level === 1) {
+          return setBlockType2(schema.nodes.paragraph)(state2, dispatch);
+        }
+        return setBlockType2(schema.nodes.heading, { level: 1 })(state2, dispatch);
+      },
+      h2: (state2, dispatch) => {
+        if (state2.selection.$from.parent.type === schema.nodes.heading && state2.selection.$from.parent.attrs.level === 2) {
+          return setBlockType2(schema.nodes.paragraph)(state2, dispatch);
+        }
+        return setBlockType2(schema.nodes.heading, { level: 2 })(state2, dispatch);
+      },
+      h3: (state2, dispatch) => {
+        if (state2.selection.$from.parent.type === schema.nodes.heading && state2.selection.$from.parent.attrs.level === 3) {
+          return setBlockType2(schema.nodes.paragraph)(state2, dispatch);
+        }
+        return setBlockType2(schema.nodes.heading, { level: 3 })(state2, dispatch);
+      },
+      ul: (state2, dispatch) => wrapInList(schema.nodes.bullet_list)(state2, dispatch),
+      ol: (state2, dispatch) => wrapInList(schema.nodes.ordered_list)(state2, dispatch),
+      blockquote: (state2, dispatch) => wrapIn(schema.nodes.blockquote)(state2, dispatch),
+      hr: (state2, dispatch) => {
+        if (dispatch) {
+          const { $from } = state2.selection;
+          const tr = state2.tr.replaceSelectionWith(schema.nodes.horizontal_rule.create());
+          dispatch(tr);
+        }
+        return true;
+      },
+      undo: (state2, dispatch) => undo(state2, dispatch),
+      redo: (state2, dispatch) => redo(state2, dispatch),
+      // 表格行列编辑命令
+      tableInsertRowAbove: (state2, dispatch, view2, attrs2) => {
+        if (attrs2 && attrs2.coords) {
+          setCellSelection(view2, attrs2.coords);
+          state2 = view2.state;
+        }
+        return addRowBefore(state2, dispatch);
+      },
+      tableInsertRowBelow: (state2, dispatch, view2, attrs2) => {
+        if (attrs2 && attrs2.coords) {
+          setCellSelection(view2, attrs2.coords);
+          state2 = view2.state;
+        }
+        return addRowAfter(state2, dispatch);
+      },
+      tableInsertColLeft: (state2, dispatch, view2, attrs2) => {
+        if (attrs2 && attrs2.coords) {
+          setCellSelection(view2, attrs2.coords);
+          state2 = view2.state;
+        }
+        return addColumnBefore(state2, dispatch);
+      },
+      tableInsertColRight: (state2, dispatch, view2, attrs2) => {
+        if (attrs2 && attrs2.coords) {
+          setCellSelection(view2, attrs2.coords);
+          state2 = view2.state;
+        }
+        return addColumnAfter(state2, dispatch);
+      },
+      tableDeleteRow: (state2, dispatch, view2, attrs2) => {
+        if (attrs2 && attrs2.coords) {
+          setCellSelection(view2, attrs2.coords);
+          state2 = view2.state;
+        }
+        return deleteRow(state2, dispatch);
+      },
+      tableDeleteCol: (state2, dispatch, view2, attrs2) => {
+        if (attrs2 && attrs2.coords) {
+          setCellSelection(view2, attrs2.coords);
+          state2 = view2.state;
+        }
+        return deleteColumn(state2, dispatch);
+      }
+    };
     return {
       destroy() {
         view.destroy();
@@ -27969,6 +28354,16 @@
         setAnnotations(anns);
         const tr = view.state.tr.setMeta("annotations-changed", anns);
         view.dispatch(tr);
+      },
+      execCommand(name, attrs2) {
+        const cmd = commandMap[name];
+        if (!cmd) {
+          console.warn(`[pm] unknown command: ${name}`);
+          return false;
+        }
+        const result = cmd(view.state, view.dispatch, view, attrs2);
+        view.focus();
+        return !!result;
       }
     };
   }

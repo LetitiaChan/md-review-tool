@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.5.0] - 2026-05-03
+## [1.5.0] - 2026-04-30
 
 ### 🐛 Bug Fixes
 - **Fix image upload in comment modal** — The "Add Image" click zone in the comment modal now uses `vscode.window.showOpenDialog` via Extension Host instead of relying on `<input type="file">` which may not work in certain VS Code webview environments (Cursor, CodeBuddy, etc.). Drag-and-drop and Ctrl+V paste remain as alternative upload methods. Falls back to native file input if `showOpenDialog` fails.
@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - **Fix document not refreshing after exiting Rich Mode** — Exiting Rich Mode (ProseMirror editor) now automatically re-renders the document preview with the latest edited content. Previously, the `rich-mode-exit` event handler called `switchMode('rich')` which immediately returned without refreshing, leaving stale content in the preview pane. Fixed by calling `refreshCurrentView()` directly to re-parse and render the updated `rawMarkdown`.
 - **Fix disk record not updated after deleting all annotations in v1** — The `doAutoSave` empty-annotation branch now unconditionally persists to disk via `saveViaHost`, regardless of `reviewVersion`. Previously, when `reviewVersion === 1`, the empty branch skipped disk write and only updated UI status. This caused a bug where deleting all annotations one by one in v1 left the old record (with annotations) on disk, which would be incorrectly restored on next file open.
 - **Hide TOC and annotations panels in Rich Mode** — The table-of-contents panel and annotations panel are now automatically hidden when entering Rich Mode editing, providing a distraction-free editing experience. Panels are restored when exiting Rich Mode.
+- **Add Rich Mode editor toolbar** — A formatting toolbar now appears at the top of the editing area when entering Rich Mode. Includes buttons for Bold, Italic, Strikethrough, H1/H2/H3, Unordered/Ordered List, Blockquote, Horizontal Rule, Undo, and Redo. Buttons reflect the current cursor context (active marks and block type are highlighted). The toolbar uses VS Code theme colors and existing i18n translations.
 
 ### 💥 Breaking Changes
 - **Remove Source Mode editor** — The CodeMirror 6 Source Mode (`</>` toolbar button) has been completely removed. Users who need raw Markdown editing can open the `.md` file directly in VS Code / Cursor's native editor (same window, adjacent tab)
@@ -40,7 +41,7 @@ All notable changes to this project will be documented in this file.
 ### 🐛 Fixes
 - Fix Rich Mode crash on documents containing block-level HTML (e.g. `<div>`, `<details>`, `<table>` as raw HTML): the `html_block` and `html_inline` ignore mappings in `MarkdownParser` were missing `noCloseToken: true`, causing the parser to register handlers for `html_block_open`/`html_block_close` instead of `html_block` — but markdown-it emits `html_block` as a standalone token without `_open`/`_close` variants
 
-## [1.4.0] - 2026-05-03
+## [1.4.0] - 2026-04-30
 
 ### ✨ Dual-Mode Editor (Phase A + B + C)
 - **New: Source Mode** — CodeMirror 6 engine for direct Markdown source editing. Toggle via the `</>` toolbar button. Features: syntax highlighting, line numbers, search (Ctrl+F), VS Code theme integration, keyboard shortcut passthrough (Ctrl+E/Alt+Z/F5 forwarded to host)

@@ -272,7 +272,7 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
             assert.ok(appJs.includes("getElementById('btnToggleRich')"), 'app.js 应获取 btnToggleRich 元素');
-            assert.ok(appJs.includes('EditMode.enterRich()'), 'app.js 应调用 EditMode.enterRich()');
+            assert.ok(/EditMode\.enterRich\s*\(/.test(appJs), 'app.js 应调用 EditMode.enterRich()');
             assert.ok(appJs.includes('EditMode.exitRich()'), 'app.js 应调用 EditMode.exitRich()');
         });
 
@@ -373,6 +373,151 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
                 '<br> 应被转换为 hardbreak token');
             // 未识别标签应降级为 text（保证不崩溃）
             assert.ok(/kind:\s*'text'/.test(bridge), '未识别 HTML 标签应降级为 text token');
+        });
+    });
+
+    // ========= Suite: Rich Mode Editor Toolbar =========
+    suite('Rich Mode 编辑器工具栏', () => {
+        // ---- Tier 1：存在性断言 ----
+
+        test('BT-EditorToolbar.1 Tier1 — index.html 应包含 #editorToolbar 元素', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+            assert.ok(html.includes('id="editorToolbar"'), 'index.html 应包含 #editorToolbar');
+        });
+
+        test('BT-EditorToolbar.2 Tier1 — 工具栏应包含所有格式化按钮（data-cmd 属性）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+            const expectedCmds = ['bold', 'italic', 'strikethrough', 'h1', 'h2', 'h3', 'ul', 'ol', 'blockquote', 'hr', 'undo', 'redo'];
+            for (const cmd of expectedCmds) {
+                assert.ok(html.includes(`data-cmd="${cmd}"`), `工具栏应包含 data-cmd="${cmd}" 按钮`);
+            }
+        });
+
+        test('BT-EditorToolbar.3 Tier1 — 工具栏按钮应使用 data-i18n-title 属性', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+            const i18nKeys = ['editor.bold_title', 'editor.italic_title', 'editor.h1_title', 'editor.undo_title', 'editor.redo_title'];
+            for (const key of i18nKeys) {
+                assert.ok(html.includes(`data-i18n-title="${key}"`), `工具栏按钮应有 data-i18n-title="${key}"`);
+            }
+        });
+
+        test('BT-EditorToolbar.4 Tier1 — CSS 应包含 #editorToolbar 样式规则', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
+            assert.ok(css.includes('#editorToolbar'), 'CSS 应包含 #editorToolbar 规则');
+            assert.ok(css.includes('.editor-toolbar-btn'), 'CSS 应包含 .editor-toolbar-btn 规则');
+            assert.ok(css.includes('.editor-toolbar-separator'), 'CSS 应包含 .editor-toolbar-separator 规则');
+        });
+
+        test('BT-EditorToolbar.5 Tier1 — pm.entry.js 应包含 execCommand 方法和命令映射表', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const pm = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            assert.ok(pm.includes('commandMap'), 'pm.entry.js 应包含 commandMap 命令映射表');
+            assert.ok(pm.includes('execCommand'), 'pm.entry.js 应包含 execCommand 方法');
+        });
+
+        test('BT-EditorToolbar.6 Tier1 — edit-mode.js 应导出 execCommand 方法', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const editMode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'edit-mode.js'), 'utf-8');
+            assert.ok(editMode.includes('execCommand'), 'edit-mode.js 应包含 execCommand');
+            assert.ok(/EditMode\s*=\s*\{[^}]*execCommand/.test(editMode), 'EditMode 导出对象应包含 execCommand');
+        });
+
+        // ---- Tier 2：行为级断言 ----
+
+        test('BT-EditorToolbar.7 Tier2 — app.js 应为 editorToolbar 绑定 click 事件委托', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+            assert.ok(appJs.includes("getElementById('editorToolbar')"), 'app.js 应获取 editorToolbar 元素');
+            assert.ok(appJs.includes("data-cmd"), 'app.js 应读取 data-cmd 属性');
+            assert.ok(appJs.includes('EditMode.execCommand'), 'app.js 应调用 EditMode.execCommand');
+        });
+
+        test('BT-EditorToolbar.8 Tier2 — app.js 应传入 onSelectionChange 回调给 enterRich', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+            assert.ok(appJs.includes('onSelectionChange'), 'app.js 应传入 onSelectionChange 回调');
+            assert.ok(appJs.includes('updateEditorToolbarState'), 'app.js 应包含 updateEditorToolbarState 函数');
+        });
+
+        test('BT-EditorToolbar.9 Tier2 — CSS 应在 rich-mode-active 时显示工具栏', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
+            assert.ok(css.includes('body.rich-mode-active #editorToolbar'), 'CSS 应有 body.rich-mode-active #editorToolbar 规则');
+            // 默认隐藏
+            const defaultRule = css.substring(css.indexOf('#editorToolbar {'), css.indexOf('#editorToolbar {') + 100);
+            assert.ok(defaultRule.includes('display: none'), '默认 #editorToolbar 应 display: none');
+        });
+
+        test('BT-EditorToolbar.10 Tier2 — rich-mode-exit 时应清除工具栏按钮状态', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+            assert.ok(appJs.includes('clearEditorToolbarState'), 'app.js 应包含 clearEditorToolbarState 函数');
+            // 确认在 rich-mode-exit handler 中调用
+            const exitIdx = appJs.indexOf("'rich-mode-exit'");
+            const afterExit = appJs.slice(exitIdx, exitIdx + 500);
+            assert.ok(afterExit.includes('clearEditorToolbarState'), 'rich-mode-exit handler 应调用 clearEditorToolbarState');
+        });
+
+        // ---- Tier 3：任务特定断言 ----
+
+        test('BT-EditorToolbar.11 Tier3 — pm.entry.js commandMap 应覆盖所有 12 个命令', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const pm = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const cmds = ['bold', 'italic', 'strikethrough', 'h1', 'h2', 'h3', 'ul', 'ol', 'blockquote', 'hr', 'undo', 'redo'];
+            for (const cmd of cmds) {
+                assert.ok(new RegExp(`['"]?${cmd}['"]?\\s*:`).test(pm), `commandMap 应包含 ${cmd} 命令`);
+            }
+        });
+
+        test('BT-EditorToolbar.12 Tier3 — pm.entry.js onSelectionChange Plugin 应收集 activeMarks 和 blockType', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const pm = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            assert.ok(pm.includes('onSelectionChange'), 'pm.entry.js 应接受 onSelectionChange 参数');
+            assert.ok(pm.includes('activeMarks'), 'onSelectionChange Plugin 应收集 activeMarks');
+            assert.ok(pm.includes('blockType'), 'onSelectionChange Plugin 应收集 blockType');
+        });
+
+        test('BT-EditorToolbar.13 Tier3 — 工具栏按钮应按功能分组（separator 分隔）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+            const toolbarMatch = html.match(/id="editorToolbar"[\s\S]*?<\/div>/);
+            assert.ok(toolbarMatch, '应能提取 editorToolbar 内容');
+            const toolbarHtml = toolbarMatch![0];
+            const separatorCount = (toolbarHtml.match(/editor-toolbar-separator/g) || []).length;
+            assert.ok(separatorCount >= 4, `工具栏应至少有 4 个分隔符（实际 ${separatorCount}）`);
+        });
+
+        test('BT-EditorToolbar.14 Tier3 — CSS 工具栏按钮应有 .active 高亮样式', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
+            assert.ok(css.includes('.editor-toolbar-btn.active'), 'CSS 应包含 .editor-toolbar-btn.active 样式');
+        });
+
+        test('BT-EditorToolbar.15 Tier3 — bundle 产物应包含 commandMap 和 execCommand', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const bundle = fs.readFileSync(path.join(extPath, 'webview', 'dist', 'app.bundle.js'), 'utf-8');
+            assert.ok(bundle.includes('editorToolbar'), 'app.bundle.js 应包含 editorToolbar 引用');
+            assert.ok(bundle.includes('execCommand'), 'app.bundle.js 应包含 execCommand');
+            assert.ok(bundle.includes('updateEditorToolbarState'), 'app.bundle.js 应包含 updateEditorToolbarState');
         });
     });
 });

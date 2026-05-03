@@ -8,14 +8,14 @@
  */
 
 import { EditorView } from 'prosemirror-view';
-import { EditorState, Plugin } from 'prosemirror-state';
+import { EditorState, Plugin, Selection } from 'prosemirror-state';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap, toggleMark, setBlockType, wrapIn, chainCommands, exitCode, joinUp, joinDown, lift, selectParentNode } from 'prosemirror-commands';
 import { history, undo, redo } from 'prosemirror-history';
 import { inputRules, wrappingInputRule, textblockTypeInputRule, smartQuotes, emDash, ellipsis } from 'prosemirror-inputrules';
 import { wrapInList, splitListItem, liftListItem, sinkListItem } from 'prosemirror-schema-list';
 import { gapCursor } from 'prosemirror-gapcursor';
-import { columnResizing, tableEditing, goToNextCell } from 'prosemirror-tables';
+import { columnResizing, tableEditing, goToNextCell, addRowBefore, addRowAfter, addColumnBefore, addColumnAfter, deleteRow, deleteColumn } from 'prosemirror-tables';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 
 import { schema } from '../../js/pm-schema.js';
@@ -367,9 +367,10 @@ function handlePaste(view, event, slice) {
  * @param {(markdown: string) => void} [options.onChange] - 文档变更回调（参数为最新 markdown）
  * @param {() => void} [options.onSave] - Ctrl+S 触发回调
  * @param {Array} [options.annotations] - 初始批注数据
- * @returns {{ destroy: () => void, getMarkdown: () => string, setMarkdown: (s: string) => void, focus: () => void, updateAnnotations: (annotations: Array) => void }}
+ * @param {(state: {activeMarks: string[], blockType: string, blockAttrs: object}) => void} [options.onSelectionChange] - 选区/文档变化回调（用于更新工具栏按钮状态）
+ * @returns {{ destroy: () => void, getMarkdown: () => string, setMarkdown: (s: string) => void, focus: () => void, updateAnnotations: (annotations: Array) => void, execCommand: (name: string, attrs?: object) => boolean }}
  */
-function createRichEditor({ parent, markdown, onChange, onSave, annotations }) {
+function createRichEditor({ parent, markdown, onChange, onSave, annotations, onSelectionChange }) {
     const doc = parseMarkdown(markdown || '');
 
     const { plugin: annotationPlugin, setAnnotations } = buildAnnotationPlugin();
@@ -403,6 +404,29 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations }) {
                 handlePaste,
             },
         }),
+        // 选区/文档变化监听（用于工具栏按钮状态更新）
+        ...(typeof onSelectionChange === 'function' ? [new Plugin({
+            view() {
+                return {
+                    update(view, prevState) {
+                        if (view.state.selection.eq(prevState.selection) && view.state.doc.eq(prevState.doc)) return;
+                        const state = view.state;
+                        const { $from } = state.selection;
+                        // 收集活跃 marks
+                        const activeMarks = [];
+                        const storedMarks = state.storedMarks || $from.marks();
+                        for (const mark of storedMarks) {
+                            activeMarks.push(mark.type.name);
+                        }
+                        // 收集当前 block type
+                        const parentNode = $from.parent;
+                        const blockType = parentNode.type.name;
+                        const blockAttrs = parentNode.attrs || {};
+                        onSelectionChange({ activeMarks, blockType, blockAttrs });
+                    },
+                };
+            },
+        })] : []),
     ];
 
     const state = EditorState.create({ doc, plugins });
@@ -412,6 +436,87 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations }) {
             diagram(node, view, getPos) { return new DiagramNodeView(node, view, getPos); },
         },
     });
+
+    // ===== 辅助：通过坐标设置选区到表格单元格 =====
+    function setCellSelection(view, coords) {
+        const posInfo = view.posAtCoords({ left: coords.left, top: coords.top });
+        if (!posInfo) return;
+        const pos = posInfo.pos;
+        const $pos = view.state.doc.resolve(pos);
+        // 向上查找最近的 table_cell 或 table_header 节点
+        for (let d = $pos.depth; d > 0; d--) {
+            const node = $pos.node(d);
+            if (node.type.name === 'table_cell' || node.type.name === 'table_header') {
+                const cellStart = $pos.start(d);
+                const tr = view.state.tr.setSelection(Selection.near(view.state.doc.resolve(cellStart)));
+                view.dispatch(tr);
+                return;
+            }
+        }
+    }
+
+    // ===== 命令映射表 =====
+    const commandMap = {
+        bold:          (state, dispatch) => toggleMark(schema.marks.strong)(state, dispatch),
+        italic:        (state, dispatch) => toggleMark(schema.marks.em)(state, dispatch),
+        strikethrough: (state, dispatch) => toggleMark(schema.marks.strikethrough)(state, dispatch),
+        h1:            (state, dispatch) => {
+            if (state.selection.$from.parent.type === schema.nodes.heading && state.selection.$from.parent.attrs.level === 1) {
+                return setBlockType(schema.nodes.paragraph)(state, dispatch);
+            }
+            return setBlockType(schema.nodes.heading, { level: 1 })(state, dispatch);
+        },
+        h2:            (state, dispatch) => {
+            if (state.selection.$from.parent.type === schema.nodes.heading && state.selection.$from.parent.attrs.level === 2) {
+                return setBlockType(schema.nodes.paragraph)(state, dispatch);
+            }
+            return setBlockType(schema.nodes.heading, { level: 2 })(state, dispatch);
+        },
+        h3:            (state, dispatch) => {
+            if (state.selection.$from.parent.type === schema.nodes.heading && state.selection.$from.parent.attrs.level === 3) {
+                return setBlockType(schema.nodes.paragraph)(state, dispatch);
+            }
+            return setBlockType(schema.nodes.heading, { level: 3 })(state, dispatch);
+        },
+        ul:            (state, dispatch) => wrapInList(schema.nodes.bullet_list)(state, dispatch),
+        ol:            (state, dispatch) => wrapInList(schema.nodes.ordered_list)(state, dispatch),
+        blockquote:    (state, dispatch) => wrapIn(schema.nodes.blockquote)(state, dispatch),
+        hr:            (state, dispatch) => {
+            if (dispatch) {
+                const { $from } = state.selection;
+                const tr = state.tr.replaceSelectionWith(schema.nodes.horizontal_rule.create());
+                dispatch(tr);
+            }
+            return true;
+        },
+        undo:          (state, dispatch) => undo(state, dispatch),
+        redo:          (state, dispatch) => redo(state, dispatch),
+        // 表格行列编辑命令
+        tableInsertRowAbove: (state, dispatch, view, attrs) => {
+            if (attrs && attrs.coords) { setCellSelection(view, attrs.coords); state = view.state; }
+            return addRowBefore(state, dispatch);
+        },
+        tableInsertRowBelow: (state, dispatch, view, attrs) => {
+            if (attrs && attrs.coords) { setCellSelection(view, attrs.coords); state = view.state; }
+            return addRowAfter(state, dispatch);
+        },
+        tableInsertColLeft: (state, dispatch, view, attrs) => {
+            if (attrs && attrs.coords) { setCellSelection(view, attrs.coords); state = view.state; }
+            return addColumnBefore(state, dispatch);
+        },
+        tableInsertColRight: (state, dispatch, view, attrs) => {
+            if (attrs && attrs.coords) { setCellSelection(view, attrs.coords); state = view.state; }
+            return addColumnAfter(state, dispatch);
+        },
+        tableDeleteRow: (state, dispatch, view, attrs) => {
+            if (attrs && attrs.coords) { setCellSelection(view, attrs.coords); state = view.state; }
+            return deleteRow(state, dispatch);
+        },
+        tableDeleteCol: (state, dispatch, view, attrs) => {
+            if (attrs && attrs.coords) { setCellSelection(view, attrs.coords); state = view.state; }
+            return deleteColumn(state, dispatch);
+        },
+    };
 
     return {
         destroy() { view.destroy(); },
@@ -426,6 +531,13 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations }) {
             setAnnotations(anns);
             const tr = view.state.tr.setMeta('annotations-changed', anns);
             view.dispatch(tr);
+        },
+        execCommand(name, attrs) {
+            const cmd = commandMap[name];
+            if (!cmd) { console.warn(`[pm] unknown command: ${name}`); return false; }
+            const result = cmd(view.state, view.dispatch, view, attrs);
+            view.focus();
+            return !!result;
         },
     };
 }

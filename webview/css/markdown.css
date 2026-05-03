@@ -1851,3 +1851,64 @@ body.rich-mode-active #richModeContainer {
     border-radius: 4px;
     margin: 0.5em 0;
 }
+
+/* ===== Editor Toolbar (Rich Mode) ===== */
+/* 编辑器格式化工具栏，仅在 Rich Mode 激活时显示 */
+#editorToolbar {
+    display: none;
+}
+body.rich-mode-active #editorToolbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--vscode-editor-background, #1e1e1e);
+    border-bottom: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.2));
+    min-height: 34px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+.editor-toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--vscode-editor-foreground, #ccc);
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s, color 0.15s;
+}
+.editor-toolbar-btn:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(90,93,94,0.31));
+}
+.editor-toolbar-btn:active {
+    background: var(--vscode-toolbar-activeBackground, rgba(99,102,103,0.4));
+}
+.editor-toolbar-btn.active {
+    background: var(--vscode-toolbar-activeBackground, rgba(99,102,103,0.4));
+    color: var(--vscode-focusBorder, #007fd4);
+}
+.editor-toolbar-btn svg {
+    flex-shrink: 0;
+}
+.editor-toolbar-text {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.editor-toolbar-separator {
+    display: inline-block;
+    width: 1px;
+    height: 18px;
+    margin: 0 4px;
+    background: var(--vscode-panel-border, rgba(128,128,128,0.25));
+    flex-shrink: 0;
+}

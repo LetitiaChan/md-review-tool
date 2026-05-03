@@ -293,8 +293,23 @@ export function initApp() {
                     EditMode.exitRich();
                     btnToggleRich.classList.remove('active');
                 } else {
-                    EditMode.enterRich();
+                    EditMode.enterRich({
+                        onSelectionChange: updateEditorToolbarState,
+                    });
                     btnToggleRich.classList.add('active');
+                }
+            });
+        }
+
+        // 编辑器工具栏按钮事件绑定
+        const editorToolbar = document.getElementById('editorToolbar');
+        if (editorToolbar && globalThis.EditMode) {
+            editorToolbar.addEventListener('click', (e) => {
+                const btn = e.target.closest('.editor-toolbar-btn');
+                if (!btn) return;
+                const cmd = btn.getAttribute('data-cmd');
+                if (cmd && EditMode.isRichActive()) {
+                    EditMode.execCommand(cmd);
                 }
             });
         }
@@ -306,6 +321,8 @@ export function initApp() {
             currentMode = 'preview';
             editorDirty = false;
             updateEditStatus('', '');
+            // 清除工具栏按钮活跃状态
+            clearEditorToolbarState();
             // 退出编辑后用最新的 rawMarkdown 重新渲染文档
             refreshCurrentView();
         });
@@ -1572,13 +1589,14 @@ this.innerHTML = t('modal.ai_result.copied');
     }
 
     // ===== 表格右键菜单 =====
-    let tableMenuTarget = { table: null, row: null, cell: null, rowIndex: -1, colIndex: -1 };
+    let tableMenuCoords = { left: 0, top: 0 };
 
     function setupTableContextMenu() {
         const docContent = document.getElementById('documentContent');
         const tableMenu = document.getElementById('tableContextMenu');
 
-        docContent.addEventListener('contextmenu', (e) => {
+        // 监听 Rich Mode 容器（PM 编辑器挂载点）和 documentContent
+        function handleTableContextMenu(e) {
             if (currentMode !== 'rich') return;
             const cell = e.target.closest('td, th');
             if (!cell) return;
@@ -1587,89 +1605,59 @@ this.innerHTML = t('modal.ai_result.copied');
             if (!table || !row) return;
 
             e.preventDefault();
-            const rowIndex = Array.from(table.querySelectorAll('tr')).indexOf(row);
-            const colIndex = Array.from(row.children).indexOf(cell);
-            tableMenuTarget = { table, row, cell, rowIndex, colIndex };
+            tableMenuCoords = { left: e.clientX, top: e.clientY };
 
             tableMenu.style.display = 'block';
             tableMenu.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
             tableMenu.style.top = Math.min(e.clientY, window.innerHeight - 320) + 'px';
 
+            // 通过 prosemirror-tables 命令的可执行性判断禁用状态
             const totalRows = table.querySelectorAll('tr').length;
             const totalCols = row.children.length;
             document.getElementById('tableMenuDeleteRow').style.opacity = totalRows <= 1 ? '0.4' : '1';
             document.getElementById('tableMenuDeleteRow').style.pointerEvents = totalRows <= 1 ? 'none' : 'auto';
             document.getElementById('tableMenuDeleteCol').style.opacity = totalCols <= 1 ? '0.4' : '1';
             document.getElementById('tableMenuDeleteCol').style.pointerEvents = totalCols <= 1 ? 'none' : 'auto';
+        }
+
+        docContent.addEventListener('contextmenu', handleTableContextMenu);
+
+        // 监听 Rich Mode 容器（动态创建，使用事件委托）
+        document.addEventListener('contextmenu', (e) => {
+            const richContainer = document.getElementById('richModeContainer');
+            if (richContainer && richContainer.contains(e.target)) {
+                handleTableContextMenu(e);
+            }
         });
 
         document.addEventListener('click', (e) => {
             if (!tableMenu.contains(e.target)) tableMenu.style.display = 'none';
         });
 
-        document.getElementById('tableMenuInsertRowAbove').addEventListener('click', () => { tableMenu.style.display = 'none'; tableInsertRow('above'); });
-        document.getElementById('tableMenuInsertRowBelow').addEventListener('click', () => { tableMenu.style.display = 'none'; tableInsertRow('below'); });
-        document.getElementById('tableMenuInsertColLeft').addEventListener('click', () => { tableMenu.style.display = 'none'; tableInsertCol('left'); });
-        document.getElementById('tableMenuInsertColRight').addEventListener('click', () => { tableMenu.style.display = 'none'; tableInsertCol('right'); });
-        document.getElementById('tableMenuDeleteRow').addEventListener('click', () => { tableMenu.style.display = 'none'; tableDeleteRow(); });
-        document.getElementById('tableMenuDeleteCol').addEventListener('click', () => { tableMenu.style.display = 'none'; tableDeleteCol(); });
-    }
-
-    function tableInsertRow(position) {
-        const { table, row } = tableMenuTarget;
-        if (!table || !row) return;
-        const colCount = row.children.length;
-        const newRow = document.createElement('tr');
-        const isHeaderRow = row.querySelector('th') !== null;
-        const cellTag = (position === 'above' && isHeaderRow) ? 'th' : 'td';
-        for (let i = 0; i < colCount; i++) {
-            const cell = document.createElement(cellTag);
-            cell.innerHTML = '<br>';
-            newRow.appendChild(cell);
-        }
-        if (position === 'above') row.parentNode.insertBefore(newRow, row);
-        else row.parentNode.insertBefore(newRow, row.nextSibling);
-        markTableEdited();
-    }
-
-    function tableInsertCol(position) {
-        const { table, colIndex } = tableMenuTarget;
-        if (!table || colIndex < 0) return;
-        table.querySelectorAll('tr').forEach((row) => {
-            const cells = Array.from(row.children);
-            const refCell = cells[colIndex];
-            if (!refCell) return;
-            const newCell = document.createElement(refCell.tagName === 'TH' ? 'th' : 'td');
-            newCell.innerHTML = '<br>';
-            if (position === 'left') row.insertBefore(newCell, refCell);
-            else row.insertBefore(newCell, refCell.nextSibling);
+        document.getElementById('tableMenuInsertRowAbove').addEventListener('click', () => {
+            tableMenu.style.display = 'none';
+            EditMode.execCommand('tableInsertRowAbove', { coords: tableMenuCoords });
         });
-        markTableEdited();
-    }
-
-    function tableDeleteRow() {
-        const { table, row } = tableMenuTarget;
-        if (!table || !row || table.querySelectorAll('tr').length <= 1) return;
-        row.remove();
-        markTableEdited();
-    }
-
-    function tableDeleteCol() {
-        const { table, colIndex } = tableMenuTarget;
-        if (!table || colIndex < 0) return;
-        const rows = table.querySelectorAll('tr');
-        if (rows[0] && rows[0].children.length <= 1) return;
-        rows.forEach(row => {
-            const cells = Array.from(row.children);
-            if (cells[colIndex]) cells[colIndex].remove();
+        document.getElementById('tableMenuInsertRowBelow').addEventListener('click', () => {
+            tableMenu.style.display = 'none';
+            EditMode.execCommand('tableInsertRowBelow', { coords: tableMenuCoords });
         });
-        markTableEdited();
-    }
-
-    function markTableEdited() {
-        editorDirty = true;
-        updateEditStatus('modified', t('notification.unsaved'));
-        scheduleAutoSave();
+        document.getElementById('tableMenuInsertColLeft').addEventListener('click', () => {
+            tableMenu.style.display = 'none';
+            EditMode.execCommand('tableInsertColLeft', { coords: tableMenuCoords });
+        });
+        document.getElementById('tableMenuInsertColRight').addEventListener('click', () => {
+            tableMenu.style.display = 'none';
+            EditMode.execCommand('tableInsertColRight', { coords: tableMenuCoords });
+        });
+        document.getElementById('tableMenuDeleteRow').addEventListener('click', () => {
+            tableMenu.style.display = 'none';
+            EditMode.execCommand('tableDeleteRow', { coords: tableMenuCoords });
+        });
+        document.getElementById('tableMenuDeleteCol').addEventListener('click', () => {
+            tableMenu.style.display = 'none';
+            EditMode.execCommand('tableDeleteCol', { coords: tableMenuCoords });
+        });
     }
 
     // ===== 编辑/预览模式切换 =====
@@ -1713,6 +1701,42 @@ this.innerHTML = t('modal.ai_result.copied');
         const el = document.getElementById('editStatus');
         el.className = 'edit-status' + (className ? ' ' + className : '');
         el.textContent = text;
+    }
+
+    // ===== 编辑器工具栏状态更新 =====
+    // 命令名到 mark/node 的映射（用于按钮高亮）
+    const _toolbarMarkMap = { bold: 'strong', italic: 'em', strikethrough: 'strikethrough' };
+    const _toolbarBlockMap = { h1: { type: 'heading', level: 1 }, h2: { type: 'heading', level: 2 }, h3: { type: 'heading', level: 3 } };
+
+    function updateEditorToolbarState(state) {
+        const toolbar = document.getElementById('editorToolbar');
+        if (!toolbar) return;
+        const { activeMarks, blockType, blockAttrs } = state;
+        const btns = toolbar.querySelectorAll('.editor-toolbar-btn');
+        for (const btn of btns) {
+            const cmd = btn.getAttribute('data-cmd');
+            if (!cmd) continue;
+            let isActive = false;
+            // 检查 inline mark
+            if (_toolbarMarkMap[cmd]) {
+                isActive = activeMarks.includes(_toolbarMarkMap[cmd]);
+            }
+            // 检查 block type
+            if (_toolbarBlockMap[cmd]) {
+                const expected = _toolbarBlockMap[cmd];
+                isActive = blockType === expected.type && blockAttrs.level === expected.level;
+            }
+            btn.classList.toggle('active', isActive);
+        }
+    }
+
+    function clearEditorToolbarState() {
+        const toolbar = document.getElementById('editorToolbar');
+        if (!toolbar) return;
+        const btns = toolbar.querySelectorAll('.editor-toolbar-btn');
+        for (const btn of btns) {
+            btn.classList.remove('active');
+        }
     }
 
     // ===== 主题按钮标签更新 =====

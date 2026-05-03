@@ -41,7 +41,7 @@ function ensureRichContainer() {
 
 // ===== Rich Mode =====
 
-function enterRich() {
+function enterRich(options) {
     if (_mode !== MODE.INACTIVE) return;
     if (!globalThis.PM || typeof globalThis.PM.createRichEditor !== 'function') {
         console.warn('[edit-mode] PM not loaded, cannot enter rich mode');
@@ -57,7 +57,7 @@ function enterRich() {
     const annotations = store.getAnnotations ? store.getAnnotations() : [];
     const container = ensureRichContainer();
 
-    _editor = globalThis.PM.createRichEditor({
+    const editorOptions = {
         parent: container,
         markdown,
         annotations,
@@ -77,7 +77,14 @@ function enterRich() {
                 globalThis.handleSaveMd();
             }
         },
-    });
+    };
+
+    // 传递 onSelectionChange 回调（用于工具栏按钮状态更新）
+    if (options && typeof options.onSelectionChange === 'function') {
+        editorOptions.onSelectionChange = options.onSelectionChange;
+    }
+
+    _editor = globalThis.PM.createRichEditor(editorOptions);
 
     document.body.classList.add(RICH_BODY_CLASS);
     _mode = MODE.RICH;
@@ -113,6 +120,13 @@ function exitRich() {
     } catch (e) { /* 容错 */ }
 }
 
+// ===== 命令代理 =====
+
+function execCommand(name, attrs) {
+    if (_mode !== MODE.RICH || !_editor || typeof _editor.execCommand !== 'function') return false;
+    return _editor.execCommand(name, attrs);
+}
+
 // ===== 查询函数 =====
 
 function isRichActive() { return _mode === MODE.RICH; }
@@ -120,5 +134,5 @@ function isAnyEditorActive() { return _mode !== MODE.INACTIVE; }
 
 export const EditMode = {
     enterRich, exitRich, isRichActive,
-    isAnyEditorActive,
+    isAnyEditorActive, execCommand,
 };
