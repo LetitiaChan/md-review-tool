@@ -4223,21 +4223,17 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       if (!data.fileName) return;
       if (!data.annotations.length) {
         const version = data.reviewVersion || 1;
-        if (version > 1) {
-          try {
-            const blocks = Renderer.parseMarkdown(data.rawMarkdown);
-            const doc = generateReviewDoc(data, blocks);
-            const rbaseName = _reviewBaseName(data);
-            const mdFileName = `${rbaseName}_v${version}_record.md`;
-            const saved = await saveViaHost(mdFileName, doc);
-            updateAutoSaveStatus(saved ? "saved" : "error");
-          } catch (e) {
-            console.error("[AutoSave] \u7A7A\u7248\u672C\u5360\u4F4D\u8BB0\u5F55\u4FDD\u5B58\u5931\u8D25:", e);
-            updateAutoSaveStatus("error");
-          }
-          return;
+        try {
+          const blocks = Renderer.parseMarkdown(data.rawMarkdown);
+          const doc = generateReviewDoc(data, blocks);
+          const rbaseName = _reviewBaseName(data);
+          const mdFileName = `${rbaseName}_v${version}_record.md`;
+          const saved = await saveViaHost(mdFileName, doc);
+          updateAutoSaveStatus(saved ? "saved" : "error");
+        } catch (e) {
+          console.error("[AutoSave] \u7A7A\u7248\u672C\u5360\u4F4D\u8BB0\u5F55\u4FDD\u5B58\u5931\u8D25:", e);
+          updateAutoSaveStatus("error");
         }
-        updateAutoSaveStatus("saved");
         return;
       }
       try {

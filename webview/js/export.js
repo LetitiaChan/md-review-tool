@@ -290,21 +290,22 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
         // 旧批注错误地恢复给用户（Bug: AI 修复后重开仍见旧批注）。
         if (!data.annotations.length) {
             const version = data.reviewVersion || 1;
-            if (version > 1) {
-                try {
-                    const blocks = Renderer.parseMarkdown(data.rawMarkdown);
-                    const doc = generateReviewDoc(data, blocks);
-                    const rbaseName = _reviewBaseName(data);
-                    const mdFileName = `${rbaseName}_v${version}_record.md`;
-                    const saved = await saveViaHost(mdFileName, doc);
-                    updateAutoSaveStatus(saved ? 'saved' : 'error');
-                } catch (e) {
-                    console.error('[AutoSave] 空版本占位记录保存失败:', e);
-                    updateAutoSaveStatus('error');
-                }
-                return;
+            // 无论版本号是多少，只要磁盘上可能存在旧记录（有批注的版本），
+            // 都必须落盘一条空批注记录来覆盖/更新，否则下次打开文件时
+            // getReviewRecords 返回的旧记录仍包含已删除的批注，会被错误恢复。
+            // 典型场景：v1 添加批注 → 逐个删除 → 最后一个删除后 annotations 为空，
+            // 但磁盘上 v1_record.md 仍包含旧批注 → 重开文件时旧批注被恢复。
+            try {
+                const blocks = Renderer.parseMarkdown(data.rawMarkdown);
+                const doc = generateReviewDoc(data, blocks);
+                const rbaseName = _reviewBaseName(data);
+                const mdFileName = `${rbaseName}_v${version}_record.md`;
+                const saved = await saveViaHost(mdFileName, doc);
+                updateAutoSaveStatus(saved ? 'saved' : 'error');
+            } catch (e) {
+                console.error('[AutoSave] 空版本占位记录保存失败:', e);
+                updateAutoSaveStatus('error');
             }
-            updateAutoSaveStatus('saved');
             return;
         }
 

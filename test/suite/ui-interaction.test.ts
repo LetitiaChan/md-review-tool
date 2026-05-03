@@ -2458,7 +2458,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
         // ---- Tier 1：存在性断言 ----
 
-        test('BT-versionBump.1 Tier1 — doAutoSave 空批注分支应包含 reviewVersion > 1 的占位落盘逻辑', () => {
+        test('BT-versionBump.1 Tier1 — doAutoSave 空批注分支应无条件落盘（覆盖旧记录）', () => {
             const body = extractFunctionBody20(exportJsText20, /async\s+function\s+doAutoSave\s*\(/);
             // 提取空批注外层 if 块的完整内容（通过括号匹配）
             const emptyIfStart = body.indexOf('if (!data.annotations.length)');
@@ -2471,13 +2471,16 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
                 j++;
             }
             const emptyBranch = body.slice(blockStart, j);
-            assert.ok(
-                /version\s*>\s*1/.test(emptyBranch),
-                '空批注分支应判断 version > 1 走占位落盘'
-            );
+            // 新逻辑：空批注分支无条件调用 saveViaHost 落盘，不再限制 version > 1
+            // 这样即使 v1 版本中用户逐个删除所有批注，也能覆盖磁盘上旧的有批注记录
             assert.ok(
                 /saveViaHost\(/.test(emptyBranch),
-                '空批注分支在 version > 1 时应调用 saveViaHost 落盘占位记录'
+                '空批注分支应无条件调用 saveViaHost 落盘（覆盖旧记录，防止重开时恢复已删除的批注）'
+            );
+            // 反向断言：不应再有 version > 1 的条件限制
+            assert.ok(
+                !/if\s*\(\s*version\s*>\s*1\s*\)/.test(emptyBranch),
+                '空批注分支不应再有 version > 1 的条件限制（所有版本都需要落盘）'
             );
         });
 
@@ -3980,6 +3983,149 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(
                 afterExit.includes("updateEditStatus('', '')"),
                 'rich-mode-exit 监听器应清除编辑状态提示文字'
+            );
+        });
+    });
+
+    // ========= Suite: Hotfix — 最后一个批注删除后磁盘记录应更新 =========
+    suite('Hotfix — 最后一个批注删除后磁盘记录应更新', () => {
+        const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const exportJsPath = path.join(extPath, 'webview', 'js', 'export.js');
+        const exportJsText = fs.readFileSync(exportJsPath, 'utf-8');
+        const bundlePath = path.join(extPath, 'webview', 'dist', 'app.bundle.js');
+        const bundleText = fs.readFileSync(bundlePath, 'utf-8');
+
+        function extractFunctionBody(source: string, anchorRegex: RegExp): string {
+            const m = anchorRegex.exec(source);
+            if (!m) return '';
+            let i = m.index + m[0].length;
+            while (i < source.length && source[i] !== '{') i++;
+            if (i >= source.length) return '';
+            let depth = 1;
+            const start = i + 1;
+            i = start;
+            while (i < source.length && depth > 0) {
+                const ch = source[i];
+                if (ch === '{') depth++;
+                else if (ch === '}') depth--;
+                i++;
+            }
+            return source.slice(start, i - 1);
+        }
+
+        // ---- Tier 1：存在性断言 ----
+
+        test('BT-emptyAnnotSave.1 Tier1 — doAutoSave 空批注分支应无条件调用 saveViaHost', () => {
+            const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
+            const emptyIfStart = body.indexOf('if (!data.annotations.length)');
+            assert.ok(emptyIfStart >= 0, '应能定位空批注分支');
+            const blockStart = body.indexOf('{', emptyIfStart);
+            let depth = 1, j = blockStart + 1;
+            while (j < body.length && depth > 0) {
+                if (body[j] === '{') depth++;
+                else if (body[j] === '}') depth--;
+                j++;
+            }
+            const emptyBranch = body.slice(blockStart, j);
+            assert.ok(
+                /saveViaHost\(/.test(emptyBranch),
+                '空批注分支应调用 saveViaHost 落盘'
+            );
+        });
+
+        test('BT-emptyAnnotSave.2 Tier1 — doAutoSave 空批注分支不应有 version > 1 条件限制', () => {
+            const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
+            const emptyIfStart = body.indexOf('if (!data.annotations.length)');
+            const blockStart = body.indexOf('{', emptyIfStart);
+            let depth = 1, j = blockStart + 1;
+            while (j < body.length && depth > 0) {
+                if (body[j] === '{') depth++;
+                else if (body[j] === '}') depth--;
+                j++;
+            }
+            const emptyBranch = body.slice(blockStart, j);
+            assert.ok(
+                !/if\s*\(\s*version\s*>\s*1\s*\)/.test(emptyBranch),
+                '空批注分支不应有 version > 1 条件限制（v1 删除所有批注也需要落盘覆盖旧记录）'
+            );
+        });
+
+        // ---- Tier 2：行为级断言 ----
+
+        test('BT-emptyAnnotSave.3 Tier2 — bundle 中空批注分支应无条件落盘', () => {
+            // 在 bundle 中验证同样的逻辑
+            const doAutoSaveIdx = bundleText.indexOf('async function doAutoSave()');
+            assert.ok(doAutoSaveIdx > 0, 'bundle 中应有 doAutoSave 函数');
+            const afterFunc = bundleText.slice(doAutoSaveIdx, doAutoSaveIdx + 2000);
+            const emptyIdx = afterFunc.indexOf('!data.annotations.length');
+            assert.ok(emptyIdx > 0, 'bundle 中应有空批注分支');
+            const emptyBranch = afterFunc.slice(emptyIdx, emptyIdx + 800);
+            assert.ok(
+                /saveViaHost\(/.test(emptyBranch),
+                'bundle 中空批注分支应调用 saveViaHost'
+            );
+        });
+
+        test('BT-emptyAnnotSave.4 Tier2 — 空批注分支应生成正确的文件名格式', () => {
+            const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
+            const emptyIfStart = body.indexOf('if (!data.annotations.length)');
+            const blockStart = body.indexOf('{', emptyIfStart);
+            let depth = 1, j = blockStart + 1;
+            while (j < body.length && depth > 0) {
+                if (body[j] === '{') depth++;
+                else if (body[j] === '}') depth--;
+                j++;
+            }
+            const emptyBranch = body.slice(blockStart, j);
+            // 文件名应包含版本号
+            assert.ok(
+                emptyBranch.includes('_v${version}_record.md') || emptyBranch.includes('_record.md'),
+                '空批注分支生成的文件名应包含版本号和 _record.md 后缀'
+            );
+        });
+
+        // ---- Tier 3：任务特定断言 ----
+
+        test('BT-emptyAnnotSave.5 Tier3 — v1 版本删除所有批注后 doAutoSave 应落盘覆盖旧记录', () => {
+            // 核心场景：用户在 v1 添加批注 → 逐个删除 → 最后一个删除后 annotations 为空
+            // 此时 reviewVersion=1，doAutoSave 应该落盘空批注记录覆盖旧的有批注记录
+            // 否则下次打开文件时 getReviewRecords 返回旧的 v1 记录（含已删除批注），被错误恢复
+            const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
+            const emptyIfStart = body.indexOf('if (!data.annotations.length)');
+            const blockStart = body.indexOf('{', emptyIfStart);
+            let depth = 1, j = blockStart + 1;
+            while (j < body.length && depth > 0) {
+                if (body[j] === '{') depth++;
+                else if (body[j] === '}') depth--;
+                j++;
+            }
+            const emptyBranch = body.slice(blockStart, j);
+            // 关键：空批注分支中 saveViaHost 调用前不应有任何 version 条件判断
+            // 即 saveViaHost 应在 try 块的顶层，不被 if(version>1) 包裹
+            const saveIdx = emptyBranch.indexOf('saveViaHost');
+            assert.ok(saveIdx > 0, '空批注分支应包含 saveViaHost 调用');
+            // 从空批注分支开头到 saveViaHost 之间，不应有 if(version > 1) 条件
+            const beforeSave = emptyBranch.slice(0, saveIdx);
+            assert.ok(
+                !/if\s*\(\s*version\s*>\s*1\s*\)/.test(beforeSave),
+                'saveViaHost 调用前不应有 version > 1 条件（v1 也需要落盘）'
+            );
+        });
+
+        test('BT-emptyAnnotSave.6 Tier3 — 空批注分支应调用 generateReviewDoc 生成完整文档', () => {
+            const body = extractFunctionBody(exportJsText, /async\s+function\s+doAutoSave\s*\(/);
+            const emptyIfStart = body.indexOf('if (!data.annotations.length)');
+            const blockStart = body.indexOf('{', emptyIfStart);
+            let depth = 1, j = blockStart + 1;
+            while (j < body.length && depth > 0) {
+                if (body[j] === '{') depth++;
+                else if (body[j] === '}') depth--;
+                j++;
+            }
+            const emptyBranch = body.slice(blockStart, j);
+            assert.ok(
+                emptyBranch.includes('generateReviewDoc(data, blocks)'),
+                '空批注分支应调用 generateReviewDoc 生成完整的批阅文档（含 rawMarkdown 快照）'
             );
         });
     });
