@@ -1669,3 +1669,52 @@ pre code.language-diff {
     font-size: 0.8em;
     margin-right: 2px;
 }
+
+/* ===== Source Mode (Phase A) ===== */
+/* 当 document.body 带有 source-mode-active class 时：
+ *   1. 隐藏原 preview/edit 视图的 documentContent
+ *   2. 展示独立的 #sourceModeContainer（CM6 挂载点）
+ *   3. 隐藏 WYSIWYG 工具栏与批注 overlay
+ *   4. CM6 编辑器使用 VS Code 主题色与等宽字体
+ *   5. btnToggleSource 激活态按钮样式
+ */
+body.source-mode-active #documentContent {
+    display: none !important;
+}
+body.source-mode-active #sourceModeContainer {
+    display: block;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+body.source-mode-active #wysiwygToolbar,
+body.source-mode-active .wysiwyg-toolbar {
+    display: none !important;
+}
+body.source-mode-active .annotations-overlay,
+body.source-mode-active .annotation-highlight {
+    display: none !important;
+}
+#sourceModeContainer {
+    display: none;
+    height: 100%;
+}
+#sourceModeContainer .cm-editor {
+    height: 100%;
+    font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+    font-size: 14px;
+    background: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
+}
+#sourceModeContainer .cm-scroller {
+    font-family: inherit;
+}
+#sourceModeContainer .cm-gutters {
+    background: var(--vscode-editorGutter-background);
+    color: var(--vscode-editorLineNumber-foreground);
+    border-right: 1px solid var(--vscode-editorGroup-border);
+}
+#btnToggleSource.active {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+}

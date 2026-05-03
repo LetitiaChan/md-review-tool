@@ -55,6 +55,10 @@
                 <svg class="mode-icon mode-icon-preview" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3C4 3 1 8 1 8s3 5 7 5 7-5 7-5-3-5-7-5z" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/></svg>
                 <svg class="mode-icon mode-icon-edit" width="14" height="14" viewBox="0 0 16 16" fill="none" style="display:none;"><path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
             </button>
+            <!-- 源码模式切换按钮（Phase A：Source Mode，CodeMirror 6 引擎）-->
+            <button class="btn-toolbar-text" id="btnToggleSource" data-i18n-title="edit_mode.source_toggle_tooltip" title="源码模式（直接编辑 Markdown）">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M5.5 4L2 8l3.5 4M10.5 4L14 8l-3.5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
             <!-- n条批注（移至一键AI修复左侧） -->
             <button class="btn-toggle-annotations" id="btnToggleAnnotations" data-i18n-title="toolbar.annotations_title" title="展开/收起批注列表">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -883,6 +887,8 @@
             window.__pendingErrors = [];
         }
     </script>
+    <!-- CodeMirror 6 bundle（Source Mode 引擎）——挂 globalThis.CM6，appBundleUri 依赖它 -->
+    <script src="${cm6BundleUri}"></script>
     <!-- 应用脚本（由 webview/build.config.mjs 打包为 webview/dist/app.bundle.js）-->
     <script src="${appBundleUri}"></script>
 </body>

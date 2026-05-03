@@ -22,6 +22,7 @@ import { Renderer } from '../../js/renderer.js';
 import { Annotations } from '../../js/annotations.js';
 import { Exporter } from '../../js/export.js';
 import { Settings } from '../../js/settings.js';
+import { EditMode } from '../../js/edit-mode.js';
 import { initApp } from '../../js/app.js';
 
 // ===== 向后兼容：把模块挂到全局 =====
@@ -36,6 +37,7 @@ globalThis.Renderer = Renderer;
 globalThis.Annotations = Annotations;
 globalThis.Exporter = Exporter;
 globalThis.Settings = Settings;
+globalThis.EditMode = EditMode;
 
 // ===== 启动应用 =====
 // initApp() 内部已有 DOM ready 检测（见 app.js 最后若干行），这里直接调用即可。

@@ -280,11 +280,37 @@ export function initApp() {
 
     // ===== 事件绑定 =====
     function bindEvents() {
+        // \u66b4\u9732 Source Mode \u6240\u9700\u7684\u51fd\u6570\u7ed9 edit-mode.js\uff08Phase A\uff09
+        globalThis.handleSaveMd = handleSaveMd;
+        globalThis.triggerAutoSave = scheduleAutoSave;
+
         document.getElementById('fileSelect').addEventListener('change', handleFileSelectChange);
         document.getElementById('btnRefresh').addEventListener('click', handleRefresh);
 
         document.getElementById('btnModeToggle').addEventListener('click', () => {
             switchMode(currentMode === 'preview' ? 'edit' : 'preview');
+        });
+
+        // Source Mode 切换按钮（Phase A）
+        const btnToggleSource = document.getElementById('btnToggleSource');
+        if (btnToggleSource && globalThis.EditMode) {
+            btnToggleSource.addEventListener('click', () => {
+                if (EditMode.isSourceActive()) {
+                    EditMode.exitSource();
+                    btnToggleSource.classList.remove('active');
+                } else {
+                    EditMode.enterSource();
+                    btnToggleSource.classList.add('active');
+                }
+            });
+        }
+
+        // Source Mode 退出后重渲染当前 currentMode 的视图
+        window.addEventListener('source-mode-exit', () => {
+            const mode = currentMode;
+            // 通过伪切换强制重渲染（先切到 否之再切回）
+            currentMode = mode === 'preview' ? 'edit' : 'preview';
+            switchMode(mode);
         });
 
         document.getElementById('btnSaveMd').addEventListener('click', handleSaveMd);
@@ -1825,6 +1851,8 @@ this.innerHTML = t('modal.ai_result.copied');
 
     async function switchMode(mode) {
         if (mode === currentMode) return;
+        // Source Mode 激活时不错开底层 preview/edit 切换（早返）
+        if (globalThis.EditMode && EditMode.isSourceActive()) return;
         const data = Store.getData();
         if (!data.fileName) { showNotification('请先打开一个 MD 文件'); return; }
 
@@ -1954,7 +1982,9 @@ this.innerHTML = t('modal.ai_result.copied');
     function scheduleAutoSave() {
         clearAutoSaveTimer();
         autoSaveTimer = setTimeout(() => {
+            // Source Mode 下亦可落盘（走 handleSaveMd 通用路径）；若当前既非 edit 也非 source 则不做
             if (currentMode === 'edit' && editorDirty) handleSaveMd();
+            else if (globalThis.EditMode && EditMode.isSourceActive()) handleSaveMd();
         }, AUTO_SAVE_DELAY);
     }
 
@@ -1965,6 +1995,21 @@ this.innerHTML = t('modal.ai_result.copied');
     // ===== 保存 MD 源文件（方向A：block-level diff，仅对变化的 block 使用 turndown） =====
     // ===== 保存 MD 源文件（方向A：block-level diff，仅对变化的 block 使用 turndown） =====
     async function handleSaveMd() {
+        // Source Mode 下走简化路径：直接用 Store 里的 rawMarkdown（edit-mode.js 的 onChange 已将最新 CM6 doc 写入）
+        if (globalThis.EditMode && EditMode.isSourceActive()) {
+            const dataSrc = Store.getData();
+            if (!dataSrc.fileName) { showNotification(t('notification.no_open_file')); return; }
+            try {
+                await Exporter.saveViaHost(dataSrc.rawMarkdown);
+                updateEditStatus('saved', t('notification.saved'));
+                setTimeout(() => updateEditStatus('', ''), 1500);
+            } catch (e) {
+                console.error('[source-mode] save failed', e);
+                updateEditStatus('error', t('notification.save_failed') || 'Save failed');
+            }
+            return;
+        }
+
         const data = Store.getData();
         if (!data.fileName) { showNotification(t('notification.no_open_file')); return; }
 

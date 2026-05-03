@@ -245,6 +245,19 @@ const Store = (() => {
         console.log('[Store] 关闭期间源文件变化，强制升级到 v' + data.reviewVersion);
     }
 
+    /**
+     * 更新 data.rawMarkdown（Phase A 新增，供 Source Mode 回写真相源）
+     *
+     * 仅更新内存中的 rawMarkdown 字段，不触发 docVersion 升级、不自动落盘；
+     * 落盘由调用方显式决定（Source Mode Ctrl+S → handleSaveMd / autosave timer）。
+     *
+     * @param {string} markdown 新的 markdown 源码
+     */
+    function setRawMarkdown(markdown) {
+        if (typeof markdown !== 'string') return;
+        data.rawMarkdown = markdown;
+    }
+
     return {
         save, load, loadFromHost, reset, setFile,
         addAnnotation, removeAnnotation, updateAnnotation,
@@ -252,7 +265,8 @@ const Store = (() => {
         getFileHash, setFileHash, getDocVersion, setDocVersion,
         getSourceFilePath, getSourceDir, getRelPath,
         archiveCurrentRecord, getArchivedRecords, restoreFromReviewRecord,
-        forceBumpVersion
+        forceBumpVersion,
+        setRawMarkdown
     };
 })();
 

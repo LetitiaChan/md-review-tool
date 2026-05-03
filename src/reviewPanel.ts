@@ -542,6 +542,8 @@ codeTheme: config.get<string>('codeTheme', 'default-light-modern'),
         const katexCssUri = webviewUri('css/katex.min.css');
         // 业务脚本已合并为单一 bundle（由 webview/build.config.mjs 打包）
         const appBundleUri = webviewUri('dist/app.bundle.js');
+        // CodeMirror 6 bundle（Source Mode 引擎，Phase A 新增）
+        const cm6BundleUri = webviewUri('dist/cm6.bundle.js');
 
 
 
@@ -567,6 +569,7 @@ codeTheme: config.get<string>('codeTheme', 'default-light-modern'),
         html = html.replace(/\$\{highlightThemesCssUri\}/g, highlightThemesCssUri);
         html = html.replace(/\$\{katexCssUri\}/g, katexCssUri);
         html = html.replace(/\$\{appBundleUri\}/g, appBundleUri);
+        html = html.replace(/\$\{cm6BundleUri\}/g, cm6BundleUri);
 
 
         return html;

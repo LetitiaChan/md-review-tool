@@ -23,6 +23,10 @@
         "toolbar.mode_title": "\u5207\u6362\u9884\u89C8/\u7F16\u8F91\u6A21\u5F0F",
         "toolbar.mode_preview": "\u9884\u89C8",
         "toolbar.mode_edit": "\u7F16\u8F91",
+        "edit_mode.source": "\u6E90\u7801",
+        "edit_mode.source_toggle_tooltip": "\u6E90\u7801\u6A21\u5F0F\uFF08\u76F4\u63A5\u7F16\u8F91 Markdown\uFF0CCtrl+S \u4FDD\u5B58\uFF09",
+        "edit_mode.source_hint": "\u5DF2\u8FDB\u5165\u6E90\u7801\u6A21\u5F0F \xB7 Ctrl+S \u4FDD\u5B58",
+        "edit_mode.source_exit_hint": "\u5DF2\u9000\u51FA\u6E90\u7801\u6A21\u5F0F",
         "toolbar.annotations_title": "\u5C55\u5F00/\u6536\u8D77\u6279\u6CE8\u5217\u8868",
         "toolbar.annotations_count": "{count}",
         "toolbar.annotations_zero": "",
@@ -474,6 +478,10 @@
         "toolbar.mode_title": "Toggle preview/edit mode",
         "toolbar.mode_preview": "Preview",
         "toolbar.mode_edit": "Edit",
+        "edit_mode.source": "Source",
+        "edit_mode.source_toggle_tooltip": "Source Mode (edit raw Markdown, Ctrl+S to save)",
+        "edit_mode.source_hint": "Entered Source Mode \xB7 Ctrl+S to save",
+        "edit_mode.source_exit_hint": "Exited Source Mode",
         "toolbar.annotations_title": "Toggle annotations panel",
         "toolbar.annotations_count": "{count}",
         "toolbar.annotations_zero": "",
@@ -1332,6 +1340,10 @@
       save();
       console.log("[Store] \u5173\u95ED\u671F\u95F4\u6E90\u6587\u4EF6\u53D8\u5316\uFF0C\u5F3A\u5236\u5347\u7EA7\u5230 v" + data.reviewVersion);
     }
+    function setRawMarkdown(markdown) {
+      if (typeof markdown !== "string") return;
+      data.rawMarkdown = markdown;
+    }
     return {
       save,
       load,
@@ -1355,7 +1367,8 @@
       archiveCurrentRecord,
       getArchivedRecords,
       restoreFromReviewRecord,
-      forceBumpVersion
+      forceBumpVersion,
+      setRawMarkdown
     };
   })();
 
@@ -4883,6 +4896,106 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     };
   })();
 
+  // webview/js/edit-mode.js
+  var _active = false;
+  var _editor = null;
+  var _container = null;
+  var CONTAINER_ID = "sourceModeContainer";
+  var BODY_ACTIVE_CLASS = "source-mode-active";
+  function ensureContainer() {
+    if (_container && _container.isConnected) return _container;
+    let el = document.getElementById(CONTAINER_ID);
+    if (!el) {
+      el = document.createElement("div");
+      el.id = CONTAINER_ID;
+      const docContent = document.getElementById("documentContent");
+      if (docContent && docContent.parentNode) {
+        docContent.parentNode.insertBefore(el, docContent.nextSibling);
+      } else {
+        document.body.appendChild(el);
+      }
+    }
+    _container = el;
+    return el;
+  }
+  function enterSource() {
+    if (_active) return;
+    if (!globalThis.CM6 || typeof globalThis.CM6.createEditor !== "function") {
+      console.warn("[edit-mode] CM6 not loaded, cannot enter source mode");
+      return;
+    }
+    const store = globalThis.Store;
+    if (!store || typeof store.getData !== "function") {
+      console.warn("[edit-mode] Store not loaded");
+      return;
+    }
+    const doc = store.getData().rawMarkdown || "";
+    const container = ensureContainer();
+    _editor = globalThis.CM6.createEditor({
+      parent: container,
+      doc,
+      onChange: (newDoc) => {
+        if (typeof store.setRawMarkdown === "function") {
+          store.setRawMarkdown(newDoc);
+        }
+        if (typeof globalThis.triggerAutoSave === "function") {
+          globalThis.triggerAutoSave();
+        }
+      },
+      onSave: () => {
+        if (_editor && typeof store.setRawMarkdown === "function") {
+          store.setRawMarkdown(_editor.getDoc());
+        }
+        if (typeof globalThis.handleSaveMd === "function") {
+          globalThis.handleSaveMd();
+        }
+      }
+    });
+    document.body.classList.add(BODY_ACTIVE_CLASS);
+    _active = true;
+    try {
+      _editor.focus();
+    } catch (e) {
+    }
+  }
+  function exitSource() {
+    if (!_active) return;
+    const store = globalThis.Store;
+    let finalDoc = "";
+    if (_editor) {
+      try {
+        finalDoc = _editor.getDoc();
+      } catch (e) {
+        finalDoc = "";
+      }
+      if (store && typeof store.setRawMarkdown === "function") {
+        store.setRawMarkdown(finalDoc);
+      }
+      try {
+        _editor.destroy();
+      } catch (e) {
+      }
+      _editor = null;
+    }
+    if (_container && _container.parentNode) {
+      try {
+        _container.parentNode.removeChild(_container);
+      } catch (e) {
+      }
+    }
+    _container = null;
+    document.body.classList.remove(BODY_ACTIVE_CLASS);
+    _active = false;
+    try {
+      window.dispatchEvent(new CustomEvent("source-mode-exit", { detail: { finalDoc } }));
+    } catch (e) {
+    }
+  }
+  function isSourceActive() {
+    return _active;
+  }
+  var EditMode2 = { enterSource, exitSource, isSourceActive };
+
   // webview/js/app.js
   function initApp() {
     let blocks = [];
@@ -5096,10 +5209,29 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       });
     }
     function bindEvents() {
+      globalThis.handleSaveMd = handleSaveMd;
+      globalThis.triggerAutoSave = scheduleAutoSave;
       document.getElementById("fileSelect").addEventListener("change", handleFileSelectChange);
       document.getElementById("btnRefresh").addEventListener("click", handleRefresh);
       document.getElementById("btnModeToggle").addEventListener("click", () => {
         switchMode(currentMode === "preview" ? "edit" : "preview");
+      });
+      const btnToggleSource = document.getElementById("btnToggleSource");
+      if (btnToggleSource && globalThis.EditMode) {
+        btnToggleSource.addEventListener("click", () => {
+          if (EditMode.isSourceActive()) {
+            EditMode.exitSource();
+            btnToggleSource.classList.remove("active");
+          } else {
+            EditMode.enterSource();
+            btnToggleSource.classList.add("active");
+          }
+        });
+      }
+      window.addEventListener("source-mode-exit", () => {
+        const mode = currentMode;
+        currentMode = mode === "preview" ? "edit" : "preview";
+        switchMode(mode);
       });
       document.getElementById("btnSaveMd").addEventListener("click", handleSaveMd);
       document.getElementById("documentContent").addEventListener("input", () => {
@@ -6408,6 +6540,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     }
     async function switchMode(mode) {
       if (mode === currentMode) return;
+      if (globalThis.EditMode && EditMode.isSourceActive()) return;
       const data = Store.getData();
       if (!data.fileName) {
         showNotification("\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A MD \u6587\u4EF6");
@@ -6516,6 +6649,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       clearAutoSaveTimer();
       autoSaveTimer = setTimeout(() => {
         if (currentMode === "edit" && editorDirty) handleSaveMd();
+        else if (globalThis.EditMode && EditMode.isSourceActive()) handleSaveMd();
       }, AUTO_SAVE_DELAY);
     }
     function clearAutoSaveTimer() {
@@ -6525,6 +6659,22 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
     }
     async function handleSaveMd() {
+      if (globalThis.EditMode && EditMode.isSourceActive()) {
+        const dataSrc = Store.getData();
+        if (!dataSrc.fileName) {
+          showNotification(t("notification.no_open_file"));
+          return;
+        }
+        try {
+          await Exporter.saveViaHost(dataSrc.rawMarkdown);
+          updateEditStatus("saved", t("notification.saved"));
+          setTimeout(() => updateEditStatus("", ""), 1500);
+        } catch (e) {
+          console.error("[source-mode] save failed", e);
+          updateEditStatus("error", t("notification.save_failed") || "Save failed");
+        }
+        return;
+      }
       const data = Store.getData();
       if (!data.fileName) {
         showNotification(t("notification.no_open_file"));
@@ -7806,5 +7956,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
   globalThis.Annotations = Annotations2;
   globalThis.Exporter = Exporter2;
   globalThis.Settings = Settings2;
+  globalThis.EditMode = EditMode2;
   initApp();
 })();
