@@ -3807,4 +3807,87 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             );
         });
     });
+
+    // ========= Suite: Hotfix — 批注删除后触发自动保存（版本更新） =========
+    suite('Hotfix — 批注操作后触发 triggerAutoSave', () => {
+        const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+        const annotationsJsPath = path.join(extPath, 'webview', 'js', 'annotations.js');
+        const annotationsText = fs.readFileSync(annotationsJsPath, 'utf-8');
+        const bundlePath = path.join(extPath, 'webview', 'dist', 'app.bundle.js');
+        const bundleText = fs.readFileSync(bundlePath, 'utf-8');
+
+        // ---- Tier 1：存在性断言 ----
+
+        test('BT-annotAutoSave.1 Tier1 — annotations.js refreshView 应包含 triggerAutoSave 调用', () => {
+            assert.ok(
+                annotationsText.includes('Exporter.triggerAutoSave'),
+                'annotations.js 中应有 Exporter.triggerAutoSave 调用'
+            );
+        });
+
+        test('BT-annotAutoSave.2 Tier1 — bundle 中 refreshView 应包含 triggerAutoSave', () => {
+            // 在 bundle 中搜索 refreshView 函数体内的 triggerAutoSave
+            assert.ok(
+                bundleText.includes('Exporter.triggerAutoSave'),
+                'bundle 中应有 Exporter.triggerAutoSave 调用'
+            );
+        });
+
+        // ---- Tier 2：行为级断言 ----
+
+        test('BT-annotAutoSave.3 Tier2 — refreshView 中 triggerAutoSave 应有 globalThis.Exporter 防护', () => {
+            // 确保有安全检查，避免 Exporter 未加载时报错
+            assert.ok(
+                annotationsText.includes('globalThis.Exporter') || annotationsText.includes('Exporter && Exporter.triggerAutoSave'),
+                'triggerAutoSave 调用应有 Exporter 存在性检查'
+            );
+        });
+
+        test('BT-annotAutoSave.4 Tier2 — removeAnnotation 后应调用 refreshView（间接触发 triggerAutoSave）', () => {
+            // 确认 removeAnnotation 后有 refreshView 调用
+            const removeIdx = annotationsText.indexOf('Store.removeAnnotation(id)');
+            assert.ok(removeIdx > 0, '应有 Store.removeAnnotation(id) 调用');
+            const afterRemove = annotationsText.slice(removeIdx, removeIdx + 200);
+            assert.ok(
+                afterRemove.includes('refreshView()'),
+                'removeAnnotation 后应调用 refreshView()'
+            );
+        });
+
+        test('BT-annotAutoSave.5 Tier2 — submitComment 后应调用 refreshView（间接触发 triggerAutoSave）', () => {
+            const submitIdx = annotationsText.indexOf('function submitComment()');
+            assert.ok(submitIdx > 0, '应有 submitComment 函数');
+            const funcBody = annotationsText.slice(submitIdx, submitIdx + 2000);
+            assert.ok(
+                funcBody.includes('refreshView()'),
+                'submitComment 后应调用 refreshView()'
+            );
+        });
+
+        // ---- Tier 3：任务特定断言 ----
+
+        test('BT-annotAutoSave.6 Tier3 — refreshView 函数体中 triggerAutoSave 应在 renderAnnotationsList 之后', () => {
+            // 确保 triggerAutoSave 在 UI 更新完成后调用
+            const refreshViewIdx = annotationsText.indexOf('function refreshView()');
+            assert.ok(refreshViewIdx > 0, '应有 refreshView 函数');
+            const funcBody = annotationsText.slice(refreshViewIdx, refreshViewIdx + 500);
+            const renderIdx = funcBody.indexOf('renderAnnotationsList()');
+            const triggerIdx = funcBody.indexOf('triggerAutoSave');
+            assert.ok(renderIdx > 0 && triggerIdx > 0, '应同时包含 renderAnnotationsList 和 triggerAutoSave');
+            assert.ok(
+                triggerIdx > renderIdx,
+                'triggerAutoSave 应在 renderAnnotationsList 之后调用（先更新 UI，再触发保存）'
+            );
+        });
+
+        test('BT-annotAutoSave.7 Tier3 — submitInsert 后应调用 refreshView（间接触发 triggerAutoSave）', () => {
+            const submitIdx = annotationsText.indexOf('function submitInsert()');
+            assert.ok(submitIdx > 0, '应有 submitInsert 函数');
+            const funcBody = annotationsText.slice(submitIdx, submitIdx + 2000);
+            assert.ok(
+                funcBody.includes('refreshView()'),
+                'submitInsert 后应调用 refreshView()'
+            );
+        });
+    });
 });

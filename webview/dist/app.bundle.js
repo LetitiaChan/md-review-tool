@@ -3968,6 +3968,9 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       Renderer.renderBlocks(blocks, data.annotations);
       renderAnnotationsList();
       updateToolbarState();
+      if (globalThis.Exporter && Exporter.triggerAutoSave) {
+        Exporter.triggerAutoSave();
+      }
     }
     function setBlocks(b) {
       blocks = b;

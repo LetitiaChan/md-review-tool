@@ -912,6 +912,10 @@ const Annotations = (() => {
         Renderer.renderBlocks(blocks, data.annotations);
         renderAnnotationsList();
         updateToolbarState();
+        // 批注变更后触发自动保存，确保磁盘上的批阅记录及时更新
+        if (globalThis.Exporter && Exporter.triggerAutoSave) {
+            Exporter.triggerAutoSave();
+        }
     }
 
     function setBlocks(b) {
