@@ -344,8 +344,9 @@ const parser = new MarkdownParser(schema, md, {
     // HTML token 兜底：html_inline 已在 htmlTagConverterPlugin 中被转换为 hardbreak/mark/text token，
     // 理论上不会到达 parser；此处映射为 ignore 作为最后一道保险。
     // html_block（整块 HTML）统一 ignore，避免解析失败；如果将来需要保留原文可改为自定义节点。
-    html_inline: { ignore: true },
-    html_block: { ignore: true },
+    // 注意：html_inline 和 html_block 都是独立 token（无 _open/_close 后缀），必须加 noCloseToken: true
+    html_inline: { ignore: true, noCloseToken: true },
+    html_block: { ignore: true, noCloseToken: true },
     // 表格节点（markdown-it table 插件 → prosemirror-tables schema）
     table: { block: 'table' },
     thead: { ignore: true },

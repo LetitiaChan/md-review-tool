@@ -28,6 +28,9 @@ All notable changes to this project will be documented in this file.
 - Users who previously used Source Mode for raw Markdown editing can open the `.md` file in VS Code / Cursor's built-in editor — the file is already open in a tab adjacent to the review panel
 - No data migration required — both engines always read/wrote the same `Store.rawMarkdown`
 
+### 🐛 Fixes
+- Fix Rich Mode crash on documents containing block-level HTML (e.g. `<div>`, `<details>`, `<table>` as raw HTML): the `html_block` and `html_inline` ignore mappings in `MarkdownParser` were missing `noCloseToken: true`, causing the parser to register handlers for `html_block_open`/`html_block_close` instead of `html_block` — but markdown-it emits `html_block` as a standalone token without `_open`/`_close` variants
+
 ## [1.4.0] - 2026-05-03
 
 ### ✨ Dual-Mode Editor (Phase A + B + C)

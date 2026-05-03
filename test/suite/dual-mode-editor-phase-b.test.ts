@@ -331,10 +331,10 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const bridge = fs.readFileSync(path.join(extPath, 'webview', 'js', 'pm-markdown-bridge.js'), 'utf-8');
-            assert.ok(/html_inline:\s*\{\s*ignore:\s*true\s*\}/.test(bridge),
-                'parser 应包含 html_inline → ignore 兜底映射');
-            assert.ok(/html_block:\s*\{\s*ignore:\s*true\s*\}/.test(bridge),
-                'parser 应包含 html_block → ignore 兜底映射');
+            assert.ok(/html_inline:\s*\{[^}]*ignore:\s*true[^}]*noCloseToken:\s*true/.test(bridge),
+                'parser 应包含 html_inline → ignore + noCloseToken 兜底映射');
+            assert.ok(/html_block:\s*\{[^}]*ignore:\s*true[^}]*noCloseToken:\s*true/.test(bridge),
+                'parser 应包含 html_block → ignore + noCloseToken 兜底映射');
         });
 
         test('BT-HtmlToken.2 应注册 htmlTagConverterPlugin 和 mark token 映射（Tier 2 — 行为级断言）', () => {
