@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### 🐛 Bug Fixes
 - **Fix image upload in comment modal** — The "Add Image" click zone in the comment modal now uses `vscode.window.showOpenDialog` via Extension Host instead of relying on `<input type="file">` which may not work in certain VS Code webview environments (Cursor, CodeBuddy, etc.). Drag-and-drop and Ctrl+V paste remain as alternative upload methods. Falls back to native file input if `showOpenDialog` fails.
+- **Fix image rendering in Rich Mode (edit mode)** — Images with relative paths (e.g. `./images/foo.png`) now render correctly in Rich Mode by resolving paths through the Renderer's image URI cache (`webview.asWebviewUri`). Previously, ProseMirror's `image` node `toDOM` used raw relative paths which are inaccessible in the webview sandbox.
 
 ### 💥 Breaking Changes
 - **Remove Source Mode editor** — The CodeMirror 6 Source Mode (`</>` toolbar button) has been completely removed. Users who need raw Markdown editing can open the `.md` file directly in VS Code / Cursor's native editor (same window, adjacent tab)

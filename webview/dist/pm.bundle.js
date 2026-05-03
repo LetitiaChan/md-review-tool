@@ -20721,7 +20721,16 @@
       }],
       toDOM(node) {
         const { src, alt, title } = node.attrs;
-        return ["img", { src, alt, title }];
+        let resolvedSrc = src;
+        if (src && !/^(https?:\/\/|data:|vscode-)/i.test(src)) {
+          try {
+            const cache = globalThis.Renderer && globalThis.Renderer.getImageUriCache ? globalThis.Renderer.getImageUriCache() : {};
+            const decodedSrc = decodeURIComponent(src);
+            resolvedSrc = cache[decodedSrc] || cache[src] || src;
+          } catch (e) {
+          }
+        }
+        return ["img", { src: resolvedSrc, alt, title }];
       }
     },
     hard_break: {
