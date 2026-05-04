@@ -103,4 +103,29 @@ suite('Link Edit Text Test Suite', () => {
         assert.ok(linkCmdSection.includes('addMark'), 'link 命令应有 addMark 路径（文本不变时）');
         assert.ok(linkCmdSection.includes('currentText'), 'link 命令应获取 currentText 用于比较');
     });
+
+    // ===== 超链接点击不跳转 =====
+
+    test('BT-LinkEditText.T1.5 Tier1 — pm.entry.js EditorView 应配置 handleDOMEvents.click', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        assert.ok(src.includes('handleDOMEvents'), 'EditorView 应配置 handleDOMEvents prop');
+        assert.ok(src.includes('preventDefault'), 'click handler 应调用 preventDefault 阻止链接跳转');
+    });
+
+    test('BT-LinkEditText.6 Tier3 — click handler 应检测 <a> 标签并阻止默认行为', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        // 验证 click handler 检测 <a> 标签
+        assert.ok(src.includes("tagName === 'A'") || src.includes('tagName === "A"'), 'click handler 应检测 tagName === A');
+        assert.ok(src.includes("closest('a')") || src.includes('closest("a")'), 'click handler 应使用 closest 查找父级 <a>');
+    });
+
+    test('BT-LinkEditText.7 Tier3 — pm.bundle.js 产物应包含链接点击阻止逻辑', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const bundle = fs.readFileSync(path.join(extPath, 'webview', 'dist', 'pm.bundle.js'), 'utf-8');
+        assert.ok(bundle.includes('handleDOMEvents'), 'pm.bundle.js 应包含 handleDOMEvents');
+        assert.ok(bundle.includes('preventDefault'), 'pm.bundle.js 应包含 preventDefault 调用');
+    });
 });
+

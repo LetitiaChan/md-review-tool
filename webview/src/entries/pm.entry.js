@@ -507,6 +507,16 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
         nodeViews: {
             diagram(node, view, getPos) { return new DiagramNodeView(node, view, getPos); },
         },
+        handleDOMEvents: {
+            // 编辑模式下阻止超链接点击跳转
+            click(view, event) {
+                const target = event.target;
+                if (target && (target.tagName === 'A' || (target.closest && target.closest('a')))) {
+                    event.preventDefault();
+                }
+                return false; // 不阻止 ProseMirror 继续处理（光标定位等）
+            },
+        },
         handleDoubleClick(view, pos, event) {
             // 检测双击位置是否在 link mark 上
             const $pos = view.state.doc.resolve(pos);

@@ -28558,6 +28558,16 @@
           return new DiagramNodeView(node, view2, getPos);
         }
       },
+      handleDOMEvents: {
+        // 编辑模式下阻止超链接点击跳转
+        click(view2, event) {
+          const target = event.target;
+          if (target && (target.tagName === "A" || target.closest && target.closest("a"))) {
+            event.preventDefault();
+          }
+          return false;
+        }
+      },
       handleDoubleClick(view2, pos, event) {
         const $pos = view2.state.doc.resolve(pos);
         const linkType = schema.marks.link;
