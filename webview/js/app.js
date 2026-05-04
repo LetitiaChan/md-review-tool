@@ -275,7 +275,7 @@ export function initApp() {
         const editorToolbar = document.getElementById('editorToolbar');
         if (editorToolbar && globalThis.EditMode) {
             // 带 popover 的按钮列表（wrapper div 的 ID）
-            const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'btnAlertBlockWrapper', 'btnCodeBlockWrapper'];
+const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'btnAlertBlockWrapper', 'btnCodeBlockWrapper', 'btnInsertTableWrapper'];
 
             editorToolbar.addEventListener('click', (e) => {
                 const btn = e.target.closest('.editor-toolbar-btn');
@@ -306,6 +306,8 @@ export function initApp() {
             setupAlertTypePopover();
             // 代码块语言选择事件
             setupCodeLangPopover();
+            // 表格网格选择事件
+            setupTableGridPopover();
 
             // 点击外部关闭所有 popover
             document.addEventListener('click', (e) => {
@@ -2041,6 +2043,58 @@ this.innerHTML = t('modal.ai_result.copied');
             // 阻止 input 内部点击冒泡关闭 popover
             customInput.addEventListener('click', (e) => e.stopPropagation());
         }
+    }
+
+    // ===== 表格网格选择 popover =====
+    function setupTableGridPopover() {
+        const grid = document.getElementById('tableGrid');
+        const label = document.getElementById('tableGridLabel');
+        const popover = document.getElementById('tableGridPopover');
+        if (!grid || !label || !popover) return;
+
+        const cells = grid.querySelectorAll('.table-grid-cell');
+        let currentRows = 0;
+        let currentCols = 0;
+
+        function updateHighlight(row, col) {
+            currentRows = row;
+            currentCols = col;
+            for (const cell of cells) {
+                const r = parseInt(cell.getAttribute('data-row'));
+                const c = parseInt(cell.getAttribute('data-col'));
+                if (r <= row && c <= col) {
+                    cell.classList.add('highlighted');
+                } else {
+                    cell.classList.remove('highlighted');
+                }
+            }
+            label.textContent = row + ' × ' + col;
+        }
+
+        for (const cell of cells) {
+            cell.addEventListener('mouseenter', () => {
+                const row = parseInt(cell.getAttribute('data-row'));
+                const col = parseInt(cell.getAttribute('data-col'));
+                updateHighlight(row, col);
+            });
+            cell.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const row = parseInt(cell.getAttribute('data-row'));
+                const col = parseInt(cell.getAttribute('data-col'));
+                if (EditMode.isRichActive()) {
+                    EditMode.execCommand('insertTable', { rows: row, cols: col });
+                }
+                closeAllPopovers();
+            });
+        }
+
+        // popover 打开时重置高亮和标签
+        const observer = new MutationObserver(() => {
+            if (popover.classList.contains('active')) {
+                updateHighlight(0, 0);
+            }
+        });
+        observer.observe(popover, { attributes: true, attributeFilter: ['class'] });
     }
 
     // ===== 主题按钮标签更新 =====

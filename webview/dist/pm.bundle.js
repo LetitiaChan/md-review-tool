@@ -28823,14 +28823,20 @@
         }
         return true;
       },
-      insertTable: (state2, dispatch) => {
+      insertTable: (state2, dispatch, view2, attrs2) => {
         if (dispatch) {
-          const cell = schema.nodes.table_cell.createAndFill();
-          const headerCell = schema.nodes.table_header.createAndFill();
-          const headerRow = schema.nodes.table_row.create(null, [headerCell, schema.nodes.table_header.createAndFill(), schema.nodes.table_header.createAndFill()]);
-          const bodyRow1 = schema.nodes.table_row.create(null, [schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill()]);
-          const bodyRow2 = schema.nodes.table_row.create(null, [schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill()]);
-          const table2 = schema.nodes.table.create(null, [headerRow, bodyRow1, bodyRow2]);
+          const rows = attrs2 && attrs2.rows && attrs2.rows >= 1 ? attrs2.rows : 3;
+          const cols = attrs2 && attrs2.cols && attrs2.cols >= 1 ? attrs2.cols : 3;
+          const headerCells = [];
+          for (let c = 0; c < cols; c++) headerCells.push(schema.nodes.table_header.createAndFill());
+          const headerRow = schema.nodes.table_row.create(null, headerCells);
+          const bodyRows = [];
+          for (let r = 1; r < rows; r++) {
+            const cells = [];
+            for (let c = 0; c < cols; c++) cells.push(schema.nodes.table_cell.createAndFill());
+            bodyRows.push(schema.nodes.table_row.create(null, cells));
+          }
+          const table2 = schema.nodes.table.create(null, [headerRow, ...bodyRows]);
           dispatch(state2.tr.replaceSelectionWith(table2));
         }
         return true;

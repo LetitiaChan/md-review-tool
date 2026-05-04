@@ -776,14 +776,23 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
             }
             return true;
         },
-        insertTable:   (state, dispatch) => {
+        insertTable:   (state, dispatch, view, attrs) => {
             if (dispatch) {
-                const cell = schema.nodes.table_cell.createAndFill();
-                const headerCell = schema.nodes.table_header.createAndFill();
-                const headerRow = schema.nodes.table_row.create(null, [headerCell, schema.nodes.table_header.createAndFill(), schema.nodes.table_header.createAndFill()]);
-                const bodyRow1 = schema.nodes.table_row.create(null, [schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill()]);
-                const bodyRow2 = schema.nodes.table_row.create(null, [schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill()]);
-                const table = schema.nodes.table.create(null, [headerRow, bodyRow1, bodyRow2]);
+                // 支持 attrs.rows（总行数，含表头）和 attrs.cols，无 attrs 时回退到 3×3
+                const rows = (attrs && attrs.rows && attrs.rows >= 1) ? attrs.rows : 3;
+                const cols = (attrs && attrs.cols && attrs.cols >= 1) ? attrs.cols : 3;
+                // 表头行
+                const headerCells = [];
+                for (let c = 0; c < cols; c++) headerCells.push(schema.nodes.table_header.createAndFill());
+                const headerRow = schema.nodes.table_row.create(null, headerCells);
+                // 数据行（rows - 1 行）
+                const bodyRows = [];
+                for (let r = 1; r < rows; r++) {
+                    const cells = [];
+                    for (let c = 0; c < cols; c++) cells.push(schema.nodes.table_cell.createAndFill());
+                    bodyRows.push(schema.nodes.table_row.create(null, cells));
+                }
+                const table = schema.nodes.table.create(null, [headerRow, ...bodyRows]);
                 dispatch(state.tr.replaceSelectionWith(table));
             }
             return true;

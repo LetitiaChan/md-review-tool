@@ -109,6 +109,7 @@
         "editor.code_lang.custom_placeholder": "\u4F8B\u5982\uFF1Ago, rust, cpp",
         "editor.code_lang.confirm": "\u786E\u8BA4",
         "editor.table_title": "\u8868\u683C",
+        "editor.table_grid_label": "{rows} \xD7 {cols}",
         "editor.mermaid_title": "Mermaid \u56FE\u8868",
         "editor.emoji_title": "Emoji \u8868\u60C5",
         "editor.plantuml_title": "PlantUML \u56FE\u8868",
@@ -617,6 +618,7 @@
         "editor.code_lang.custom_placeholder": "e.g. go, rust, cpp",
         "editor.code_lang.confirm": "Apply",
         "editor.table_title": "Table",
+        "editor.table_grid_label": "{rows} \xD7 {cols}",
         "editor.mermaid_title": "Mermaid diagram",
         "editor.emoji_title": "Emoji",
         "editor.plantuml_title": "PlantUML diagram",
@@ -5380,7 +5382,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
       const editorToolbar = document.getElementById("editorToolbar");
       if (editorToolbar && globalThis.EditMode) {
-        const popoverWrapperIds = ["btnTextColor", "btnLink", "btnImage", "btnEmoji", "btnAlertBlockWrapper", "btnCodeBlockWrapper"];
+        const popoverWrapperIds = ["btnTextColor", "btnLink", "btnImage", "btnEmoji", "btnAlertBlockWrapper", "btnCodeBlockWrapper", "btnInsertTableWrapper"];
         editorToolbar.addEventListener("click", (e) => {
           const btn = e.target.closest(".editor-toolbar-btn");
           const wrapper = e.target.closest(".toolbar-btn-wrapper");
@@ -5401,6 +5403,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         setupEmojiPopover();
         setupAlertTypePopover();
         setupCodeLangPopover();
+        setupTableGridPopover();
         document.addEventListener("click", (e) => {
           if (!e.target.closest(".toolbar-popover") && !e.target.closest(".toolbar-btn-wrapper")) {
             closeAllPopovers();
@@ -6895,6 +6898,51 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         });
         customInput.addEventListener("click", (e) => e.stopPropagation());
       }
+    }
+    function setupTableGridPopover() {
+      const grid = document.getElementById("tableGrid");
+      const label = document.getElementById("tableGridLabel");
+      const popover = document.getElementById("tableGridPopover");
+      if (!grid || !label || !popover) return;
+      const cells = grid.querySelectorAll(".table-grid-cell");
+      let currentRows = 0;
+      let currentCols = 0;
+      function updateHighlight(row, col) {
+        currentRows = row;
+        currentCols = col;
+        for (const cell of cells) {
+          const r = parseInt(cell.getAttribute("data-row"));
+          const c = parseInt(cell.getAttribute("data-col"));
+          if (r <= row && c <= col) {
+            cell.classList.add("highlighted");
+          } else {
+            cell.classList.remove("highlighted");
+          }
+        }
+        label.textContent = row + " \xD7 " + col;
+      }
+      for (const cell of cells) {
+        cell.addEventListener("mouseenter", () => {
+          const row = parseInt(cell.getAttribute("data-row"));
+          const col = parseInt(cell.getAttribute("data-col"));
+          updateHighlight(row, col);
+        });
+        cell.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const row = parseInt(cell.getAttribute("data-row"));
+          const col = parseInt(cell.getAttribute("data-col"));
+          if (EditMode.isRichActive()) {
+            EditMode.execCommand("insertTable", { rows: row, cols: col });
+          }
+          closeAllPopovers();
+        });
+      }
+      const observer = new MutationObserver(() => {
+        if (popover.classList.contains("active")) {
+          updateHighlight(0, 0);
+        }
+      });
+      observer.observe(popover, { attributes: true, attributeFilter: ["class"] });
     }
     function updateThemeButtonLabel(theme) {
       const btn = document.getElementById("btnToggleTheme");

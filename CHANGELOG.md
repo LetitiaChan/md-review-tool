@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### ✨ New Features
+- **Table grid selector in Rich Mode toolbar** — The table toolbar button now opens a 6×6 grid popover instead of directly inserting a fixed 3×3 table. Users can hover over the grid to select the desired number of rows and columns (displayed as "R × C" label below the grid), then click to insert a table of that exact size. The `insertTable` ProseMirror command now accepts `attrs.rows` and `attrs.cols` parameters; when called without attrs, it falls back to the default 3×3 table for backward compatibility.
 - **Pick local images in Rich Mode editor** — The image toolbar popover now includes a "📁 Pick Local Image" button that opens the native file picker dialog (via `vscode.window.showOpenDialog`). Selected images are copied to the configured `imageAssetsPath` directory and inserted into the editor with correct relative paths. Supports multi-select. The original URL input method is preserved below a divider.
 
 ### 🐛 Bug Fixes

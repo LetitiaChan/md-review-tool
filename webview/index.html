@@ -263,9 +263,22 @@
                             <button class="popover-confirm-btn" id="imageConfirmBtn" data-i18n="editor.image_confirm">确认</button>
                         </div>
                     </div>
-                    <button class="editor-toolbar-btn" data-cmd="insertTable" data-i18n-title="editor.table_title" title="表格">
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M2 10h12M6 2v12M10 2v12" stroke="currentColor" stroke-width="1"/></svg>
-                    </button>
+                    <div class="toolbar-btn-wrapper" id="btnInsertTableWrapper">
+                        <button class="editor-toolbar-btn" id="btnInsertTable" data-cmd="insertTable" data-i18n-title="editor.table_title" title="表格">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M2 10h12M6 2v12M10 2v12" stroke="currentColor" stroke-width="1"/></svg>
+                        </button>
+                        <div class="toolbar-popover table-grid-popover" id="tableGridPopover">
+                            <div class="table-grid" id="tableGrid">
+                                <div class="table-grid-cell" data-row="1" data-col="1"></div><div class="table-grid-cell" data-row="1" data-col="2"></div><div class="table-grid-cell" data-row="1" data-col="3"></div><div class="table-grid-cell" data-row="1" data-col="4"></div><div class="table-grid-cell" data-row="1" data-col="5"></div><div class="table-grid-cell" data-row="1" data-col="6"></div>
+                                <div class="table-grid-cell" data-row="2" data-col="1"></div><div class="table-grid-cell" data-row="2" data-col="2"></div><div class="table-grid-cell" data-row="2" data-col="3"></div><div class="table-grid-cell" data-row="2" data-col="4"></div><div class="table-grid-cell" data-row="2" data-col="5"></div><div class="table-grid-cell" data-row="2" data-col="6"></div>
+                                <div class="table-grid-cell" data-row="3" data-col="1"></div><div class="table-grid-cell" data-row="3" data-col="2"></div><div class="table-grid-cell" data-row="3" data-col="3"></div><div class="table-grid-cell" data-row="3" data-col="4"></div><div class="table-grid-cell" data-row="3" data-col="5"></div><div class="table-grid-cell" data-row="3" data-col="6"></div>
+                                <div class="table-grid-cell" data-row="4" data-col="1"></div><div class="table-grid-cell" data-row="4" data-col="2"></div><div class="table-grid-cell" data-row="4" data-col="3"></div><div class="table-grid-cell" data-row="4" data-col="4"></div><div class="table-grid-cell" data-row="4" data-col="5"></div><div class="table-grid-cell" data-row="4" data-col="6"></div>
+                                <div class="table-grid-cell" data-row="5" data-col="1"></div><div class="table-grid-cell" data-row="5" data-col="2"></div><div class="table-grid-cell" data-row="5" data-col="3"></div><div class="table-grid-cell" data-row="5" data-col="4"></div><div class="table-grid-cell" data-row="5" data-col="5"></div><div class="table-grid-cell" data-row="5" data-col="6"></div>
+                                <div class="table-grid-cell" data-row="6" data-col="1"></div><div class="table-grid-cell" data-row="6" data-col="2"></div><div class="table-grid-cell" data-row="6" data-col="3"></div><div class="table-grid-cell" data-row="6" data-col="4"></div><div class="table-grid-cell" data-row="6" data-col="5"></div><div class="table-grid-cell" data-row="6" data-col="6"></div>
+                            </div>
+                            <div class="table-grid-label" id="tableGridLabel" data-i18n="editor.table_grid_label">0 × 0</div>
+                        </div>
+                    </div>
                     <span class="editor-toolbar-separator"></span>
                     <!-- 块级 -->
                     <button class="editor-toolbar-btn" data-cmd="blockquote" data-i18n-title="editor.quote_title" title="引用块">
