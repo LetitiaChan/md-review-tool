@@ -1678,7 +1678,7 @@ body.rich-mode-active #richModeContainer {
     font-size: var(--vscode-editor-fontSize, 14px);
     line-height: 1.6;
     color: var(--vscode-editor-foreground);
-    background: var(--bg-white, var(--vscode-editor-background, #ffffff));
+    background: var(--vscode-editor-background);
     outline: none;
 }
 #richModeContainer .ProseMirror:focus {

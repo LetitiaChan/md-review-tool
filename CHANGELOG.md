@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### 🔧 Improvements
+- **Use VS Code default editor background/foreground in Rich Mode** — `#richModeContainer .ProseMirror` now uses `var(--vscode-editor-background)` directly instead of the custom `--bg-white` variable, so the editor background always matches the active VS Code theme without extra overrides.
+
 ### 🗑️ Removed
 - **Removed `MD Human Review: Open Review Panel` command** — The standalone WebviewPanel mode (`mdReview.openPanel`) has been completely removed. Users should now use "Open With..." → "MD Human Review" (Custom Editor) to open Markdown files for review. The `ReviewPanel` class (`src/reviewPanel.ts`) has been deleted along with all associated keybindings (`Ctrl+Enter`), context menus, and activation events.
 

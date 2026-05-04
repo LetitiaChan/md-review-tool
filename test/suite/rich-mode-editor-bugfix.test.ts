@@ -267,4 +267,36 @@ suite('Rich Mode Editor Bugfix Test Suite', () => {
         assert.ok(margin >= 360,
             `tableContextMenu 视口裁剪 margin 应 ≥ 360（实际 ${margin}），避免新增 Delete table 项被视口裁剪`);
     });
+
+    // ===== 编辑器背景/前景色使用 VSCode 默认 =====
+
+    test('BT-RichModeBugfix.T1.7 Tier1 — markdown.css #richModeContainer .ProseMirror 背景色应使用 --vscode-editor-background', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
+        // 提取 #richModeContainer .ProseMirror 规则块
+        const pmMatch = css.match(/#richModeContainer\s+\.ProseMirror\s*\{([^}]+)\}/);
+        assert.ok(pmMatch, '应能定位到 #richModeContainer .ProseMirror 规则块');
+        const ruleBody = pmMatch![1];
+        assert.ok(ruleBody.includes('var(--vscode-editor-background)'),
+            '背景色应直接使用 var(--vscode-editor-background)');
+        assert.ok(!ruleBody.includes('--bg-white'),
+            '背景色不应使用自定义 --bg-white 变量');
+    });
+
+    test('BT-RichModeBugfix.9 Tier3 — 编辑器前景色和背景色均使用 VSCode 默认变量，不额外覆盖', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'markdown.css'), 'utf-8');
+        const pmMatch = css.match(/#richModeContainer\s+\.ProseMirror\s*\{([^}]+)\}/);
+        assert.ok(pmMatch, '应能定位到 #richModeContainer .ProseMirror 规则块');
+        const ruleBody = pmMatch![1];
+        // 前景色应使用 --vscode-editor-foreground
+        assert.ok(ruleBody.includes('var(--vscode-editor-foreground)'),
+            '前景色应使用 var(--vscode-editor-foreground)');
+        // 背景色应使用 --vscode-editor-background（不带 fallback 硬编码色值）
+        const bgMatch = ruleBody.match(/background\s*:\s*([^;]+);/);
+        assert.ok(bgMatch, '应能提取 background 属性值');
+        const bgValue = bgMatch![1].trim();
+        assert.strictEqual(bgValue, 'var(--vscode-editor-background)',
+            `背景色应为纯 var(--vscode-editor-background)，实际为 "${bgValue}"`);
+    });
 });
