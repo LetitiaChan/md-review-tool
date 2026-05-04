@@ -2000,6 +2000,41 @@ body.rich-mode-active #editorToolbar {
 .image-popover {
     min-width: 240px;
 }
+.popover-pick-btn {
+    display: block;
+    width: 100%;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    border: 1px dashed var(--vscode-button-background, #0e639c);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--vscode-button-background, #0e639c);
+    cursor: pointer;
+    font-size: 12px;
+    text-align: center;
+    transition: background 0.15s, color 0.15s;
+}
+.popover-pick-btn:hover {
+    background: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #fff);
+}
+.popover-divider {
+    display: flex;
+    align-items: center;
+    margin: 4px 0 6px;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground, #888);
+}
+.popover-divider::before,
+.popover-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--vscode-input-border, rgba(128,128,128,0.3));
+}
+.popover-divider span {
+    padding: 0 8px;
+}
 .popover-input {
     display: block;
     width: 100%;

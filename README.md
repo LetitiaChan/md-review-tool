@@ -29,7 +29,7 @@
 - **💬 Add Comments** — Select text to add comments with image attachments (click, drag, or Ctrl+V paste)
 - **🗑️ Mark Deletion** — Select text to mark as pending deletion, displayed with strikethrough
 - **➕ Insert Content** — Select anchor text to insert new content (supports Markdown), with before/after insertion options
-- **✏️ Rich Mode Editor** — Click the pencil (✎) toolbar button to enter a ProseMirror-based structured editor with a formatting toolbar (Bold, Italic, Headings, Lists, etc.), syntax highlighting, diagram preview, smart paste, and annotation decorations
+- **✏️ Rich Mode Editor** — Click the pencil (✎) toolbar button to enter a ProseMirror-based structured editor with a formatting toolbar (Bold, Italic, Headings, Lists, etc.), syntax highlighting, diagram preview, smart paste, annotation decorations, and local image insertion (pick from file system or paste)
 - **📊 Table Editing** — Right-click tables in edit mode to insert/delete rows and columns
 - **📈 Diagram Source Editing** — In edit mode, Mermaid / PlantUML / Graphviz diagrams are converted to editable source code areas for direct modification
 - **🔄 Smart Edit Preservation** — Editing blockquotes, GitHub alert blocks, code blocks, math formulas, and diagrams preserves their original Markdown structure
@@ -276,7 +276,7 @@ MIT
 - **💬 添加评论** — 选中文字后添加评论，支持在评论中插入图片（点击、拖拽或 Ctrl+V 粘贴）
 - **🗑️ 标记删除** — 选中文字标记为待删除，以删除线样式展示
 - **➕ 插入内容** — 选中锚点文字后插入新内容（支持 Markdown 格式），可选择在锚点之前或之后插入
-- **✏️ 富文本编辑器** — 点击工具栏的铅笔（✎）按钮进入基于 ProseMirror 的结构化编辑器，支持语法高亮、图表预览、智能粘贴、批注装饰
+- **✏️ 富文本编辑器** — 点击工具栏的铅笔（✎）按钮进入基于 ProseMirror 的结构化编辑器，支持语法高亮、图表预览、智能粘贴、批注装饰、本地图片选取插入
 - **📊 表格编辑** — 编辑模式下右键表格可插入/删除行列
 - **📈 图表源码编辑** — 编辑模式下 Mermaid / PlantUML / Graphviz 图表自动转换为可编辑的源码区域，支持直接修改图表代码
 - **🔄 智能编辑保护** — 编辑引用块、GitHub 告警块、代码块、数学公式和图表时，保留原始 Markdown 结构不被破坏

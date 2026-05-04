@@ -4,10 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### ✨ New Features
+- **Pick local images in Rich Mode editor** — The image toolbar popover now includes a "📁 Pick Local Image" button that opens the native file picker dialog (via `vscode.window.showOpenDialog`). Selected images are copied to the configured `imageAssetsPath` directory and inserted into the editor with correct relative paths. Supports multi-select. The original URL input method is preserved below a divider.
+
 ### 🐛 Bug Fixes
 - **Fix pasted images not rendering in Rich Mode editor** — When pasting an image in Rich Mode, the image was saved to disk and a ProseMirror `image` node was inserted with a relative path (e.g. `assets/images/image-xxx.png`). However, the `Renderer._imageUriCache` did not contain a mapping for the newly saved image, so `image.toDOM()` fell back to the raw relative path which is inaccessible inside the webview sandbox — resulting in a broken image. Refreshing also failed because the cache was only built once during initial file load. Fix: `webviewHelper.ts` now returns the `webviewUri` alongside `relativePath` in the `imageSaved` response; `pm.entry.js` `handleImageSaved` updates the Renderer URI cache (both raw and decoded paths) before inserting the image node, ensuring `toDOM()` can resolve the correct webview URI immediately.
 
 ### ✅ Tests (Hotfix)
+- Added 13 regression assertions (`BT-PickLocalImage.T1.1~T1.7`, `BT-PickLocalImage.1~6`) covering: imagePickLocalBtn existence in HTML (Tier 1), popover-divider structure (Tier 1), pickImageForEditor message handler in compiled output and source (Tier 1), i18n keys for pick_local and or (Tier 1), app.bundle.js integration (Tier 1), CSS styles (Tier 1), showOpenDialog with image filters (Tier 3), copyFileSync usage (Tier 3), relativePath+webviewUri return (Tier 3), click event binding (Tier 3), URI cache update (Tier 3), cancel returns empty array (Tier 3). 920 passing, 0 failing.
 - Added 5 regression assertions (`BT-CssImgCursor.T1.7~T1.8`, `BT-CssImgCursor.7~9`) covering: `webviewUri` field in `imageSaved` response (Tier 1), URI cache update logic in `handleImageSaved` (Tier 1), cache-before-insert ordering (Tier 3), decoded path caching (Tier 3), and `pm-schema.js` image.toDOM cache lookup (Tier 3). 907 passing, 0 failing.
 
 ### 🔧 Improvements

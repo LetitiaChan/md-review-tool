@@ -120,6 +120,8 @@
         "editor.image_url_placeholder": "\u8F93\u5165\u56FE\u7247\u5730\u5740...",
         "editor.image_alt_placeholder": "\u66FF\u4EE3\u6587\u672C\uFF08\u53EF\u9009\uFF09",
         "editor.image_confirm": "\u786E\u8BA4",
+        "editor.image_pick_local": "\u{1F4C1} \u9009\u62E9\u672C\u5730\u56FE\u7247",
+        "editor.image_or": "\u6216",
         "editor.tips_title": "\u7F16\u8F91\u6A21\u5F0F\u98CE\u9669\u63D0\u793A",
         "editor.tips_close": "\u5173\u95ED",
         "editor.tips_warning1": "\u4FEE\u6539\u5185\u5BB9\u540E\uFF0C\u90E8\u5206 Markdown \u6269\u5C55\u8BED\u6CD5\u53EF\u80FD\u4E22\u5931\uFF08\u5982\u56FE\u8868\u3001GitHub \u544A\u8B66\u5757\u7B49\uFF09",
@@ -626,6 +628,8 @@
         "editor.image_url_placeholder": "Enter image URL...",
         "editor.image_alt_placeholder": "Alt text (optional)",
         "editor.image_confirm": "Confirm",
+        "editor.image_pick_local": "\u{1F4C1} Pick Local Image",
+        "editor.image_or": "or",
         "editor.tips_title": "Edit Mode Warning",
         "editor.tips_close": "Close",
         "editor.tips_warning1": "After editing, some Markdown extended syntax may be lost (e.g., math formulas, Mermaid diagrams, GitHub alert blocks, etc.)",
@@ -6774,6 +6778,33 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       const confirmBtn = document.getElementById("imageConfirmBtn");
       const urlInput = document.getElementById("imageUrlInput");
       const altInput = document.getElementById("imageAltInput");
+      const pickLocalBtn = document.getElementById("imagePickLocalBtn");
+      if (pickLocalBtn) {
+        pickLocalBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          try {
+            const result = await callHost("pickImageForEditor", {});
+            if (result && result.images && result.images.length > 0) {
+              for (const img of result.images) {
+                if (img.relativePath && EditMode.isRichActive()) {
+                  if (img.webviewUri && globalThis.Renderer && globalThis.Renderer.getImageUriCache) {
+                    const cache = globalThis.Renderer.getImageUriCache();
+                    cache[img.relativePath] = img.webviewUri;
+                    try {
+                      cache[decodeURIComponent(img.relativePath)] = img.webviewUri;
+                    } catch (_e) {
+                    }
+                  }
+                  EditMode.execCommand("insertImage", { src: img.relativePath, alt: "" });
+                }
+              }
+            }
+          } catch (err) {
+            console.warn("[app] pickImageForEditor failed:", err);
+          }
+          closeAllPopovers();
+        });
+      }
       if (confirmBtn && urlInput) {
         confirmBtn.addEventListener("click", (e) => {
           e.stopPropagation();

@@ -219,6 +219,58 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
                 }
                 break;
             }
+            case 'pickImageForEditor': {
+                try {
+                    const uris = await vscode.window.showOpenDialog({
+                        canSelectMany: true,
+                        filters: { 'Images': ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg'] },
+                        title: 'Select Image'
+                    });
+                    if (!uris || uris.length === 0) {
+                        ctx.postMessage({ type: 'pickImageForEditorResult', payload: { success: true, images: [] }, requestId });
+                        break;
+                    }
+                    const config = vscode.workspace.getConfiguration('mdReview');
+                    const assetsPath = config.get<string>('imageAssetsPath', 'assets/images');
+                    let baseDir: string;
+                    const currentFilePath = ctx.getCurrentFilePath();
+                    if (currentFilePath) {
+                        baseDir = path.dirname(currentFilePath);
+                    } else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+                        baseDir = vscode.workspace.workspaceFolders[0].uri.fsPath;
+                    } else {
+                        ctx.postMessage({ type: 'pickImageForEditorResult', payload: { success: false, error: 'No workspace folder', images: [] }, requestId });
+                        break;
+                    }
+                    const targetDir = path.join(baseDir, assetsPath);
+                    if (!fs.existsSync(targetDir)) {
+                        fs.mkdirSync(targetDir, { recursive: true });
+                    }
+                    const images: { relativePath: string; webviewUri: string }[] = [];
+                    for (const uri of uris) {
+                        const ext = path.extname(uri.fsPath).toLowerCase();
+                        const originalName = path.basename(uri.fsPath, ext);
+                        const now = new Date();
+                        const timestamp = now.getFullYear().toString() +
+                            String(now.getMonth() + 1).padStart(2, '0') +
+                            String(now.getDate()).padStart(2, '0') + '-' +
+                            String(now.getHours()).padStart(2, '0') +
+                            String(now.getMinutes()).padStart(2, '0') +
+                            String(now.getSeconds()).padStart(2, '0');
+                        const random = Math.random().toString(36).slice(2, 6);
+                        const filename = `${originalName}-${timestamp}-${random}${ext}`;
+                        const targetPath = path.join(targetDir, filename);
+                        fs.copyFileSync(uri.fsPath, targetPath);
+                        const relativePath = path.posix.join(assetsPath, filename).replace(/\\/g, '/');
+                        const webviewUri = ctx.webview.asWebviewUri(vscode.Uri.file(targetPath)).toString();
+                        images.push({ relativePath, webviewUri });
+                    }
+                    ctx.postMessage({ type: 'pickImageForEditorResult', payload: { success: true, images }, requestId });
+                } catch (e: any) {
+                    ctx.postMessage({ type: 'pickImageForEditorResult', payload: { success: false, error: e.message, images: [] }, requestId });
+                }
+                break;
+            }
             case 'saveAnnotationImage': {
                 try {
                     const result = ctx.fileService.saveAnnotationImage(payload.base64Data, payload.fileName, payload.sourceDir);

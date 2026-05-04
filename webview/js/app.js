@@ -1926,6 +1926,31 @@ this.innerHTML = t('modal.ai_result.copied');
         const confirmBtn = document.getElementById('imageConfirmBtn');
         const urlInput = document.getElementById('imageUrlInput');
         const altInput = document.getElementById('imageAltInput');
+        const pickLocalBtn = document.getElementById('imagePickLocalBtn');
+        if (pickLocalBtn) {
+            pickLocalBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                try {
+                    const result = await callHost('pickImageForEditor', {});
+                    if (result && result.images && result.images.length > 0) {
+                        for (const img of result.images) {
+                            if (img.relativePath && EditMode.isRichActive()) {
+                                // 更新 Renderer 图片 URI 缓存
+                                if (img.webviewUri && globalThis.Renderer && globalThis.Renderer.getImageUriCache) {
+                                    const cache = globalThis.Renderer.getImageUriCache();
+                                    cache[img.relativePath] = img.webviewUri;
+                                    try { cache[decodeURIComponent(img.relativePath)] = img.webviewUri; } catch (_e) { /* ignore */ }
+                                }
+                                EditMode.execCommand('insertImage', { src: img.relativePath, alt: '' });
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.warn('[app] pickImageForEditor failed:', err);
+                }
+                closeAllPopovers();
+            });
+        }
         if (confirmBtn && urlInput) {
             confirmBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
