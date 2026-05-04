@@ -988,6 +988,25 @@
         </div>
     </div>
 
+    <!-- 超链接浮动编辑菜单（Rich Mode 编辑模式下点击链接时显示） -->
+    <div class="link-bubble-menu" id="linkBubbleMenu" style="display:none;">
+        <span class="link-bubble-url" id="linkBubbleUrl" data-i18n-title="editor.link_bubble_open" title="在新选项卡打开链接"></span>
+        <div class="link-bubble-actions">
+            <button class="link-bubble-btn" id="linkBubbleEdit" data-i18n-title="editor.link_bubble_edit" title="编辑链接">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.4 1.6a1.4 1.4 0 0 1 2 0l1 1a1.4 1.4 0 0 1 0 2L5.8 13.2 2 14l.8-3.8L11.4 1.6z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 3.4l2.6 2.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </button>
+            <button class="link-bubble-btn" id="linkBubbleOpen" data-i18n-title="editor.link_bubble_open" title="在新选项卡打开链接">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M9 2h5v5M14 2L7 9M6 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1v-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="link-bubble-btn" id="linkBubbleCopy" data-i18n-title="editor.link_bubble_copy" title="复制链接">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="9" height="9" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M3 11V3a1 1 0 011-1h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </button>
+            <button class="link-bubble-btn link-bubble-btn-danger" id="linkBubbleUnlink" data-i18n-title="editor.link_bubble_unlink" title="取消链接">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M7 9L5.5 10.5a2.5 2.5 0 010-3.5L7 5.5M9 7l1.5-1.5a2.5 2.5 0 010 3.5L9 10.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+    </div>
+
     <!-- 引入第三方库 -->
     <script src="${markedUri}"></script>
     <script src="${markedFootnoteUri}"></script>

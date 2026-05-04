@@ -446,6 +446,15 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
                 ctx.postMessage({ type: 'documentDirtyState', payload: { isDirty }, requestId });
                 break;
             }
+            case 'openExternalLink': {
+                const url = payload.url || '';
+                if (url) {
+                    try {
+                        await vscode.env.openExternal(vscode.Uri.parse(url));
+                    } catch (e: any) { /* 容错 */ }
+                }
+                break;
+            }
             case 'refresh.showDirtyConfirm': {
                 const lang = vscode.workspace.getConfiguration('mdReview').get<string>('language', 'zh-CN');
                 const msg = lang === 'zh-CN'

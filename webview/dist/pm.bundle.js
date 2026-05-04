@@ -28592,11 +28592,26 @@
         }
       },
       handleDOMEvents: {
-        // 编辑模式下阻止超链接点击跳转
+        // 编辑模式下阻止超链接点击跳转，并派发浮动菜单事件
         click(view2, event) {
           const target = event.target;
-          if (target && (target.tagName === "A" || target.closest && target.closest("a"))) {
+          const anchor = target && (target.tagName === "A" ? target : target.closest && target.closest("a"));
+          if (anchor) {
             event.preventDefault();
+            try {
+              const rect = anchor.getBoundingClientRect();
+              window.dispatchEvent(new CustomEvent("pm-link-click", {
+                detail: {
+                  href: anchor.getAttribute("href") || "",
+                  title: anchor.getAttribute("title") || "",
+                  text: anchor.textContent || "",
+                  rect: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, width: rect.width, height: rect.height }
+                }
+              }));
+            } catch (e) {
+            }
+          } else {
+            window.dispatchEvent(new CustomEvent("pm-link-click", { detail: null }));
           }
           return false;
         }

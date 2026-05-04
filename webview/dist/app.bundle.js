@@ -119,6 +119,11 @@
         "editor.link_url_placeholder": "\u8F93\u5165\u94FE\u63A5\u5730\u5740...",
         "editor.link_title_placeholder": "\u94FE\u63A5\u6807\u9898\uFF08\u53EF\u9009\uFF09",
         "editor.link_confirm": "\u786E\u8BA4",
+        "editor.link_bubble_open": "\u5728\u65B0\u9009\u9879\u5361\u6253\u5F00\u94FE\u63A5",
+        "editor.link_bubble_edit": "\u7F16\u8F91\u94FE\u63A5",
+        "editor.link_bubble_copy": "\u590D\u5236\u94FE\u63A5",
+        "editor.link_bubble_unlink": "\u53D6\u6D88\u94FE\u63A5",
+        "editor.link_bubble_copied": "\u94FE\u63A5\u5DF2\u590D\u5236",
         "editor.image_url_placeholder": "\u8F93\u5165\u56FE\u7247\u5730\u5740...",
         "editor.image_alt_placeholder": "\u66FF\u4EE3\u6587\u672C\uFF08\u53EF\u9009\uFF09",
         "editor.image_confirm": "\u786E\u8BA4",
@@ -629,6 +634,11 @@
         "editor.link_url_placeholder": "Enter URL...",
         "editor.link_title_placeholder": "Link title (optional)",
         "editor.link_confirm": "Confirm",
+        "editor.link_bubble_open": "Open link in new tab",
+        "editor.link_bubble_edit": "Edit link",
+        "editor.link_bubble_copy": "Copy link",
+        "editor.link_bubble_unlink": "Unlink",
+        "editor.link_bubble_copied": "Link copied",
         "editor.image_url_placeholder": "Enter image URL...",
         "editor.image_alt_placeholder": "Alt text (optional)",
         "editor.image_confirm": "Confirm",
@@ -5403,6 +5413,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         });
         setupColorPopover();
         setupLinkPopover();
+        setupLinkBubbleMenu();
         setupImagePopover();
         setupEmojiPopover();
         setupAlertTypePopover();
@@ -6811,6 +6822,124 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         if (wrapper) {
           toggleToolbarPopover(wrapper);
         }
+      });
+    }
+    function setupLinkBubbleMenu() {
+      const menu = document.getElementById("linkBubbleMenu");
+      const urlEl = document.getElementById("linkBubbleUrl");
+      const editBtn = document.getElementById("linkBubbleEdit");
+      const openBtn = document.getElementById("linkBubbleOpen");
+      const copyBtn = document.getElementById("linkBubbleCopy");
+      const unlinkBtn = document.getElementById("linkBubbleUnlink");
+      if (!menu || !urlEl) return;
+      let _currentHref = "";
+      function showBubbleMenu(detail) {
+        if (!detail || !detail.href || !detail.rect) {
+          hideBubbleMenu();
+          return;
+        }
+        _currentHref = detail.href;
+        const displayUrl = detail.href.length > 40 ? detail.href.slice(0, 37) + "..." : detail.href;
+        urlEl.textContent = displayUrl;
+        urlEl.title = detail.href;
+        menu.style.display = "flex";
+        const rect = detail.rect;
+        const menuRect = menu.getBoundingClientRect();
+        let left = rect.left + (rect.width - menuRect.width) / 2;
+        let top = rect.bottom + 6;
+        if (left < 4) left = 4;
+        if (left + menuRect.width > window.innerWidth - 4) left = window.innerWidth - menuRect.width - 4;
+        if (top + menuRect.height > window.innerHeight - 4) {
+          top = rect.top - menuRect.height - 6;
+        }
+        menu.style.left = left + "px";
+        menu.style.top = top + "px";
+      }
+      function hideBubbleMenu() {
+        menu.style.display = "none";
+        _currentHref = "";
+      }
+      window.addEventListener("pm-link-click", (e) => {
+        if (!EditMode.isRichActive()) {
+          hideBubbleMenu();
+          return;
+        }
+        const detail = e.detail;
+        if (detail && detail.href) {
+          showBubbleMenu(detail);
+        } else {
+          hideBubbleMenu();
+        }
+      });
+      if (urlEl) {
+        urlEl.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (_currentHref) {
+            callHost("openExternalLink", { url: _currentHref });
+          }
+        });
+      }
+      if (editBtn) {
+        editBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          hideBubbleMenu();
+          const wrapper = document.getElementById("btnLink");
+          if (wrapper) toggleToolbarPopover(wrapper);
+        });
+      }
+      if (openBtn) {
+        openBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (_currentHref) {
+            callHost("openExternalLink", { url: _currentHref });
+          }
+          hideBubbleMenu();
+        });
+      }
+      if (copyBtn) {
+        copyBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (_currentHref) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(_currentHref).catch(() => {
+              });
+            }
+            showNotification(I18n.t("editor.link_bubble_copied"));
+          }
+          hideBubbleMenu();
+        });
+      }
+      if (unlinkBtn) {
+        unlinkBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (EditMode.isRichActive()) {
+            let attrs = null;
+            try {
+              attrs = EditMode.getLinkAttrsAtSelection ? EditMode.getLinkAttrsAtSelection() : null;
+            } catch (err) {
+            }
+            if (attrs && EditMode.setSelectionRange) {
+              try {
+                EditMode.setSelectionRange(attrs.from, attrs.to);
+              } catch (err) {
+              }
+            }
+            EditMode.execCommand("link", { href: "", text: "" });
+          }
+          hideBubbleMenu();
+        });
+      }
+      document.addEventListener("mousedown", (e) => {
+        if (menu.style.display !== "none" && !menu.contains(e.target)) {
+          hideBubbleMenu();
+        }
+      });
+      const scrollContainer = document.getElementById("documentContent") || document;
+      scrollContainer.addEventListener("scroll", () => {
+        if (menu.style.display !== "none") hideBubbleMenu();
+      }, { passive: true });
+      window.addEventListener("rich-mode-exit", () => {
+        hideBubbleMenu();
       });
     }
     function setupImagePopover() {

@@ -300,6 +300,8 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
             setupColorPopover();
             // 链接输入事件
             setupLinkPopover();
+            // 超链接浮动编辑菜单
+            setupLinkBubbleMenu();
             // 图片输入事件
             setupImagePopover();
             // Emoji 面板事件
@@ -1955,6 +1957,139 @@ this.innerHTML = t('modal.ai_result.copied');
                 toggleToolbarPopover(wrapper);
             }
         });
+    }
+
+    // ===== 超链接浮动编辑菜单 (Link Bubble Menu) =====
+    function setupLinkBubbleMenu() {
+        const menu = document.getElementById('linkBubbleMenu');
+        const urlEl = document.getElementById('linkBubbleUrl');
+        const editBtn = document.getElementById('linkBubbleEdit');
+        const openBtn = document.getElementById('linkBubbleOpen');
+        const copyBtn = document.getElementById('linkBubbleCopy');
+        const unlinkBtn = document.getElementById('linkBubbleUnlink');
+        if (!menu || !urlEl) return;
+
+        let _currentHref = '';
+
+        function showBubbleMenu(detail) {
+            if (!detail || !detail.href || !detail.rect) {
+                hideBubbleMenu();
+                return;
+            }
+            _currentHref = detail.href;
+            // 显示 URL（截断过长的链接）
+            const displayUrl = detail.href.length > 40 ? detail.href.slice(0, 37) + '...' : detail.href;
+            urlEl.textContent = displayUrl;
+            urlEl.title = detail.href;
+            // 定位菜单：在链接下方居中
+            menu.style.display = 'flex';
+            const rect = detail.rect;
+            const menuRect = menu.getBoundingClientRect();
+            let left = rect.left + (rect.width - menuRect.width) / 2;
+            let top = rect.bottom + 6;
+            // 视口边界修正
+            if (left < 4) left = 4;
+            if (left + menuRect.width > window.innerWidth - 4) left = window.innerWidth - menuRect.width - 4;
+            if (top + menuRect.height > window.innerHeight - 4) {
+                top = rect.top - menuRect.height - 6; // 放到链接上方
+            }
+            menu.style.left = left + 'px';
+            menu.style.top = top + 'px';
+        }
+
+        function hideBubbleMenu() {
+            menu.style.display = 'none';
+            _currentHref = '';
+        }
+
+        // 监听 PM 链接点击事件
+        window.addEventListener('pm-link-click', (e) => {
+            if (!EditMode.isRichActive()) { hideBubbleMenu(); return; }
+            const detail = e.detail;
+            if (detail && detail.href) {
+                showBubbleMenu(detail);
+            } else {
+                hideBubbleMenu();
+            }
+        });
+
+        // 点击 URL 文本 → 在新标签页打开
+        if (urlEl) {
+            urlEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (_currentHref) {
+                    callHost('openExternalLink', { url: _currentHref });
+                }
+            });
+        }
+
+        // 编辑按钮 → 打开工具栏 link popover
+        if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                hideBubbleMenu();
+                const wrapper = document.getElementById('btnLink');
+                if (wrapper) toggleToolbarPopover(wrapper);
+            });
+        }
+
+        // 在新标签页打开
+        if (openBtn) {
+            openBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (_currentHref) {
+                    callHost('openExternalLink', { url: _currentHref });
+                }
+                hideBubbleMenu();
+            });
+        }
+
+        // 复制链接
+        if (copyBtn) {
+            copyBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (_currentHref) {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(_currentHref).catch(() => {});
+                    }
+                    showNotification(I18n.t('editor.link_bubble_copied'));
+                }
+                hideBubbleMenu();
+            });
+        }
+
+        // 取消链接（移除 link mark）
+        if (unlinkBtn) {
+            unlinkBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (EditMode.isRichActive()) {
+                    // 获取当前链接范围并扩展选区
+                    let attrs = null;
+                    try { attrs = EditMode.getLinkAttrsAtSelection ? EditMode.getLinkAttrsAtSelection() : null; } catch (err) { /* 容错 */ }
+                    if (attrs && EditMode.setSelectionRange) {
+                        try { EditMode.setSelectionRange(attrs.from, attrs.to); } catch (err) { /* 容错 */ }
+                    }
+                    EditMode.execCommand('link', { href: '', text: '' });
+                }
+                hideBubbleMenu();
+            });
+        }
+
+        // 点击菜单外部关闭
+        document.addEventListener('mousedown', (e) => {
+            if (menu.style.display !== 'none' && !menu.contains(e.target)) {
+                hideBubbleMenu();
+            }
+        });
+
+        // 滚动时关闭
+        const scrollContainer = document.getElementById('documentContent') || document;
+        scrollContainer.addEventListener('scroll', () => {
+            if (menu.style.display !== 'none') hideBubbleMenu();
+        }, { passive: true });
+
+        // Rich Mode 退出时关闭
+        window.addEventListener('rich-mode-exit', () => { hideBubbleMenu(); });
     }
 
     function setupImagePopover() {

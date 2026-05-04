@@ -508,11 +508,27 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
             diagram(node, view, getPos) { return new DiagramNodeView(node, view, getPos); },
         },
         handleDOMEvents: {
-            // 编辑模式下阻止超链接点击跳转
+            // 编辑模式下阻止超链接点击跳转，并派发浮动菜单事件
             click(view, event) {
                 const target = event.target;
-                if (target && (target.tagName === 'A' || (target.closest && target.closest('a')))) {
+                const anchor = target && (target.tagName === 'A' ? target : (target.closest && target.closest('a')));
+                if (anchor) {
                     event.preventDefault();
+                    // 派发 pm-link-click 事件，携带链接 DOM 坐标和属性
+                    try {
+                        const rect = anchor.getBoundingClientRect();
+                        window.dispatchEvent(new CustomEvent('pm-link-click', {
+                            detail: {
+                                href: anchor.getAttribute('href') || '',
+                                title: anchor.getAttribute('title') || '',
+                                text: anchor.textContent || '',
+                                rect: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, width: rect.width, height: rect.height },
+                            }
+                        }));
+                    } catch (e) { /* 容错 */ }
+                } else {
+                    // 点击非链接区域，关闭浮动菜单
+                    window.dispatchEvent(new CustomEvent('pm-link-click', { detail: null }));
                 }
                 return false; // 不阻止 ProseMirror 继续处理（光标定位等）
             },
