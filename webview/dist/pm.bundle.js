@@ -27625,16 +27625,49 @@
       }
     });
   }
+  function taskListPlugin(md2) {
+    md2.core.ruler.after("inline", "task_list", function(state) {
+      const tokens = state.tokens;
+      for (let i = 0; i < tokens.length; i++) {
+        if (tokens[i].type !== "list_item_open") continue;
+        let j = i + 1;
+        while (j < tokens.length && tokens[j].type !== "list_item_close") {
+          if (tokens[j].type === "inline") {
+            const content = tokens[j].content;
+            const taskMatch = content.match(/^\[([ xX])\]\s?/);
+            if (taskMatch) {
+              const checked = taskMatch[1] !== " ";
+              if (!tokens[i].meta) tokens[i].meta = {};
+              tokens[i].meta.checked = checked;
+              tokens[j].content = content.slice(taskMatch[0].length);
+              if (tokens[j].children && tokens[j].children.length > 0) {
+                const firstChild = tokens[j].children[0];
+                if (firstChild.type === "text") {
+                  firstChild.content = firstChild.content.slice(taskMatch[0].length);
+                  if (firstChild.content === "") {
+                    tokens[j].children.shift();
+                  }
+                }
+              }
+            }
+            break;
+          }
+          j++;
+        }
+      }
+    });
+  }
   md.use(frontmatterPlugin);
   md.use(mathPlugin);
   md.use(ghAlertPlugin);
   md.use(coloredTextPlugin);
   md.use(diagramPlugin);
   md.use(htmlTagConverterPlugin);
+  md.use(taskListPlugin);
   var parser = new MarkdownParser(schema, md, {
     blockquote: { block: "blockquote" },
     paragraph: { block: "paragraph" },
-    list_item: { block: "list_item" },
+    list_item: { block: "list_item", getAttrs: (tok) => ({ checked: tok.meta && tok.meta.checked !== void 0 ? tok.meta.checked : null }) },
     bullet_list: { block: "bullet_list" },
     ordered_list: { block: "ordered_list", getAttrs: (tok) => ({ start: +tok.attrGet("start") || 1 }) },
     heading: { block: "heading", getAttrs: (tok) => ({ level: +tok.tag.slice(1) }) },

@@ -316,6 +316,49 @@ function htmlTagConverterPlugin(md) {
     });
 }
 
+/**
+ * Task List 插件：识别 list_item 中以 [ ] 或 [x]/[X] 开头的内容，
+ * 在 list_item_open token 上设置 meta.checked 属性，并从 inline 内容中移除前缀。
+ * 这样 MarkdownParser 的 getAttrs 就能正确读取 checked 状态。
+ */
+function taskListPlugin(md) {
+    md.core.ruler.after('inline', 'task_list', function (state) {
+        const tokens = state.tokens;
+        for (let i = 0; i < tokens.length; i++) {
+            if (tokens[i].type !== 'list_item_open') continue;
+            // 找到 list_item_open 后面的第一个 inline token（通常在 paragraph_open 之后）
+            let j = i + 1;
+            while (j < tokens.length && tokens[j].type !== 'list_item_close') {
+                if (tokens[j].type === 'inline') {
+                    const content = tokens[j].content;
+                    // 匹配 [ ] 或 [x]/[X] 开头
+                    const taskMatch = content.match(/^\[([ xX])\]\s?/);
+                    if (taskMatch) {
+                        const checked = taskMatch[1] !== ' ';
+                        // 在 list_item_open 上设置 meta
+                        if (!tokens[i].meta) tokens[i].meta = {};
+                        tokens[i].meta.checked = checked;
+                        // 从 inline 内容中移除 [ ] / [x] 前缀
+                        tokens[j].content = content.slice(taskMatch[0].length);
+                        // 同时更新 children（如果已经生成）
+                        if (tokens[j].children && tokens[j].children.length > 0) {
+                            const firstChild = tokens[j].children[0];
+                            if (firstChild.type === 'text') {
+                                firstChild.content = firstChild.content.slice(taskMatch[0].length);
+                                if (firstChild.content === '') {
+                                    tokens[j].children.shift();
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                j++;
+            }
+        }
+    });
+}
+
 // 注册插件
 md.use(frontmatterPlugin);
 md.use(mathPlugin);
@@ -323,12 +366,13 @@ md.use(ghAlertPlugin);
 md.use(coloredTextPlugin);
 md.use(diagramPlugin);
 md.use(htmlTagConverterPlugin);
+md.use(taskListPlugin);
 
 // ===== MarkdownParser 配置 =====
 const parser = new MarkdownParser(schema, md, {
     blockquote: { block: 'blockquote' },
     paragraph: { block: 'paragraph' },
-    list_item: { block: 'list_item' },
+    list_item: { block: 'list_item', getAttrs: tok => ({ checked: tok.meta && tok.meta.checked !== undefined ? tok.meta.checked : null }) },
     bullet_list: { block: 'bullet_list' },
     ordered_list: { block: 'ordered_list', getAttrs: tok => ({ start: +tok.attrGet('start') || 1 }) },
     heading: { block: 'heading', getAttrs: tok => ({ level: +tok.tag.slice(1) }) },
