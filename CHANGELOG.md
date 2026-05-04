@@ -7,8 +7,11 @@ All notable changes to this project will be documented in this file.
 ### 🔧 Improvements
 - **Use VS Code default editor background/foreground in Rich Mode** — `#richModeContainer .ProseMirror` now uses `var(--vscode-editor-background)` directly instead of the custom `--bg-white` variable, so the editor background always matches the active VS Code theme without extra overrides.
 
+### ✨ Restored Features
+- **Restore context menus for Markdown files** — Right-click context menus (`explorer/context`, `editor/context`, `editor/title`, `editor/title/context`) are back with a new `mdReview.openWithReview` command that opens Markdown files directly in the Custom Editor via `vscode.openWith`. The `Ctrl+Enter` keyboard shortcut in the file explorer is also restored.
+
 ### 🗑️ Removed
-- **Removed `MD Human Review: Open Review Panel` command** — The standalone WebviewPanel mode (`mdReview.openPanel`) has been completely removed. Users should now use "Open With..." → "MD Human Review" (Custom Editor) to open Markdown files for review. The `ReviewPanel` class (`src/reviewPanel.ts`) has been deleted along with all associated keybindings (`Ctrl+Enter`), context menus, and activation events.
+- **Removed `MD Human Review: Open Review Panel` command** — The standalone WebviewPanel mode (`mdReview.openPanel`) has been completely removed. Users should now use the context menu "Open with Review" or "Open With..." → "MD Human Review" (Custom Editor) to open Markdown files for review. The `ReviewPanel` class (`src/reviewPanel.ts`) has been deleted along with all associated activation events.
 
 ### ✨ New Features
 - **Custom Editor Provider ("Open With..." integration)** — The extension now registers as a `CustomTextEditorProvider` for `.md`, `.mdc`, and `.markdown` files with `priority: "option"`. Users can right-click any Markdown file in VS Code Explorer → "Open With..." → "MD Human Review" to open it with native dirty-state indicators (●), Ctrl+S save, and close-confirmation dialogs. The existing `mdReview.openPanel` command continues to work as before.

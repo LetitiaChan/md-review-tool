@@ -67,6 +67,7 @@
     "Other"
   ],
   "activationEvents": [
+    "onCommand:mdReview.openWithReview",
     "onCustomEditor:mdReview.markdownEditor"
   ],
   "main": "./out/extension.js",
@@ -98,16 +99,55 @@
     ],
     "commands": [
       {
+        "command": "mdReview.openWithReview",
+        "title": "%command.openWithReview%",
+        "icon": "$(edit)"
+      },
+      {
         "command": "mdReview.exportReview",
         "title": "%command.exportReview%"
       }
     ],
-    "menus": {},
+    "menus": {
+      "editor/context": [
+        {
+          "command": "mdReview.openWithReview",
+          "when": "resourceExtname == .md || resourceExtname == .markdown || resourceExtname == .mdc",
+          "group": "navigation@0"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "mdReview.openWithReview",
+          "when": "resourceExtname == .md || resourceExtname == .markdown || resourceExtname == .mdc",
+          "group": "navigation@0"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "mdReview.openWithReview",
+          "when": "resourceExtname == .md || resourceExtname == .markdown || resourceExtname == .mdc",
+          "group": "navigation@0"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "mdReview.openWithReview",
+          "when": "resourceExtname == .md || resourceExtname == .markdown || resourceExtname == .mdc",
+          "group": "navigation@0"
+        }
+      ]
+    },
     "keybindings": [
       {
         "command": "mdReview.exportReview",
         "key": "ctrl+e",
         "when": "mdReviewPanelFocused"
+      },
+      {
+        "command": "mdReview.openWithReview",
+        "key": "ctrl+enter",
+        "when": "filesExplorerFocus && resourceExtname =~ /^\\.(md|markdown|mdc)$/"
       }
     ],
     "configuration": {

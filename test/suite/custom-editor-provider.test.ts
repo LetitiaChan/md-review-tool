@@ -208,4 +208,64 @@ suite('Custom Editor Provider Tests', () => {
             'app.bundle.js 不应包含 updateFileSelectHighlight —— 确保源码清理后 esbuild 产物同步更新'
         );
     });
+
+    // ===== 右键菜单恢复（openWithReview 命令） =====
+
+    test('BT-custom-editor.T1.29 Tier1 — package.json 应注册 mdReview.openWithReview 命令', () => {
+        const pkgPath = path.join(projectRoot, 'package.json');
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        const cmds = pkg.contributes.commands.map((c: any) => c.command);
+        assert.ok(cmds.includes('mdReview.openWithReview'),
+            'commands 应包含 mdReview.openWithReview');
+    });
+
+    test('BT-custom-editor.T1.30 Tier1 — package.json menus 应包含 explorer/context 和 editor/context', () => {
+        const pkgPath = path.join(projectRoot, 'package.json');
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        const menus = pkg.contributes.menus;
+        assert.ok(menus['explorer/context'], 'menus 应包含 explorer/context');
+        assert.ok(menus['editor/context'], 'menus 应包含 editor/context');
+        assert.ok(menus['editor/title'], 'menus 应包含 editor/title');
+        assert.ok(menus['editor/title/context'], 'menus 应包含 editor/title/context');
+    });
+
+    test('BT-custom-editor.T1.31 Tier1 — extension.ts 应注册 openWithReview 命令', () => {
+        const content = fs.readFileSync(path.join(projectRoot, 'src', 'extension.ts'), 'utf-8');
+        assert.ok(content.includes("'mdReview.openWithReview'"),
+            'extension.ts 应注册 mdReview.openWithReview 命令');
+    });
+
+    test('BT-custom-editor.T1.32 Tier1 — i18n 应包含 openWithReview 中英文翻译', () => {
+        const nlsEn = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.nls.json'), 'utf-8'));
+        const nlsZh = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.nls.zh-cn.json'), 'utf-8'));
+        assert.ok(nlsEn['command.openWithReview'], 'package.nls.json 应包含 command.openWithReview');
+        assert.ok(nlsZh['command.openWithReview'], 'package.nls.zh-cn.json 应包含 command.openWithReview');
+    });
+
+    test('BT-custom-editor.29 Tier3 — 右键菜单项应指向 openWithReview 而非已移除的 openPanel', () => {
+        const pkgPath = path.join(projectRoot, 'package.json');
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        const menus = pkg.contributes.menus;
+        // 所有菜单位置的命令都应为 openWithReview
+        for (const location of ['explorer/context', 'editor/context', 'editor/title', 'editor/title/context']) {
+            const items = menus[location];
+            assert.ok(Array.isArray(items) && items.length > 0, `${location} 应有菜单项`);
+            for (const item of items) {
+                assert.strictEqual(item.command, 'mdReview.openWithReview',
+                    `${location} 菜单项应指向 mdReview.openWithReview，而非 ${item.command}`);
+            }
+        }
+        // 确保不引用已移除的 openPanel
+        const pkgStr = JSON.stringify(pkg);
+        assert.ok(!pkgStr.includes('mdReview.openPanel'),
+            'package.json 不应引用已移除的 mdReview.openPanel 命令');
+    });
+
+    test('BT-custom-editor.30 Tier3 — openWithReview 命令实现应使用 vscode.openWith 打开 Custom Editor', () => {
+        const content = fs.readFileSync(path.join(projectRoot, 'src', 'extension.ts'), 'utf-8');
+        assert.ok(content.includes('vscode.openWith'),
+            'openWithReview 命令应调用 vscode.openWith');
+        assert.ok(content.includes('mdReview.markdownEditor'),
+            'openWithReview 命令应指定 mdReview.markdownEditor viewType');
+    });
 });
