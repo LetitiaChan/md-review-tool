@@ -20970,7 +20970,14 @@
       }],
       toDOM(node) {
         if (node.attrs.checked !== null) {
-          return ["li", { class: "task-list-item" }, 0];
+          const checkboxAttrs = { type: "checkbox", class: "task-list-checkbox" };
+          if (node.attrs.checked) checkboxAttrs.checked = "checked";
+          return [
+            "li",
+            { class: `task-list-item${node.attrs.checked ? " checked" : ""}` },
+            ["input", checkboxAttrs],
+            ["span", { class: "task-list-content" }, 0]
+          ];
         }
         return ["li", 0];
       },
@@ -28589,6 +28596,43 @@
       nodeViews: {
         diagram(node, view2, getPos) {
           return new DiagramNodeView(node, view2, getPos);
+        },
+        list_item(node, view2, getPos) {
+          if (node.attrs.checked === null) return void 0;
+          const dom = document.createElement("li");
+          dom.classList.add("task-list-item");
+          if (node.attrs.checked) dom.classList.add("checked");
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.classList.add("task-list-checkbox");
+          checkbox.checked = node.attrs.checked;
+          checkbox.contentEditable = "false";
+          checkbox.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            const pos = getPos();
+            if (pos == null) return;
+            const currentChecked = view2.state.doc.nodeAt(pos)?.attrs.checked;
+            const tr = view2.state.tr.setNodeMarkup(pos, null, {
+              ...view2.state.doc.nodeAt(pos).attrs,
+              checked: !currentChecked
+            });
+            view2.dispatch(tr);
+          });
+          const contentDOM = document.createElement("span");
+          contentDOM.classList.add("task-list-content");
+          dom.appendChild(checkbox);
+          dom.appendChild(contentDOM);
+          return {
+            dom,
+            contentDOM,
+            update(updatedNode) {
+              if (updatedNode.type.name !== "list_item") return false;
+              if (updatedNode.attrs.checked === null) return false;
+              checkbox.checked = updatedNode.attrs.checked;
+              dom.classList.toggle("checked", updatedNode.attrs.checked);
+              return true;
+            }
+          };
         }
       },
       handleDOMEvents: {

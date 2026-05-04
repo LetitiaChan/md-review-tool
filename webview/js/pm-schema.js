@@ -143,7 +143,12 @@ const nodes = {
         }],
         toDOM(node) {
             if (node.attrs.checked !== null) {
-                return ['li', { class: 'task-list-item' }, 0];
+                const checkboxAttrs = { type: 'checkbox', class: 'task-list-checkbox' };
+                if (node.attrs.checked) checkboxAttrs.checked = 'checked';
+                return ['li', { class: `task-list-item${node.attrs.checked ? ' checked' : ''}` },
+                    ['input', checkboxAttrs],
+                    ['span', { class: 'task-list-content' }, 0]
+                ];
             }
             return ['li', 0];
         },

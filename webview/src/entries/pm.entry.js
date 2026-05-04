@@ -506,6 +506,51 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
         state,
         nodeViews: {
             diagram(node, view, getPos) { return new DiagramNodeView(node, view, getPos); },
+            list_item(node, view, getPos) {
+                // 只有 task list item（checked !== null）才使用自定义 NodeView
+                if (node.attrs.checked === null) return undefined;
+
+                const dom = document.createElement('li');
+                dom.classList.add('task-list-item');
+                if (node.attrs.checked) dom.classList.add('checked');
+
+                // 创建 checkbox 元素
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.classList.add('task-list-checkbox');
+                checkbox.checked = node.attrs.checked;
+                checkbox.contentEditable = 'false';
+                checkbox.addEventListener('mousedown', (e) => {
+                    e.preventDefault(); // 阻止 ProseMirror 失焦
+                    const pos = getPos();
+                    if (pos == null) return;
+                    const currentChecked = view.state.doc.nodeAt(pos)?.attrs.checked;
+                    const tr = view.state.tr.setNodeMarkup(pos, null, {
+                        ...view.state.doc.nodeAt(pos).attrs,
+                        checked: !currentChecked,
+                    });
+                    view.dispatch(tr);
+                });
+
+                // 内容容器
+                const contentDOM = document.createElement('span');
+                contentDOM.classList.add('task-list-content');
+
+                dom.appendChild(checkbox);
+                dom.appendChild(contentDOM);
+
+                return {
+                    dom,
+                    contentDOM,
+                    update(updatedNode) {
+                        if (updatedNode.type.name !== 'list_item') return false;
+                        if (updatedNode.attrs.checked === null) return false;
+                        checkbox.checked = updatedNode.attrs.checked;
+                        dom.classList.toggle('checked', updatedNode.attrs.checked);
+                        return true;
+                    },
+                };
+            },
         },
         handleDOMEvents: {
             // 编辑模式下阻止超链接点击跳转，并派发浮动菜单事件
