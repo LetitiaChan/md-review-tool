@@ -79,35 +79,6 @@ body {
     border-radius: var(--radius-sm);
 }
 
-/* 文件选择器组 */
-.file-selector-group {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.file-select {
-    padding: 5px 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 13px;
-    background: var(--bg-white);
-    color: var(--text);
-    cursor: pointer;
-    max-width: 195px;
-    outline: none;
-    transition: border-color 0.15s;
-}
-
-.file-select:hover {
-    border-color: var(--primary);
-}
-
-.file-select:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1);
-}
-
 .btn-icon {
     display: inline-flex;
     align-items: center;
@@ -2350,7 +2321,6 @@ body.zen-mode .document-content {
 
 /* 禅模式下隐藏工具栏中不需要的按钮，保持简洁 */
 body.zen-mode .toolbar-left .btn-help,
-body.zen-mode .toolbar-left .file-selector-group,
 body.zen-mode .toolbar-right .btn-toggle-annotations,
 body.zen-mode .toolbar-right #btnToggleToc,
 body.zen-mode .toolbar-right .btn-apply,

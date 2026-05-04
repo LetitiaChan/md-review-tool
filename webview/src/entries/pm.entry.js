@@ -20,6 +20,7 @@ import { Decoration, DecorationSet } from 'prosemirror-view';
 
 import { schema } from '../../js/pm-schema.js';
 import { parseMarkdown, serializeMarkdown } from '../../js/pm-markdown-bridge.js';
+import { createSlashCommandPlugin } from '../slash-command/slash-command-plugin.js';
 
 // ===== 输入规则 =====
 function buildInputRules() {
@@ -38,12 +39,35 @@ function buildInputRules() {
                 return tr;
             },
         },
+        // - [ ] → task list item (unchecked)
+        {
+            match: /^\s*[-+*]\s\[\s?\]\s$/,
+            handler(state, match, start, end) {
+                const listItem = schema.nodes.list_item.create({ checked: false }, schema.nodes.paragraph.create());
+                const bulletList = schema.nodes.bullet_list.create(null, listItem);
+                const tr = state.tr.replaceRangeWith(start, end, bulletList);
+                // 将光标放到 list_item 内的 paragraph 中
+                const resolvedPos = tr.doc.resolve(start + 3); // bullet_list > list_item > paragraph
+                tr.setSelection(TextSelection.create(tr.doc, resolvedPos.pos));
+                return tr;
+            },
+        },
+        // - [x] / - [X] → task list item (checked)
+        {
+            match: /^\s*[-+*]\s\[[xX]\]\s$/,
+            handler(state, match, start, end) {
+                const listItem = schema.nodes.list_item.create({ checked: true }, schema.nodes.paragraph.create());
+                const bulletList = schema.nodes.bullet_list.create(null, listItem);
+                const tr = state.tr.replaceRangeWith(start, end, bulletList);
+                const resolvedPos = tr.doc.resolve(start + 3);
+                tr.setSelection(TextSelection.create(tr.doc, resolvedPos.pos));
+                return tr;
+            },
+        },
         // - → bullet_list
         wrappingInputRule(/^\s*[-+*]\s$/, schema.nodes.bullet_list),
         // 1. → ordered_list
         wrappingInputRule(/^(\d+)\.\s$/, schema.nodes.ordered_list, match => ({ start: +match[1] })),
-        // - [ ] → task list item
-        // (handled by list_item checked attr)
     ];
     return inputRules({ rules });
 }
@@ -323,6 +347,46 @@ function handlePaste(view, event, slice) {
     const clipboardData = event.clipboardData;
     if (!clipboardData) return false;
 
+    // 图片粘贴检测：优先处理图片文件
+    const files = clipboardData.files;
+    if (files && files.length > 0) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file.type.startsWith('image/')) {
+                // 5MB 大小限制
+                if (file.size > 5 * 1024 * 1024) {
+                    if (globalThis.__vscodeApi) {
+                        globalThis.__vscodeApi.postMessage({ type: 'showWarning', payload: { message: 'Image too large (max 5MB)' } });
+                    }
+                    return true;
+                }
+                // 读取为 base64 DataURL
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const dataUrl = reader.result;
+                    const ext = file.type.split('/')[1] || 'png';
+                    const now = new Date();
+                    const timestamp = now.getFullYear().toString() +
+                        String(now.getMonth() + 1).padStart(2, '0') +
+                        String(now.getDate()).padStart(2, '0') + '-' +
+                        String(now.getHours()).padStart(2, '0') +
+                        String(now.getMinutes()).padStart(2, '0') +
+                        String(now.getSeconds()).padStart(2, '0');
+                    const random = Math.random().toString(36).slice(2, 6);
+                    const filename = `image-${timestamp}-${random}.${ext}`;
+                    if (globalThis.__vscodeApi) {
+                        globalThis.__vscodeApi.postMessage({
+                            type: 'saveImage',
+                            payload: { dataUrl, filename, requestId: `img-${Date.now()}` },
+                        });
+                    }
+                };
+                reader.readAsDataURL(file);
+                return true; // 阻止默认粘贴行为
+            }
+        }
+    }
+
     const html = clipboardData.getData('text/html');
     const text = clipboardData.getData('text/plain');
 
@@ -370,11 +434,18 @@ function handlePaste(view, event, slice) {
  * @param {(state: {activeMarks: string[], blockType: string, blockAttrs: object}) => void} [options.onSelectionChange] - 选区/文档变化回调（用于更新工具栏按钮状态）
  * @returns {{ destroy: () => void, getMarkdown: () => string, setMarkdown: (s: string) => void, focus: () => void, updateAnnotations: (annotations: Array) => void, execCommand: (name: string, attrs?: object) => boolean }}
  */
-function createRichEditor({ parent, markdown, onChange, onSave, annotations, onSelectionChange }) {
+function createRichEditor({ parent, markdown, onChange, onSave, annotations, onSelectionChange, initialCursorLine }) {
     const doc = parseMarkdown(markdown || '');
 
     const { plugin: annotationPlugin, setAnnotations } = buildAnnotationPlugin();
     if (annotations) setAnnotations(annotations);
+
+    // Slash Command Plugin 使用延迟引用（commandMap 在 plugins 之后定义）
+    const commandMapRef = {};
+    const slashCommandPlugin = createSlashCommandPlugin({
+        commandMap: commandMapRef,
+        getI18n: (key) => (globalThis.I18n && globalThis.I18n.t) ? globalThis.I18n.t(key) : key,
+    });
 
     const plugins = [
         buildKeymap(onSave),
@@ -385,6 +456,7 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
         columnResizing(),
         tableEditing(),
         annotationPlugin,
+        slashCommandPlugin,
         // onChange 监听
         new Plugin({
             view() {
@@ -436,6 +508,79 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
             diagram(node, view, getPos) { return new DiagramNodeView(node, view, getPos); },
         },
     });
+
+    // ===== 恢复光标位置 =====
+    if (initialCursorLine && initialCursorLine > 0) {
+        try {
+            // 简化策略：遍历 PM doc 的顶层节点，找到对应行号的位置
+            let targetPos = 0;
+            let blockCount = 0;
+            const targetBlock = Math.min(initialCursorLine, view.state.doc.childCount);
+            view.state.doc.forEach((node, offset) => {
+                blockCount++;
+                if (blockCount <= targetBlock) {
+                    targetPos = offset + 1; // 进入节点内部
+                }
+            });
+            if (targetPos > 0 && targetPos <= view.state.doc.content.size) {
+                const sel = TextSelection.create(view.state.doc, Math.min(targetPos, view.state.doc.content.size));
+                const tr = view.state.tr.setSelection(sel).scrollIntoView();
+                view.dispatch(tr);
+            }
+        } catch (e) { /* 容错：恢复失败不影响编辑 */ }
+    }
+
+    // ===== 图片拖拽监听 =====
+    view.dom.addEventListener('drop', (event) => {
+        const dt = event.dataTransfer;
+        if (!dt || !dt.files || dt.files.length === 0) return;
+        for (let i = 0; i < dt.files.length; i++) {
+            const file = dt.files[i];
+            if (file.type.startsWith('image/')) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (file.size > 5 * 1024 * 1024) {
+                    if (globalThis.__vscodeApi) {
+                        globalThis.__vscodeApi.postMessage({ type: 'showWarning', payload: { message: 'Image too large (max 5MB)' } });
+                    }
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const dataUrl = reader.result;
+                    const ext = file.type.split('/')[1] || 'png';
+                    const now = new Date();
+                    const timestamp = now.getFullYear().toString() +
+                        String(now.getMonth() + 1).padStart(2, '0') +
+                        String(now.getDate()).padStart(2, '0') + '-' +
+                        String(now.getHours()).padStart(2, '0') +
+                        String(now.getMinutes()).padStart(2, '0') +
+                        String(now.getSeconds()).padStart(2, '0');
+                    const random = Math.random().toString(36).slice(2, 6);
+                    const filename = `image-${timestamp}-${random}.${ext}`;
+                    if (globalThis.__vscodeApi) {
+                        globalThis.__vscodeApi.postMessage({
+                            type: 'saveImage',
+                            payload: { dataUrl, filename, requestId: `img-${Date.now()}` },
+                        });
+                    }
+                };
+                reader.readAsDataURL(file);
+                return;
+            }
+        }
+    });
+
+    // ===== 监听 imageSaved 消息，插入图片节点 =====
+    function handleImageSaved(event) {
+        const msg = event.data;
+        if (msg && msg.type === 'imageSaved' && msg.payload && msg.payload.relativePath) {
+            const node = schema.nodes.image.create({ src: msg.payload.relativePath, alt: null, title: null });
+            const tr = view.state.tr.replaceSelectionWith(node);
+            view.dispatch(tr);
+        }
+    }
+    window.addEventListener('message', handleImageSaved);
 
     // ===== 辅助：通过坐标设置选区到表格单元格 =====
     function setCellSelection(view, coords) {
@@ -666,6 +811,9 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
         },
     };
 
+    // 将 commandMap 填充到延迟引用对象（供 Slash Command Plugin 使用）
+    Object.assign(commandMapRef, commandMap);
+
     // ===== 辅助：读取当前选区所处 link mark 的属性与覆盖范围 =====
     function getLinkAttrsAtSelection() {
         const state = view.state;
@@ -722,7 +870,10 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
     }
 
     return {
-        destroy() { view.destroy(); },
+        destroy() {
+            window.removeEventListener('message', handleImageSaved);
+            view.destroy();
+        },
         getMarkdown() { return serializeMarkdown(view.state.doc); },
         setMarkdown(s) {
             const newDoc = parseMarkdown(s || '');
@@ -750,6 +901,37 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
             const sel = TextSelection.create(doc, from, to);
             view.dispatch(view.state.tr.setSelection(sel));
             return true;
+        },
+        // 光标位置查询：返回当前光标所在的 markdown 行号
+        getCursorLine() {
+            try {
+                const md = serializeMarkdown(view.state.doc);
+                const pos = view.state.selection.from;
+                // 计算 pos 之前的文本对应的行号
+                let charCount = 0;
+                let lineNum = 1;
+                const lines = md.split('\n');
+                // 简化策略：通过遍历 PM doc 节点计算块索引，映射到行号
+                let blockIndex = 0;
+                view.state.doc.forEach((node, offset) => {
+                    if (offset + node.nodeSize <= pos) {
+                        blockIndex++;
+                    }
+                });
+                // 块索引映射到行号（简化：每个块大约对应 1-3 行）
+                let currentLine = 0;
+                for (let i = 0; i < lines.length && blockIndex > 0; i++) {
+                    currentLine = i + 1;
+                    if (lines[i].trim() === '' && i > 0 && lines[i - 1].trim() !== '') {
+                        blockIndex--;
+                    } else if (lines[i].trim() !== '' && (i === 0 || lines[i - 1].trim() === '')) {
+                        blockIndex--;
+                    }
+                }
+                return Math.max(currentLine, 1);
+            } catch (e) {
+                return 1;
+            }
         },
     };
 }

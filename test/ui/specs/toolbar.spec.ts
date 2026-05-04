@@ -65,11 +65,6 @@ test.describe('工具栏交互测试', () => {
         expect(afterDark).not.toBe(initialDark);
     });
 
-    test('BT-toolbar.7 刷新按钮存在', async ({ page }) => {
-        const refreshBtn = page.locator('#btnRefresh');
-        await expect(refreshBtn).toBeVisible();
-    });
-
     test('BT-toolbar.8 批注切换按钮存在', async ({ page }) => {
         const annotationsBtn = page.locator('#btnToggleAnnotations');
         await expect(annotationsBtn).toBeVisible();

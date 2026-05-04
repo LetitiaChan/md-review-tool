@@ -31,5 +31,7 @@
   "config.showLineNumbers.description": "在代码块中显示行号",
   "config.codeTheme.description": "代码高亮主题",
   "config.codeTheme.auto": "自动（跟随界面主题）",
-  "config.language.description": "界面语言 / Interface language"
+  "config.language.description": "界面语言 / Interface language",
+  "config.customCss.description": "自定义 CSS 规则，注入到 webview 中（位于所有内置样式之后，可覆盖任何内置样式）",
+  "config.imageAssetsPath.description": "粘贴/拖拽图片的保存目录（相对于工作区，默认: assets/images）"
 }

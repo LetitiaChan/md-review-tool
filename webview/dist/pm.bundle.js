@@ -27902,6 +27902,257 @@
     return serializer.serialize(doc3);
   }
 
+  // webview/src/slash-command/slash-commands.js
+  function getSlashCommands(getI18n) {
+    const t = getI18n || ((k) => k);
+    return [
+      { id: "h1", labelKey: "slash.heading1", label: t("slash.heading1"), icon: "H1", category: "heading" },
+      { id: "h2", labelKey: "slash.heading2", label: t("slash.heading2"), icon: "H2", category: "heading" },
+      { id: "h3", labelKey: "slash.heading3", label: t("slash.heading3"), icon: "H3", category: "heading" },
+      { id: "blockquote", labelKey: "slash.blockquote", label: t("slash.blockquote"), icon: "\u275D", category: "block" },
+      { id: "codeBlock", labelKey: "slash.code_block", label: t("slash.code_block"), icon: "\u2328", category: "block" },
+      { id: "hr", labelKey: "slash.horizontal_rule", label: t("slash.horizontal_rule"), icon: "\u2500", category: "block" },
+      { id: "table", labelKey: "slash.table", label: t("slash.table"), icon: "\u25A6", category: "block" },
+      { id: "ul", labelKey: "slash.bullet_list", label: t("slash.bullet_list"), icon: "\u2022", category: "list" },
+      { id: "ol", labelKey: "slash.ordered_list", label: t("slash.ordered_list"), icon: "1.", category: "list" },
+      { id: "taskList", labelKey: "slash.task_list", label: t("slash.task_list"), icon: "\u2611", category: "list" },
+      { id: "alertBlock", labelKey: "slash.alert_block", label: t("slash.alert_block"), icon: "\u2139", category: "block" },
+      { id: "insertImage", labelKey: "slash.image", label: t("slash.image"), icon: "\u{1F5BC}", category: "media" }
+    ];
+  }
+
+  // webview/src/slash-command/slash-command-plugin.js
+  var slashCommandKey = new PluginKey("slashCommand");
+  function createSlashCommandPlugin({ commandMap, getI18n }) {
+    let menuEl = null;
+    let activeView = null;
+    return new Plugin({
+      key: slashCommandKey,
+      state: {
+        init() {
+          return { active: false, filterText: "", selectedIndex: 0, triggerPos: -1 };
+        },
+        apply(tr, prev) {
+          const meta = tr.getMeta(slashCommandKey);
+          if (meta) return meta;
+          if (prev.active && tr.docChanged) {
+            const state = tr.state || null;
+            if (state) {
+              const $from = state.selection.$from;
+              const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
+              if (textBefore.startsWith("/")) {
+                return { ...prev, filterText: textBefore.slice(1), selectedIndex: 0 };
+              } else {
+                return { active: false, filterText: "", selectedIndex: 0, triggerPos: -1 };
+              }
+            }
+          }
+          return prev;
+        }
+      },
+      props: {
+        handleTextInput(view, from2, to, text2) {
+          if (text2 === "/") {
+            const $from = view.state.selection.$from;
+            const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
+            if (textBefore.trim() === "") {
+              setTimeout(() => {
+                const tr = view.state.tr.setMeta(slashCommandKey, {
+                  active: true,
+                  filterText: "",
+                  selectedIndex: 0,
+                  triggerPos: from2
+                });
+                view.dispatch(tr);
+                showMenu(view);
+              }, 0);
+            }
+          }
+          return false;
+        },
+        handleKeyDown(view, event) {
+          const pluginState = slashCommandKey.getState(view.state);
+          if (!pluginState || !pluginState.active) return false;
+          const commands = getFilteredCommands(pluginState.filterText, getI18n);
+          switch (event.key) {
+            case "ArrowDown": {
+              event.preventDefault();
+              const newIndex = (pluginState.selectedIndex + 1) % Math.max(commands.length, 1);
+              const tr = view.state.tr.setMeta(slashCommandKey, { ...pluginState, selectedIndex: newIndex });
+              view.dispatch(tr);
+              updateMenuHighlight(newIndex);
+              return true;
+            }
+            case "ArrowUp": {
+              event.preventDefault();
+              const len = Math.max(commands.length, 1);
+              const newIndex = (pluginState.selectedIndex - 1 + len) % len;
+              const tr = view.state.tr.setMeta(slashCommandKey, { ...pluginState, selectedIndex: newIndex });
+              view.dispatch(tr);
+              updateMenuHighlight(newIndex);
+              return true;
+            }
+            case "Enter": {
+              event.preventDefault();
+              if (commands.length > 0) {
+                executeCommand(view, commands[pluginState.selectedIndex], pluginState, commandMap);
+              }
+              return true;
+            }
+            case "Escape": {
+              event.preventDefault();
+              closeMenu(view);
+              return true;
+            }
+            case "ArrowLeft": {
+              const $from = view.state.selection.$from;
+              if ($from.parentOffset <= 1) {
+                setTimeout(() => closeMenu(view), 0);
+              }
+              return false;
+            }
+            case "Backspace": {
+              const $from = view.state.selection.$from;
+              const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
+              if (textBefore === "/") {
+                setTimeout(() => closeMenu(view), 0);
+              }
+              return false;
+            }
+            default:
+              return false;
+          }
+        }
+      },
+      view(editorView) {
+        activeView = editorView;
+        return {
+          update(view, prevState) {
+            activeView = view;
+            const pluginState = slashCommandKey.getState(view.state);
+            if (pluginState && pluginState.active) {
+              renderMenu(view, pluginState);
+            } else {
+              hideMenu();
+            }
+          },
+          destroy() {
+            hideMenu();
+            activeView = null;
+          }
+        };
+      }
+    });
+    function getFilteredCommands(filterText, i18nFn) {
+      const commands = getSlashCommands(i18nFn);
+      if (!filterText) return commands;
+      const lower = filterText.toLowerCase();
+      return commands.filter(
+        (cmd) => cmd.label.toLowerCase().includes(lower) || cmd.id.toLowerCase().includes(lower) || cmd.labelKey.toLowerCase().includes(lower)
+      );
+    }
+    function showMenu(view) {
+      if (!menuEl) {
+        menuEl = document.createElement("div");
+        menuEl.className = "slash-command-menu";
+        menuEl.setAttribute("role", "listbox");
+        document.body.appendChild(menuEl);
+      }
+      renderMenu(view, slashCommandKey.getState(view.state));
+    }
+    function hideMenu() {
+      if (menuEl) {
+        menuEl.style.display = "none";
+      }
+    }
+    function closeMenu(view) {
+      const tr = view.state.tr.setMeta(slashCommandKey, {
+        active: false,
+        filterText: "",
+        selectedIndex: 0,
+        triggerPos: -1
+      });
+      view.dispatch(tr);
+      hideMenu();
+    }
+    function renderMenu(view, pluginState) {
+      if (!menuEl || !pluginState || !pluginState.active) return;
+      const commands = getFilteredCommands(pluginState.filterText, getI18n);
+      const coords = view.coordsAtPos(view.state.selection.from);
+      const editorRect = view.dom.getBoundingClientRect();
+      menuEl.style.display = "block";
+      menuEl.style.position = "absolute";
+      menuEl.style.left = `${coords.left}px`;
+      menuEl.style.top = `${coords.bottom + 4}px`;
+      menuEl.style.zIndex = "9999";
+      if (commands.length === 0) {
+        menuEl.innerHTML = `<div class="slash-command-empty">${getI18n ? getI18n("slash.no_results") : "No results"}</div>`;
+      } else {
+        menuEl.innerHTML = commands.map((cmd, i) => {
+          const activeClass = i === pluginState.selectedIndex ? " slash-command-item-active" : "";
+          return `<div class="slash-command-item${activeClass}" data-index="${i}" role="option">
+                    <span class="slash-command-icon">${cmd.icon}</span>
+                    <span class="slash-command-label">${cmd.label}</span>
+                </div>`;
+        }).join("");
+        menuEl.querySelectorAll(".slash-command-item").forEach((item) => {
+          item.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const index = parseInt(item.dataset.index, 10);
+            executeCommand(view, commands[index], pluginState, commandMap);
+          });
+          item.addEventListener("mouseenter", () => {
+            const index = parseInt(item.dataset.index, 10);
+            updateMenuHighlight(index);
+            const tr = view.state.tr.setMeta(slashCommandKey, { ...pluginState, selectedIndex: index });
+            view.dispatch(tr);
+          });
+        });
+      }
+      const menuRect = menuEl.getBoundingClientRect();
+      if (menuRect.bottom > window.innerHeight) {
+        menuEl.style.top = `${coords.top - menuRect.height - 4}px`;
+      }
+      if (menuRect.right > window.innerWidth) {
+        menuEl.style.left = `${window.innerWidth - menuRect.width - 8}px`;
+      }
+    }
+    function updateMenuHighlight(index) {
+      if (!menuEl) return;
+      menuEl.querySelectorAll(".slash-command-item").forEach((item, i) => {
+        item.classList.toggle("slash-command-item-active", i === index);
+      });
+      const activeItem = menuEl.querySelector(".slash-command-item-active");
+      if (activeItem) activeItem.scrollIntoView({ block: "nearest" });
+    }
+    function executeCommand(view, cmd, pluginState, cmdMap) {
+      if (!cmd) return;
+      closeMenu(view);
+      const $from = view.state.selection.$from;
+      const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
+      const slashStart = $from.pos - textBefore.length;
+      const slashEnd = $from.pos;
+      let tr = view.state.tr.delete(slashStart, slashEnd);
+      view.dispatch(tr);
+      const cmdFn = cmdMap[cmd.id];
+      if (cmdFn) {
+        if (cmd.id === "insertImage") {
+          cmdFn(view.state, view.dispatch, view, { src: "", alt: "" });
+        } else if (cmd.id === "alertBlock") {
+          cmdFn(view.state, view.dispatch, view, { type: "NOTE" });
+        } else if (cmd.id === "codeBlock") {
+          cmdFn(view.state, view.dispatch, view, { language: "" });
+        } else if (cmd.id === "table") {
+          cmdFn(view.state, view.dispatch, view, { rows: 3, cols: 3 });
+        } else {
+          cmdFn(view.state, view.dispatch, view);
+        }
+      }
+      view.focus();
+    }
+  }
+
   // webview/src/entries/pm.entry.js
   function buildInputRules() {
     const rules = [
@@ -27919,12 +28170,34 @@
           return tr;
         }
       },
+      // - [ ] → task list item (unchecked)
+      {
+        match: /^\s*[-+*]\s\[\s?\]\s$/,
+        handler(state, match2, start, end) {
+          const listItem = schema.nodes.list_item.create({ checked: false }, schema.nodes.paragraph.create());
+          const bulletList = schema.nodes.bullet_list.create(null, listItem);
+          const tr = state.tr.replaceRangeWith(start, end, bulletList);
+          const resolvedPos = tr.doc.resolve(start + 3);
+          tr.setSelection(TextSelection.create(tr.doc, resolvedPos.pos));
+          return tr;
+        }
+      },
+      // - [x] / - [X] → task list item (checked)
+      {
+        match: /^\s*[-+*]\s\[[xX]\]\s$/,
+        handler(state, match2, start, end) {
+          const listItem = schema.nodes.list_item.create({ checked: true }, schema.nodes.paragraph.create());
+          const bulletList = schema.nodes.bullet_list.create(null, listItem);
+          const tr = state.tr.replaceRangeWith(start, end, bulletList);
+          const resolvedPos = tr.doc.resolve(start + 3);
+          tr.setSelection(TextSelection.create(tr.doc, resolvedPos.pos));
+          return tr;
+        }
+      },
       // - → bullet_list
       wrappingInputRule(/^\s*[-+*]\s$/, schema.nodes.bullet_list),
       // 1. → ordered_list
       wrappingInputRule(/^(\d+)\.\s$/, schema.nodes.ordered_list, (match2) => ({ start: +match2[1] }))
-      // - [ ] → task list item
-      // (handled by list_item checked attr)
     ];
     return inputRules({ rules });
   }
@@ -28156,6 +28429,37 @@
   function handlePaste2(view, event, slice2) {
     const clipboardData = event.clipboardData;
     if (!clipboardData) return false;
+    const files = clipboardData.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.type.startsWith("image/")) {
+          if (file.size > 5 * 1024 * 1024) {
+            if (globalThis.__vscodeApi) {
+              globalThis.__vscodeApi.postMessage({ type: "showWarning", payload: { message: "Image too large (max 5MB)" } });
+            }
+            return true;
+          }
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result;
+            const ext = file.type.split("/")[1] || "png";
+            const now = /* @__PURE__ */ new Date();
+            const timestamp = now.getFullYear().toString() + String(now.getMonth() + 1).padStart(2, "0") + String(now.getDate()).padStart(2, "0") + "-" + String(now.getHours()).padStart(2, "0") + String(now.getMinutes()).padStart(2, "0") + String(now.getSeconds()).padStart(2, "0");
+            const random = Math.random().toString(36).slice(2, 6);
+            const filename = `image-${timestamp}-${random}.${ext}`;
+            if (globalThis.__vscodeApi) {
+              globalThis.__vscodeApi.postMessage({
+                type: "saveImage",
+                payload: { dataUrl, filename, requestId: `img-${Date.now()}` }
+              });
+            }
+          };
+          reader.readAsDataURL(file);
+          return true;
+        }
+      }
+    }
     const html = clipboardData.getData("text/html");
     const text2 = clipboardData.getData("text/plain");
     if (html && html.trim()) {
@@ -28186,10 +28490,15 @@
     }
     return false;
   }
-  function createRichEditor({ parent, markdown, onChange, onSave, annotations, onSelectionChange }) {
+  function createRichEditor({ parent, markdown, onChange, onSave, annotations, onSelectionChange, initialCursorLine }) {
     const doc3 = parseMarkdown(markdown || "");
     const { plugin: annotationPlugin, setAnnotations } = buildAnnotationPlugin();
     if (annotations) setAnnotations(annotations);
+    const commandMapRef = {};
+    const slashCommandPlugin = createSlashCommandPlugin({
+      commandMap: commandMapRef,
+      getI18n: (key) => globalThis.I18n && globalThis.I18n.t ? globalThis.I18n.t(key) : key
+    });
     const plugins = [
       buildKeymap(onSave),
       keymap(baseKeymap),
@@ -28199,6 +28508,7 @@
       columnResizing(),
       tableEditing(),
       annotationPlugin,
+      slashCommandPlugin,
       // onChange 监听
       new Plugin({
         view() {
@@ -28249,6 +28559,68 @@
         }
       }
     });
+    if (initialCursorLine && initialCursorLine > 0) {
+      try {
+        let targetPos = 0;
+        let blockCount = 0;
+        const targetBlock = Math.min(initialCursorLine, view.state.doc.childCount);
+        view.state.doc.forEach((node, offset) => {
+          blockCount++;
+          if (blockCount <= targetBlock) {
+            targetPos = offset + 1;
+          }
+        });
+        if (targetPos > 0 && targetPos <= view.state.doc.content.size) {
+          const sel = TextSelection.create(view.state.doc, Math.min(targetPos, view.state.doc.content.size));
+          const tr = view.state.tr.setSelection(sel).scrollIntoView();
+          view.dispatch(tr);
+        }
+      } catch (e) {
+      }
+    }
+    view.dom.addEventListener("drop", (event) => {
+      const dt = event.dataTransfer;
+      if (!dt || !dt.files || dt.files.length === 0) return;
+      for (let i = 0; i < dt.files.length; i++) {
+        const file = dt.files[i];
+        if (file.type.startsWith("image/")) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (file.size > 5 * 1024 * 1024) {
+            if (globalThis.__vscodeApi) {
+              globalThis.__vscodeApi.postMessage({ type: "showWarning", payload: { message: "Image too large (max 5MB)" } });
+            }
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result;
+            const ext = file.type.split("/")[1] || "png";
+            const now = /* @__PURE__ */ new Date();
+            const timestamp = now.getFullYear().toString() + String(now.getMonth() + 1).padStart(2, "0") + String(now.getDate()).padStart(2, "0") + "-" + String(now.getHours()).padStart(2, "0") + String(now.getMinutes()).padStart(2, "0") + String(now.getSeconds()).padStart(2, "0");
+            const random = Math.random().toString(36).slice(2, 6);
+            const filename = `image-${timestamp}-${random}.${ext}`;
+            if (globalThis.__vscodeApi) {
+              globalThis.__vscodeApi.postMessage({
+                type: "saveImage",
+                payload: { dataUrl, filename, requestId: `img-${Date.now()}` }
+              });
+            }
+          };
+          reader.readAsDataURL(file);
+          return;
+        }
+      }
+    });
+    function handleImageSaved(event) {
+      const msg = event.data;
+      if (msg && msg.type === "imageSaved" && msg.payload && msg.payload.relativePath) {
+        const node = schema.nodes.image.create({ src: msg.payload.relativePath, alt: null, title: null });
+        const tr = view.state.tr.replaceSelectionWith(node);
+        view.dispatch(tr);
+      }
+    }
+    window.addEventListener("message", handleImageSaved);
     function setCellSelection(view2, coords) {
       const posInfo = view2.posAtCoords({ left: coords.left, top: coords.top });
       if (!posInfo) return;
@@ -28484,6 +28856,7 @@
         return true;
       }
     };
+    Object.assign(commandMapRef, commandMap);
     function getLinkAttrsAtSelection() {
       const state2 = view.state;
       const { $from } = state2.selection;
@@ -28536,6 +28909,7 @@
     }
     return {
       destroy() {
+        window.removeEventListener("message", handleImageSaved);
         view.destroy();
       },
       getMarkdown() {
@@ -28572,6 +28946,34 @@
         const sel = TextSelection.create(doc4, from2, to);
         view.dispatch(view.state.tr.setSelection(sel));
         return true;
+      },
+      // 光标位置查询：返回当前光标所在的 markdown 行号
+      getCursorLine() {
+        try {
+          const md2 = serializeMarkdown(view.state.doc);
+          const pos = view.state.selection.from;
+          let charCount = 0;
+          let lineNum = 1;
+          const lines = md2.split("\n");
+          let blockIndex = 0;
+          view.state.doc.forEach((node, offset) => {
+            if (offset + node.nodeSize <= pos) {
+              blockIndex++;
+            }
+          });
+          let currentLine = 0;
+          for (let i = 0; i < lines.length && blockIndex > 0; i++) {
+            currentLine = i + 1;
+            if (lines[i].trim() === "" && i > 0 && lines[i - 1].trim() !== "") {
+              blockIndex--;
+            } else if (lines[i].trim() !== "" && (i === 0 || lines[i - 1].trim() === "")) {
+              blockIndex--;
+            }
+          }
+          return Math.max(currentLine, 1);
+        } catch (e) {
+          return 1;
+        }
       }
     };
   }

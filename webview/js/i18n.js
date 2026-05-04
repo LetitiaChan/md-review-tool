@@ -10,8 +10,6 @@ window.I18n = (() => {
         'zh-CN': {
             // ===== 工具栏 =====
             'toolbar.help_title': '使用帮助',
-            'toolbar.file_select_title': '选择MD文件',
-            'toolbar.file_select_default': '-- 选择文件 --',
             'toolbar.no_file': '未打开文件',
             'toolbar.file_changed': '文件已更新',
             'toolbar.save_title': '保存修改到源文件 (Ctrl+S)',
@@ -35,7 +33,6 @@ window.I18n = (() => {
             'toolbar.ai_fix_title': '根据批阅记录一键AI修复源文件',
     'toolbar.ai_fix': 'AI Fix',
             'toolbar.settings_title': '设置',
-            'toolbar.refresh_title': '刷新当前文件',
             'toolbar.scroll_top_title': '回到顶部',
 
             // ===== 欢迎页 =====
@@ -83,6 +80,20 @@ window.I18n = (() => {
             'editor.highlight_title': '高亮文本',
             'editor.task_list_title': '任务列表',
             'editor.link_title': '超链接',
+            // Slash Command 命令面板
+            'slash.heading1': '标题 1',
+            'slash.heading2': '标题 2',
+            'slash.heading3': '标题 3',
+            'slash.blockquote': '引用块',
+            'slash.code_block': '代码块',
+            'slash.horizontal_rule': '分割线',
+            'slash.table': '表格',
+            'slash.bullet_list': '无序列表',
+            'slash.ordered_list': '有序列表',
+            'slash.task_list': '任务列表',
+            'slash.alert_block': '高亮块',
+            'slash.image': '图片',
+            'slash.no_results': '无匹配结果',
             'editor.image_title': '图片',
             'editor.alert_title': '高亮块',
             'editor.alert_type.note': '提示',
@@ -256,8 +267,7 @@ window.I18n = (() => {
             'help.ui_multi_window': '<strong>多窗口支持</strong> — 可同时打开多个 Markdown 文件，每个文件拥有独立的批阅面板和状态',
             'help.ui_zen': '<strong>禅模式</strong> — 按 <kbd>Alt</kbd>+<kbd>Z</kbd> 隐藏侧栏专注阅读，同时隐藏 IDE 侧边栏',
             'help.ui_theme': '<strong>亮色/暗色主题</strong> — 工具栏一键切换或跟随系统',
-            'help.ui_file_select': '<strong>文件选择器</strong> — 工作区内 Markdown 文件下拉框快速切换',
-            'help.ui_file_change': '<strong>文件变更检测</strong> — 源文件修改后显示「文件已更新」徽章，点击刷新按钮重载',
+            'help.ui_file_change': '<strong>文件变更检测</strong> — 源文件修改后显示「文件已更新」徽章',
             'help.ui_resize': '<strong>面板拖拽</strong> — 目录和批注面板宽度可拖拽调整',
             'help.tips_title': '💡 小贴士',
             'help.tips_reader': '<strong>当作 Markdown 阅读器使用</strong> — 关闭右侧批阅面板（目录 + 批注），即可作为纯 Markdown 阅读器使用，享受完整的渲染效果',
@@ -393,6 +403,9 @@ window.I18n = (() => {
             'notification.auto_saved': '✓ 已自动保存',
             'notification.auto_save_failed': '✗ 保存失败',
             'notification.request_timeout': '请求超时: {type}',
+            'notification.image_saved': '✅ 图片已保存: {path}',
+            'notification.image_save_failed': '❌ 图片保存失败: {error}',
+            'notification.image_too_large': '⚠️ 图片超过 5MB 限制',
 
             // ===== 浮层按钮 =====
             'float.comment': '💬 评论',
@@ -517,8 +530,6 @@ window.I18n = (() => {
         'en': {
             // ===== Toolbar =====
             'toolbar.help_title': 'Help',
-            'toolbar.file_select_title': 'Select MD file',
-            'toolbar.file_select_default': '-- Select file --',
             'toolbar.no_file': 'No file open',
             'toolbar.file_changed': 'File updated',
             'toolbar.save_title': 'Save changes to source file (Ctrl+S)',
@@ -542,7 +553,6 @@ window.I18n = (() => {
             'toolbar.ai_fix_title': 'Generate AI fix instructions from review annotations',
             'toolbar.ai_fix': 'AI Fix',
             'toolbar.settings_title': 'Settings',
-            'toolbar.refresh_title': 'Refresh current file',
             'toolbar.scroll_top_title': 'Back to top',
 
             // ===== Welcome =====
@@ -590,6 +600,20 @@ window.I18n = (() => {
             'editor.highlight_title': 'Highlight',
             'editor.task_list_title': 'Task list',
             'editor.link_title': 'Hyperlink',
+            // Slash Command menu
+            'slash.heading1': 'Heading 1',
+            'slash.heading2': 'Heading 2',
+            'slash.heading3': 'Heading 3',
+            'slash.blockquote': 'Blockquote',
+            'slash.code_block': 'Code Block',
+            'slash.horizontal_rule': 'Horizontal Rule',
+            'slash.table': 'Table',
+            'slash.bullet_list': 'Bullet List',
+            'slash.ordered_list': 'Ordered List',
+            'slash.task_list': 'Task List',
+            'slash.alert_block': 'Alert Block',
+            'slash.image': 'Image',
+            'slash.no_results': 'No results',
             'editor.image_title': 'Image',
             'editor.alert_title': 'Alert block',
             'editor.alert_type.note': 'Note',
@@ -763,8 +787,7 @@ window.I18n = (() => {
             'help.ui_multi_window': '<strong>Multi-Window</strong> — Open multiple Markdown files simultaneously, each with its own independent review panel and state',
             'help.ui_zen': '<strong>Zen Mode</strong> — Press <kbd>Alt</kbd>+<kbd>Z</kbd> to hide sidebars for focused reading',
             'help.ui_theme': '<strong>Light/Dark Theme</strong> — One-click toggle or follow system',
-            'help.ui_file_select': '<strong>File Selector</strong> — Dropdown to quickly switch between workspace Markdown files',
-            'help.ui_file_change': '<strong>File Change Detection</strong> — Shows "File updated" badge when source file is modified; click refresh to reload',
+            'help.ui_file_change': '<strong>File Change Detection</strong> — Shows "File updated" badge when source file is modified externally',
             'help.ui_resize': '<strong>Panel Resize</strong> — Drag to adjust TOC and annotation panel widths',
             'help.tips_title': '💡 Tips',
             'help.tips_reader': '<strong>Use as a Markdown Reader</strong> — Hide the review panels (TOC + Annotations) to use it as a pure Markdown reader with full rendering support',
@@ -900,6 +923,9 @@ window.I18n = (() => {
             'notification.auto_saved': '✓ Auto-saved',
             'notification.auto_save_failed': '✗ Save failed',
             'notification.request_timeout': 'Request timeout: {type}',
+            'notification.image_saved': '✅ Image saved: {path}',
+            'notification.image_save_failed': '❌ Image save failed: {error}',
+            'notification.image_too_large': '⚠️ Image exceeds 5MB limit',
 
             // ===== Float Buttons =====
             'float.comment': '💬 Comment',
@@ -1193,7 +1219,6 @@ window.I18n = (() => {
         <li>${_t('help.ui_multi_window')}</li>
         <li>${_t('help.ui_zen')}</li>
         <li>${_t('help.ui_theme')}</li>
-        <li>${_t('help.ui_file_select')}</li>
         <li>${_t('help.ui_file_change')}</li>
         <li>${_t('help.ui_resize')}</li>
     </ul>

@@ -490,9 +490,9 @@ suite('ReviewPanel Test Suite', () => {
     // ===== Hotfix — 一键 AI 修复不弹出输出窗口 =====
     suite('23. Hotfix — 一键 AI 修复时输出窗口不应弹出', () => {
         const extPath23 = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
-        const reviewPanelTs = fs.readFileSync(path.join(extPath23, 'src', 'reviewPanel.ts'), 'utf-8');
-        const reviewPanelJs = fs.existsSync(path.join(extPath23, 'out', 'reviewPanel.js'))
-            ? fs.readFileSync(path.join(extPath23, 'out', 'reviewPanel.js'), 'utf-8')
+        const reviewPanelTs = fs.readFileSync(path.join(extPath23, 'src', 'webviewHelper.ts'), 'utf-8');
+        const reviewPanelJs = fs.existsSync(path.join(extPath23, 'out', 'webviewHelper.js'))
+            ? fs.readFileSync(path.join(extPath23, 'out', 'webviewHelper.js'), 'utf-8')
             : '';
 
         // 定位 openCodeBuddyChat 分支：只对 AI Chat 派发这段代码做断言，避免误伤其他 OutputChannel

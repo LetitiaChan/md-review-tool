@@ -67,10 +67,23 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:mdReview.openPanel"
+    "onCommand:mdReview.openPanel",
+    "onCustomEditor:mdReview.markdownEditor"
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "customEditors": [
+      {
+        "viewType": "mdReview.markdownEditor",
+        "displayName": "MD Human Review",
+        "selector": [
+          { "filenamePattern": "*.md" },
+          { "filenamePattern": "*.mdc" },
+          { "filenamePattern": "*.markdown" }
+        ],
+        "priority": "option"
+      }
+    ],
     "languages": [
       {
         "id": "markdown",
@@ -325,6 +338,16 @@
             "Default Dark Modern"
           ],
           "description": "%config.codeTheme.description%"
+        },
+        "mdReview.customCss": {
+          "type": "string",
+          "default": "",
+          "description": "%config.customCss.description%"
+        },
+        "mdReview.imageAssetsPath": {
+          "type": "string",
+          "default": "assets/images",
+          "description": "%config.imageAssetsPath.description%"
         }
       }
     }

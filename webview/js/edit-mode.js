@@ -19,6 +19,9 @@ const MODE = { INACTIVE: 'inactive', RICH: 'rich' };
 let _mode = MODE.INACTIVE;
 let _editor = null;       // PM 实例句柄
 
+// 光标位置记忆（per-file，session-scoped）
+const _cursorPositions = new Map(); // filePath → lineNumber
+
 const RICH_CONTAINER_ID = 'richModeContainer';
 const RICH_BODY_CLASS = 'rich-mode-active';
 
@@ -84,6 +87,14 @@ function enterRich(options) {
         editorOptions.onSelectionChange = options.onSelectionChange;
     }
 
+    // 传递上次退出时记录的光标行号
+    const store2 = globalThis.Store;
+    const currentFile = (store2 && store2.getData) ? (store2.getData().relPath || '') : '';
+    const savedLine = _cursorPositions.get(currentFile);
+    if (savedLine !== undefined && savedLine > 0) {
+        editorOptions.initialCursorLine = savedLine;
+    }
+
     _editor = globalThis.PM.createRichEditor(editorOptions);
 
     document.body.classList.add(RICH_BODY_CLASS);
@@ -98,6 +109,14 @@ function exitRich() {
     const store = globalThis.Store;
     let finalMarkdown = '';
     if (_editor) {
+        // 记录光标位置（行号）
+        try {
+            if (typeof _editor.getCursorLine === 'function') {
+                const currentFile = (store && store.getData) ? (store.getData().relPath || '') : '';
+                const line = _editor.getCursorLine();
+                if (line > 0) _cursorPositions.set(currentFile, line);
+            }
+        } catch (e) { /* 容错 */ }
         try { finalMarkdown = _editor.getMarkdown(); } catch (e) { finalMarkdown = ''; }
         if (store && typeof store.setRawMarkdown === 'function') {
             store.setRawMarkdown(finalMarkdown);

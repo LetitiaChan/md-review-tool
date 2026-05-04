@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### ✨ New Features
+- **Custom Editor Provider ("Open With..." integration)** — The extension now registers as a `CustomTextEditorProvider` for `.md`, `.mdc`, and `.markdown` files with `priority: "option"`. Users can right-click any Markdown file in VS Code Explorer → "Open With..." → "MD Human Review" to open it with native dirty-state indicators (●), Ctrl+S save, and close-confirmation dialogs. The existing `mdReview.openPanel` command continues to work as before.
+- **Shared webview architecture** — Extracted webview HTML generation and message handling into `src/webviewHelper.ts`, enabling both the WebviewPanel mode and the new Custom Editor mode to share the same rendering and interaction logic without duplication.
+
+### 🔧 Breaking Changes
+- **Removed internal file list** — The file selector dropdown and refresh button have been removed from the toolbar. Users should now use VS Code's native file Explorer to navigate between Markdown files (right-click → "Open With..." or set MD Human Review as default editor).
+
+### ✅ Tests
+- Added `test/suite/custom-editor-provider.test.ts` — 25 regression assertions covering Custom Editor registration (Tier 1: package.json config, file existence), shared helper usage (Tier 2: imports, function calls), and file list removal verification (Tier 3: no dead code remains). All 909 tests pass.
+
+### ✨ New Features
 - **Alert block type selector** — Clicking the Alert block toolbar button (`#btnAlertBlock`) now opens a popover with 5 alert type options (📝 Note / 💡 Tip / ❗ Important / ⚠️ Warning / 🛑 Caution). Selecting a type wraps the current block in a `gh_alert` node with the chosen `alertType`; if the cursor is already inside an existing alert block, the type is switched in place (via `setNodeMarkup`) instead of nesting. The `alertBlock` PM command signature is extended to `(state, dispatch, view, attrs)`, accepting `attrs.alertType` and defaulting to `'NOTE'` for backwards compatibility.
 - **Code block language selector** — Clicking the Code block toolbar button (`#btnCodeBlock`) now opens a popover with 12 common languages (JavaScript, TypeScript, Python, Bash, Shell, JSON, YAML, HTML, CSS, Markdown, SQL, Plain Text) plus a custom-language input row. Selecting a language inserts a `code_block` with the chosen info string; typing a custom language (e.g. "go", "rust") and pressing Enter or Apply does the same. If the cursor is already inside an existing code block, the language is switched in place. The `codeBlock` PM command signature is extended to `(state, dispatch, view, attrs)`, normalizes `attrs.language` via `.trim().toLowerCase()`, and defaults to `''` for backwards compatibility.
 

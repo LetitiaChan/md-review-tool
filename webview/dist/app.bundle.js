@@ -7,8 +7,6 @@
       "zh-CN": {
         // ===== 工具栏 =====
         "toolbar.help_title": "\u4F7F\u7528\u5E2E\u52A9",
-        "toolbar.file_select_title": "\u9009\u62E9MD\u6587\u4EF6",
-        "toolbar.file_select_default": "-- \u9009\u62E9\u6587\u4EF6 --",
         "toolbar.no_file": "\u672A\u6253\u5F00\u6587\u4EF6",
         "toolbar.file_changed": "\u6587\u4EF6\u5DF2\u66F4\u65B0",
         "toolbar.save_title": "\u4FDD\u5B58\u4FEE\u6539\u5230\u6E90\u6587\u4EF6 (Ctrl+S)",
@@ -32,7 +30,6 @@
         "toolbar.ai_fix_title": "\u6839\u636E\u6279\u9605\u8BB0\u5F55\u4E00\u952EAI\u4FEE\u590D\u6E90\u6587\u4EF6",
         "toolbar.ai_fix": "AI Fix",
         "toolbar.settings_title": "\u8BBE\u7F6E",
-        "toolbar.refresh_title": "\u5237\u65B0\u5F53\u524D\u6587\u4EF6",
         "toolbar.scroll_top_title": "\u56DE\u5230\u9876\u90E8",
         // ===== 欢迎页 =====
         "welcome.title": "\u6B22\u8FCE\u4F7F\u7528 MD Human Review",
@@ -76,6 +73,20 @@
         "editor.highlight_title": "\u9AD8\u4EAE\u6587\u672C",
         "editor.task_list_title": "\u4EFB\u52A1\u5217\u8868",
         "editor.link_title": "\u8D85\u94FE\u63A5",
+        // Slash Command 命令面板
+        "slash.heading1": "\u6807\u9898 1",
+        "slash.heading2": "\u6807\u9898 2",
+        "slash.heading3": "\u6807\u9898 3",
+        "slash.blockquote": "\u5F15\u7528\u5757",
+        "slash.code_block": "\u4EE3\u7801\u5757",
+        "slash.horizontal_rule": "\u5206\u5272\u7EBF",
+        "slash.table": "\u8868\u683C",
+        "slash.bullet_list": "\u65E0\u5E8F\u5217\u8868",
+        "slash.ordered_list": "\u6709\u5E8F\u5217\u8868",
+        "slash.task_list": "\u4EFB\u52A1\u5217\u8868",
+        "slash.alert_block": "\u9AD8\u4EAE\u5757",
+        "slash.image": "\u56FE\u7247",
+        "slash.no_results": "\u65E0\u5339\u914D\u7ED3\u679C",
         "editor.image_title": "\u56FE\u7247",
         "editor.alert_title": "\u9AD8\u4EAE\u5757",
         "editor.alert_type.note": "\u63D0\u793A",
@@ -241,8 +252,7 @@
         "help.ui_multi_window": "<strong>\u591A\u7A97\u53E3\u652F\u6301</strong> \u2014 \u53EF\u540C\u65F6\u6253\u5F00\u591A\u4E2A Markdown \u6587\u4EF6\uFF0C\u6BCF\u4E2A\u6587\u4EF6\u62E5\u6709\u72EC\u7ACB\u7684\u6279\u9605\u9762\u677F\u548C\u72B6\u6001",
         "help.ui_zen": "<strong>\u7985\u6A21\u5F0F</strong> \u2014 \u6309 <kbd>Alt</kbd>+<kbd>Z</kbd> \u9690\u85CF\u4FA7\u680F\u4E13\u6CE8\u9605\u8BFB\uFF0C\u540C\u65F6\u9690\u85CF IDE \u4FA7\u8FB9\u680F",
         "help.ui_theme": "<strong>\u4EAE\u8272/\u6697\u8272\u4E3B\u9898</strong> \u2014 \u5DE5\u5177\u680F\u4E00\u952E\u5207\u6362\u6216\u8DDF\u968F\u7CFB\u7EDF",
-        "help.ui_file_select": "<strong>\u6587\u4EF6\u9009\u62E9\u5668</strong> \u2014 \u5DE5\u4F5C\u533A\u5185 Markdown \u6587\u4EF6\u4E0B\u62C9\u6846\u5FEB\u901F\u5207\u6362",
-        "help.ui_file_change": "<strong>\u6587\u4EF6\u53D8\u66F4\u68C0\u6D4B</strong> \u2014 \u6E90\u6587\u4EF6\u4FEE\u6539\u540E\u663E\u793A\u300C\u6587\u4EF6\u5DF2\u66F4\u65B0\u300D\u5FBD\u7AE0\uFF0C\u70B9\u51FB\u5237\u65B0\u6309\u94AE\u91CD\u8F7D",
+        "help.ui_file_change": "<strong>\u6587\u4EF6\u53D8\u66F4\u68C0\u6D4B</strong> \u2014 \u6E90\u6587\u4EF6\u4FEE\u6539\u540E\u663E\u793A\u300C\u6587\u4EF6\u5DF2\u66F4\u65B0\u300D\u5FBD\u7AE0",
         "help.ui_resize": "<strong>\u9762\u677F\u62D6\u62FD</strong> \u2014 \u76EE\u5F55\u548C\u6279\u6CE8\u9762\u677F\u5BBD\u5EA6\u53EF\u62D6\u62FD\u8C03\u6574",
         "help.tips_title": "\u{1F4A1} \u5C0F\u8D34\u58EB",
         "help.tips_reader": "<strong>\u5F53\u4F5C Markdown \u9605\u8BFB\u5668\u4F7F\u7528</strong> \u2014 \u5173\u95ED\u53F3\u4FA7\u6279\u9605\u9762\u677F\uFF08\u76EE\u5F55 + \u6279\u6CE8\uFF09\uFF0C\u5373\u53EF\u4F5C\u4E3A\u7EAF Markdown \u9605\u8BFB\u5668\u4F7F\u7528\uFF0C\u4EAB\u53D7\u5B8C\u6574\u7684\u6E32\u67D3\u6548\u679C",
@@ -376,6 +386,9 @@
         "notification.auto_saved": "\u2713 \u5DF2\u81EA\u52A8\u4FDD\u5B58",
         "notification.auto_save_failed": "\u2717 \u4FDD\u5B58\u5931\u8D25",
         "notification.request_timeout": "\u8BF7\u6C42\u8D85\u65F6: {type}",
+        "notification.image_saved": "\u2705 \u56FE\u7247\u5DF2\u4FDD\u5B58: {path}",
+        "notification.image_save_failed": "\u274C \u56FE\u7247\u4FDD\u5B58\u5931\u8D25: {error}",
+        "notification.image_too_large": "\u26A0\uFE0F \u56FE\u7247\u8D85\u8FC7 5MB \u9650\u5236",
         // ===== 浮层按钮 =====
         "float.comment": "\u{1F4AC} \u8BC4\u8BBA",
         "float.delete": "\u{1F5D1}\uFE0F \u5220\u9664",
@@ -491,8 +504,6 @@
       "en": {
         // ===== Toolbar =====
         "toolbar.help_title": "Help",
-        "toolbar.file_select_title": "Select MD file",
-        "toolbar.file_select_default": "-- Select file --",
         "toolbar.no_file": "No file open",
         "toolbar.file_changed": "File updated",
         "toolbar.save_title": "Save changes to source file (Ctrl+S)",
@@ -516,7 +527,6 @@
         "toolbar.ai_fix_title": "Generate AI fix instructions from review annotations",
         "toolbar.ai_fix": "AI Fix",
         "toolbar.settings_title": "Settings",
-        "toolbar.refresh_title": "Refresh current file",
         "toolbar.scroll_top_title": "Back to top",
         // ===== Welcome =====
         "welcome.title": "Welcome to MD Human Review",
@@ -560,6 +570,20 @@
         "editor.highlight_title": "Highlight",
         "editor.task_list_title": "Task list",
         "editor.link_title": "Hyperlink",
+        // Slash Command menu
+        "slash.heading1": "Heading 1",
+        "slash.heading2": "Heading 2",
+        "slash.heading3": "Heading 3",
+        "slash.blockquote": "Blockquote",
+        "slash.code_block": "Code Block",
+        "slash.horizontal_rule": "Horizontal Rule",
+        "slash.table": "Table",
+        "slash.bullet_list": "Bullet List",
+        "slash.ordered_list": "Ordered List",
+        "slash.task_list": "Task List",
+        "slash.alert_block": "Alert Block",
+        "slash.image": "Image",
+        "slash.no_results": "No results",
         "editor.image_title": "Image",
         "editor.alert_title": "Alert block",
         "editor.alert_type.note": "Note",
@@ -725,8 +749,7 @@
         "help.ui_multi_window": "<strong>Multi-Window</strong> \u2014 Open multiple Markdown files simultaneously, each with its own independent review panel and state",
         "help.ui_zen": "<strong>Zen Mode</strong> \u2014 Press <kbd>Alt</kbd>+<kbd>Z</kbd> to hide sidebars for focused reading",
         "help.ui_theme": "<strong>Light/Dark Theme</strong> \u2014 One-click toggle or follow system",
-        "help.ui_file_select": "<strong>File Selector</strong> \u2014 Dropdown to quickly switch between workspace Markdown files",
-        "help.ui_file_change": '<strong>File Change Detection</strong> \u2014 Shows "File updated" badge when source file is modified; click refresh to reload',
+        "help.ui_file_change": '<strong>File Change Detection</strong> \u2014 Shows "File updated" badge when source file is modified externally',
         "help.ui_resize": "<strong>Panel Resize</strong> \u2014 Drag to adjust TOC and annotation panel widths",
         "help.tips_title": "\u{1F4A1} Tips",
         "help.tips_reader": "<strong>Use as a Markdown Reader</strong> \u2014 Hide the review panels (TOC + Annotations) to use it as a pure Markdown reader with full rendering support",
@@ -860,6 +883,9 @@
         "notification.auto_saved": "\u2713 Auto-saved",
         "notification.auto_save_failed": "\u2717 Save failed",
         "notification.request_timeout": "Request timeout: {type}",
+        "notification.image_saved": "\u2705 Image saved: {path}",
+        "notification.image_save_failed": "\u274C Image save failed: {error}",
+        "notification.image_too_large": "\u26A0\uFE0F Image exceeds 5MB limit",
         // ===== Float Buttons =====
         "float.comment": "\u{1F4AC} Comment",
         "float.delete": "\u{1F5D1}\uFE0F Delete",
@@ -1120,7 +1146,6 @@
         <li>${_t("help.ui_multi_window")}</li>
         <li>${_t("help.ui_zen")}</li>
         <li>${_t("help.ui_theme")}</li>
-        <li>${_t("help.ui_file_select")}</li>
         <li>${_t("help.ui_file_change")}</li>
         <li>${_t("help.ui_resize")}</li>
     </ul>
@@ -4443,6 +4468,13 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
       }
       applyTheme(currentSettings.theme);
+      let customStyleEl = document.getElementById("md-review-custom-css");
+      if (!customStyleEl) {
+        customStyleEl = document.createElement("style");
+        customStyleEl.id = "md-review-custom-css";
+        document.head.appendChild(customStyleEl);
+      }
+      customStyleEl.textContent = currentSettings.customCss || "";
       const tocPanel2 = document.getElementById("tocPanel");
       if (tocPanel2) {
         if (!currentSettings.showToc) {
@@ -4975,6 +5007,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
   var MODE = { INACTIVE: "inactive", RICH: "rich" };
   var _mode = MODE.INACTIVE;
   var _editor = null;
+  var _cursorPositions = /* @__PURE__ */ new Map();
   var RICH_CONTAINER_ID = "richModeContainer";
   var RICH_BODY_CLASS = "rich-mode-active";
   function ensureRichContainer() {
@@ -5029,6 +5062,12 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     if (options && typeof options.onSelectionChange === "function") {
       editorOptions.onSelectionChange = options.onSelectionChange;
     }
+    const store2 = globalThis.Store;
+    const currentFile = store2 && store2.getData ? store2.getData().relPath || "" : "";
+    const savedLine = _cursorPositions.get(currentFile);
+    if (savedLine !== void 0 && savedLine > 0) {
+      editorOptions.initialCursorLine = savedLine;
+    }
     _editor = globalThis.PM.createRichEditor(editorOptions);
     document.body.classList.add(RICH_BODY_CLASS);
     _mode = MODE.RICH;
@@ -5042,6 +5081,14 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     const store = globalThis.Store;
     let finalMarkdown = "";
     if (_editor) {
+      try {
+        if (typeof _editor.getCursorLine === "function") {
+          const currentFile = store && store.getData ? store.getData().relPath || "" : "";
+          const line = _editor.getCursorLine();
+          if (line > 0) _cursorPositions.set(currentFile, line);
+        }
+      } catch (e) {
+      }
       try {
         finalMarkdown = _editor.getMarkdown();
       } catch (e) {
@@ -5109,7 +5156,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
   // webview/js/app.js
   function initApp() {
     let blocks = [];
-    let serverFileList = [];
     let currentMode = "preview";
     let editorDirty = false;
     let autoSaveTimer = null;
@@ -5260,7 +5306,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
         if (key === "languageChanged") {
           updateZenButtonLabel();
-          updateServerFileSelect();
           if (typeof Annotations !== "undefined" && Annotations.renderAnnotationsList) {
             Annotations.renderAnnotationsList();
           }
@@ -5281,20 +5326,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         console.error("[App] \u72B6\u6001\u6062\u590D\u5931\u8D25:", e);
       }
       vscode.postMessage({ type: "ready" });
-      loadFileList();
       Exporter.enableAutoSave();
-    }
-    async function loadFileList() {
-      try {
-        const result = await callHost("getFiles", {});
-        if (result && result.files && result.files.length > 0) {
-          serverFileList = result.files;
-          updateServerFileSelect();
-          document.getElementById("fileSelectorGroup").style.display = "flex";
-        }
-      } catch (e) {
-        console.warn("[App] \u52A0\u8F7D\u6587\u4EF6\u5217\u8868\u5931\u8D25:", e);
-      }
     }
     function requestImageUris(markdown, sourceDir) {
       const html = marked.parse(markdown);
@@ -5306,21 +5338,9 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         });
       }
     }
-    function updateServerFileSelect() {
-      const select = document.getElementById("fileSelect");
-      select.innerHTML = '<option value="" data-i18n="toolbar.file_select_default">' + t("toolbar.file_select_default") + "</option>";
-      serverFileList.forEach((name) => {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        select.appendChild(opt);
-      });
-    }
     function bindEvents() {
       globalThis.handleSaveMd = handleSaveMd;
       globalThis.triggerAutoSave = scheduleAutoSave;
-      document.getElementById("fileSelect").addEventListener("change", handleFileSelectChange);
-      document.getElementById("btnRefresh").addEventListener("click", handleRefresh);
       const btnToggleRich = document.getElementById("btnToggleRich");
       if (btnToggleRich && globalThis.EditMode) {
         btnToggleRich.addEventListener("click", () => {
@@ -5661,103 +5681,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       initPanelResize();
       initContentSearch();
       initTocSearch();
-    }
-    async function handleFileSelectChange(e) {
-      const value = e.target.value;
-      if (!value) return;
-      if (currentMode === "rich" && editorDirty) {
-        clearAutoSaveTimer();
-        await handleSaveMd();
-      }
-      if (currentMode === "rich") {
-        editorDirty = false;
-        switchMode("preview");
-      }
-      try {
-        const records = await callHost("getReviewRecords", { fileName: value, relPath: value });
-        if (records && records.records && records.records.length > 0) {
-          const fileData = await callHost("readFile", { filePath: value });
-          if (fileData && !fileData.error) {
-            const matchedRecord = records.records[0];
-            const staleCheck = _isRecordStaleOnOpen(matchedRecord, fileData.content, fileData.docVersion);
-            if (staleCheck.stale) {
-              loadDocument(fileData.name, fileData.content, true, void 0, fileData.docVersion, fileData.sourceFilePath, fileData.sourceDir, fileData.relPath, fileData.pathHash);
-              requestImageUris(fileData.content, fileData.sourceDir);
-              Store.forceBumpVersion(matchedRecord.reviewVersion || 1, fileData.content, fileData.docVersion);
-              if (Exporter && Exporter.triggerAutoSave) {
-                Exporter.triggerAutoSave();
-              }
-              showNotification(t("notification.stale_content_bumped", { version: Store.getData().reviewVersion }));
-              console.log("[App] \u6279\u9605\u8BB0\u5F55\u8FC7\u671F (" + staleCheck.reason + ")\uFF0C\u5DF2\u5347\u7EA7\u5230 v" + Store.getData().reviewVersion);
-              return;
-            }
-            loadDocument(fileData.name, fileData.content, true, void 0, fileData.docVersion, fileData.sourceFilePath, fileData.sourceDir, fileData.relPath, fileData.pathHash);
-            requestImageUris(fileData.content, fileData.sourceDir);
-            Store.restoreFromReviewRecord(matchedRecord, fileData.name, fileData.content, fileData.docVersion);
-            const newBlocks = Renderer.parseMarkdown(fileData.content);
-            Renderer.renderBlocks(newBlocks, Store.getAnnotations());
-            renderMathAndMermaid();
-            Annotations.setBlocks(newBlocks);
-            Annotations.init(newBlocks);
-            Annotations.renderAnnotationsList();
-            Annotations.updateToolbarState();
-            if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
-              showNotification(t("notification.restored", { count: matchedRecord.annotations.length }));
-            }
-            return;
-          }
-        }
-        const data = await callHost("readFile", { filePath: value });
-        if (data && !data.error) {
-          loadDocument(data.name, data.content, true, void 0, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
-          requestImageUris(data.content, data.sourceDir);
-        }
-      } catch (e2) {
-        console.error("[App] \u52A0\u8F7D\u6587\u4EF6\u5931\u8D25:", e2);
-        showNotification(t("notification.load_failed"));
-      }
-    }
-    async function handleRefresh() {
-      vscode.postMessage({ type: "getSettings" });
-      const currentData = Store.getData();
-      if (!currentData.fileName) return;
-      try {
-        const filePath = currentData.sourceFilePath || currentData.fileName;
-        const data = await callHost("readFile", { filePath });
-        if (data && !data.error) {
-          const contentChanged = data.content.trim() !== currentData.rawMarkdown.trim();
-          if (contentChanged) {
-            loadDocument(data.name, data.content, true, void 0, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
-            showNotification("\u6587\u4EF6\u5DF2\u66F4\u65B0\uFF0C\u5DF2\u521B\u5EFA\u65B0\u7684\u6279\u9605\u7248\u672C");
-          } else {
-            loadDocument(data.name, data.content, false, void 0, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
-            showNotification("\u6587\u4EF6\u5DF2\u91CD\u65B0\u52A0\u8F7D");
-            try {
-              const records = await callHost("getReviewRecords", { fileName: data.name, relPath: data.relPath || "" });
-              if (records && records.records && records.records.length > 0) {
-                const matchedRecord = records.records[0];
-                Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
-                if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
-                  const newBlocks = Renderer.parseMarkdown(data.content);
-                  Renderer.renderBlocks(newBlocks, Store.getAnnotations());
-                  renderMathAndMermaid();
-                  Annotations.setBlocks(newBlocks);
-                  Annotations.init(newBlocks);
-                  Annotations.renderAnnotationsList();
-                  Annotations.updateToolbarState();
-                }
-              }
-            } catch (e) {
-              console.warn("[App] \u5237\u65B0\u65F6\u6062\u590D\u6279\u9605\u8BB0\u5F55\u5931\u8D25:", e);
-            }
-          }
-          requestImageUris(data.content, data.sourceDir);
-          hideFileChangeBadge();
-          loadFileList();
-        }
-      } catch (e) {
-        showNotification("\u5237\u65B0\u5931\u8D25: " + e.message);
-      }
     }
     function loadDocument(fileName, markdown, isNew, fileHash, docVersion, sourceFilePath, sourceDir, relPath, pathHash) {
       if (isNew) {

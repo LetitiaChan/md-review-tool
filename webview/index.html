@@ -22,11 +22,6 @@
     <header class="toolbar">
         <div class="toolbar-left">
 <button class="btn btn-help" id="btnHelp" data-i18n-title="toolbar.help_title" title="使用帮助">❓</button>
-            <div class="file-selector-group" id="fileSelectorGroup" style="display:none;">
-                <select class="file-select" id="fileSelect" data-i18n-title="toolbar.file_select_title" title="选择MD文件">
-                    <option value="" data-i18n="toolbar.file_select_default">-- 选择文件 --</option>
-                </select>
-            </div>
             <span class="file-name" id="fileName" data-i18n="toolbar.no_file">未打开文件</span>
             <span class="file-change-badge" id="fileChangeBadge" style="display:none;" data-i18n="toolbar.file_changed">文件已更新</span>
             <span class="edit-status" id="editStatus"></span>
@@ -68,10 +63,6 @@
             <!-- 设置（仅图标） -->
             <button class="btn-toolbar-icon" id="btnSettings" data-i18n-title="toolbar.settings_title" title="设置">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6.5 1.5h3l.4 1.9.7.3 1.7-1 2.1 2.1-1 1.7.3.7 1.9.4v3l-1.9.4-.3.7 1 1.7-2.1 2.1-1.7-1-.7.3-.4 1.9h-3l-.4-1.9-.7-.3-1.7 1-2.1-2.1 1-1.7-.3-.7-1.9-.4v-3l1.9-.4.3-.7-1-1.7 2.1-2.1 1.7 1 .7-.3.4-1.9z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.2"/></svg>
-            </button>
-            <!-- 刷新（仅图标） -->
-            <button class="btn-toolbar-icon" id="btnRefresh" data-i18n-title="toolbar.refresh_title" title="刷新当前文件">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.65 2.35A7.96 7.96 0 0 0 8 0C3.58 0 0 3.58 0 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 8 14 6 6 0 1 1 8 2c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z" fill="currentColor" transform="scale(0.85) translate(1.2,1.2)"/></svg>
             </button>
         </div>
     </header>

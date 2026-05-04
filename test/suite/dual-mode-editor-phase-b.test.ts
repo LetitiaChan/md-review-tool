@@ -87,13 +87,13 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
                 'index.html 应包含 ${pmBundleUri} 占位符');
         });
 
-        test('T10.8 reviewPanel.ts 应注入 pmBundleUri', () => {
-            const rpPath = path.join(extPath, 'src', 'reviewPanel.ts');
+        test('T10.8 webviewHelper.ts 应注入 pmBundleUri', () => {
+            const rpPath = path.join(extPath, 'src', 'webviewHelper.ts');
             const content = fs.readFileSync(rpPath, 'utf-8');
             assert.ok(/pmBundleUri\s*=\s*webviewUri\(['"]dist\/pm\.bundle\.js['"]\)/.test(content),
-                'reviewPanel.ts 应声明 pmBundleUri = webviewUri("dist/pm.bundle.js")');
+                'webviewHelper.ts 应声明 pmBundleUri = webviewUri("dist/pm.bundle.js")');
             assert.ok(/html\.replace\(\s*\/\\\$\\\{pmBundleUri\\\}\/g/.test(content),
-                'reviewPanel.ts 应对 ${pmBundleUri} 做 html.replace');
+                'webviewHelper.ts 应对 ${pmBundleUri} 做 html.replace');
         });
 
         test('T10.9 i18n.js 的 zh 与 en 两表应都含 edit_mode.rich key', () => {

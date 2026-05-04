@@ -31,5 +31,7 @@
   "config.showLineNumbers.description": "Show line numbers in code blocks",
   "config.codeTheme.description": "Code highlight theme",
   "config.codeTheme.auto": "Auto (follow interface theme)",
-  "config.language.description": "Interface language"
+  "config.language.description": "Interface language",
+  "config.customCss.description": "Custom CSS rules to inject into the webview (placed after all built-in styles)",
+  "config.imageAssetsPath.description": "Directory path (relative to workspace) for saving pasted/dropped images (default: assets/images)"
 }

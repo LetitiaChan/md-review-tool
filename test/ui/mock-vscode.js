@@ -43,9 +43,6 @@
                 case 'ready':
                     // 不需要响应
                     break;
-                case 'getFiles':
-                    _dispatchResponse('fileList', { files: [] }, requestId);
-                    break;
                 case 'getState':
                     _dispatchResponse('stateValue', { value: null }, requestId);
                     break;

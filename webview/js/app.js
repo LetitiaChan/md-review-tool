@@ -9,7 +9,6 @@
  */
 export function initApp() {
     let blocks = [];
-    let serverFileList = [];
     let currentMode = 'preview';
     let editorDirty = false;
     let autoSaveTimer = null;
@@ -201,7 +200,6 @@ export function initApp() {
             // 语言变更时刷新禅模式按钮等动态文本
             if (key === 'languageChanged') {
                 updateZenButtonLabel();
-                updateServerFileSelect();
                 // 刷新批注列表中的动态文本（类型标签、日期格式、按钮文本等）
                 if (typeof Annotations !== 'undefined' && Annotations.renderAnnotationsList) {
                     Annotations.renderAnnotationsList();
@@ -231,24 +229,8 @@ export function initApp() {
         // 通知 Extension Host webview 已就绪（必须确保发出，否则文件内容不会被加载）
         vscode.postMessage({ type: 'ready' });
 
-        // 异步从 Host 加载文件列表
-        loadFileList();
-
         // 启用自动保存
         Exporter.enableAutoSave();
-    }
-
-    async function loadFileList() {
-        try {
-            const result = await callHost('getFiles', {});
-            if (result && result.files && result.files.length > 0) {
-                serverFileList = result.files;
-                updateServerFileSelect();
-                document.getElementById('fileSelectorGroup').style.display = 'flex';
-            }
-        } catch (e) {
-            console.warn('[App] 加载文件列表失败:', e);
-        }
     }
 
     // ===== 请求图片 URI 批量转换 =====
@@ -263,26 +245,11 @@ export function initApp() {
         }
     }
 
-    // ===== 文件选择下拉框 =====
-    function updateServerFileSelect() {
-        const select = document.getElementById('fileSelect');
-        select.innerHTML = '<option value="" data-i18n="toolbar.file_select_default">' + t('toolbar.file_select_default') + '</option>';
-        serverFileList.forEach((name) => {
-            const opt = document.createElement('option');
-            opt.value = name;
-            opt.textContent = name;
-            select.appendChild(opt);
-        });
-    }
-
     // ===== 事件绑定 =====
     function bindEvents() {
         // 暴露保存函数给 edit-mode.js
         globalThis.handleSaveMd = handleSaveMd;
         globalThis.triggerAutoSave = scheduleAutoSave;
-
-        document.getElementById('fileSelect').addEventListener('change', handleFileSelectChange);
-        document.getElementById('btnRefresh').addEventListener('click', handleRefresh);
 
 
         // Rich Mode 切换按钮（扩展内唯一编辑器）
@@ -715,122 +682,8 @@ export function initApp() {
     }
 
 
-    // ===== 文件选择变更 =====
-    async function handleFileSelectChange(e) {
-        const value = e.target.value;
-        if (!value) return;
 
-        if (currentMode === 'rich' && editorDirty) {
-            clearAutoSaveTimer();
-            await handleSaveMd();
-        }
-        if (currentMode === 'rich') {
-            editorDirty = false;
-            switchMode('preview');
-        }
 
-        try {
-            // 先尝试从 .review 恢复
-            const records = await callHost('getReviewRecords', { fileName: value, relPath: value });
-            if (records && records.records && records.records.length > 0) {
-                const fileData = await callHost('readFile', { filePath: value });
-                if (fileData && !fileData.error) {
-                    const matchedRecord = records.records[0];
-                    // 思路 A + B：检测批阅记录是否已过期（关闭期间源文件被外部修改）
-                    const staleCheck = _isRecordStaleOnOpen(matchedRecord, fileData.content, fileData.docVersion);
-                    if (staleCheck.stale) {
-                        loadDocument(fileData.name, fileData.content, true, undefined, fileData.docVersion, fileData.sourceFilePath, fileData.sourceDir, fileData.relPath, fileData.pathHash);
-                        requestImageUris(fileData.content, fileData.sourceDir);
-                        Store.forceBumpVersion(matchedRecord.reviewVersion || 1, fileData.content, fileData.docVersion);
-                        if (Exporter && Exporter.triggerAutoSave) { Exporter.triggerAutoSave(); }
-                        showNotification(t('notification.stale_content_bumped', { version: Store.getData().reviewVersion }));
-                        console.log('[App] 批阅记录过期 (' + staleCheck.reason + ')，已升级到 v' + Store.getData().reviewVersion);
-                        return;
-                    }
-                    // 即使最新记录批注为空（v>1 空占位），也要 restoreFromReviewRecord
-                    // 让 reviewVersion 正确恢复，下次刷新不会从 v1 开始自增。
-                    loadDocument(fileData.name, fileData.content, true, undefined, fileData.docVersion, fileData.sourceFilePath, fileData.sourceDir, fileData.relPath, fileData.pathHash);
-                    requestImageUris(fileData.content, fileData.sourceDir);
-                    Store.restoreFromReviewRecord(matchedRecord, fileData.name, fileData.content, fileData.docVersion);
-                    const newBlocks = Renderer.parseMarkdown(fileData.content);
-                    Renderer.renderBlocks(newBlocks, Store.getAnnotations());
-                    renderMathAndMermaid();
-                    Annotations.setBlocks(newBlocks);
-                    Annotations.init(newBlocks);
-                    Annotations.renderAnnotationsList();
-                    Annotations.updateToolbarState();
-                    if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
-                        showNotification(t('notification.restored', { count: matchedRecord.annotations.length }));
-                    }
-                    return;
-                }
-            }
-
-            // 正常加载
-            const data = await callHost('readFile', { filePath: value });
-            if (data && !data.error) {
-                loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
-                requestImageUris(data.content, data.sourceDir);
-            }
-        } catch (e) {
-            console.error('[App] 加载文件失败:', e);
-            showNotification(t('notification.load_failed'));
-        }
-    }
-
-    // ===== 刷新 =====
-    async function handleRefresh() {
-        // 刷新时同步设置（其他面板可能已修改设置）
-        vscode.postMessage({ type: 'getSettings' });
-
-        const currentData = Store.getData();
-        if (!currentData.fileName) return;
-
-        try {
-            const filePath = currentData.sourceFilePath || currentData.fileName;
-            const data = await callHost('readFile', { filePath });
-            if (data && !data.error) {
-                const contentChanged = data.content.trim() !== currentData.rawMarkdown.trim();
-                if (contentChanged) {
-                    loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
-                    showNotification('文件已更新，已创建新的批阅版本');
-                } else {
-                    loadDocument(data.name, data.content, false, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
-                    showNotification('文件已重新加载');
-
-                    // 仅在内容未变化时从磁盘批阅记录恢复批注（确保批注列表与磁盘同步）
-                    // 内容变化时已进入新批阅版本，不应恢复旧批阅记录，否则会覆盖新版本号
-                    try {
-                        const records = await callHost('getReviewRecords', { fileName: data.name, relPath: data.relPath || '' });
-                        if (records && records.records && records.records.length > 0) {
-                            const matchedRecord = records.records[0];
-                            // 即使最新记录批注为空（v>1 空占位），也要 restoreFromReviewRecord
-                            // 让 reviewVersion 与磁盘保持一致。
-                            Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
-                            if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
-                                const newBlocks = Renderer.parseMarkdown(data.content);
-                                Renderer.renderBlocks(newBlocks, Store.getAnnotations());
-                                renderMathAndMermaid();
-                                Annotations.setBlocks(newBlocks);
-                                Annotations.init(newBlocks);
-                                Annotations.renderAnnotationsList();
-                                Annotations.updateToolbarState();
-                            }
-                        }
-                    } catch (e) {
-                        console.warn('[App] 刷新时恢复批阅记录失败:', e);
-                    }
-                }
-                requestImageUris(data.content, data.sourceDir);
-                hideFileChangeBadge();
-
-                // 刷新文件列表
-                loadFileList();
-            }
-        } catch (e) {
-            showNotification('刷新失败: ' + e.message);
-        }
-    }
 
     // ===== 加载文档 =====
     function loadDocument(fileName, markdown, isNew, fileHash, docVersion, sourceFilePath, sourceDir, relPath, pathHash) {

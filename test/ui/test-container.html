@@ -35,7 +35,6 @@
         <div class="toolbar-right">
             <button class="btn btn-apply" id="btnApplyReview" disabled>🤖 AI 修复</button>
             <button class="btn-toolbar-icon" id="btnSettings" title="设置">⚙️</button>
-            <button class="btn-toolbar-icon" id="btnRefresh" title="刷新">🔄</button>
         </div>
     </header>
 
@@ -131,7 +130,7 @@
         (function() {
             // app.js 中通过 getElementById 绑定 addEventListener 的所有元素 ID
             const requiredIds = [
-                'fileSelect', 'fileChangeBadge',
+                'fileChangeBadge',
                 'btnHelp', 'btnCloseHelp', 'btnCloseHelpOk',
                 'btnCloseClearAll', 'btnCancelClearAll', 'btnConfirmClearAll',
                 'btnCancelApply', 'btnCloseApplyConfirm', 'btnConfirmApply',
@@ -147,7 +146,7 @@
                 'tableMenuInsertColLeft', 'tableMenuInsertColRight',
                 'tableMenuDeleteRow', 'tableMenuDeleteCol',
                 'settingsPanel', 'btnCloseSettings', 'btnResetSettings',
-                'fileSelectorGroup', 'applyResultContent', 'aiInstructionContent',
+                'applyResultContent', 'aiInstructionContent',
                 'imageUploadInput', 'imagePreviewList',
                 'insertImageUploadInput', 'insertImagePreviewList',
             ];

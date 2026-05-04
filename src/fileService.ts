@@ -106,18 +106,6 @@ export class FileService {
     }
 
     /**
-     * 列出工作区所有 .md / .mdc 文件（递归搜索），排除 .review 目录
-     */
-    async listMdFiles(): Promise<string[]> {
-        if (!this.workspaceRoot) { return []; }
-const uris = await vscode.workspace.findFiles('**/*.{md,mdc}', '{**/node_modules/**,**/.review/**}');
-        return uris
-            .map(u => vscode.workspace.asRelativePath(u))
-.filter(p => !p.startsWith('.review/') && !p.startsWith('.review\\'))
-            .sort((a, b) => a.localeCompare(b, 'zh-CN'));
-    }
-
-    /**
      * 读取文件内容
      */
     readFile(filePath: string): { name: string; content: string; docVersion: string | null; sourceFilePath: string; sourceDir: string; relPath: string; pathHash: string } {

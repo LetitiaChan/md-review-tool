@@ -127,6 +127,15 @@ codeTheme: 'default-light-modern',
         // 主题
         applyTheme(currentSettings.theme);
 
+        // Custom CSS 注入
+        let customStyleEl = document.getElementById('md-review-custom-css');
+        if (!customStyleEl) {
+            customStyleEl = document.createElement('style');
+            customStyleEl.id = 'md-review-custom-css';
+            document.head.appendChild(customStyleEl);
+        }
+        customStyleEl.textContent = currentSettings.customCss || '';
+
         // 目录
         const tocPanel2 = document.getElementById('tocPanel');
         if (tocPanel2) {

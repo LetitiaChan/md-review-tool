@@ -753,7 +753,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
             // 工具栏元素
             const toolbarIds = [
-                'fileSelect', 'fileName', 'editStatus', 'btnSaveMd',
+                'fileName', 'editStatus', 'btnSaveMd',
                 'btnToggleAnnotations', 'btnToggleToc',
                 'btnSettings', 'btnHelp'
             ];
@@ -931,26 +931,6 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         });
 
 
-
-        test('语言切换应刷新文件选择下拉框默认文本', () => {
-            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
-            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
-
-            // app.js 在 languageChanged 回调中应调用 updateServerFileSelect 刷新下拉框
-            assert.ok(appJs.includes('updateServerFileSelect'), 'app.js 应有 updateServerFileSelect 函数');
-            // 验证 languageChanged 分支中包含 updateServerFileSelect 调用
-            const langChangedIdx = appJs.indexOf("'languageChanged'");
-            const afterLangChanged = appJs.substring(langChangedIdx, langChangedIdx + 300);
-            assert.ok(afterLangChanged.includes('updateServerFileSelect'), '语言切换回调中应调用 updateServerFileSelect 刷新文件选择下拉框');
-        });
-
-        test('updateServerFileSelect 生成的默认 option 应带有 data-i18n 属性', () => {
-            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
-            const appJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
-
-            // 动态生成的默认 option 应包含 data-i18n 属性，以便 applyToDOM 能刷新
-            assert.ok(appJs.includes('data-i18n="toolbar.file_select_default"'), '动态生成的默认 option 应带有 data-i18n 属性');
-        });
 
         test('applyToDOM 应对 optgroup 设置 label 属性而非 textContent（防止清空子选项）', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
@@ -1316,15 +1296,9 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         });
     });
 
-    // ===== 9. 文件选择器交互 =====
+    // ===== 9. 文件元信息 =====
 
-    suite('9. 文件选择器交互', () => {
-        test('listMdFiles 应返回工作区中的 md 文件', async () => {
-            const files = await fileService.listMdFiles();
-            assert.ok(Array.isArray(files), '应返回数组');
-            // 在测试环境中可能没有工作区文件，但不应报错
-        });
-
+    suite('9. 文件元信息', () => {
         test('readFile 后应能获取文件元信息', () => {
             const testFile = path.join(testDir, 'meta-test.md');
             fs.writeFileSync(testFile, '# 元信息测试\n\n**文档版本**：v3.2.1\n\n内容', 'utf-8');
@@ -2260,16 +2234,6 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             );
         });
 
-        test('BT-reviewKeep.4 Tier2 — handleRefresh 内容变化分支不应主动调用 deleteReviewRecords', () => {
-            const body = extractFunctionBody(appJsText, /async\s+function\s+handleRefresh\s*\(/);
-            assert.ok(body.length > 0, '应能提取到 handleRefresh 函数体');
-            // handleRefresh 自己不应直接发起磁盘删除
-            assert.ok(
-                !/callHost\s*\(\s*['"]deleteReviewRecords/.test(body),
-                'handleRefresh 不应直接调用 deleteReviewRecords（避免误删历史批阅版本）'
-            );
-        });
-
         test('BT-reviewKeep.5 Tier3 — 仅 btnConfirmClearAll handler 保留显式 deleteReviewRecords 调用', () => {
             // 全代码库扫描：webview 里 callHost('deleteReviewRecords', ...) 只应存在于"清除全部批注"显式 handler 中
             const allCallers: string[] = [];
@@ -2655,11 +2619,11 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
                 /function\s+_isRecordStaleOnOpen\s*\(/.test(appJsText21),
                 'app.js 应定义 _isRecordStaleOnOpen helper'
             );
-            // 至少 handleFileContentPush + handleFileSelectChange 两处调用
+            // 至少 handleFileContentPush 调用
             const callCount = (appJsText21.match(/_isRecordStaleOnOpen\(/g) || []).length;
             assert.ok(
-                callCount >= 3,
-                `_isRecordStaleOnOpen 应至少在 2 处调用（定义 1 次 + 至少 2 次调用 = 3 次出现），实际 ${callCount} 次`
+                callCount >= 2,
+                `_isRecordStaleOnOpen 应至少在 1 处调用（定义 1 次 + 至少 1 次调用 = 2 次出现），实际 ${callCount} 次`
             );
             // 过期分支必须调用 forceBumpVersion
             assert.ok(
@@ -2977,19 +2941,19 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(/Windsurf/.test(i18nJsText), 'i18n.js 应包含 Windsurf 字样');
         });
 
-        test('Tier1 — reviewPanel.ts 应 import aiChatAdapters 并新增 cursor/windsurf 成功文案', () => {
-            const reviewPanelText = fs.readFileSync(path.join(extPath, 'src', 'reviewPanel.ts'), 'utf-8');
+        test('Tier1 — webviewHelper.ts 应 import aiChatAdapters 并新增 cursor/windsurf 成功文案', () => {
+            const webviewHelperText = fs.readFileSync(path.join(extPath, 'src', 'webviewHelper.ts'), 'utf-8');
             assert.ok(
-                /from\s+['"]\.\/aiChatAdapters['"]/.test(reviewPanelText),
-                'reviewPanel.ts 应 import ./aiChatAdapters'
+                /from\s+['"]\.\/aiChatAdapters['"]/.test(webviewHelperText),
+                'webviewHelper.ts 应 import ./aiChatAdapters'
             );
             assert.ok(
-                reviewPanelText.includes("'ai.chat_success_cursor'"),
-                'reviewPanel.ts 应新增 ai.chat_success_cursor i18n key'
+                webviewHelperText.includes("'ai.chat_success_cursor'"),
+                'webviewHelper.ts 应新增 ai.chat_success_cursor i18n key'
             );
             assert.ok(
-                reviewPanelText.includes("'ai.chat_success_windsurf'"),
-                'reviewPanel.ts 应新增 ai.chat_success_windsurf i18n key'
+                webviewHelperText.includes("'ai.chat_success_windsurf'"),
+                'webviewHelper.ts 应新增 ai.chat_success_windsurf i18n key'
             );
         });
 
@@ -3378,10 +3342,10 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const reviewPanelJs = fs.readFileSync(path.join(extPath, 'out', 'reviewPanel.js'), 'utf-8');
 
-            // 定位 zenModeChanged case 的实现体（截取 1200 字节上下文）
+            // 定位 zenModeChanged case 的实现体（截取 2500 字节上下文）
             const caseStart = reviewPanelJs.indexOf("'zenModeChanged'");
             assert.ok(caseStart !== -1, '应存在 zenModeChanged case');
-            const caseBody = reviewPanelJs.substring(caseStart, caseStart + 1500);
+            const caseBody = reviewPanelJs.substring(caseStart, caseStart + 2500);
 
             // 应存在记录字段 _zenClosedBars，用于对称恢复
             assert.ok(
@@ -3413,7 +3377,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             // 避免把用户原本未打开的栏误开
             const caseStart = reviewPanelJs.indexOf("'zenModeChanged'");
             assert.ok(caseStart !== -1, '应存在 zenModeChanged case');
-            const caseBody = reviewPanelJs.substring(caseStart, caseStart + 1500);
+            const caseBody = reviewPanelJs.substring(caseStart, caseStart + 2500);
 
             assert.ok(
                 /_zenClosedBars\.sidebar[\s\S]{0,120}toggleSidebarVisibility/.test(caseBody),
@@ -3489,7 +3453,6 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
                 'btnToggleAnnotations',
                 'btnApplyReview',
                 'btnSettings',
-                'btnRefresh',
                 'btnHelp',
                 'btnSaveMd'
             ];
@@ -3584,16 +3547,6 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.strictEqual(helpHeightMatch![1], '22', '帮助按钮高度应为 22px');
         });
 
-        test('BT-toolbarToggle.24 文件选择控件最大宽度应为 195px（Tier 3 — 回归断言）', () => {
-            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
-            const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
-
-            // .file-select max-width 应为 195px
-            const match = css.match(/\.file-select\s*\{[^}]*max-width:\s*(\d+)px/);
-            assert.ok(match, '应存在 .file-select max-width 定义');
-            assert.strictEqual(match![1], '195', '文件选择控件最大宽度应为 195px');
-        });
-
         test('BT-toolbarToggle.25 帮助弹窗 .modal-help 应设置 overflow-y: hidden 防止双滚动条（Tier 1 — 存在性断言）', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
             const css = fs.readFileSync(path.join(extPath, 'webview', 'css', 'style.css'), 'utf-8');
@@ -3633,8 +3586,8 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
     // ========= Suite: Hotfix — 评论弹窗图片上传通过 Extension Host pickImage 绕过 webview file input 限制 =========
     suite('Hotfix — pickImage 图片选择功能', () => {
         const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
-        const reviewPanelTsPath = path.join(extPath, 'out', 'src', 'reviewPanel.js');
-        const reviewPanelText = fs.readFileSync(reviewPanelTsPath, 'utf-8');
+        const webviewHelperJsPath = path.join(extPath, 'out', 'webviewHelper.js');
+        const reviewPanelText = fs.readFileSync(webviewHelperJsPath, 'utf-8');
         const annotationsJsPath = path.join(extPath, 'webview', 'js', 'annotations.js');
         const annotationsText = fs.readFileSync(annotationsJsPath, 'utf-8');
         const bundlePath = path.join(extPath, 'webview', 'dist', 'app.bundle.js');
