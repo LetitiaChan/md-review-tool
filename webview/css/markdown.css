@@ -1938,7 +1938,43 @@ body.rich-mode-active #editorToolbar {
     display: block;
 }
 
-/* 颜色选择器 */
+/* 刷新按钮弹出菜单 */
+.toolbar-btn-refresh {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.refresh-popover {
+    min-width: 200px;
+    padding: 4px;
+    left: auto;
+    right: 0;
+    transform: none;
+}
+.refresh-strategy-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--vscode-foreground, #ccc);
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 4px;
+    text-align: left;
+}
+.refresh-strategy-option:hover {
+    background: var(--vscode-list-hoverBackground, rgba(255,255,255,0.05));
+}
+.refresh-strategy-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+.refresh-strategy-label {
+    white-space: nowrap;
+}
 .color-popover {
     min-width: 160px;
 }

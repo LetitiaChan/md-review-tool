@@ -34,6 +34,14 @@ window.I18n = (() => {
     'toolbar.ai_fix': 'AI Fix',
             'toolbar.settings_title': '设置',
             'toolbar.scroll_top_title': '回到顶部',
+            'toolbar.refresh_title': '刷新',
+            'toolbar.refresh_visual': '视觉刷新（仅重新渲染）',
+            'toolbar.refresh_disk': '从磁盘重载（创建新审阅版本）',
+            'toolbar.refresh_editor': '重载编辑器',
+            'refresh.dirty_confirm_title': '未保存的修改',
+            'refresh.dirty_confirm_message': '文档有未保存的修改。放弃修改并重新加载？',
+            'refresh.dirty_confirm_discard': '放弃并重载',
+            'refresh.dirty_confirm_cancel': '取消',
 
             // ===== 欢迎页 =====
             'welcome.title': '欢迎使用 MD Human Review',
@@ -554,6 +562,14 @@ window.I18n = (() => {
             'toolbar.ai_fix': 'AI Fix',
             'toolbar.settings_title': 'Settings',
             'toolbar.scroll_top_title': 'Back to top',
+            'toolbar.refresh_title': 'Refresh',
+            'toolbar.refresh_visual': 'Visual Refresh (re-render only)',
+            'toolbar.refresh_disk': 'Reload from Disk (new review version)',
+            'toolbar.refresh_editor': 'Reload Editor',
+            'refresh.dirty_confirm_title': 'Unsaved Changes',
+            'refresh.dirty_confirm_message': 'Document has unsaved changes. Discard and reload?',
+            'refresh.dirty_confirm_discard': 'Discard & Reload',
+            'refresh.dirty_confirm_cancel': 'Cancel',
 
             // ===== Welcome =====
             'welcome.title': 'Welcome to MD Human Review',

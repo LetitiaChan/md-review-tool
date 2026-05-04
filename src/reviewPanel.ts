@@ -148,6 +148,7 @@ export class ReviewPanel {
                 });
             },
             webview: this._panel.webview,
+            getDocumentIsDirty: () => false, // WebviewPanel 模式无 TextDocument 绑定
         };
 
         this._messageHandler = createMessageHandler(handlerCtx);

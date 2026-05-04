@@ -119,6 +119,8 @@ export interface MessageHandlerContext {
     onReady: () => void;
     /** webview 面板（用于 resolveImageUris 等） */
     webview: vscode.Webview;
+    /** 获取当前文档的脏状态（Custom Editor 返回真实 isDirty，WebviewPanel 返回 false） */
+    getDocumentIsDirty: () => boolean;
 }
 
 /**
@@ -384,6 +386,34 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
                     }
                 } catch (e: any) {
                     vscode.window.showErrorMessage(`打开文件失败: ${e.message}`);
+                }
+                break;
+            }
+            case 'getDocumentDirtyState': {
+                const isDirty = ctx.getDocumentIsDirty();
+                ctx.postMessage({ type: 'documentDirtyState', payload: { isDirty }, requestId });
+                break;
+            }
+            case 'refresh.showDirtyConfirm': {
+                const lang = vscode.workspace.getConfiguration('mdReview').get<string>('language', 'zh-CN');
+                const msg = lang === 'zh-CN'
+                    ? '文档有未保存的修改。放弃修改并重新加载？'
+                    : 'Document has unsaved changes. Discard and reload?';
+                const discardLabel = lang === 'zh-CN' ? '放弃并重载' : 'Discard & Reload';
+                const cancelLabel = lang === 'zh-CN' ? '取消' : 'Cancel';
+                const choice = await vscode.window.showWarningMessage(
+                    msg, { modal: true }, discardLabel, cancelLabel
+                );
+                const confirmed = choice === discardLabel;
+                ctx.postMessage({ type: 'refresh.dirtyConfirmResult', payload: { confirmed }, requestId });
+                break;
+            }
+            case 'refresh.revertFile': {
+                try {
+                    await vscode.commands.executeCommand('workbench.action.revertFile');
+                    ctx.postMessage({ type: 'refresh.revertResult', payload: { success: true }, requestId });
+                } catch (e: any) {
+                    ctx.postMessage({ type: 'refresh.revertResult', payload: { success: false, fallback: 'visual' }, requestId });
                 }
                 break;
             }

@@ -11,6 +11,9 @@ All notable changes to this project will be documented in this file.
 ### 🔧 Breaking Changes
 - **Removed internal file list** — The file selector dropdown and refresh button have been removed from the toolbar. Users should now use VS Code's native file Explorer to navigate between Markdown files (right-click → "Open With..." or set MD Human Review as default editor).
 
+### 🔧 Restored Features
+- **Restored toolbar refresh button with three strategies** — The refresh button (`#btnRefresh`) has been restored to the toolbar with a popup menu offering three strategies: (1) Visual Refresh — re-renders current markdown without reading disk or modifying Store; (2) Disk Reload — re-reads file content, compares with current data, and creates a new review version snapshot if content changed; (3) Editor Reload — reverts the Custom Editor via `workbench.action.revertFile` (falls back to visual refresh in WebviewPanel mode). Both Disk Reload and Editor Reload check `TextDocument.isDirty` and show a modal confirmation dialog before discarding unsaved changes. File selector remains removed.
+
 ### ✅ Tests
 - Added `test/suite/custom-editor-provider.test.ts` — 25 regression assertions covering Custom Editor registration (Tier 1: package.json config, file existence), shared helper usage (Tier 2: imports, function calls), and file list removal verification (Tier 3: no dead code remains). All 909 tests pass.
 

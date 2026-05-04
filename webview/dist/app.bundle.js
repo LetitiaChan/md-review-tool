@@ -31,6 +31,14 @@
         "toolbar.ai_fix": "AI Fix",
         "toolbar.settings_title": "\u8BBE\u7F6E",
         "toolbar.scroll_top_title": "\u56DE\u5230\u9876\u90E8",
+        "toolbar.refresh_title": "\u5237\u65B0",
+        "toolbar.refresh_visual": "\u89C6\u89C9\u5237\u65B0\uFF08\u4EC5\u91CD\u65B0\u6E32\u67D3\uFF09",
+        "toolbar.refresh_disk": "\u4ECE\u78C1\u76D8\u91CD\u8F7D\uFF08\u521B\u5EFA\u65B0\u5BA1\u9605\u7248\u672C\uFF09",
+        "toolbar.refresh_editor": "\u91CD\u8F7D\u7F16\u8F91\u5668",
+        "refresh.dirty_confirm_title": "\u672A\u4FDD\u5B58\u7684\u4FEE\u6539",
+        "refresh.dirty_confirm_message": "\u6587\u6863\u6709\u672A\u4FDD\u5B58\u7684\u4FEE\u6539\u3002\u653E\u5F03\u4FEE\u6539\u5E76\u91CD\u65B0\u52A0\u8F7D\uFF1F",
+        "refresh.dirty_confirm_discard": "\u653E\u5F03\u5E76\u91CD\u8F7D",
+        "refresh.dirty_confirm_cancel": "\u53D6\u6D88",
         // ===== 欢迎页 =====
         "welcome.title": "\u6B22\u8FCE\u4F7F\u7528 MD Human Review",
         "welcome.subtitle": "\u6253\u5F00\u4E00\u4E2A Markdown \u6587\u4EF6\uFF0C\u50CF\u5BFC\u5E08\u6279\u6539\u8BBA\u6587\u4E00\u6837\u8FDB\u884C\u6279\u9605",
@@ -528,6 +536,14 @@
         "toolbar.ai_fix": "AI Fix",
         "toolbar.settings_title": "Settings",
         "toolbar.scroll_top_title": "Back to top",
+        "toolbar.refresh_title": "Refresh",
+        "toolbar.refresh_visual": "Visual Refresh (re-render only)",
+        "toolbar.refresh_disk": "Reload from Disk (new review version)",
+        "toolbar.refresh_editor": "Reload Editor",
+        "refresh.dirty_confirm_title": "Unsaved Changes",
+        "refresh.dirty_confirm_message": "Document has unsaved changes. Discard and reload?",
+        "refresh.dirty_confirm_discard": "Discard & Reload",
+        "refresh.dirty_confirm_cancel": "Cancel",
         // ===== Welcome =====
         "welcome.title": "Welcome to MD Human Review",
         "welcome.subtitle": "Open a Markdown file to start reviewing like a mentor grading a paper",
@@ -1192,7 +1208,7 @@
     };
   })();
   var t2 = window.I18n.t;
-  var I18n = window.I18n;
+  var I18n2 = window.I18n;
 
   // webview/js/store.js
   var Store2 = /* @__PURE__ */ (() => {
@@ -5341,6 +5357,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     function bindEvents() {
       globalThis.handleSaveMd = handleSaveMd;
       globalThis.triggerAutoSave = scheduleAutoSave;
+      setupRefreshButton();
       const btnToggleRich = document.getElementById("btnToggleRich");
       if (btnToggleRich && globalThis.EditMode) {
         btnToggleRich.addEventListener("click", () => {
@@ -6628,6 +6645,108 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         p.classList.remove("active");
       }
     }
+    function setupRefreshButton() {
+      const wrapper = document.getElementById("btnRefreshWrapper");
+      const btn = document.getElementById("btnRefresh");
+      if (!wrapper || !btn) return;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const popover = wrapper.querySelector(".toolbar-popover");
+        if (!popover) return;
+        const isActive = popover.classList.contains("active");
+        closeAllPopovers();
+        if (!isActive) {
+          popover.classList.add("active");
+        }
+      });
+      const options = wrapper.querySelectorAll("[data-strategy]");
+      for (const opt of options) {
+        opt.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const strategy = opt.getAttribute("data-strategy");
+          closeAllPopovers();
+          if (strategy === "visual") refreshVisual();
+          else if (strategy === "disk") refreshFromDisk();
+          else if (strategy === "editor") refreshEditor();
+        });
+      }
+      document.addEventListener("click", (e) => {
+        if (!wrapper.contains(e.target)) {
+          const popover = wrapper.querySelector(".toolbar-popover.active");
+          if (popover) popover.classList.remove("active");
+        }
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          const popover = wrapper.querySelector(".toolbar-popover.active");
+          if (popover) popover.classList.remove("active");
+        }
+      });
+    }
+    function refreshVisual() {
+      refreshCurrentView();
+      showNotification(I18n.t("toolbar.refresh_visual_done"));
+    }
+    async function refreshFromDisk() {
+      try {
+        const dirtyResult = await callHost("getDocumentDirtyState", {});
+        if (dirtyResult && dirtyResult.isDirty) {
+          const confirmResult = await callHost("refresh.showDirtyConfirm", {});
+          if (!confirmResult || !confirmResult.confirmed) {
+            return;
+          }
+        }
+        const data = Store.getData();
+        const filePath = data.sourceFilePath || data.fileName;
+        if (!filePath) return;
+        const fileResult = await callHost("readFile", { filePath });
+        if (!fileResult || fileResult.error) {
+          showNotification(I18n.t("toolbar.refresh_disk_error"));
+          return;
+        }
+        const newContent = fileResult.content || "";
+        const currentContent = data.rawMarkdown || "";
+        const contentChanged = newContent.trim() !== currentContent.trim();
+        loadDocument(
+          fileResult.fileName || data.fileName,
+          newContent,
+          contentChanged,
+          // isNew = contentChanged → 触发新版本
+          fileResult.fileHash || data.fileHash,
+          fileResult.docVersion || data.docVersion,
+          fileResult.sourceFilePath || data.sourceFilePath,
+          fileResult.sourceDir || data.sourceDir,
+          fileResult.relPath || data.relPath,
+          fileResult.pathHash || data.pathHash
+        );
+        if (contentChanged) {
+          showNotification(I18n.t("toolbar.refresh_disk_updated"));
+        } else {
+          showNotification(I18n.t("toolbar.refresh_disk_unchanged"));
+        }
+      } catch (e) {
+        showNotification(I18n.t("toolbar.refresh_disk_error"));
+      }
+    }
+    async function refreshEditor() {
+      try {
+        const dirtyResult = await callHost("getDocumentDirtyState", {});
+        if (dirtyResult && dirtyResult.isDirty) {
+          const confirmResult = await callHost("refresh.showDirtyConfirm", {});
+          if (!confirmResult || !confirmResult.confirmed) {
+            return;
+          }
+        }
+        const result = await callHost("refresh.revertFile", {});
+        if (result && result.fallback === "visual") {
+          refreshVisual();
+        } else {
+          showNotification(I18n.t("toolbar.refresh_editor_done"));
+        }
+      } catch (e) {
+        refreshVisual();
+      }
+    }
     function setupColorPopover() {
       const swatches = document.querySelectorAll(".color-swatch");
       for (const swatch of swatches) {
@@ -7390,7 +7509,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
   }
 
   // webview/src/entries/main.entry.js
-  globalThis.I18n = I18n;
+  globalThis.I18n = I18n2;
   globalThis.t = t2;
   globalThis.Store = Store2;
   globalThis.Renderer = Renderer2;

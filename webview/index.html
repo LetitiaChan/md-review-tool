@@ -33,6 +33,26 @@
         <div class="toolbar-right">
             <!-- 自动保存状态 -->
             <span class="auto-save-status" id="autoSaveStatus"></span>
+            <!-- 刷新按钮（三策略弹出菜单） -->
+            <div class="toolbar-btn-wrapper toolbar-btn-refresh" id="btnRefreshWrapper">
+                <button class="btn-toolbar-icon" id="btnRefresh" data-i18n-title="toolbar.refresh_title" title="刷新">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 1v3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="toolbar-popover refresh-popover" id="refreshPopover">
+                    <button class="refresh-strategy-option" data-strategy="visual">
+                        <span class="refresh-strategy-icon">🔄</span>
+                        <span class="refresh-strategy-label" data-i18n="toolbar.refresh_visual">视觉刷新</span>
+                    </button>
+                    <button class="refresh-strategy-option" data-strategy="disk">
+                        <span class="refresh-strategy-icon">💾</span>
+                        <span class="refresh-strategy-label" data-i18n="toolbar.refresh_disk">从磁盘重载</span>
+                    </button>
+                    <button class="refresh-strategy-option" data-strategy="editor">
+                        <span class="refresh-strategy-icon">⚡</span>
+                        <span class="refresh-strategy-label" data-i18n="toolbar.refresh_editor">重载编辑器</span>
+                    </button>
+                </div>
+            </div>
             <!-- 目录（胶囊风格） -->
             <button class="btn-toggle-annotations" id="btnToggleToc" data-i18n-title="toolbar.toc_title" title="展开/收起目录导航">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 7h8M2 11h10M2 15h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>

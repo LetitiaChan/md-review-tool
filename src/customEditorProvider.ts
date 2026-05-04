@@ -102,6 +102,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
                 });
             },
             webview: webviewPanel.webview,
+            getDocumentIsDirty: () => document.isDirty,
         };
 
         const messageHandler = createMessageHandler(handlerCtx);

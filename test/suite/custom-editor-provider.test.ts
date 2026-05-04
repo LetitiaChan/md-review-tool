@@ -135,10 +135,11 @@ suite('Custom Editor Provider Tests', () => {
         assert.ok(!content.includes('fileSelectorGroup'), 'index.html 不应包含 fileSelectorGroup');
     });
 
-    test('BT-custom-editor.20 webview/index.html 不应包含 btnRefresh', () => {
+    test('BT-custom-editor.20 webview/index.html 应包含 btnRefresh 及 SVG 图标', () => {
         const htmlPath = path.join(projectRoot, 'webview', 'index.html');
         const content = fs.readFileSync(htmlPath, 'utf-8');
-        assert.ok(!content.includes('btnRefresh'), 'index.html 不应包含 btnRefresh');
+        assert.ok(content.includes('btnRefresh'), 'index.html 应包含 btnRefresh');
+        assert.ok(content.includes('refresh-popover'), 'index.html 应包含 refresh-popover 弹出菜单');
     });
 
     test('BT-custom-editor.21 webview/js/app.js 不应包含 loadFileList 函数', () => {
