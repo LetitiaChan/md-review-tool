@@ -533,7 +533,7 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
                 });
 
                 // 内容容器
-                const contentDOM = document.createElement('span');
+                const contentDOM = document.createElement('div');
                 contentDOM.classList.add('task-list-content');
 
                 dom.appendChild(checkbox);

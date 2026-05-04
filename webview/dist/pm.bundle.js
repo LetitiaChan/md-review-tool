@@ -20966,6 +20966,10 @@
           const checkbox = dom.querySelector('input[type="checkbox"]');
           if (checkbox) return { checked: checkbox.checked };
           return { checked: null };
+        },
+        contentElement(dom) {
+          const content = dom.querySelector(".task-list-content");
+          return content || dom;
         }
       }],
       toDOM(node) {
@@ -20976,7 +20980,7 @@
             "li",
             { class: `task-list-item${node.attrs.checked ? " checked" : ""}` },
             ["input", checkboxAttrs],
-            ["span", { class: "task-list-content" }, 0]
+            ["div", { class: "task-list-content" }, 0]
           ];
         }
         return ["li", 0];
@@ -28618,7 +28622,7 @@
             });
             view2.dispatch(tr);
           });
-          const contentDOM = document.createElement("span");
+          const contentDOM = document.createElement("div");
           contentDOM.classList.add("task-list-content");
           dom.appendChild(checkbox);
           dom.appendChild(contentDOM);

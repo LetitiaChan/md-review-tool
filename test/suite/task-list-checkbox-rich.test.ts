@@ -77,4 +77,19 @@ suite('Hotfix — Task List Checkbox Rich Mode 渲染', () => {
         assert.ok(css.includes('.task-list-checkbox:checked::after'), 'CSS 应包含 checkbox :checked::after 伪元素（勾选标记）');
         assert.ok(css.includes('.task-list-checkbox:checked'), 'CSS 应包含 checkbox :checked 样式');
     });
+
+    test('BT-TaskListCheckbox.6 Tier3 — contentDOM 应使用 div（block 元素）而非 span', () => {
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const nodeViewIdx = src.indexOf('list_item(node, view, getPos)');
+        const nodeViewSection = src.substring(nodeViewIdx, nodeViewIdx + 2000);
+        assert.ok(nodeViewSection.includes("createElement('div')"), 'contentDOM 应使用 div 元素（避免 inline 包含 block 的 HTML 规范问题）');
+        assert.ok(!nodeViewSection.includes("createElement('span')") || nodeViewSection.indexOf("createElement('div')") < nodeViewSection.indexOf("createElement('span')"),
+            'contentDOM 不应使用 span 元素');
+    });
+
+    test('BT-TaskListCheckbox.7 Tier3 — parseDOM 应定义 contentElement 指向 .task-list-content', () => {
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'js', 'pm-schema.js'), 'utf-8');
+        assert.ok(src.includes('contentElement'), 'pm-schema.js 应定义 contentElement');
+        assert.ok(src.includes('.task-list-content'), 'contentElement 应指向 .task-list-content');
+    });
 });

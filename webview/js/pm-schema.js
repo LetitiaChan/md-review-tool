@@ -140,6 +140,11 @@ const nodes = {
                 if (checkbox) return { checked: checkbox.checked };
                 return { checked: null };
             },
+            contentElement(dom) {
+                // 如果是 task list item，内容在 .task-list-content 容器中
+                const content = dom.querySelector('.task-list-content');
+                return content || dom;
+            },
         }],
         toDOM(node) {
             if (node.attrs.checked !== null) {
@@ -147,7 +152,7 @@ const nodes = {
                 if (node.attrs.checked) checkboxAttrs.checked = 'checked';
                 return ['li', { class: `task-list-item${node.attrs.checked ? ' checked' : ''}` },
                     ['input', checkboxAttrs],
-                    ['span', { class: 'task-list-content' }, 0]
+                    ['div', { class: 'task-list-content' }, 0]
                 ];
             }
             return ['li', 0];
