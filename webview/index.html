@@ -272,12 +272,62 @@
                     <button class="editor-toolbar-btn" data-cmd="blockquote" data-i18n-title="editor.quote_title" title="引用块">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3v10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M7 5h7M7 8h5M7 11h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
                     </button>
-                    <button class="editor-toolbar-btn" data-cmd="alertBlock" data-i18n-title="editor.alert_title" title="高亮块">
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 11H2L8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 6v3M8 11h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                    </button>
-                    <button class="editor-toolbar-btn" data-cmd="codeBlock" data-i18n-title="editor.code_block_title" title="代码块">
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 6l-2 2 2 2M11 6l2 2-2 2M9 4L7 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </button>
+                    <div class="toolbar-btn-wrapper toolbar-btn-alert" id="btnAlertBlockWrapper">
+                        <button class="editor-toolbar-btn" id="btnAlertBlock" data-cmd="alertBlock" data-i18n-title="editor.alert_title" title="高亮块">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 11H2L8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 6v3M8 11h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        </button>
+                        <!-- 高亮块类型选择 popover -->
+                        <div class="toolbar-popover alert-type-popover" id="alertTypePopover">
+                            <button class="alert-type-option" data-alert-type="note">
+                                <span class="alert-type-icon">📝</span>
+                                <span class="alert-type-label" data-i18n="editor.alert_type.note">提示</span>
+                            </button>
+                            <button class="alert-type-option" data-alert-type="tip">
+                                <span class="alert-type-icon">💡</span>
+                                <span class="alert-type-label" data-i18n="editor.alert_type.tip">技巧</span>
+                            </button>
+                            <button class="alert-type-option" data-alert-type="important">
+                                <span class="alert-type-icon">❗</span>
+                                <span class="alert-type-label" data-i18n="editor.alert_type.important">重要</span>
+                            </button>
+                            <button class="alert-type-option" data-alert-type="warning">
+                                <span class="alert-type-icon">⚠️</span>
+                                <span class="alert-type-label" data-i18n="editor.alert_type.warning">警告</span>
+                            </button>
+                            <button class="alert-type-option" data-alert-type="caution">
+                                <span class="alert-type-icon">🛑</span>
+                                <span class="alert-type-label" data-i18n="editor.alert_type.caution">危险</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="toolbar-btn-wrapper toolbar-btn-codelang" id="btnCodeBlockWrapper">
+                        <button class="editor-toolbar-btn" id="btnCodeBlock" data-cmd="codeBlock" data-i18n-title="editor.code_block_title" title="代码块">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 6l-2 2 2 2M11 6l2 2-2 2M9 4L7 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                        <!-- 代码块语言选择 popover -->
+                        <div class="toolbar-popover code-lang-popover" id="codeLangPopover">
+                            <div class="code-lang-section-title" data-i18n="editor.code_lang.common_title">常用语言</div>
+                            <div class="code-lang-grid">
+                                <button class="code-lang-option" data-lang="javascript">JavaScript</button>
+                                <button class="code-lang-option" data-lang="typescript">TypeScript</button>
+                                <button class="code-lang-option" data-lang="python">Python</button>
+                                <button class="code-lang-option" data-lang="bash">Bash</button>
+                                <button class="code-lang-option" data-lang="shell">Shell</button>
+                                <button class="code-lang-option" data-lang="json">JSON</button>
+                                <button class="code-lang-option" data-lang="yaml">YAML</button>
+                                <button class="code-lang-option" data-lang="html">HTML</button>
+                                <button class="code-lang-option" data-lang="css">CSS</button>
+                                <button class="code-lang-option" data-lang="markdown">Markdown</button>
+                                <button class="code-lang-option" data-lang="sql">SQL</button>
+                                <button class="code-lang-option" data-lang="plaintext">Plain Text</button>
+                            </div>
+                            <div class="code-lang-section-title" data-i18n="editor.code_lang.custom_title">自定义语言</div>
+                            <div class="code-lang-custom-row">
+                                <input type="text" class="code-lang-custom-input" id="codeLangCustomInput" data-i18n-placeholder="editor.code_lang.custom_placeholder" placeholder="例如：go, rust, cpp">
+                                <button class="code-lang-custom-apply" id="codeLangCustomApply" data-i18n="editor.code_lang.confirm">确认</button>
+                            </div>
+                        </div>
+                    </div>
                     <button class="editor-toolbar-btn" data-cmd="hr" data-i18n-title="editor.hr_title" title="分隔线">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 2"/></svg>
                     </button>

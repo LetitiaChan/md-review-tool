@@ -2054,6 +2054,110 @@ body.rich-mode-active #editorToolbar {
     background: var(--vscode-toolbar-hoverBackground, rgba(90,93,94,0.31));
 }
 
+/* ===== Alert Type Selector Popover ===== */
+.alert-type-popover {
+    min-width: 160px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.alert-type-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+    transition: background 0.1s;
+}
+.alert-type-option:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(90,93,94,0.31));
+}
+.alert-type-icon {
+    font-size: 14px;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.alert-type-label {
+    flex: 1;
+}
+
+/* ===== Code Language Selector Popover ===== */
+.code-lang-popover {
+    min-width: 260px;
+    max-width: 300px;
+    padding: 6px;
+}
+.code-lang-section-title {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground, #999);
+    padding: 4px 4px 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.code-lang-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+    margin-bottom: 6px;
+}
+.code-lang-option {
+    padding: 5px 4px;
+    background: transparent;
+    border: 1px solid var(--vscode-input-border, rgba(127,127,127,0.3));
+    border-radius: 3px;
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    font-size: 11.5px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    text-align: center;
+    transition: background 0.1s, border-color 0.1s;
+}
+.code-lang-option:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(90,93,94,0.31));
+    border-color: var(--vscode-focusBorder, #007acc);
+}
+.code-lang-custom-row {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+.code-lang-custom-input {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 6px;
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border, rgba(127,127,127,0.4));
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: var(--vscode-editor-font-family, monospace);
+}
+.code-lang-custom-input:focus {
+    outline: none;
+    border-color: var(--vscode-focusBorder, #007acc);
+}
+.code-lang-custom-apply {
+    padding: 4px 10px;
+    background: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #fff);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+.code-lang-custom-apply:hover {
+    background: var(--vscode-button-hoverBackground, #1177bb);
+}
+
 /* ===== Bug 5 / Table Hover "+" Overlay ===== */
 /* 表格 hover 时顶层显示 2 个浮动 "+" 按钮（下方添加行、右侧添加列） */
 .table-hover-overlay {

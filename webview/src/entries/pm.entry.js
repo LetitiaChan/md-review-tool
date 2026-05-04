@@ -586,10 +586,40 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
             }
             return true;
         },
-        alertBlock:    (state, dispatch) => wrapIn(schema.nodes.gh_alert, { alertType: 'NOTE' })(state, dispatch),
-        codeBlock:     (state, dispatch) => {
+        alertBlock:    (state, dispatch, view, attrs) => {
+            const alertType = (attrs && attrs.alertType) || 'NOTE';
+            // 侦测当前光标是否已在 gh_alert 祖先内 → setNodeMarkup 切换 attr
+            const $from = state.selection.$from;
+            for (let d = $from.depth; d > 0; d--) {
+                const node = $from.node(d);
+                if (node.type === schema.nodes.gh_alert) {
+                    const pos = $from.before(d);
+                    if (dispatch) {
+                        dispatch(state.tr.setNodeMarkup(pos, null, { ...node.attrs, alertType }));
+                    }
+                    return true;
+                }
+            }
+            // 未在 alert 内 → 包裹
+            return wrapIn(schema.nodes.gh_alert, { alertType })(state, dispatch);
+        },
+        codeBlock:     (state, dispatch, view, attrs) => {
+            const language = ((attrs && attrs.language) || '').trim().toLowerCase();
+            // 侦测当前光标是否已在 code_block 祖先内 → setNodeMarkup 切换 attr
+            const $from = state.selection.$from;
+            for (let d = $from.depth; d > 0; d--) {
+                const node = $from.node(d);
+                if (node.type === schema.nodes.code_block) {
+                    const pos = $from.before(d);
+                    if (dispatch) {
+                        dispatch(state.tr.setNodeMarkup(pos, null, { ...node.attrs, language }));
+                    }
+                    return true;
+                }
+            }
+            // 未在 code_block 内 → 插入新的
             if (dispatch) {
-                const node = schema.nodes.code_block.create({ language: '' });
+                const node = schema.nodes.code_block.create({ language });
                 dispatch(state.tr.replaceSelectionWith(node));
             }
             return true;

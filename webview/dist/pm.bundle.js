@@ -28409,10 +28409,36 @@
         }
         return true;
       },
-      alertBlock: (state2, dispatch) => wrapIn(schema.nodes.gh_alert, { alertType: "NOTE" })(state2, dispatch),
-      codeBlock: (state2, dispatch) => {
+      alertBlock: (state2, dispatch, view2, attrs2) => {
+        const alertType = attrs2 && attrs2.alertType || "NOTE";
+        const $from = state2.selection.$from;
+        for (let d = $from.depth; d > 0; d--) {
+          const node = $from.node(d);
+          if (node.type === schema.nodes.gh_alert) {
+            const pos = $from.before(d);
+            if (dispatch) {
+              dispatch(state2.tr.setNodeMarkup(pos, null, { ...node.attrs, alertType }));
+            }
+            return true;
+          }
+        }
+        return wrapIn(schema.nodes.gh_alert, { alertType })(state2, dispatch);
+      },
+      codeBlock: (state2, dispatch, view2, attrs2) => {
+        const language = (attrs2 && attrs2.language || "").trim().toLowerCase();
+        const $from = state2.selection.$from;
+        for (let d = $from.depth; d > 0; d--) {
+          const node = $from.node(d);
+          if (node.type === schema.nodes.code_block) {
+            const pos = $from.before(d);
+            if (dispatch) {
+              dispatch(state2.tr.setNodeMarkup(pos, null, { ...node.attrs, language }));
+            }
+            return true;
+          }
+        }
         if (dispatch) {
-          const node = schema.nodes.code_block.create({ language: "" });
+          const node = schema.nodes.code_block.create({ language });
           dispatch(state2.tr.replaceSelectionWith(node));
         }
         return true;

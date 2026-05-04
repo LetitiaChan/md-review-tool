@@ -305,7 +305,7 @@ export function initApp() {
         const editorToolbar = document.getElementById('editorToolbar');
         if (editorToolbar && globalThis.EditMode) {
             // 带 popover 的按钮列表（wrapper div 的 ID）
-            const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji'];
+            const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'btnAlertBlockWrapper', 'btnCodeBlockWrapper'];
 
             editorToolbar.addEventListener('click', (e) => {
                 const btn = e.target.closest('.editor-toolbar-btn');
@@ -332,6 +332,10 @@ export function initApp() {
             setupImagePopover();
             // Emoji 面板事件
             setupEmojiPopover();
+            // 高亮块类型选择事件
+            setupAlertTypePopover();
+            // 代码块语言选择事件
+            setupCodeLangPopover();
 
             // 点击外部关闭所有 popover
             document.addEventListener('click', (e) => {
@@ -2054,6 +2058,62 @@ this.innerHTML = t('modal.ai_result.copied');
                 }
                 closeAllPopovers();
             });
+        }
+    }
+
+    // ===== 高亮块类型选择 popover =====
+    function setupAlertTypePopover() {
+        const options = document.querySelectorAll('#alertTypePopover .alert-type-option');
+        for (const option of options) {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const rawType = option.getAttribute('data-alert-type') || 'note';
+                const alertType = rawType.toUpperCase();
+                if (EditMode.isRichActive()) {
+                    EditMode.execCommand('alertBlock', { alertType });
+                }
+                closeAllPopovers();
+            });
+        }
+    }
+
+    // ===== 代码块语言选择 popover =====
+    function setupCodeLangPopover() {
+        const options = document.querySelectorAll('#codeLangPopover .code-lang-option');
+        for (const option of options) {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const language = (option.getAttribute('data-lang') || '').trim().toLowerCase();
+                if (EditMode.isRichActive()) {
+                    EditMode.execCommand('codeBlock', { language });
+                }
+                closeAllPopovers();
+            });
+        }
+        const customInput = document.getElementById('codeLangCustomInput');
+        const customApply = document.getElementById('codeLangCustomApply');
+        if (customApply && customInput) {
+            const applyCustom = () => {
+                const language = (customInput.value || '').trim().toLowerCase();
+                if (EditMode.isRichActive()) {
+                    EditMode.execCommand('codeBlock', { language });
+                }
+                customInput.value = '';
+                closeAllPopovers();
+            };
+            customApply.addEventListener('click', (e) => {
+                e.stopPropagation();
+                applyCustom();
+            });
+            customInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    applyCustom();
+                }
+            });
+            // 阻止 input 内部点击冒泡关闭 popover
+            customInput.addEventListener('click', (e) => e.stopPropagation());
         }
     }
 

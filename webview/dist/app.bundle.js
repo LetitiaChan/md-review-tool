@@ -78,7 +78,16 @@
         "editor.link_title": "\u8D85\u94FE\u63A5",
         "editor.image_title": "\u56FE\u7247",
         "editor.alert_title": "\u9AD8\u4EAE\u5757",
+        "editor.alert_type.note": "\u63D0\u793A",
+        "editor.alert_type.tip": "\u6280\u5DE7",
+        "editor.alert_type.important": "\u91CD\u8981",
+        "editor.alert_type.warning": "\u8B66\u544A",
+        "editor.alert_type.caution": "\u5371\u9669",
         "editor.code_block_title": "\u4EE3\u7801\u5757",
+        "editor.code_lang.common_title": "\u5E38\u7528\u8BED\u8A00",
+        "editor.code_lang.custom_title": "\u81EA\u5B9A\u4E49\u8BED\u8A00",
+        "editor.code_lang.custom_placeholder": "\u4F8B\u5982\uFF1Ago, rust, cpp",
+        "editor.code_lang.confirm": "\u786E\u8BA4",
         "editor.table_title": "\u8868\u683C",
         "editor.mermaid_title": "Mermaid \u56FE\u8868",
         "editor.emoji_title": "Emoji \u8868\u60C5",
@@ -553,7 +562,16 @@
         "editor.link_title": "Hyperlink",
         "editor.image_title": "Image",
         "editor.alert_title": "Alert block",
+        "editor.alert_type.note": "Note",
+        "editor.alert_type.tip": "Tip",
+        "editor.alert_type.important": "Important",
+        "editor.alert_type.warning": "Warning",
+        "editor.alert_type.caution": "Caution",
         "editor.code_block_title": "Code block",
+        "editor.code_lang.common_title": "Common languages",
+        "editor.code_lang.custom_title": "Custom language",
+        "editor.code_lang.custom_placeholder": "e.g. go, rust, cpp",
+        "editor.code_lang.confirm": "Apply",
         "editor.table_title": "Table",
         "editor.mermaid_title": "Mermaid diagram",
         "editor.emoji_title": "Emoji",
@@ -5319,7 +5337,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
       const editorToolbar = document.getElementById("editorToolbar");
       if (editorToolbar && globalThis.EditMode) {
-        const popoverWrapperIds = ["btnTextColor", "btnLink", "btnImage", "btnEmoji"];
+        const popoverWrapperIds = ["btnTextColor", "btnLink", "btnImage", "btnEmoji", "btnAlertBlockWrapper", "btnCodeBlockWrapper"];
         editorToolbar.addEventListener("click", (e) => {
           const btn = e.target.closest(".editor-toolbar-btn");
           const wrapper = e.target.closest(".toolbar-btn-wrapper");
@@ -5338,6 +5356,8 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         setupLinkPopover();
         setupImagePopover();
         setupEmojiPopover();
+        setupAlertTypePopover();
+        setupCodeLangPopover();
         document.addEventListener("click", (e) => {
           if (!e.target.closest(".toolbar-popover") && !e.target.closest(".toolbar-btn-wrapper")) {
             closeAllPopovers();
@@ -6811,6 +6831,57 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           }
           closeAllPopovers();
         });
+      }
+    }
+    function setupAlertTypePopover() {
+      const options = document.querySelectorAll("#alertTypePopover .alert-type-option");
+      for (const option of options) {
+        option.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const rawType = option.getAttribute("data-alert-type") || "note";
+          const alertType = rawType.toUpperCase();
+          if (EditMode.isRichActive()) {
+            EditMode.execCommand("alertBlock", { alertType });
+          }
+          closeAllPopovers();
+        });
+      }
+    }
+    function setupCodeLangPopover() {
+      const options = document.querySelectorAll("#codeLangPopover .code-lang-option");
+      for (const option of options) {
+        option.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const language = (option.getAttribute("data-lang") || "").trim().toLowerCase();
+          if (EditMode.isRichActive()) {
+            EditMode.execCommand("codeBlock", { language });
+          }
+          closeAllPopovers();
+        });
+      }
+      const customInput = document.getElementById("codeLangCustomInput");
+      const customApply = document.getElementById("codeLangCustomApply");
+      if (customApply && customInput) {
+        const applyCustom = () => {
+          const language = (customInput.value || "").trim().toLowerCase();
+          if (EditMode.isRichActive()) {
+            EditMode.execCommand("codeBlock", { language });
+          }
+          customInput.value = "";
+          closeAllPopovers();
+        };
+        customApply.addEventListener("click", (e) => {
+          e.stopPropagation();
+          applyCustom();
+        });
+        customInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.stopPropagation();
+            applyCustom();
+          }
+        });
+        customInput.addEventListener("click", (e) => e.stopPropagation());
       }
     }
     function updateThemeButtonLabel(theme) {
