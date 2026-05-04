@@ -497,11 +497,14 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
-            const toolbarMatch = html.match(/id="editorToolbar"[\s\S]*?<\/div>/);
-            assert.ok(toolbarMatch, '应能提取 editorToolbar 内容');
-            const toolbarHtml = toolbarMatch![0];
+            // 匹配整个 editorToolbar div（包含嵌套 div）
+            const startIdx = html.indexOf('id="editorToolbar"');
+            assert.ok(startIdx > 0, '应能找到 editorToolbar');
+            const endMarker = '<div class="document-content"';
+            const endIdx = html.indexOf(endMarker, startIdx);
+            const toolbarHtml = html.substring(startIdx, endIdx);
             const separatorCount = (toolbarHtml.match(/editor-toolbar-separator/g) || []).length;
-            assert.ok(separatorCount >= 4, `工具栏应至少有 4 个分隔符（实际 ${separatorCount}）`);
+            assert.ok(separatorCount >= 6, `工具栏应至少有 6 个分隔符（实际 ${separatorCount}）`);
         });
 
         test('BT-EditorToolbar.14 Tier3 — CSS 工具栏按钮应有 .active 高亮样式', () => {

@@ -28333,6 +28333,85 @@
           state2 = view2.state;
         }
         return deleteColumn(state2, dispatch);
+      },
+      // ===== 扩展工具栏命令 =====
+      code: (state2, dispatch) => toggleMark(schema.marks.code)(state2, dispatch),
+      highlight: (state2, dispatch) => toggleMark(schema.marks.mark)(state2, dispatch),
+      textColor: (state2, dispatch, view2, attrs2) => {
+        if (!attrs2 || !attrs2.color) return false;
+        return toggleMark(schema.marks.colored_text, { color: attrs2.color })(state2, dispatch);
+      },
+      taskList: (state2, dispatch) => {
+        const wrapped = wrapInList(schema.nodes.bullet_list)(state2, dispatch ? (tr) => {
+          const { from: from2, to } = tr.selection;
+          tr.doc.nodesBetween(from2, to, (node, pos) => {
+            if (node.type === schema.nodes.list_item && node.attrs.checked === null) {
+              tr.setNodeMarkup(pos, null, { ...node.attrs, checked: false });
+            }
+          });
+          dispatch(tr);
+        } : void 0);
+        return wrapped;
+      },
+      link: (state2, dispatch, view2, attrs2) => {
+        if (!attrs2 || !attrs2.href) return false;
+        return toggleMark(schema.marks.link, { href: attrs2.href, title: attrs2.title || null })(state2, dispatch);
+      },
+      insertImage: (state2, dispatch, view2, attrs2) => {
+        if (!attrs2 || !attrs2.src) return false;
+        if (dispatch) {
+          const node = schema.nodes.image.create({ src: attrs2.src, alt: attrs2.alt || null, title: null });
+          dispatch(state2.tr.replaceSelectionWith(node));
+        }
+        return true;
+      },
+      alertBlock: (state2, dispatch) => wrapIn(schema.nodes.gh_alert, { alertType: "NOTE" })(state2, dispatch),
+      codeBlock: (state2, dispatch) => {
+        if (dispatch) {
+          const node = schema.nodes.code_block.create({ language: "" });
+          dispatch(state2.tr.replaceSelectionWith(node));
+        }
+        return true;
+      },
+      insertTable: (state2, dispatch) => {
+        if (dispatch) {
+          const cell = schema.nodes.table_cell.createAndFill();
+          const headerCell = schema.nodes.table_header.createAndFill();
+          const headerRow = schema.nodes.table_row.create(null, [headerCell, schema.nodes.table_header.createAndFill(), schema.nodes.table_header.createAndFill()]);
+          const bodyRow1 = schema.nodes.table_row.create(null, [schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill()]);
+          const bodyRow2 = schema.nodes.table_row.create(null, [schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill()]);
+          const table2 = schema.nodes.table.create(null, [headerRow, bodyRow1, bodyRow2]);
+          dispatch(state2.tr.replaceSelectionWith(table2));
+        }
+        return true;
+      },
+      insertMermaid: (state2, dispatch) => {
+        if (dispatch) {
+          const node = schema.nodes.diagram.create({ language: "mermaid", source: "graph TD\n  A --> B" });
+          dispatch(state2.tr.replaceSelectionWith(node));
+        }
+        return true;
+      },
+      insertEmoji: (state2, dispatch, view2, attrs2) => {
+        if (!attrs2 || !attrs2.emoji) return false;
+        if (dispatch) {
+          dispatch(state2.tr.insertText(attrs2.emoji));
+        }
+        return true;
+      },
+      insertPlantuml: (state2, dispatch) => {
+        if (dispatch) {
+          const node = schema.nodes.diagram.create({ language: "plantuml", source: "@startuml\nAlice -> Bob: Hello\n@enduml" });
+          dispatch(state2.tr.replaceSelectionWith(node));
+        }
+        return true;
+      },
+      insertGraphviz: (state2, dispatch) => {
+        if (dispatch) {
+          const node = schema.nodes.diagram.create({ language: "dot", source: "digraph G {\n  A -> B\n}" });
+          dispatch(state2.tr.replaceSelectionWith(node));
+        }
+        return true;
       }
     };
     return {

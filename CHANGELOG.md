@@ -4,7 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [1.5.0] - 2026-04-30
 
+### ✨ New Features
+- **Extend Rich Mode editor toolbar** — Added 13 new toolbar buttons: Inline Code, Text Color (with 8 preset colors + custom picker), Highlight, Task List, Hyperlink (with URL input popover), Image (with URL/alt input popover), Alert Block, Code Block, Table (inserts 3×3), Mermaid diagram, PlantUML diagram, Graphviz diagram, and Emoji (with 80-emoji picker panel). Toolbar buttons are organized into functional groups with separators. All buttons support i18n tooltips and active state detection.
+
 ### 🐛 Bug Fixes
+- **Fix toolbar popover breaking page rendering** — Popover panels (color picker, link input, image input, emoji grid) were incorrectly nested inside `<button>` elements, which violates HTML spec (buttons cannot contain interactive content like `<div>`, `<input>`, `<button>`). This caused browsers to break the DOM structure during parsing, corrupting the entire page layout. Fixed by wrapping each popover button in a `<div class="toolbar-btn-wrapper">` container that holds both the button and its popover as siblings.
 - **Fix image upload in comment modal** — The "Add Image" click zone in the comment modal now uses `vscode.window.showOpenDialog` via Extension Host instead of relying on `<input type="file">` which may not work in certain VS Code webview environments (Cursor, CodeBuddy, etc.). Drag-and-drop and Ctrl+V paste remain as alternative upload methods. Falls back to native file input if `showOpenDialog` fails.
 - **Fix image rendering in Rich Mode (edit mode)** — Images with relative paths (e.g. `./images/foo.png`) now render correctly in Rich Mode by resolving paths through the Renderer's image URI cache (`webview.asWebviewUri`). Previously, ProseMirror's `image` node `toDOM` used raw relative paths which are inaccessible in the webview sandbox.
 - **Fix Rich Mode save failure** — Saving in Rich Mode (including after deleting images) now works correctly. The `handleSaveMd` function was calling `Exporter.saveViaHost()` which is not exported from the Exporter module, causing `TypeError: Exporter.saveViaHost is not a function`. Fixed by using `callHost('saveFile', { filePath, content })` to properly save the source file via Extension Host.

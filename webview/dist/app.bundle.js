@@ -71,6 +71,26 @@
         "editor.hr_title": "\u5206\u9694\u7EBF",
         "editor.undo_title": "\u64A4\u9500 (Ctrl+Z)",
         "editor.redo_title": "\u91CD\u505A (Ctrl+Y)",
+        "editor.code_title": "\u884C\u5185\u4EE3\u7801",
+        "editor.color_title": "\u6587\u672C\u989C\u8272",
+        "editor.highlight_title": "\u9AD8\u4EAE\u6587\u672C",
+        "editor.task_list_title": "\u4EFB\u52A1\u5217\u8868",
+        "editor.link_title": "\u8D85\u94FE\u63A5",
+        "editor.image_title": "\u56FE\u7247",
+        "editor.alert_title": "\u9AD8\u4EAE\u5757",
+        "editor.code_block_title": "\u4EE3\u7801\u5757",
+        "editor.table_title": "\u8868\u683C",
+        "editor.mermaid_title": "Mermaid \u56FE\u8868",
+        "editor.emoji_title": "Emoji \u8868\u60C5",
+        "editor.plantuml_title": "PlantUML \u56FE\u8868",
+        "editor.graphviz_title": "Graphviz \u56FE\u8868",
+        "editor.color_custom": "\u81EA\u5B9A\u4E49",
+        "editor.link_url_placeholder": "\u8F93\u5165\u94FE\u63A5\u5730\u5740...",
+        "editor.link_title_placeholder": "\u94FE\u63A5\u6807\u9898\uFF08\u53EF\u9009\uFF09",
+        "editor.link_confirm": "\u786E\u8BA4",
+        "editor.image_url_placeholder": "\u8F93\u5165\u56FE\u7247\u5730\u5740...",
+        "editor.image_alt_placeholder": "\u66FF\u4EE3\u6587\u672C\uFF08\u53EF\u9009\uFF09",
+        "editor.image_confirm": "\u786E\u8BA4",
         "editor.tips_title": "\u7F16\u8F91\u6A21\u5F0F\u98CE\u9669\u63D0\u793A",
         "editor.tips_close": "\u5173\u95ED",
         "editor.tips_warning1": "\u4FEE\u6539\u5185\u5BB9\u540E\uFF0C\u90E8\u5206 Markdown \u6269\u5C55\u8BED\u6CD5\u53EF\u80FD\u4E22\u5931\uFF08\u5982\u56FE\u8868\u3001GitHub \u544A\u8B66\u5757\u7B49\uFF09",
@@ -525,6 +545,26 @@
         "editor.hr_title": "Horizontal rule",
         "editor.undo_title": "Undo (Ctrl+Z)",
         "editor.redo_title": "Redo (Ctrl+Y)",
+        "editor.code_title": "Inline code",
+        "editor.color_title": "Text color",
+        "editor.highlight_title": "Highlight",
+        "editor.task_list_title": "Task list",
+        "editor.link_title": "Hyperlink",
+        "editor.image_title": "Image",
+        "editor.alert_title": "Alert block",
+        "editor.code_block_title": "Code block",
+        "editor.table_title": "Table",
+        "editor.mermaid_title": "Mermaid diagram",
+        "editor.emoji_title": "Emoji",
+        "editor.plantuml_title": "PlantUML diagram",
+        "editor.graphviz_title": "Graphviz diagram",
+        "editor.color_custom": "Custom",
+        "editor.link_url_placeholder": "Enter URL...",
+        "editor.link_title_placeholder": "Link title (optional)",
+        "editor.link_confirm": "Confirm",
+        "editor.image_url_placeholder": "Enter image URL...",
+        "editor.image_alt_placeholder": "Alt text (optional)",
+        "editor.image_confirm": "Confirm",
         "editor.tips_title": "Edit Mode Warning",
         "editor.tips_close": "Close",
         "editor.tips_warning1": "After editing, some Markdown extended syntax may be lost (e.g., math formulas, Mermaid diagrams, GitHub alert blocks, etc.)",
@@ -5259,13 +5299,32 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
       const editorToolbar = document.getElementById("editorToolbar");
       if (editorToolbar && globalThis.EditMode) {
+        const popoverWrapperIds = ["btnTextColor", "btnLink", "btnImage", "btnEmoji"];
         editorToolbar.addEventListener("click", (e) => {
           const btn = e.target.closest(".editor-toolbar-btn");
+          const wrapper = e.target.closest(".toolbar-btn-wrapper");
+          if (e.target.closest(".toolbar-popover")) return;
+          if (wrapper && popoverWrapperIds.includes(wrapper.id)) {
+            if (!EditMode.isRichActive()) return;
+            toggleToolbarPopover(wrapper);
+            return;
+          }
           if (!btn) return;
           const cmd = btn.getAttribute("data-cmd");
-          if (cmd && EditMode.isRichActive()) {
-            EditMode.execCommand(cmd);
+          if (!cmd || !EditMode.isRichActive()) return;
+          EditMode.execCommand(cmd);
+        });
+        setupColorPopover();
+        setupLinkPopover();
+        setupImagePopover();
+        setupEmojiPopover();
+        document.addEventListener("click", (e) => {
+          if (!e.target.closest(".toolbar-popover") && !e.target.closest(".toolbar-btn-wrapper")) {
+            closeAllPopovers();
           }
+        });
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") closeAllPopovers();
         });
       }
       window.addEventListener("rich-mode-exit", () => {
@@ -6420,7 +6479,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       el.className = "edit-status" + (className ? " " + className : "");
       el.textContent = text;
     }
-    const _toolbarMarkMap = { bold: "strong", italic: "em", strikethrough: "strikethrough" };
+    const _toolbarMarkMap = { bold: "strong", italic: "em", strikethrough: "strikethrough", code: "code", highlight: "mark", textColor: "colored_text" };
     const _toolbarBlockMap = { h1: { type: "heading", level: 1 }, h2: { type: "heading", level: 2 }, h3: { type: "heading", level: 3 } };
     function updateEditorToolbarState(state) {
       const toolbar = document.getElementById("editorToolbar");
@@ -6447,6 +6506,121 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       const btns = toolbar.querySelectorAll(".editor-toolbar-btn");
       for (const btn of btns) {
         btn.classList.remove("active");
+      }
+    }
+    function toggleToolbarPopover(wrapper) {
+      const popover = wrapper.querySelector(".toolbar-popover");
+      if (!popover) return;
+      const isActive = popover.classList.contains("active");
+      closeAllPopovers();
+      if (!isActive) {
+        popover.classList.add("active");
+      }
+    }
+    function closeAllPopovers() {
+      const popovers = document.querySelectorAll(".toolbar-popover.active");
+      for (const p of popovers) {
+        p.classList.remove("active");
+      }
+    }
+    function setupColorPopover() {
+      const swatches = document.querySelectorAll(".color-swatch");
+      for (const swatch of swatches) {
+        swatch.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const color = swatch.getAttribute("data-color");
+          if (color && EditMode.isRichActive()) {
+            EditMode.execCommand("textColor", { color });
+          }
+          closeAllPopovers();
+        });
+      }
+      const customApply = document.getElementById("colorCustomApply");
+      const customInput = document.getElementById("colorCustomInput");
+      if (customApply && customInput) {
+        customApply.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const color = customInput.value;
+          if (color && EditMode.isRichActive()) {
+            EditMode.execCommand("textColor", { color });
+          }
+          closeAllPopovers();
+        });
+      }
+    }
+    function setupLinkPopover() {
+      const confirmBtn = document.getElementById("linkConfirmBtn");
+      const urlInput = document.getElementById("linkUrlInput");
+      const titleInput = document.getElementById("linkTitleInput");
+      if (confirmBtn && urlInput) {
+        confirmBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const href = urlInput.value.trim();
+          if (href && EditMode.isRichActive()) {
+            EditMode.execCommand("link", { href, title: titleInput ? titleInput.value.trim() : "" });
+          }
+          urlInput.value = "";
+          if (titleInput) titleInput.value = "";
+          closeAllPopovers();
+        });
+        urlInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            confirmBtn.click();
+          }
+        });
+        if (titleInput) {
+          titleInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              confirmBtn.click();
+            }
+          });
+        }
+      }
+    }
+    function setupImagePopover() {
+      const confirmBtn = document.getElementById("imageConfirmBtn");
+      const urlInput = document.getElementById("imageUrlInput");
+      const altInput = document.getElementById("imageAltInput");
+      if (confirmBtn && urlInput) {
+        confirmBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const src = urlInput.value.trim();
+          if (src && EditMode.isRichActive()) {
+            EditMode.execCommand("insertImage", { src, alt: altInput ? altInput.value.trim() : "" });
+          }
+          urlInput.value = "";
+          if (altInput) altInput.value = "";
+          closeAllPopovers();
+        });
+        urlInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            confirmBtn.click();
+          }
+        });
+        if (altInput) {
+          altInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              confirmBtn.click();
+            }
+          });
+        }
+      }
+    }
+    function setupEmojiPopover() {
+      const emojiItems = document.querySelectorAll(".emoji-item");
+      for (const item of emojiItems) {
+        item.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const emoji = item.getAttribute("data-emoji");
+          if (emoji && EditMode.isRichActive()) {
+            EditMode.execCommand("insertEmoji", { emoji });
+          }
+          closeAllPopovers();
+        });
       }
     }
     function updateThemeButtonLabel(theme) {

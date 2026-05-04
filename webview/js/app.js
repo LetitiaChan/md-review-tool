@@ -304,13 +304,44 @@ export function initApp() {
         // 编辑器工具栏按钮事件绑定
         const editorToolbar = document.getElementById('editorToolbar');
         if (editorToolbar && globalThis.EditMode) {
+            // 带 popover 的按钮列表（wrapper div 的 ID）
+            const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji'];
+
             editorToolbar.addEventListener('click', (e) => {
                 const btn = e.target.closest('.editor-toolbar-btn');
+                const wrapper = e.target.closest('.toolbar-btn-wrapper');
+                // 如果点击的是 popover 内部元素，不处理
+                if (e.target.closest('.toolbar-popover')) return;
+                // 如果点击的是 wrapper 内的按钮，切换 popover
+                if (wrapper && popoverWrapperIds.includes(wrapper.id)) {
+                    if (!EditMode.isRichActive()) return;
+                    toggleToolbarPopover(wrapper);
+                    return;
+                }
                 if (!btn) return;
                 const cmd = btn.getAttribute('data-cmd');
-                if (cmd && EditMode.isRichActive()) {
-                    EditMode.execCommand(cmd);
+                if (!cmd || !EditMode.isRichActive()) return;
+                EditMode.execCommand(cmd);
+            });
+
+            // 颜色选择器事件
+            setupColorPopover();
+            // 链接输入事件
+            setupLinkPopover();
+            // 图片输入事件
+            setupImagePopover();
+            // Emoji 面板事件
+            setupEmojiPopover();
+
+            // 点击外部关闭所有 popover
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.toolbar-popover') && !e.target.closest('.toolbar-btn-wrapper')) {
+                    closeAllPopovers();
                 }
+            });
+            // Escape 关闭 popover
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeAllPopovers();
             });
         }
 
@@ -1705,7 +1736,7 @@ this.innerHTML = t('modal.ai_result.copied');
 
     // ===== 编辑器工具栏状态更新 =====
     // 命令名到 mark/node 的映射（用于按钮高亮）
-    const _toolbarMarkMap = { bold: 'strong', italic: 'em', strikethrough: 'strikethrough' };
+    const _toolbarMarkMap = { bold: 'strong', italic: 'em', strikethrough: 'strikethrough', code: 'code', highlight: 'mark', textColor: 'colored_text' };
     const _toolbarBlockMap = { h1: { type: 'heading', level: 1 }, h2: { type: 'heading', level: 2 }, h3: { type: 'heading', level: 3 } };
 
     function updateEditorToolbarState(state) {
@@ -1736,6 +1767,116 @@ this.innerHTML = t('modal.ai_result.copied');
         const btns = toolbar.querySelectorAll('.editor-toolbar-btn');
         for (const btn of btns) {
             btn.classList.remove('active');
+        }
+    }
+
+    // ===== 工具栏 Popover 辅助函数 =====
+    function toggleToolbarPopover(wrapper) {
+        const popover = wrapper.querySelector('.toolbar-popover');
+        if (!popover) return;
+        const isActive = popover.classList.contains('active');
+        closeAllPopovers();
+        if (!isActive) {
+            popover.classList.add('active');
+        }
+    }
+
+    function closeAllPopovers() {
+        const popovers = document.querySelectorAll('.toolbar-popover.active');
+        for (const p of popovers) {
+            p.classList.remove('active');
+        }
+    }
+
+    function setupColorPopover() {
+        const swatches = document.querySelectorAll('.color-swatch');
+        for (const swatch of swatches) {
+            swatch.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const color = swatch.getAttribute('data-color');
+                if (color && EditMode.isRichActive()) {
+                    EditMode.execCommand('textColor', { color });
+                }
+                closeAllPopovers();
+            });
+        }
+        const customApply = document.getElementById('colorCustomApply');
+        const customInput = document.getElementById('colorCustomInput');
+        if (customApply && customInput) {
+            customApply.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const color = customInput.value;
+                if (color && EditMode.isRichActive()) {
+                    EditMode.execCommand('textColor', { color });
+                }
+                closeAllPopovers();
+            });
+        }
+    }
+
+    function setupLinkPopover() {
+        const confirmBtn = document.getElementById('linkConfirmBtn');
+        const urlInput = document.getElementById('linkUrlInput');
+        const titleInput = document.getElementById('linkTitleInput');
+        if (confirmBtn && urlInput) {
+            confirmBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const href = urlInput.value.trim();
+                if (href && EditMode.isRichActive()) {
+                    EditMode.execCommand('link', { href, title: titleInput ? titleInput.value.trim() : '' });
+                }
+                urlInput.value = '';
+                if (titleInput) titleInput.value = '';
+                closeAllPopovers();
+            });
+            urlInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); confirmBtn.click(); }
+            });
+            if (titleInput) {
+                titleInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); confirmBtn.click(); }
+                });
+            }
+        }
+    }
+
+    function setupImagePopover() {
+        const confirmBtn = document.getElementById('imageConfirmBtn');
+        const urlInput = document.getElementById('imageUrlInput');
+        const altInput = document.getElementById('imageAltInput');
+        if (confirmBtn && urlInput) {
+            confirmBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const src = urlInput.value.trim();
+                if (src && EditMode.isRichActive()) {
+                    EditMode.execCommand('insertImage', { src, alt: altInput ? altInput.value.trim() : '' });
+                }
+                urlInput.value = '';
+                if (altInput) altInput.value = '';
+                closeAllPopovers();
+            });
+            urlInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); confirmBtn.click(); }
+            });
+            if (altInput) {
+                altInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); confirmBtn.click(); }
+                });
+            }
+        }
+    }
+
+    function setupEmojiPopover() {
+        const emojiItems = document.querySelectorAll('.emoji-item');
+        for (const item of emojiItems) {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const emoji = item.getAttribute('data-emoji');
+                if (emoji && EditMode.isRichActive()) {
+                    EditMode.execCommand('insertEmoji', { emoji });
+                }
+                closeAllPopovers();
+            });
         }
     }
 

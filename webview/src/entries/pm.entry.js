@@ -516,6 +516,87 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
             if (attrs && attrs.coords) { setCellSelection(view, attrs.coords); state = view.state; }
             return deleteColumn(state, dispatch);
         },
+        // ===== 扩展工具栏命令 =====
+        code:          (state, dispatch) => toggleMark(schema.marks.code)(state, dispatch),
+        highlight:     (state, dispatch) => toggleMark(schema.marks.mark)(state, dispatch),
+        textColor:     (state, dispatch, view, attrs) => {
+            if (!attrs || !attrs.color) return false;
+            return toggleMark(schema.marks.colored_text, { color: attrs.color })(state, dispatch);
+        },
+        taskList:      (state, dispatch) => {
+            // 先包裹为 bullet_list，再将 list_item 的 checked 设为 false
+            const wrapped = wrapInList(schema.nodes.bullet_list)(state, dispatch ? (tr) => {
+                // 遍历新创建的 list_item 设置 checked=false
+                const { from, to } = tr.selection;
+                tr.doc.nodesBetween(from, to, (node, pos) => {
+                    if (node.type === schema.nodes.list_item && node.attrs.checked === null) {
+                        tr.setNodeMarkup(pos, null, { ...node.attrs, checked: false });
+                    }
+                });
+                dispatch(tr);
+            } : undefined);
+            return wrapped;
+        },
+        link:          (state, dispatch, view, attrs) => {
+            if (!attrs || !attrs.href) return false;
+            return toggleMark(schema.marks.link, { href: attrs.href, title: attrs.title || null })(state, dispatch);
+        },
+        insertImage:   (state, dispatch, view, attrs) => {
+            if (!attrs || !attrs.src) return false;
+            if (dispatch) {
+                const node = schema.nodes.image.create({ src: attrs.src, alt: attrs.alt || null, title: null });
+                dispatch(state.tr.replaceSelectionWith(node));
+            }
+            return true;
+        },
+        alertBlock:    (state, dispatch) => wrapIn(schema.nodes.gh_alert, { alertType: 'NOTE' })(state, dispatch),
+        codeBlock:     (state, dispatch) => {
+            if (dispatch) {
+                const node = schema.nodes.code_block.create({ language: '' });
+                dispatch(state.tr.replaceSelectionWith(node));
+            }
+            return true;
+        },
+        insertTable:   (state, dispatch) => {
+            if (dispatch) {
+                const cell = schema.nodes.table_cell.createAndFill();
+                const headerCell = schema.nodes.table_header.createAndFill();
+                const headerRow = schema.nodes.table_row.create(null, [headerCell, schema.nodes.table_header.createAndFill(), schema.nodes.table_header.createAndFill()]);
+                const bodyRow1 = schema.nodes.table_row.create(null, [schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill()]);
+                const bodyRow2 = schema.nodes.table_row.create(null, [schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill(), schema.nodes.table_cell.createAndFill()]);
+                const table = schema.nodes.table.create(null, [headerRow, bodyRow1, bodyRow2]);
+                dispatch(state.tr.replaceSelectionWith(table));
+            }
+            return true;
+        },
+        insertMermaid: (state, dispatch) => {
+            if (dispatch) {
+                const node = schema.nodes.diagram.create({ language: 'mermaid', source: 'graph TD\n  A --> B' });
+                dispatch(state.tr.replaceSelectionWith(node));
+            }
+            return true;
+        },
+        insertEmoji:   (state, dispatch, view, attrs) => {
+            if (!attrs || !attrs.emoji) return false;
+            if (dispatch) {
+                dispatch(state.tr.insertText(attrs.emoji));
+            }
+            return true;
+        },
+        insertPlantuml: (state, dispatch) => {
+            if (dispatch) {
+                const node = schema.nodes.diagram.create({ language: 'plantuml', source: '@startuml\nAlice -> Bob: Hello\n@enduml' });
+                dispatch(state.tr.replaceSelectionWith(node));
+            }
+            return true;
+        },
+        insertGraphviz: (state, dispatch) => {
+            if (dispatch) {
+                const node = schema.nodes.diagram.create({ language: 'dot', source: 'digraph G {\n  A -> B\n}' });
+                dispatch(state.tr.replaceSelectionWith(node));
+            }
+            return true;
+        },
     };
 
     return {

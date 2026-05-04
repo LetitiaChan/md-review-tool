@@ -190,6 +190,34 @@
                     <button class="editor-toolbar-btn" data-cmd="strikethrough" data-i18n-title="editor.strikethrough_title" title="删除线">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M5 4c0-1.1.9-2 2-2h2c1.1 0 2 .9 2 2s-.9 2-2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M11 12c0 1.1-.9 2-2 2H7c-1.1 0-2-.9-2-2s.9-2 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                     </button>
+                    <button class="editor-toolbar-btn" data-cmd="code" data-i18n-title="editor.code_title" title="行内代码">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M5 4L2 8l3 4M11 4l3 4-3 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="toolbar-btn-wrapper toolbar-btn-color" id="btnTextColor">
+                        <button class="editor-toolbar-btn" data-cmd="textColor" data-i18n-title="editor.color_title" title="文本颜色">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 13h10M5.5 10L8 3l2.5 7M6.2 8h3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                        <!-- 颜色选择器 popover -->
+                        <div class="toolbar-popover color-popover" id="colorPopover">
+                            <div class="color-swatches">
+                                <button class="color-swatch" data-color="#e53935" style="background:#e53935" title="红色"></button>
+                                <button class="color-swatch" data-color="#fb8c00" style="background:#fb8c00" title="橙色"></button>
+                                <button class="color-swatch" data-color="#fdd835" style="background:#fdd835" title="黄色"></button>
+                                <button class="color-swatch" data-color="#43a047" style="background:#43a047" title="绿色"></button>
+                                <button class="color-swatch" data-color="#1e88e5" style="background:#1e88e5" title="蓝色"></button>
+                                <button class="color-swatch" data-color="#8e24aa" style="background:#8e24aa" title="紫色"></button>
+                                <button class="color-swatch" data-color="#757575" style="background:#757575" title="灰色"></button>
+                                <button class="color-swatch" data-color="#000000" style="background:#000000" title="黑色"></button>
+                            </div>
+                            <div class="color-custom-row">
+                                <input type="color" class="color-custom-input" id="colorCustomInput" value="#e53935">
+                                <button class="color-custom-apply" id="colorCustomApply" data-i18n="editor.color_custom">自定义</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="editor-toolbar-btn" data-cmd="highlight" data-i18n-title="editor.highlight_title" title="高亮文本">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="8" rx="1" fill="rgba(255,235,59,0.4)" stroke="currentColor" stroke-width="1.2"/><path d="M4 8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    </button>
                     <span class="editor-toolbar-separator"></span>
                     <!-- 标题 -->
                     <button class="editor-toolbar-btn" data-cmd="h1" data-i18n-title="editor.h1_title" title="一级标题">
@@ -209,14 +237,74 @@
                     <button class="editor-toolbar-btn" data-cmd="ol" data-i18n-title="editor.ol_title" title="有序列表">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><text x="1.5" y="5.5" font-size="5" font-weight="bold" fill="currentColor">1</text><text x="1.5" y="9.5" font-size="5" font-weight="bold" fill="currentColor">2</text><text x="1.5" y="13.5" font-size="5" font-weight="bold" fill="currentColor">3</text><path d="M6 4h8M6 8h8M6 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                     </button>
+                    <button class="editor-toolbar-btn" data-cmd="taskList" data-i18n-title="editor.task_list_title" title="任务列表">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M3.5 4.5l1 1 2-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M9 4h5M9 11.5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    </button>
+                    <span class="editor-toolbar-separator"></span>
+                    <!-- 插入 -->
+                    <div class="toolbar-btn-wrapper toolbar-btn-link" id="btnLink">
+                        <button class="editor-toolbar-btn" data-cmd="link" data-i18n-title="editor.link_title" title="超链接">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6.5 9.5l3-3M5 11a2.5 2.5 0 0 1 0-3.5l1-1M11 5a2.5 2.5 0 0 1 0 3.5l-1 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        </button>
+                        <!-- 链接输入 popover -->
+                        <div class="toolbar-popover link-popover" id="linkPopover">
+                            <input type="text" class="popover-input" id="linkUrlInput" data-i18n-placeholder="editor.link_url_placeholder" placeholder="输入链接地址...">
+                            <input type="text" class="popover-input" id="linkTitleInput" data-i18n-placeholder="editor.link_title_placeholder" placeholder="链接标题（可选）">
+                            <button class="popover-confirm-btn" id="linkConfirmBtn" data-i18n="editor.link_confirm">确认</button>
+                        </div>
+                    </div>
+                    <div class="toolbar-btn-wrapper toolbar-btn-image" id="btnImage">
+                        <button class="editor-toolbar-btn" data-cmd="insertImage" data-i18n-title="editor.image_title" title="图片">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><circle cx="5.5" cy="6.5" r="1.2" stroke="currentColor" stroke-width="1"/><path d="M2 11l3-3 2 2 4-4 3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                        <!-- 图片输入 popover -->
+                        <div class="toolbar-popover image-popover" id="imagePopover">
+                            <input type="text" class="popover-input" id="imageUrlInput" data-i18n-placeholder="editor.image_url_placeholder" placeholder="输入图片地址...">
+                            <input type="text" class="popover-input" id="imageAltInput" data-i18n-placeholder="editor.image_alt_placeholder" placeholder="替代文本（可选）">
+                            <button class="popover-confirm-btn" id="imageConfirmBtn" data-i18n="editor.image_confirm">确认</button>
+                        </div>
+                    </div>
+                    <button class="editor-toolbar-btn" data-cmd="insertTable" data-i18n-title="editor.table_title" title="表格">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M2 10h12M6 2v12M10 2v12" stroke="currentColor" stroke-width="1"/></svg>
+                    </button>
                     <span class="editor-toolbar-separator"></span>
                     <!-- 块级 -->
                     <button class="editor-toolbar-btn" data-cmd="blockquote" data-i18n-title="editor.quote_title" title="引用块">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 3v10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M7 5h7M7 8h5M7 11h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
                     </button>
+                    <button class="editor-toolbar-btn" data-cmd="alertBlock" data-i18n-title="editor.alert_title" title="高亮块">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2l6 11H2L8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 6v3M8 11h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    </button>
+                    <button class="editor-toolbar-btn" data-cmd="codeBlock" data-i18n-title="editor.code_block_title" title="代码块">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 6l-2 2 2 2M11 6l2 2-2 2M9 4L7 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
                     <button class="editor-toolbar-btn" data-cmd="hr" data-i18n-title="editor.hr_title" title="分隔线">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 2"/></svg>
                     </button>
+                    <span class="editor-toolbar-separator"></span>
+                    <!-- 图表 -->
+                    <button class="editor-toolbar-btn" data-cmd="insertMermaid" data-i18n-title="editor.mermaid_title" title="Mermaid 图表">
+                        <span class="editor-toolbar-text" style="font-size:10px">MER</span>
+                    </button>
+                    <button class="editor-toolbar-btn" data-cmd="insertPlantuml" data-i18n-title="editor.plantuml_title" title="PlantUML 图表">
+                        <span class="editor-toolbar-text" style="font-size:10px">UML</span>
+                    </button>
+                    <button class="editor-toolbar-btn" data-cmd="insertGraphviz" data-i18n-title="editor.graphviz_title" title="Graphviz 图表">
+                        <span class="editor-toolbar-text" style="font-size:10px">DOT</span>
+                    </button>
+                    <span class="editor-toolbar-separator"></span>
+                    <!-- Emoji -->
+                    <div class="toolbar-btn-wrapper toolbar-btn-emoji" id="btnEmoji">
+                        <button class="editor-toolbar-btn" data-cmd="insertEmoji" data-i18n-title="editor.emoji_title" title="Emoji 表情">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><circle cx="6" cy="7" r="0.8" fill="currentColor"/><circle cx="10" cy="7" r="0.8" fill="currentColor"/><path d="M5.5 10c.8 1.2 2.2 1.5 2.5 1.5s1.7-.3 2.5-1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+                        </button>
+                        <!-- Emoji 选择面板 -->
+                        <div class="toolbar-popover emoji-popover" id="emojiPopover">
+                            <div class="emoji-grid">
+                                <span class="emoji-item" data-emoji="😀">😀</span><span class="emoji-item" data-emoji="😃">😃</span><span class="emoji-item" data-emoji="😄">😄</span><span class="emoji-item" data-emoji="😁">😁</span><span class="emoji-item" data-emoji="😆">😆</span><span class="emoji-item" data-emoji="😅">😅</span><span class="emoji-item" data-emoji="🤣">🤣</span><span class="emoji-item" data-emoji="😂">😂</span><span class="emoji-item" data-emoji="🙂">🙂</span><span class="emoji-item" data-emoji="😉">😉</span><span class="emoji-item" data-emoji="😊">😊</span><span class="emoji-item" data-emoji="😍">😍</span><span class="emoji-item" data-emoji="🥰">🥰</span><span class="emoji-item" data-emoji="😘">😘</span><span class="emoji-item" data-emoji="😎">😎</span><span class="emoji-item" data-emoji="🤔">🤔</span><span class="emoji-item" data-emoji="😐">😐</span><span class="emoji-item" data-emoji="😑">😑</span><span class="emoji-item" data-emoji="😶">😶</span><span class="emoji-item" data-emoji="🙄">🙄</span><span class="emoji-item" data-emoji="😏">😏</span><span class="emoji-item" data-emoji="😣">😣</span><span class="emoji-item" data-emoji="😥">😥</span><span class="emoji-item" data-emoji="😮">😮</span><span class="emoji-item" data-emoji="🤐">🤐</span><span class="emoji-item" data-emoji="😯">😯</span><span class="emoji-item" data-emoji="😪">😪</span><span class="emoji-item" data-emoji="😫">😫</span><span class="emoji-item" data-emoji="😴">😴</span><span class="emoji-item" data-emoji="😜">😜</span><span class="emoji-item" data-emoji="👍">👍</span><span class="emoji-item" data-emoji="👎">👎</span><span class="emoji-item" data-emoji="👏">👏</span><span class="emoji-item" data-emoji="🙌">🙌</span><span class="emoji-item" data-emoji="🤝">🤝</span><span class="emoji-item" data-emoji="✌️">✌️</span><span class="emoji-item" data-emoji="🤞">🤞</span><span class="emoji-item" data-emoji="👌">👌</span><span class="emoji-item" data-emoji="👋">👋</span><span class="emoji-item" data-emoji="💪">💪</span><span class="emoji-item" data-emoji="❤️">❤️</span><span class="emoji-item" data-emoji="🧡">🧡</span><span class="emoji-item" data-emoji="💛">💛</span><span class="emoji-item" data-emoji="💚">💚</span><span class="emoji-item" data-emoji="💙">💙</span><span class="emoji-item" data-emoji="💜">💜</span><span class="emoji-item" data-emoji="🖤">🖤</span><span class="emoji-item" data-emoji="💯">💯</span><span class="emoji-item" data-emoji="⭐">⭐</span><span class="emoji-item" data-emoji="🌟">🌟</span><span class="emoji-item" data-emoji="✨">✨</span><span class="emoji-item" data-emoji="⚡">⚡</span><span class="emoji-item" data-emoji="🔥">🔥</span><span class="emoji-item" data-emoji="💧">💧</span><span class="emoji-item" data-emoji="🎉">🎉</span><span class="emoji-item" data-emoji="🎊">🎊</span><span class="emoji-item" data-emoji="🎈">🎈</span><span class="emoji-item" data-emoji="🎁">🎁</span><span class="emoji-item" data-emoji="🏆">🏆</span><span class="emoji-item" data-emoji="🥇">🥇</span><span class="emoji-item" data-emoji="📌">📌</span><span class="emoji-item" data-emoji="📎">📎</span><span class="emoji-item" data-emoji="✅">✅</span><span class="emoji-item" data-emoji="❌">❌</span><span class="emoji-item" data-emoji="⚠️">⚠️</span><span class="emoji-item" data-emoji="❓">❓</span><span class="emoji-item" data-emoji="💡">💡</span><span class="emoji-item" data-emoji="📝">📝</span><span class="emoji-item" data-emoji="📚">📚</span><span class="emoji-item" data-emoji="🔑">🔑</span><span class="emoji-item" data-emoji="🔒">🔒</span><span class="emoji-item" data-emoji="🔔">🔔</span><span class="emoji-item" data-emoji="📢">📢</span><span class="emoji-item" data-emoji="💬">💬</span><span class="emoji-item" data-emoji="🚀">🚀</span><span class="emoji-item" data-emoji="🎯">🎯</span><span class="emoji-item" data-emoji="🛠️">🛠️</span><span class="emoji-item" data-emoji="⚙️">⚙️</span><span class="emoji-item" data-emoji="📊">📊</span><span class="emoji-item" data-emoji="📈">📈</span><span class="emoji-item" data-emoji="🐛">🐛</span><span class="emoji-item" data-emoji="🐱">🐱</span><span class="emoji-item" data-emoji="🐶">🐶</span><span class="emoji-item" data-emoji="🌈">🌈</span>
+                            </div>
+                        </div>
+                    </div>
                     <span class="editor-toolbar-separator"></span>
                     <!-- 历史 -->
                     <button class="editor-toolbar-btn" data-cmd="undo" data-i18n-title="editor.undo_title" title="撤销 (Ctrl+Z)">

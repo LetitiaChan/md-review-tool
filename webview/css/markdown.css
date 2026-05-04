@@ -1912,3 +1912,144 @@ body.rich-mode-active #editorToolbar {
     background: var(--vscode-panel-border, rgba(128,128,128,0.25));
     flex-shrink: 0;
 }
+
+/* ===== Toolbar Popovers ===== */
+.toolbar-btn-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.toolbar-popover {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 6px;
+    background: var(--vscode-editorWidget-background, #252526);
+    border: 1px solid var(--vscode-editorWidget-border, rgba(128,128,128,0.35));
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 200;
+    padding: 8px;
+    min-width: 180px;
+}
+.toolbar-popover.active {
+    display: block;
+}
+
+/* 颜色选择器 */
+.color-popover {
+    min-width: 160px;
+}
+.color-swatches {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin-bottom: 8px;
+}
+.color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+}
+.color-swatch:hover {
+    border-color: var(--vscode-focusBorder, #007fd4);
+    transform: scale(1.15);
+}
+.color-custom-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-top: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.25));
+    padding-top: 6px;
+}
+.color-custom-input {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0;
+    background: transparent;
+}
+.color-custom-apply {
+    flex: 1;
+    padding: 4px 8px;
+    border: none;
+    border-radius: 4px;
+    background: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #fff);
+    cursor: pointer;
+    font-size: 11px;
+}
+.color-custom-apply:hover {
+    background: var(--vscode-button-hoverBackground, #1177bb);
+}
+
+/* 链接/图片输入 popover */
+.link-popover,
+.image-popover {
+    min-width: 240px;
+}
+.popover-input {
+    display: block;
+    width: 100%;
+    padding: 5px 8px;
+    margin-bottom: 6px;
+    border: 1px solid var(--vscode-input-border, rgba(128,128,128,0.4));
+    border-radius: 4px;
+    background: var(--vscode-input-background, #3c3c3c);
+    color: var(--vscode-input-foreground, #ccc);
+    font-size: 12px;
+    outline: none;
+    box-sizing: border-box;
+}
+.popover-input:focus {
+    border-color: var(--vscode-focusBorder, #007fd4);
+}
+.popover-confirm-btn {
+    display: block;
+    width: 100%;
+    padding: 5px 8px;
+    border: none;
+    border-radius: 4px;
+    background: var(--vscode-button-background, #0e639c);
+    color: var(--vscode-button-foreground, #fff);
+    cursor: pointer;
+    font-size: 12px;
+}
+.popover-confirm-btn:hover {
+    background: var(--vscode-button-hoverBackground, #1177bb);
+}
+
+/* Emoji 面板 */
+.emoji-popover {
+    min-width: 260px;
+    max-width: 300px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+}
+.emoji-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.1s;
+    user-select: none;
+}
+.emoji-item:hover {
+    background: var(--vscode-toolbar-hoverBackground, rgba(90,93,94,0.31));
+}
