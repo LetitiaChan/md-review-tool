@@ -708,8 +708,6 @@ export function initApp() {
         const fileRelPath = storeData.relPath || storeData.sourceFilePath || fileName;
         fileNameEl.title = fileRelPath;
 
-        updateFileSelectHighlight(fileName);
-
         blocks = Renderer.parseMarkdown(markdown);
         const data = Store.getData();
         Renderer.renderBlocks(blocks, data.annotations);
@@ -1229,17 +1227,6 @@ export function initApp() {
 
         // 打开后自动适应窗口
         requestAnimationFrame(() => fitToWindow());
-    }
-
-    // ===== 文件选择下拉框高亮 =====
-    function updateFileSelectHighlight(fileName) {
-        const select = document.getElementById('fileSelect');
-        for (let i = 0; i < select.options.length; i++) {
-            if (select.options[i].value === fileName || select.options[i].textContent === fileName) {
-                select.value = select.options[i].value;
-                return;
-            }
-        }
     }
 
     // ===== 切换批注面板 =====

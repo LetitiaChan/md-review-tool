@@ -173,4 +173,42 @@ suite('Custom Editor Provider Tests', () => {
         const content = fs.readFileSync(cssPath, 'utf-8');
         assert.ok(!content.includes('.file-selector-group'), 'style.css 不应包含 .file-selector-group');
     });
+
+    // ===== BT-custom-editor.26~28：防止 updateFileSelectHighlight 死代码复活
+    // （曾导致 "Cannot read properties of null (reading 'options')" 打不开文件）=====
+
+    test('BT-custom-editor.26 webview/js/app.js 不应包含 updateFileSelectHighlight 函数定义', () => {
+        const appPath = path.join(projectRoot, 'webview', 'js', 'app.js');
+        const content = fs.readFileSync(appPath, 'utf-8');
+        assert.ok(
+            !content.includes('function updateFileSelectHighlight'),
+            'app.js 不应包含 updateFileSelectHighlight 函数定义（fileSelect DOM 已移除）'
+        );
+        assert.ok(
+            !content.includes('updateFileSelectHighlight('),
+            'app.js 不应调用 updateFileSelectHighlight（会访问不存在的 fileSelect.options 引发 TypeError）'
+        );
+    });
+
+    test('BT-custom-editor.27 webview/js/app.js 不应对已移除的 fileSelect DOM 执行 getElementById', () => {
+        const appPath = path.join(projectRoot, 'webview', 'js', 'app.js');
+        const content = fs.readFileSync(appPath, 'utf-8');
+        assert.ok(
+            !/getElementById\(\s*['"]fileSelect['"]\s*\)/.test(content),
+            'app.js 不应 getElementById("fileSelect") —— 该元素在 add-custom-editor-provider 中已移除，访问其 .options 会抛 null 引用错误'
+        );
+    });
+
+    test('BT-custom-editor.28 webview/dist/app.bundle.js 不应包含 updateFileSelectHighlight（编译产物同步）', () => {
+        const bundlePath = path.join(projectRoot, 'webview', 'dist', 'app.bundle.js');
+        if (!fs.existsSync(bundlePath)) {
+            // 未编译环境跳过（compile 阶段会生成产物）
+            return;
+        }
+        const content = fs.readFileSync(bundlePath, 'utf-8');
+        assert.ok(
+            !content.includes('updateFileSelectHighlight'),
+            'app.bundle.js 不应包含 updateFileSelectHighlight —— 确保源码清理后 esbuild 产物同步更新'
+        );
+    });
 });

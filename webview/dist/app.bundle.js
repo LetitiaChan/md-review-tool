@@ -5697,7 +5697,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       fileNameEl.textContent = fileName + versionLabel;
       const fileRelPath = storeData.relPath || storeData.sourceFilePath || fileName;
       fileNameEl.title = fileRelPath;
-      updateFileSelectHighlight(fileName);
       blocks = Renderer.parseMarkdown(markdown);
       const data = Store.getData();
       Renderer.renderBlocks(blocks, data.annotations);
@@ -6147,15 +6146,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       document.addEventListener("mouseup", onMouseUp);
       document.addEventListener("keydown", onKeyDown);
       requestAnimationFrame(() => fitToWindow());
-    }
-    function updateFileSelectHighlight(fileName) {
-      const select = document.getElementById("fileSelect");
-      for (let i = 0; i < select.options.length; i++) {
-        if (select.options[i].value === fileName || select.options[i].textContent === fileName) {
-          select.value = select.options[i].value;
-          return;
-        }
-      }
     }
     function toggleAnnotationsPanel(show) {
       const panel = document.getElementById("annotationsPanel");
