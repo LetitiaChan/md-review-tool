@@ -346,7 +346,9 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
                     const targetPath = path.join(targetDir, filename);
                     fs.writeFileSync(targetPath, buffer);
                     const relativePath = path.posix.join(assetsPath, filename).replace(/\\/g, '/');
-                    ctx.postMessage({ type: 'imageSaved', payload: { relativePath }, requestId: imgReqId });
+                    // 额外返回 webview URI，让 webview 端可以立即更新图片缓存（修复粘贴图片后渲染不正确的问题）
+                    const webviewUri = ctx.webview.asWebviewUri(vscode.Uri.file(targetPath)).toString();
+                    ctx.postMessage({ type: 'imageSaved', payload: { relativePath, webviewUri }, requestId: imgReqId });
                 } catch (e: any) {
                     ctx.postMessage({ type: 'imageSaveError', payload: { error: e.message }, requestId: payload.requestId });
                 }

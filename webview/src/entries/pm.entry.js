@@ -575,6 +575,13 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
     function handleImageSaved(event) {
         const msg = event.data;
         if (msg && msg.type === 'imageSaved' && msg.payload && msg.payload.relativePath) {
+            // 先更新 Renderer 的图片 URI 缓存，确保 toDOM 能正确解析新图片路径
+            if (msg.payload.webviewUri && globalThis.Renderer && globalThis.Renderer.getImageUriCache) {
+                const cache = globalThis.Renderer.getImageUriCache();
+                cache[msg.payload.relativePath] = msg.payload.webviewUri;
+                // 同时缓存 decoded 版本（toDOM 会尝试 decodeURIComponent）
+                try { cache[decodeURIComponent(msg.payload.relativePath)] = msg.payload.webviewUri; } catch (e) { /* ignore */ }
+            }
             const node = schema.nodes.image.create({ src: msg.payload.relativePath, alt: null, title: null });
             const tr = view.state.tr.replaceSelectionWith(node);
             view.dispatch(tr);

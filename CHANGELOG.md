@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### 🐛 Bug Fixes
+- **Fix pasted images not rendering in Rich Mode editor** — When pasting an image in Rich Mode, the image was saved to disk and a ProseMirror `image` node was inserted with a relative path (e.g. `assets/images/image-xxx.png`). However, the `Renderer._imageUriCache` did not contain a mapping for the newly saved image, so `image.toDOM()` fell back to the raw relative path which is inaccessible inside the webview sandbox — resulting in a broken image. Refreshing also failed because the cache was only built once during initial file load. Fix: `webviewHelper.ts` now returns the `webviewUri` alongside `relativePath` in the `imageSaved` response; `pm.entry.js` `handleImageSaved` updates the Renderer URI cache (both raw and decoded paths) before inserting the image node, ensuring `toDOM()` can resolve the correct webview URI immediately.
+
+### ✅ Tests (Hotfix)
+- Added 5 regression assertions (`BT-CssImgCursor.T1.7~T1.8`, `BT-CssImgCursor.7~9`) covering: `webviewUri` field in `imageSaved` response (Tier 1), URI cache update logic in `handleImageSaved` (Tier 1), cache-before-insert ordering (Tier 3), decoded path caching (Tier 3), and `pm-schema.js` image.toDOM cache lookup (Tier 3). 907 passing, 0 failing.
+
 ### 🔧 Improvements
 - **Use VS Code default editor background/foreground in Rich Mode** — `#richModeContainer .ProseMirror` now uses `var(--vscode-editor-background)` directly instead of the custom `--bg-white` variable, so the editor background always matches the active VS Code theme without extra overrides.
 

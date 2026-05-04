@@ -28615,6 +28615,14 @@
     function handleImageSaved(event) {
       const msg = event.data;
       if (msg && msg.type === "imageSaved" && msg.payload && msg.payload.relativePath) {
+        if (msg.payload.webviewUri && globalThis.Renderer && globalThis.Renderer.getImageUriCache) {
+          const cache = globalThis.Renderer.getImageUriCache();
+          cache[msg.payload.relativePath] = msg.payload.webviewUri;
+          try {
+            cache[decodeURIComponent(msg.payload.relativePath)] = msg.payload.webviewUri;
+          } catch (e) {
+          }
+        }
         const node = schema.nodes.image.create({ src: msg.payload.relativePath, alt: null, title: null });
         const tr = view.state.tr.replaceSelectionWith(node);
         view.dispatch(tr);

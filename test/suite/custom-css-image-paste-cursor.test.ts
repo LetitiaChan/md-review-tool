@@ -149,4 +149,47 @@ suite('Custom CSS / Image Paste / Cursor Restore Test Suite', () => {
         const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
         assert.ok(src.includes("removeEventListener('message', handleImageSaved)"), 'destroy 应清理 imageSaved 消息监听');
     });
+
+    // ===== Bugfix: 粘贴图片后 URI 缓存更新（修复渲染不正确） =====
+
+    test('BT-CssImgCursor.T1.7 Tier1 — webviewHelper.ts saveImage 回传 webviewUri 字段', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const src = fs.readFileSync(path.join(extPath, 'out', 'webviewHelper.js'), 'utf-8');
+        // saveImage 成功后应返回 webviewUri 字段
+        assert.ok(src.includes('webviewUri'), 'saveImage 回传消息应包含 webviewUri 字段');
+        assert.ok(src.includes('asWebviewUri'), 'saveImage 应调用 webview.asWebviewUri 转换路径');
+    });
+
+    test('BT-CssImgCursor.T1.8 Tier1 — pm.entry.js handleImageSaved 包含 URI 缓存更新逻辑', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        assert.ok(src.includes('msg.payload.webviewUri'), 'handleImageSaved 应读取 webviewUri');
+        assert.ok(src.includes('getImageUriCache'), 'handleImageSaved 应访问 Renderer.getImageUriCache');
+    });
+
+    test('BT-CssImgCursor.7 Tier3 — handleImageSaved 先更新缓存再插入节点（顺序正确）', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        // 确保缓存更新在节点插入之前
+        const cacheUpdateIdx = src.indexOf('cache[msg.payload.relativePath] = msg.payload.webviewUri');
+        const nodeCreateIdx = src.indexOf('schema.nodes.image.create', cacheUpdateIdx > 0 ? cacheUpdateIdx : 0);
+        assert.ok(cacheUpdateIdx > 0, 'handleImageSaved 应将 relativePath→webviewUri 写入缓存');
+        assert.ok(nodeCreateIdx > cacheUpdateIdx, '缓存更新应在 image.create 之前（确保 toDOM 能查到 URI）');
+    });
+
+    test('BT-CssImgCursor.8 Tier3 — handleImageSaved 同时缓存 decoded 版本的路径', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        // toDOM 中会尝试 decodeURIComponent(src)，所以缓存也需要 decoded 版本
+        assert.ok(src.includes('decodeURIComponent(msg.payload.relativePath)'), 'handleImageSaved 应缓存 decoded 版本的路径');
+    });
+
+    test('BT-CssImgCursor.9 Tier3 — pm-schema.js image.toDOM 从 Renderer.getImageUriCache 解析相对路径', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'js', 'pm-schema.js'), 'utf-8');
+        assert.ok(src.includes('Renderer.getImageUriCache'), 'image.toDOM 应从 Renderer.getImageUriCache 获取缓存');
+        assert.ok(src.includes('decodeURIComponent(src)'), 'image.toDOM 应尝试 decodeURIComponent 查找');
+        // 确保有降级逻辑
+        assert.ok(src.includes('|| src'), 'image.toDOM 应有降级到原始 src 的逻辑');
+    });
 });
