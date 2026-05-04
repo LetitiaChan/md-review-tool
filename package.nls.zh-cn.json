@@ -1,5 +1,4 @@
 {
-  "command.openPanel": "MD Human Review: 打开批阅面板",
   "command.exportReview": "MD Human Review: 导出批阅记录",
   "config.fontSize.description": "文档正文字体大小（px）",
   "config.lineHeight.description": "文档正文行高",

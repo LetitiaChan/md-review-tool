@@ -33,26 +33,6 @@
         <div class="toolbar-right">
             <!-- 自动保存状态 -->
             <span class="auto-save-status" id="autoSaveStatus"></span>
-            <!-- 刷新按钮（三策略弹出菜单） -->
-            <div class="toolbar-btn-wrapper toolbar-btn-refresh" id="btnRefreshWrapper">
-                <button class="btn-toolbar-icon" id="btnRefresh" data-i18n-title="toolbar.refresh_title" title="刷新">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 1v3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <div class="toolbar-popover refresh-popover" id="refreshPopover">
-                    <button class="refresh-strategy-option" data-strategy="visual">
-                        <span class="refresh-strategy-icon">🔄</span>
-                        <span class="refresh-strategy-label" data-i18n="toolbar.refresh_visual">视觉刷新</span>
-                    </button>
-                    <button class="refresh-strategy-option" data-strategy="disk">
-                        <span class="refresh-strategy-icon">💾</span>
-                        <span class="refresh-strategy-label" data-i18n="toolbar.refresh_disk">从磁盘重载</span>
-                    </button>
-                    <button class="refresh-strategy-option" data-strategy="editor">
-                        <span class="refresh-strategy-icon">⚡</span>
-                        <span class="refresh-strategy-label" data-i18n="toolbar.refresh_editor">重载编辑器</span>
-                    </button>
-                </div>
-            </div>
             <!-- 目录（胶囊风格） -->
             <button class="btn-toggle-annotations" id="btnToggleToc" data-i18n-title="toolbar.toc_title" title="展开/收起目录导航">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 7h8M2 11h10M2 15h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -84,6 +64,12 @@
             <button class="btn-toolbar-icon" id="btnSettings" data-i18n-title="toolbar.settings_title" title="设置">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6.5 1.5h3l.4 1.9.7.3 1.7-1 2.1 2.1-1 1.7.3.7 1.9.4v3l-1.9.4-.3.7 1 1.7-2.1 2.1-1.7-1-.7.3-.4 1.9h-3l-.4-1.9-.7-.3-1.7 1-2.1-2.1 1-1.7-.3-.7-1.9-.4v-3l1.9-.4.3-.7-1-1.7 2.1-2.1 1.7 1 .7-.3.4-1.9z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.2"/></svg>
             </button>
+            <!-- 刷新（从磁盘重载） -->
+            <div class="toolbar-btn-wrapper toolbar-btn-refresh" id="btnRefreshWrapper">
+                <button class="btn-toolbar-icon" id="btnRefresh" data-i18n-title="toolbar.refresh_title" title="从磁盘重载">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8 1v3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -636,8 +622,7 @@
                                 <div class="label-desc" data-i18n="settings.theme_desc">切换亮色或暗色风格</div>
                             </div>
                             <div class="theme-button-group">
-                                <button class="theme-btn active" data-theme="light" data-i18n="settings.theme_light">☀️ 亮色</button>
-                                <button class="theme-btn" data-theme="dark" data-i18n="settings.theme_dark">🌙 暗色</button>
+                                <button class="theme-btn active" data-theme="dark" data-i18n="settings.theme_dark">🌙 暗色</button>
                                 <button class="theme-btn" data-theme="auto" data-i18n="settings.theme_auto">🖥️ 跟随系统</button>
                             </div>
                         </div>

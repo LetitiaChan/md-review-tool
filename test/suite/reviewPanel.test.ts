@@ -12,17 +12,7 @@ suite('ReviewPanel Test Suite', () => {
         }
     });
 
-    // ===== 面板创建 =====
-
-    test('执行 openPanel 命令不应抛出错误', async () => {
-        try {
-            await vscode.commands.executeCommand('mdReview.openPanel');
-            await new Promise(resolve => setTimeout(resolve, 500));
-            assert.ok(true, 'openPanel 命令执行成功');
-        } catch (e: any) {
-            assert.ok(true, `命令执行完成（可能有预期内的错误）: ${e.message}`);
-        }
-    });
+    // ===== 命令执行 =====
 
     test('执行 exportReview 命令不应抛出错误（无面板时）', async () => {
         try {
@@ -90,28 +80,16 @@ suite('ReviewPanel Test Suite', () => {
         assert.ok(html.includes('${appBundleUri}'), 'HTML 应包含 appBundleUri 占位符');
     });
 
-    // ===== 菜单配置验证 =====
+    // ===== Custom Editor 配置验证 =====
 
-    test('扩展应配置编辑器右键菜单', () => {
+    test('扩展应配置 customEditors', () => {
         const ext = vscode.extensions.getExtension('letitia.md-human-review');
         assert.ok(ext);
-        const menus = ext!.packageJSON.contributes.menus;
-        assert.ok(menus, '应有 menus 配置');
-        assert.ok(menus['editor/context'], '应有编辑器右键菜单');
-        assert.ok(menus['editor/title'], '应有编辑器标题栏菜单');
-        assert.ok(menus['explorer/context'], '应有资源管理器右键菜单');
-    });
-
-    test('菜单项应限制为 markdown 和 mdc 文件', () => {
-        const ext = vscode.extensions.getExtension('letitia.md-human-review');
-        assert.ok(ext);
-        const editorContextMenus = ext!.packageJSON.contributes.menus['editor/context'];
-        assert.ok(Array.isArray(editorContextMenus));
-
-        const openPanelMenu = editorContextMenus.find((m: any) => m.command === 'mdReview.openPanel');
-        assert.ok(openPanelMenu, '右键菜单应包含 openPanel 命令');
-        assert.ok(openPanelMenu.when.includes('markdown'), 'when 条件应包含 markdown');
-        assert.ok(openPanelMenu.when.includes('mdc'), 'when 条件应包含 mdc');
+        const customEditors = ext!.packageJSON.contributes.customEditors;
+        assert.ok(Array.isArray(customEditors), '应有 customEditors 配置');
+        assert.ok(customEditors.length > 0, '应至少有一个 Custom Editor');
+        const mdEditor = customEditors.find((e: any) => e.viewType === 'mdReview.markdownEditor');
+        assert.ok(mdEditor, '应有 mdReview.markdownEditor Custom Editor');
     });
 
     // ===== 扩展图标验证 =====
@@ -291,27 +269,25 @@ suite('ReviewPanel Test Suite', () => {
     // ===== Webview 面板选项验证 =====
 
     suite('Webview 面板选项', () => {
-        test('扩展应声明 viewType 为 mdReview', () => {
-            // 通过 package.json 的 commands 验证
+        test('扩展应配置 Custom Editor viewType', () => {
             const ext = vscode.extensions.getExtension('letitia.md-human-review');
             assert.ok(ext);
 
-            const commands = ext!.packageJSON.contributes.commands;
-            assert.ok(Array.isArray(commands), '应有 commands 配置');
-
-            const openCmd = commands.find((c: any) => c.command === 'mdReview.openPanel');
-            assert.ok(openCmd, '应有 openPanel 命令');
-            assert.ok(openCmd.title, '命令应有标题');
+            const customEditors = ext!.packageJSON.contributes.customEditors;
+            assert.ok(Array.isArray(customEditors), '应有 customEditors 配置');
+            const mdEditor = customEditors.find((e: any) => e.viewType === 'mdReview.markdownEditor');
+            assert.ok(mdEditor, '应有 mdReview.markdownEditor viewType');
+            assert.ok(mdEditor.displayName, 'Custom Editor 应有 displayName');
         });
 
         test('扩展应配置 activationEvents', () => {
             const ext = vscode.extensions.getExtension('letitia.md-human-review');
             assert.ok(ext);
 
-            // VS Code 1.74+ 自动从 contributes.commands 推断 activationEvents
-            // 验证命令存在即可
-            const commands = ext!.packageJSON.contributes.commands;
-            assert.ok(commands.length > 0, '应有至少一个命令');
+            // VS Code 1.74+ 自动从 contributes 推断 activationEvents
+            // 验证 Custom Editor 存在即可
+            const customEditors = ext!.packageJSON.contributes.customEditors;
+            assert.ok(customEditors.length > 0, '应有至少一个 Custom Editor');
         });
     });
 
@@ -365,37 +341,7 @@ suite('ReviewPanel Test Suite', () => {
 
             const keybindings = ext!.packageJSON.contributes.keybindings;
             assert.ok(Array.isArray(keybindings), '应有 keybindings 配置');
-            assert.ok(keybindings.length >= 2, '应至少有 2 个快捷键绑定');
-        });
-
-        test('应配置 Ctrl+Enter 快捷键用于在资源管理器中打开批阅面板', () => {
-            const ext = vscode.extensions.getExtension('letitia.md-human-review');
-            assert.ok(ext);
-
-            const keybindings = ext!.packageJSON.contributes.keybindings;
-            const openPanelBinding = keybindings.find(
-                (kb: any) => kb.command === 'mdReview.openPanel'
-            );
-            assert.ok(openPanelBinding, 'keybindings 应包含 mdReview.openPanel 命令');
-            assert.strictEqual(openPanelBinding.key, 'ctrl+enter', '快捷键应为 ctrl+enter');
-        });
-
-        test('Ctrl+Enter 快捷键的 when 条件应限制为资源管理器中的有效文件', () => {
-            const ext = vscode.extensions.getExtension('letitia.md-human-review');
-            assert.ok(ext);
-
-            const keybindings = ext!.packageJSON.contributes.keybindings;
-            const openPanelBinding = keybindings.find(
-                (kb: any) => kb.command === 'mdReview.openPanel'
-            );
-            assert.ok(openPanelBinding);
-
-            const when = openPanelBinding.when as string;
-            assert.ok(when.includes('filesExplorerFocus'), 'when 条件应包含 filesExplorerFocus');
-            assert.ok(when.includes('resourceExtname'), 'when 条件应包含 resourceExtname');
-            assert.ok(when.includes('md'), 'when 条件应匹配 .md 文件');
-            assert.ok(when.includes('mdc'), 'when 条件应匹配 .mdc 文件');
-            assert.ok(when.includes('markdown'), 'when 条件应匹配 .markdown 文件');
+            assert.ok(keybindings.length >= 1, '应至少有 1 个快捷键绑定');
         });
 
         test('应保留 Ctrl+E 导出快捷键', () => {
@@ -415,77 +361,7 @@ suite('ReviewPanel Test Suite', () => {
         });
     });
 
-    // ===== openPanel 命令 URI 参数验证 =====
 
-    suite('openPanel 命令参数处理', () => {
-        test('传入 .md 文件 URI 执行 openPanel 不应抛出错误', async () => {
-            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
-            assert.ok(extPath);
-
-            // 创建临时 md 文件用于测试
-            const tmpDir = path.join(extPath!, '.test-tmp');
-            if (!fs.existsSync(tmpDir)) {
-                fs.mkdirSync(tmpDir, { recursive: true });
-            }
-            const tmpFile = path.join(tmpDir, 'test-shortcut.md');
-            fs.writeFileSync(tmpFile, '# 快捷键测试\n\n这是一个测试文件。');
-
-            try {
-                const uri = vscode.Uri.file(tmpFile);
-                await vscode.commands.executeCommand('mdReview.openPanel', uri);
-                await new Promise(resolve => setTimeout(resolve, 500));
-                assert.ok(true, '通过 URI 参数打开批阅面板成功');
-            } catch (e: any) {
-                assert.ok(true, `命令执行完成: ${e.message}`);
-            } finally {
-                // 清理临时文件
-                if (fs.existsSync(tmpFile)) {
-                    fs.unlinkSync(tmpFile);
-                }
-                if (fs.existsSync(tmpDir)) {
-                    fs.rmdirSync(tmpDir);
-                }
-            }
-        });
-
-        test('传入 .mdc 文件 URI 执行 openPanel 不应抛出错误', async () => {
-            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
-            assert.ok(extPath);
-
-            const tmpDir = path.join(extPath!, '.test-tmp');
-            if (!fs.existsSync(tmpDir)) {
-                fs.mkdirSync(tmpDir, { recursive: true });
-            }
-            const tmpFile = path.join(tmpDir, 'test-shortcut.mdc');
-            fs.writeFileSync(tmpFile, '# MDC 快捷键测试\n\n这是一个 .mdc 测试文件。');
-
-            try {
-                const uri = vscode.Uri.file(tmpFile);
-                await vscode.commands.executeCommand('mdReview.openPanel', uri);
-                await new Promise(resolve => setTimeout(resolve, 500));
-                assert.ok(true, '通过 .mdc URI 参数打开批阅面板成功');
-            } catch (e: any) {
-                assert.ok(true, `命令执行完成: ${e.message}`);
-            } finally {
-                if (fs.existsSync(tmpFile)) {
-                    fs.unlinkSync(tmpFile);
-                }
-                if (fs.existsSync(tmpDir)) {
-                    fs.rmdirSync(tmpDir);
-                }
-            }
-        });
-
-        test('不传参数执行 openPanel 不应抛出错误（回退逻辑）', async () => {
-            try {
-                await vscode.commands.executeCommand('mdReview.openPanel');
-                await new Promise(resolve => setTimeout(resolve, 500));
-                assert.ok(true, '无参数执行 openPanel 成功（触发剪贴板回退逻辑）');
-            } catch (e: any) {
-                assert.ok(true, `命令执行完成: ${e.message}`);
-            }
-        });
-    });
 
     // ===== Hotfix — 一键 AI 修复不弹出输出窗口 =====
     suite('23. Hotfix — 一键 AI 修复时输出窗口不应弹出', () => {
@@ -507,7 +383,7 @@ suite('ReviewPanel Test Suite', () => {
 
         // Tier 1 — 存在性/源码关键字断言
         test('BT-aiChatOutputSilent.1 源码中 AI Chat 分支应已移除 outputChannel.show() 调用（成功路径）', () => {
-            assert.ok(tsBlock.length > 0, 'reviewPanel.ts 中应存在 MD Human Review - AI Chat 分支');
+            assert.ok(tsBlock.length > 0, 'webviewHelper.ts 中应存在 MD Human Review - AI Chat 分支');
             assert.ok(
                 !/outputChannel\.show\s*\(/.test(tsBlock),
                 'AI Chat 分支不应再调用 outputChannel.show()，否则输出窗口会弹出'
@@ -517,7 +393,7 @@ suite('ReviewPanel Test Suite', () => {
         test('BT-aiChatOutputSilent.2 编译产物中 AI Chat 分支也不应残留 outputChannel.show() 调用', () => {
             if (!jsBlock) {
                 // 未编译时跳过（CI/本地会先 npm run compile，通常不会命中）
-                assert.ok(true, 'out/reviewPanel.js 未生成，跳过编译产物断言');
+                assert.ok(true, 'out/webviewHelper.js 未生成，跳过编译产物断言');
                 return;
             }
             assert.ok(

@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FileService } from '../../src/fileService';
 import { StateService } from '../../src/stateService';
-import { ReviewPanel } from '../../src/reviewPanel';
 
 /**
  * 边界场景端到端测试套件
@@ -59,12 +58,6 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
     });
 
     suiteTeardown(() => {
-        for (const p of ReviewPanel.panels.values()) {
-            p.dispose();
-        }
-        if (ReviewPanel.currentPanel) {
-            ReviewPanel.currentPanel.dispose();
-        }
         if (fs.existsSync(testDir)) {
             fs.rmSync(testDir, { recursive: true, force: true });
         }
@@ -900,76 +893,15 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
         });
     });
 
-    // ===== 4. 面板状态异常 =====
+    // ===== 4. 命令安全性 =====
 
-    suite('4. 面板状态异常', () => {
-        test('快速连续执行 openPanel → 不崩溃', async () => {
-            const promises = [];
-            for (let i = 0; i < 5; i++) {
-                promises.push(
-                    vscode.commands.executeCommand('mdReview.openPanel').then(
-                        () => true,
-                        () => true // 错误也视为安全完成
-                    )
-                );
-            }
-
-            const results = await Promise.all(promises);
-            assert.strictEqual(results.length, 5, '所有命令应完成');
-        });
-
-        test('无面板时执行 exportReview → 安全忽略', async () => {
-            // 确保无面板
-            if (ReviewPanel.currentPanel) {
-                ReviewPanel.currentPanel.dispose();
-                await new Promise(resolve => setTimeout(resolve, 200));
-            }
-
+    suite('4. 命令安全性', () => {
+        test('无 Custom Editor 时执行 exportReview → 安全忽略', async () => {
             try {
                 await vscode.commands.executeCommand('mdReview.exportReview');
                 assert.ok(true, '无面板时应安全忽略');
             } catch (e: any) {
                 assert.ok(true, `安全处理: ${e.message}`);
-            }
-        });
-
-        test('面板 dispose 后 currentPanel 应为 undefined', async () => {
-            try {
-                await vscode.commands.executeCommand('mdReview.openPanel');
-                await new Promise(resolve => setTimeout(resolve, 300));
-            } catch (e) {
-                // 忽略
-            }
-
-            if (ReviewPanel.currentPanel) {
-                ReviewPanel.currentPanel.dispose();
-                await new Promise(resolve => setTimeout(resolve, 200));
-                assert.strictEqual(ReviewPanel.currentPanel, undefined, 'dispose 后应为 undefined');
-            } else {
-                assert.ok(true, '测试环境中面板可能未创建');
-            }
-        });
-
-        test('多次 dispose 不应崩溃', async () => {
-            try {
-                await vscode.commands.executeCommand('mdReview.openPanel');
-                await new Promise(resolve => setTimeout(resolve, 300));
-            } catch (e) {
-                // 忽略
-            }
-
-            if (ReviewPanel.currentPanel) {
-                const panel = ReviewPanel.currentPanel;
-                panel.dispose();
-                // 第二次 dispose 不应崩溃
-                try {
-                    panel.dispose();
-                } catch (e) {
-                    // 可能抛出错误，但不应崩溃
-                }
-                assert.ok(true, '多次 dispose 不应崩溃');
-            } else {
-                assert.ok(true, '测试环境中面板可能未创建');
             }
         });
     });

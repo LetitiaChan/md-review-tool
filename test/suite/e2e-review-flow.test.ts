@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FileService } from '../../src/fileService';
 import { StateService } from '../../src/stateService';
-import { ReviewPanel } from '../../src/reviewPanel';
 
 /**
  * 端到端批阅流程测试套件
@@ -54,13 +53,6 @@ suite('E2E Review Flow Test Suite — 完整批阅流程端到端', () => {
     });
 
     suiteTeardown(() => {
-        // 确保所有面板关闭
-        for (const p of ReviewPanel.panels.values()) {
-            p.dispose();
-        }
-        if (ReviewPanel.currentPanel) {
-            ReviewPanel.currentPanel.dispose();
-        }
         // 清理临时目录
         if (fs.existsSync(testDir)) {
             fs.rmSync(testDir, { recursive: true, force: true });
@@ -106,13 +98,12 @@ suite('E2E Review Flow Test Suite — 完整批阅流程端到端', () => {
         });
 
         test('openPanel 命令应成功执行', async () => {
+            // openPanel 命令已移除，改为验证 exportReview 命令
             try {
-                await vscode.commands.executeCommand('mdReview.openPanel');
-                // 等待面板初始化
+                await vscode.commands.executeCommand('mdReview.exportReview');
                 await new Promise(resolve => setTimeout(resolve, 300));
-                assert.ok(true, 'openPanel 命令执行成功');
+                assert.ok(true, 'exportReview 命令执行成功');
             } catch (e: any) {
-                // 测试环境中可能因无活动编辑器而产生预期错误
                 assert.ok(true, `命令执行完成: ${e.message}`);
             }
         });
@@ -782,17 +773,10 @@ suite('E2E Review Flow Test Suite — 完整批阅流程端到端', () => {
     suite('场景 11：面板生命周期', () => {
         test('面板命令应已注册', async () => {
             const commands = await vscode.commands.getCommands(true);
-            assert.ok(commands.includes('mdReview.openPanel'), 'openPanel 应已注册');
             assert.ok(commands.includes('mdReview.exportReview'), 'exportReview 应已注册');
         });
 
         test('exportReview 在无面板时应安全执行', async () => {
-            // 确保无面板
-            if (ReviewPanel.currentPanel) {
-                ReviewPanel.currentPanel.dispose();
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-
             try {
                 await vscode.commands.executeCommand('mdReview.exportReview');
                 assert.ok(true, '无面板时 exportReview 应静默忽略');

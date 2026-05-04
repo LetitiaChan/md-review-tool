@@ -63,10 +63,10 @@ suite('Remove Source Mode — Regression Test Suite', () => {
                 'edit-mode.js 不应包含 isSourceActive');
         });
 
-        test('T1.7 reviewPanel.ts 不应包含 cm6BundleUri', () => {
-            const content = fs.readFileSync(path.join(extPath, 'src', 'reviewPanel.ts'), 'utf-8');
+        test('T1.7 webviewHelper.ts 不应包含 cm6BundleUri', () => {
+            const content = fs.readFileSync(path.join(extPath, 'src', 'webviewHelper.ts'), 'utf-8');
             assert.ok(!content.includes('cm6BundleUri'),
-                'reviewPanel.ts 不应包含 cm6BundleUri');
+                'webviewHelper.ts 不应包含 cm6BundleUri');
         });
 
         test('T1.8 markdown.css 不应包含 source-mode-active 或 sourceModeContainer 或 btnToggleSource', () => {

@@ -1797,60 +1797,18 @@ this.innerHTML = t('modal.ai_result.copied');
         }
     }
 
-    // ===== 刷新按钮三策略 =====
+    // ===== 刷新按钮（点击直接从磁盘重载） =====
     function setupRefreshButton() {
-        const wrapper = document.getElementById('btnRefreshWrapper');
         const btn = document.getElementById('btnRefresh');
-        if (!wrapper || !btn) return;
+        if (!btn) return;
 
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const popover = wrapper.querySelector('.toolbar-popover');
-            if (!popover) return;
-            const isActive = popover.classList.contains('active');
-            closeAllPopovers();
-            if (!isActive) {
-                popover.classList.add('active');
-            }
-        });
-
-        // 策略选项点击
-        const options = wrapper.querySelectorAll('[data-strategy]');
-        for (const opt of options) {
-            opt.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const strategy = opt.getAttribute('data-strategy');
-                closeAllPopovers();
-                if (strategy === 'visual') refreshVisual();
-                else if (strategy === 'disk') refreshFromDisk();
-                else if (strategy === 'editor') refreshEditor();
-            });
-        }
-
-        // 点击外部关闭
-        document.addEventListener('click', (e) => {
-            if (!wrapper.contains(e.target)) {
-                const popover = wrapper.querySelector('.toolbar-popover.active');
-                if (popover) popover.classList.remove('active');
-            }
-        });
-
-        // Escape 关闭
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const popover = wrapper.querySelector('.toolbar-popover.active');
-                if (popover) popover.classList.remove('active');
-            }
+            refreshFromDisk();
         });
     }
 
-    /** R1 — 视觉刷新：重新渲染当前 markdown，不读磁盘、不改 Store */
-    function refreshVisual() {
-        refreshCurrentView();
-        showNotification(I18n.t('toolbar.refresh_visual_done'));
-    }
-
-    /** R2 — 从磁盘重载：检查脏状态 → 读取文件 → 差异比较 → 按需创建新审阅版本 */
+    /** 从磁盘重载：检查脏状态 → 读取文件 → 差异比较 → 按需创建新审阅版本 */
     async function refreshFromDisk() {
         try {
             // 1. 查询脏状态
@@ -1894,31 +1852,6 @@ this.innerHTML = t('modal.ai_result.copied');
             }
         } catch (e) {
             showNotification(I18n.t('toolbar.refresh_disk_error'));
-        }
-    }
-
-    /** R4 — 重载编辑器：Custom Editor 执行 revertFile；WebviewPanel 降级为 R1 */
-    async function refreshEditor() {
-        try {
-            // 查询脏状态
-            const dirtyResult = await callHost('getDocumentDirtyState', {});
-            if (dirtyResult && dirtyResult.isDirty) {
-                const confirmResult = await callHost('refresh.showDirtyConfirm', {});
-                if (!confirmResult || !confirmResult.confirmed) {
-                    return;
-                }
-            }
-            // 执行 revertFile
-            const result = await callHost('refresh.revertFile', {});
-            if (result && result.fallback === 'visual') {
-                // WebviewPanel 模式降级为视觉刷新
-                refreshVisual();
-            } else {
-                showNotification(I18n.t('toolbar.refresh_editor_done'));
-            }
-        } catch (e) {
-            // 降级为视觉刷新
-            refreshVisual();
         }
     }
 

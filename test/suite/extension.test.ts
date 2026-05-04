@@ -22,11 +22,6 @@ suite('Extension Test Suite', () => {
 
     // ===== 命令注册 =====
 
-    test('openPanel 命令应该被注册', async () => {
-        const commands = await vscode.commands.getCommands(true);
-        assert.ok(commands.includes('mdReview.openPanel'), 'mdReview.openPanel 命令应该已注册');
-    });
-
     test('exportReview 命令应该被注册', async () => {
         const commands = await vscode.commands.getCommands(true);
         assert.ok(commands.includes('mdReview.exportReview'), 'mdReview.exportReview 命令应该已注册');

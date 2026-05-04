@@ -81,7 +81,6 @@ suite('Workflow Test Suite — 完整工作流', () => {
 
         test('所有核心命令应已注册', async () => {
             const commands = await vscode.commands.getCommands(true);
-            assert.ok(commands.includes('mdReview.openPanel'), 'openPanel 命令应已注册');
             assert.ok(commands.includes('mdReview.exportReview'), 'exportReview 命令应已注册');
         });
 
@@ -750,20 +749,9 @@ suite('Workflow Test Suite — 完整工作流', () => {
         });
     });
 
-    // ===== 流程 10：面板命令执行 =====
+    // ===== 流程 10：命令执行 =====
 
-    suite('流程 10：面板命令执行', () => {
-        test('openPanel 命令应可安全执行', async () => {
-            try {
-                await vscode.commands.executeCommand('mdReview.openPanel');
-                await new Promise(resolve => setTimeout(resolve, 500));
-                assert.ok(true, 'openPanel 命令执行成功');
-            } catch (e: any) {
-                // 在测试环境中可能因为没有活动编辑器而产生预期内的错误
-                assert.ok(true, `命令执行完成: ${e.message}`);
-            }
-        });
-
+    suite('流程 10：命令执行', () => {
         test('exportReview 命令在无面板时应安全执行', async () => {
             try {
                 await vscode.commands.executeCommand('mdReview.exportReview');

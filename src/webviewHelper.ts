@@ -373,11 +373,9 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
                     const fileUri = vscode.Uri.file(absPath);
                     if (fs.existsSync(absPath)) {
                         const ext = path.extname(absPath).toLowerCase();
-                        if (ext === '.md' || ext === '.mdc') {
-                            // 在 Panel 模式下用 ReviewPanel 打开；Custom Editor 模式下也用 ReviewPanel
-                            // （因为 Custom Editor 由 VS Code 管理打开方式）
-                            const { ReviewPanel } = require('./reviewPanel');
-                            ReviewPanel.createOrShow(ctx.extensionContext, absPath);
+                        if (ext === '.md' || ext === '.mdc' || ext === '.markdown') {
+                            // 通过 Custom Editor 打开 Markdown 文件
+                            vscode.commands.executeCommand('vscode.openWith', fileUri, 'mdReview.markdownEditor');
                         } else {
                             vscode.commands.executeCommand('vscode.open', fileUri, { preview: false });
                         }

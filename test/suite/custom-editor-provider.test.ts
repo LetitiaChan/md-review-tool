@@ -96,19 +96,19 @@ suite('Custom Editor Provider Tests', () => {
 
     // ===== Tier 2: 行为级断言 =====
 
-    test('BT-custom-editor.13 reviewPanel.ts 应导入 webviewHelper', () => {
-        const content = fs.readFileSync(path.join(projectRoot, 'src', 'reviewPanel.ts'), 'utf-8');
-        assert.ok(content.includes("from './webviewHelper'"), 'reviewPanel 应导入 webviewHelper');
+    test('BT-custom-editor.13 customEditorProvider.ts 应导入 webviewHelper', () => {
+        const content = fs.readFileSync(path.join(projectRoot, 'src', 'customEditorProvider.ts'), 'utf-8');
+        assert.ok(content.includes("from './webviewHelper'"), 'customEditorProvider 应导入 webviewHelper');
     });
 
-    test('BT-custom-editor.14 reviewPanel.ts 应使用 getWebviewHtml', () => {
-        const content = fs.readFileSync(path.join(projectRoot, 'src', 'reviewPanel.ts'), 'utf-8');
-        assert.ok(content.includes('getWebviewHtml('), 'reviewPanel 应调用 getWebviewHtml');
+    test('BT-custom-editor.14 customEditorProvider.ts 应使用 getWebviewHtml', () => {
+        const content = fs.readFileSync(path.join(projectRoot, 'src', 'customEditorProvider.ts'), 'utf-8');
+        assert.ok(content.includes('getWebviewHtml('), 'customEditorProvider 应调用 getWebviewHtml');
     });
 
-    test('BT-custom-editor.15 reviewPanel.ts 应使用 createMessageHandler', () => {
-        const content = fs.readFileSync(path.join(projectRoot, 'src', 'reviewPanel.ts'), 'utf-8');
-        assert.ok(content.includes('createMessageHandler('), 'reviewPanel 应调用 createMessageHandler');
+    test('BT-custom-editor.15 customEditorProvider.ts 应使用 createMessageHandler', () => {
+        const content = fs.readFileSync(path.join(projectRoot, 'src', 'customEditorProvider.ts'), 'utf-8');
+        assert.ok(content.includes('createMessageHandler('), 'customEditorProvider 应调用 createMessageHandler');
     });
 
     test('BT-custom-editor.16 extension.ts 应导入 MarkdownEditorProvider', () => {
@@ -139,7 +139,6 @@ suite('Custom Editor Provider Tests', () => {
         const htmlPath = path.join(projectRoot, 'webview', 'index.html');
         const content = fs.readFileSync(htmlPath, 'utf-8');
         assert.ok(content.includes('btnRefresh'), 'index.html 应包含 btnRefresh');
-        assert.ok(content.includes('refresh-popover'), 'index.html 应包含 refresh-popover 弹出菜单');
     });
 
     test('BT-custom-editor.21 webview/js/app.js 不应包含 loadFileList 函数', () => {
@@ -161,11 +160,8 @@ suite('Custom Editor Provider Tests', () => {
     });
 
     test('BT-custom-editor.24 src/ 目录不应包含 getFiles 消息处理', () => {
-        const rpPath = path.join(projectRoot, 'src', 'reviewPanel.ts');
         const whPath = path.join(projectRoot, 'src', 'webviewHelper.ts');
-        const rpContent = fs.readFileSync(rpPath, 'utf-8');
         const whContent = fs.readFileSync(whPath, 'utf-8');
-        assert.ok(!rpContent.includes("'getFiles'"), 'reviewPanel.ts 不应处理 getFiles 消息');
         assert.ok(!whContent.includes("'getFiles'"), 'webviewHelper.ts 不应处理 getFiles 消息');
     });
 

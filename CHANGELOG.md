@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### 🗑️ Removed
+- **Removed `MD Human Review: Open Review Panel` command** — The standalone WebviewPanel mode (`mdReview.openPanel`) has been completely removed. Users should now use "Open With..." → "MD Human Review" (Custom Editor) to open Markdown files for review. The `ReviewPanel` class (`src/reviewPanel.ts`) has been deleted along with all associated keybindings (`Ctrl+Enter`), context menus, and activation events.
+
 ### ✨ New Features
 - **Custom Editor Provider ("Open With..." integration)** — The extension now registers as a `CustomTextEditorProvider` for `.md`, `.mdc`, and `.markdown` files with `priority: "option"`. Users can right-click any Markdown file in VS Code Explorer → "Open With..." → "MD Human Review" to open it with native dirty-state indicators (●), Ctrl+S save, and close-confirmation dialogs. The existing `mdReview.openPanel` command continues to work as before.
 - **Shared webview architecture** — Extracted webview HTML generation and message handling into `src/webviewHelper.ts`, enabling both the WebviewPanel mode and the new Custom Editor mode to share the same rendering and interaction logic without duplication.

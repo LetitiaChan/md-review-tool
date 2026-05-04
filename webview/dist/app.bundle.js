@@ -31,10 +31,11 @@
         "toolbar.ai_fix": "AI Fix",
         "toolbar.settings_title": "\u8BBE\u7F6E",
         "toolbar.scroll_top_title": "\u56DE\u5230\u9876\u90E8",
-        "toolbar.refresh_title": "\u5237\u65B0",
-        "toolbar.refresh_visual": "\u89C6\u89C9\u5237\u65B0\uFF08\u4EC5\u91CD\u65B0\u6E32\u67D3\uFF09",
-        "toolbar.refresh_disk": "\u4ECE\u78C1\u76D8\u91CD\u8F7D\uFF08\u521B\u5EFA\u65B0\u5BA1\u9605\u7248\u672C\uFF09",
-        "toolbar.refresh_editor": "\u91CD\u8F7D\u7F16\u8F91\u5668",
+        "toolbar.refresh_title": "\u4ECE\u78C1\u76D8\u91CD\u8F7D",
+        "toolbar.refresh_disk": "\u4ECE\u78C1\u76D8\u91CD\u8F7D",
+        "toolbar.refresh_disk_updated": "\u5DF2\u4ECE\u78C1\u76D8\u91CD\u8F7D\uFF0C\u521B\u5EFA\u65B0\u5BA1\u9605\u7248\u672C",
+        "toolbar.refresh_disk_unchanged": "\u6587\u4EF6\u672A\u53D8\u5316",
+        "toolbar.refresh_disk_error": "\u91CD\u8F7D\u5931\u8D25",
         "refresh.dirty_confirm_title": "\u672A\u4FDD\u5B58\u7684\u4FEE\u6539",
         "refresh.dirty_confirm_message": "\u6587\u6863\u6709\u672A\u4FDD\u5B58\u7684\u4FEE\u6539\u3002\u653E\u5F03\u4FEE\u6539\u5E76\u91CD\u65B0\u52A0\u8F7D\uFF1F",
         "refresh.dirty_confirm_discard": "\u653E\u5F03\u5E76\u91CD\u8F7D",
@@ -536,10 +537,11 @@
         "toolbar.ai_fix": "AI Fix",
         "toolbar.settings_title": "Settings",
         "toolbar.scroll_top_title": "Back to top",
-        "toolbar.refresh_title": "Refresh",
-        "toolbar.refresh_visual": "Visual Refresh (re-render only)",
-        "toolbar.refresh_disk": "Reload from Disk (new review version)",
-        "toolbar.refresh_editor": "Reload Editor",
+        "toolbar.refresh_title": "Reload from Disk",
+        "toolbar.refresh_disk": "Reload from Disk",
+        "toolbar.refresh_disk_updated": "Reloaded from disk, new review version created",
+        "toolbar.refresh_disk_unchanged": "File unchanged",
+        "toolbar.refresh_disk_error": "Reload failed",
         "refresh.dirty_confirm_title": "Unsaved Changes",
         "refresh.dirty_confirm_message": "Document has unsaved changes. Discard and reload?",
         "refresh.dirty_confirm_discard": "Discard & Reload",
@@ -4401,7 +4403,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       contentMaxWidth: 1100,
       fontFamily: "",
       codeFontFamily: "",
-      theme: "light",
+      theme: "dark",
       showToc: true,
       showAnnotations: true,
       sidebarLayout: "toc-left",
@@ -4414,7 +4416,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       showLineNumbers: false,
       autoSave: true,
       autoSaveDelay: 1500,
-      codeTheme: "default-light-modern",
+      codeTheme: "default-dark-modern",
       language: "zh-CN"
     };
     const DARK_CODE_THEMES = [
@@ -6646,46 +6648,12 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
     }
     function setupRefreshButton() {
-      const wrapper = document.getElementById("btnRefreshWrapper");
       const btn = document.getElementById("btnRefresh");
-      if (!wrapper || !btn) return;
+      if (!btn) return;
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        const popover = wrapper.querySelector(".toolbar-popover");
-        if (!popover) return;
-        const isActive = popover.classList.contains("active");
-        closeAllPopovers();
-        if (!isActive) {
-          popover.classList.add("active");
-        }
+        refreshFromDisk();
       });
-      const options = wrapper.querySelectorAll("[data-strategy]");
-      for (const opt of options) {
-        opt.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const strategy = opt.getAttribute("data-strategy");
-          closeAllPopovers();
-          if (strategy === "visual") refreshVisual();
-          else if (strategy === "disk") refreshFromDisk();
-          else if (strategy === "editor") refreshEditor();
-        });
-      }
-      document.addEventListener("click", (e) => {
-        if (!wrapper.contains(e.target)) {
-          const popover = wrapper.querySelector(".toolbar-popover.active");
-          if (popover) popover.classList.remove("active");
-        }
-      });
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          const popover = wrapper.querySelector(".toolbar-popover.active");
-          if (popover) popover.classList.remove("active");
-        }
-      });
-    }
-    function refreshVisual() {
-      refreshCurrentView();
-      showNotification(I18n.t("toolbar.refresh_visual_done"));
     }
     async function refreshFromDisk() {
       try {
@@ -6726,25 +6694,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
       } catch (e) {
         showNotification(I18n.t("toolbar.refresh_disk_error"));
-      }
-    }
-    async function refreshEditor() {
-      try {
-        const dirtyResult = await callHost("getDocumentDirtyState", {});
-        if (dirtyResult && dirtyResult.isDirty) {
-          const confirmResult = await callHost("refresh.showDirtyConfirm", {});
-          if (!confirmResult || !confirmResult.confirmed) {
-            return;
-          }
-        }
-        const result = await callHost("refresh.revertFile", {});
-        if (result && result.fallback === "visual") {
-          refreshVisual();
-        } else {
-          showNotification(I18n.t("toolbar.refresh_editor_done"));
-        }
-      } catch (e) {
-        refreshVisual();
       }
     }
     function setupColorPopover() {

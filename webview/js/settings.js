@@ -12,7 +12,7 @@ const Settings = (() => {
         contentMaxWidth: 1100,
         fontFamily: '',
         codeFontFamily: '',
-        theme: 'light',
+        theme: 'dark',
         showToc: true,
         showAnnotations: true,
         sidebarLayout: 'toc-left',
@@ -25,7 +25,7 @@ const Settings = (() => {
         showLineNumbers: false,
         autoSave: true,
         autoSaveDelay: 1500,
-codeTheme: 'default-light-modern',
+codeTheme: 'default-dark-modern',
         language: 'zh-CN'
     };
 

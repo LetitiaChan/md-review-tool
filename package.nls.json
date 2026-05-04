@@ -1,5 +1,4 @@
 {
-  "command.openPanel": "MD Human Review: Open Review Panel",
   "command.exportReview": "MD Human Review: Export Review Record",
   "config.fontSize.description": "Document body font size (px)",
   "config.lineHeight.description": "Document body line height",

@@ -11,6 +11,19 @@ import { getWebviewHtml, createMessageHandler, MessageHandlerContext } from './w
 export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
     public static readonly viewType = 'mdReview.markdownEditor';
 
+    /** 追踪所有活跃的 Custom Editor webview panels，供 exportReview 等命令使用 */
+    private static _activeWebviewPanels: Set<vscode.WebviewPanel> = new Set();
+
+    /** 获取当前活跃的 webview panel（最近一个被聚焦的） */
+    public static getActiveWebviewPanel(): vscode.WebviewPanel | undefined {
+        // 返回集合中最后一个（最近添加的）
+        let last: vscode.WebviewPanel | undefined;
+        for (const panel of MarkdownEditorProvider._activeWebviewPanels) {
+            last = panel;
+        }
+        return last;
+    }
+
     constructor(private readonly _context: vscode.ExtensionContext) {}
 
     public static register(context: vscode.ExtensionContext): vscode.Disposable {
@@ -149,7 +162,22 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
         // 面板关闭时清理
         webviewPanel.onDidDispose(() => {
+            MarkdownEditorProvider._activeWebviewPanels.delete(webviewPanel);
             disposables.forEach(d => d.dispose());
         });
+
+        // 追踪活跃 webview panel
+        MarkdownEditorProvider._activeWebviewPanels.add(webviewPanel);
+
+        // 监听面板激活状态，确保 getActiveWebviewPanel 返回最近聚焦的
+        disposables.push(
+            webviewPanel.onDidChangeViewState(e => {
+                if (e.webviewPanel.active) {
+                    // 移除再添加，确保在 Set 末尾
+                    MarkdownEditorProvider._activeWebviewPanels.delete(webviewPanel);
+                    MarkdownEditorProvider._activeWebviewPanels.add(webviewPanel);
+                }
+            })
+        );
     }
 }
