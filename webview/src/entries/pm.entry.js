@@ -507,6 +507,33 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
         nodeViews: {
             diagram(node, view, getPos) { return new DiagramNodeView(node, view, getPos); },
         },
+        handleDoubleClick(view, pos, event) {
+            // 检测双击位置是否在 link mark 上
+            const $pos = view.state.doc.resolve(pos);
+            const linkType = schema.marks.link;
+            const marks = $pos.marks();
+            let linkMark = null;
+            for (const m of marks) {
+                if (m.type === linkType) { linkMark = m; break; }
+            }
+            if (!linkMark) {
+                // 尝试前一位置
+                const before = $pos.nodeBefore;
+                if (before && before.marks) {
+                    for (const m of before.marks) {
+                        if (m.type === linkType) { linkMark = m; break; }
+                    }
+                }
+            }
+            if (linkMark) {
+                // 派发自定义事件通知 app.js 打开链接编辑 popover
+                try {
+                    window.dispatchEvent(new CustomEvent('pm-link-dblclick', { detail: {} }));
+                } catch (e) { /* 容错 */ }
+                return true; // 阻止默认双击选词行为
+            }
+            return false;
+        },
     });
 
     // ===== 恢复光标位置 =====
@@ -715,12 +742,28 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
             if (empty) return false;
             if (dispatch) {
                 let tr = state.tr;
-                // 替换语义：先移除选区内已有的 link mark，再按需添加新的
-                tr = tr.removeMark(from, to, schema.marks.link);
                 const href = typeof attrs.href === 'string' ? attrs.href.trim() : '';
-                if (href) {
-                    const mark = schema.marks.link.create({ href, title: attrs.title || null });
-                    tr = tr.addMark(from, to, mark);
+                const newText = typeof attrs.text === 'string' ? attrs.text : '';
+                const currentText = state.doc.textBetween(from, to);
+                // 如果提供了新的显示文本且与当前不同，替换文本内容
+                if (newText && newText !== currentText) {
+                    // 替换文本并应用 link mark（或移除）
+                    if (href) {
+                        const mark = schema.marks.link.create({ href, title: attrs.title || null });
+                        const textNode = schema.text(newText, [mark]);
+                        tr = tr.replaceWith(from, to, textNode);
+                    } else {
+                        // 空 href = 移除链接，只替换文本
+                        const textNode = schema.text(newText);
+                        tr = tr.replaceWith(from, to, textNode);
+                    }
+                } else {
+                    // 文本不变，只操作 mark
+                    tr = tr.removeMark(from, to, schema.marks.link);
+                    if (href) {
+                        const mark = schema.marks.link.create({ href, title: attrs.title || null });
+                        tr = tr.addMark(from, to, mark);
+                    }
                 }
                 dispatch(tr.scrollIntoView());
             }
@@ -877,9 +920,12 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
         // 退路：如果上述遍历没有扩展到，则至少返回 mark 的属性与当前选区
         const from = parentStart + markStart;
         const to = parentStart + markEnd;
+        // 获取链接显示文本
+        const text = state.doc.textBetween(from, to);
         return {
             href: linkMark.attrs.href || '',
             title: linkMark.attrs.title || '',
+            text: text || '',
             from: from,
             to: to,
         };

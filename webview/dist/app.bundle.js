@@ -115,6 +115,7 @@
         "editor.plantuml_title": "PlantUML \u56FE\u8868",
         "editor.graphviz_title": "Graphviz \u56FE\u8868",
         "editor.color_custom": "\u81EA\u5B9A\u4E49",
+        "editor.link_text_placeholder": "\u663E\u793A\u6587\u672C...",
         "editor.link_url_placeholder": "\u8F93\u5165\u94FE\u63A5\u5730\u5740...",
         "editor.link_title_placeholder": "\u94FE\u63A5\u6807\u9898\uFF08\u53EF\u9009\uFF09",
         "editor.link_confirm": "\u786E\u8BA4",
@@ -624,6 +625,7 @@
         "editor.plantuml_title": "PlantUML diagram",
         "editor.graphviz_title": "Graphviz diagram",
         "editor.color_custom": "Custom",
+        "editor.link_text_placeholder": "Display text...",
         "editor.link_url_placeholder": "Enter URL...",
         "editor.link_title_placeholder": "Link title (optional)",
         "editor.link_confirm": "Confirm",
@@ -6638,6 +6640,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         if (wrapper.id === "btnLink") {
           const urlInput = document.getElementById("linkUrlInput");
           const titleInput = document.getElementById("linkTitleInput");
+          const textInput = document.getElementById("linkTextInput");
           let attrs = null;
           try {
             attrs = EditMode.getLinkAttrsAtSelection ? EditMode.getLinkAttrsAtSelection() : null;
@@ -6645,10 +6648,12 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
             attrs = null;
           }
           if (attrs) {
+            if (textInput) textInput.value = attrs.text || "";
             if (urlInput) urlInput.value = attrs.href || "";
             if (titleInput) titleInput.value = attrs.title || "";
             _pendingLinkRange = { from: attrs.from, to: attrs.to };
           } else {
+            if (textInput) textInput.value = "";
             if (urlInput) urlInput.value = "";
             if (titleInput) titleInput.value = "";
             _pendingLinkRange = null;
@@ -6753,6 +6758,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       const confirmBtn = document.getElementById("linkConfirmBtn");
       const urlInput = document.getElementById("linkUrlInput");
       const titleInput = document.getElementById("linkTitleInput");
+      const textInput = document.getElementById("linkTextInput");
       if (confirmBtn && urlInput) {
         confirmBtn.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -6762,15 +6768,17 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           }
           const href = urlInput.value.trim();
           const title = titleInput ? titleInput.value.trim() : "";
+          const text = textInput ? textInput.value : "";
           if (_pendingLinkRange && EditMode.setSelectionRange) {
             try {
               EditMode.setSelectionRange(_pendingLinkRange.from, _pendingLinkRange.to);
             } catch (err) {
             }
           }
-          EditMode.execCommand("link", { href, title });
+          EditMode.execCommand("link", { href, title, text });
           urlInput.value = "";
           if (titleInput) titleInput.value = "";
+          if (textInput) textInput.value = "";
           _pendingLinkRange = null;
           closeAllPopovers();
         });
@@ -6788,7 +6796,22 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
             }
           });
         }
+        if (textInput) {
+          textInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              confirmBtn.click();
+            }
+          });
+        }
       }
+      window.addEventListener("pm-link-dblclick", () => {
+        if (!EditMode.isRichActive()) return;
+        const wrapper = document.getElementById("btnLink");
+        if (wrapper) {
+          toggleToolbarPopover(wrapper);
+        }
+      });
     }
     function setupImagePopover() {
       const confirmBtn = document.getElementById("imageConfirmBtn");

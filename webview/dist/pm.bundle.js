@@ -28557,6 +28557,37 @@
         diagram(node, view2, getPos) {
           return new DiagramNodeView(node, view2, getPos);
         }
+      },
+      handleDoubleClick(view2, pos, event) {
+        const $pos = view2.state.doc.resolve(pos);
+        const linkType = schema.marks.link;
+        const marks2 = $pos.marks();
+        let linkMark = null;
+        for (const m of marks2) {
+          if (m.type === linkType) {
+            linkMark = m;
+            break;
+          }
+        }
+        if (!linkMark) {
+          const before = $pos.nodeBefore;
+          if (before && before.marks) {
+            for (const m of before.marks) {
+              if (m.type === linkType) {
+                linkMark = m;
+                break;
+              }
+            }
+          }
+        }
+        if (linkMark) {
+          try {
+            window.dispatchEvent(new CustomEvent("pm-link-dblclick", { detail: {} }));
+          } catch (e) {
+          }
+          return true;
+        }
+        return false;
       }
     });
     if (initialCursorLine && initialCursorLine > 0) {
@@ -28764,11 +28795,24 @@
         if (empty2) return false;
         if (dispatch) {
           let tr = state2.tr;
-          tr = tr.removeMark(from2, to, schema.marks.link);
           const href = typeof attrs2.href === "string" ? attrs2.href.trim() : "";
-          if (href) {
-            const mark = schema.marks.link.create({ href, title: attrs2.title || null });
-            tr = tr.addMark(from2, to, mark);
+          const newText = typeof attrs2.text === "string" ? attrs2.text : "";
+          const currentText = state2.doc.textBetween(from2, to);
+          if (newText && newText !== currentText) {
+            if (href) {
+              const mark = schema.marks.link.create({ href, title: attrs2.title || null });
+              const textNode = schema.text(newText, [mark]);
+              tr = tr.replaceWith(from2, to, textNode);
+            } else {
+              const textNode = schema.text(newText);
+              tr = tr.replaceWith(from2, to, textNode);
+            }
+          } else {
+            tr = tr.removeMark(from2, to, schema.marks.link);
+            if (href) {
+              const mark = schema.marks.link.create({ href, title: attrs2.title || null });
+              tr = tr.addMark(from2, to, mark);
+            }
           }
           dispatch(tr.scrollIntoView());
         }
@@ -28914,9 +28958,11 @@
       });
       const from2 = parentStart + markStart;
       const to = parentStart + markEnd;
+      const text2 = state2.doc.textBetween(from2, to);
       return {
         href: linkMark.attrs.href || "",
         title: linkMark.attrs.title || "",
+        text: text2 || "",
         from: from2,
         to
       };

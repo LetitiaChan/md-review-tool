@@ -1781,19 +1781,22 @@ this.innerHTML = t('modal.ai_result.copied');
         const isActive = popover.classList.contains('active');
         closeAllPopovers();
         if (!isActive) {
-            // 链接 popover 特殊分支：预填当前选区已有 link 的 href/title
+            // 链接 popover 特殊分支：预填当前选区已有 link 的 href/title/text
             if (wrapper.id === 'btnLink') {
                 const urlInput = document.getElementById('linkUrlInput');
                 const titleInput = document.getElementById('linkTitleInput');
+                const textInput = document.getElementById('linkTextInput');
                 let attrs = null;
                 try {
                     attrs = EditMode.getLinkAttrsAtSelection ? EditMode.getLinkAttrsAtSelection() : null;
                 } catch (e) { attrs = null; }
                 if (attrs) {
+                    if (textInput) textInput.value = attrs.text || '';
                     if (urlInput) urlInput.value = attrs.href || '';
                     if (titleInput) titleInput.value = attrs.title || '';
                     _pendingLinkRange = { from: attrs.from, to: attrs.to };
                 } else {
+                    if (textInput) textInput.value = '';
                     if (urlInput) urlInput.value = '';
                     if (titleInput) titleInput.value = '';
                     _pendingLinkRange = null;
@@ -1909,20 +1912,23 @@ this.innerHTML = t('modal.ai_result.copied');
         const confirmBtn = document.getElementById('linkConfirmBtn');
         const urlInput = document.getElementById('linkUrlInput');
         const titleInput = document.getElementById('linkTitleInput');
+        const textInput = document.getElementById('linkTextInput');
         if (confirmBtn && urlInput) {
             confirmBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (!EditMode.isRichActive()) { closeAllPopovers(); return; }
                 const href = urlInput.value.trim();
                 const title = titleInput ? titleInput.value.trim() : '';
+                const text = textInput ? textInput.value : '';
                 // 如果有待处理的 link mark 范围（预填场景），先扩展选区到完整范围
                 if (_pendingLinkRange && EditMode.setSelectionRange) {
                     try { EditMode.setSelectionRange(_pendingLinkRange.from, _pendingLinkRange.to); } catch (err) { /* 容错 */ }
                 }
-                // 派发 link 命令：空 href = 移除链接，非空 = 替换/新增
-                EditMode.execCommand('link', { href, title });
+                // 派发 link 命令：空 href = 移除链接，非空 = 替换/新增；text 用于替换显示文本
+                EditMode.execCommand('link', { href, title, text });
                 urlInput.value = '';
                 if (titleInput) titleInput.value = '';
+                if (textInput) textInput.value = '';
                 _pendingLinkRange = null;
                 closeAllPopovers();
             });
@@ -1934,7 +1940,21 @@ this.innerHTML = t('modal.ai_result.copied');
                     if (e.key === 'Enter') { e.preventDefault(); confirmBtn.click(); }
                 });
             }
+            if (textInput) {
+                textInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); confirmBtn.click(); }
+                });
+            }
         }
+
+        // 监听 PM 双击链接事件，自动打开链接编辑 popover
+        window.addEventListener('pm-link-dblclick', () => {
+            if (!EditMode.isRichActive()) return;
+            const wrapper = document.getElementById('btnLink');
+            if (wrapper) {
+                toggleToolbarPopover(wrapper);
+            }
+        });
     }
 
     function setupImagePopover() {
