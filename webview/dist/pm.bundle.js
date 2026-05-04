@@ -20158,6 +20158,14 @@
       return true;
     };
   }
+  function deleteTable(state, dispatch) {
+    const $pos = state.selection.$anchor;
+    for (let d = $pos.depth; d > 0; d--) if ($pos.node(d).type.spec.tableRole == "table") {
+      if (dispatch) dispatch(state.tr.delete($pos.before(d), $pos.after(d)).scrollIntoView());
+      return true;
+    }
+    return false;
+  }
   function deleteCellSelection(state, dispatch) {
     const sel = state.selection;
     if (!(sel instanceof CellSelection)) return false;
@@ -28342,20 +28350,56 @@
         return toggleMark(schema.marks.colored_text, { color: attrs2.color })(state2, dispatch);
       },
       taskList: (state2, dispatch) => {
-        const wrapped = wrapInList(schema.nodes.bullet_list)(state2, dispatch ? (tr) => {
-          const { from: from2, to } = tr.selection;
-          tr.doc.nodesBetween(from2, to, (node, pos) => {
-            if (node.type === schema.nodes.list_item && node.attrs.checked === null) {
-              tr.setNodeMarkup(pos, null, { ...node.attrs, checked: false });
+        if (!dispatch) {
+          return wrapInList(schema.nodes.bullet_list)(state2);
+        }
+        return wrapInList(schema.nodes.bullet_list)(state2, (tr) => {
+          const $from = tr.selection.$from;
+          let listPos = -1;
+          let listNode = null;
+          for (let d = $from.depth; d > 0; d--) {
+            const node = $from.node(d);
+            if (node.type === schema.nodes.bullet_list) {
+              listPos = $from.before(d);
+              listNode = node;
+              break;
             }
-          });
+          }
+          if (listNode) {
+            let childOffset = 0;
+            listNode.forEach((item, _offset, _idx) => {
+              if (item.type === schema.nodes.list_item && item.attrs.checked === null) {
+                const itemPos = listPos + 1 + childOffset;
+                tr.setNodeMarkup(itemPos, null, { ...item.attrs, checked: false });
+              }
+              childOffset += item.nodeSize;
+            });
+          }
           dispatch(tr);
-        } : void 0);
-        return wrapped;
+        });
       },
       link: (state2, dispatch, view2, attrs2) => {
-        if (!attrs2 || !attrs2.href) return false;
-        return toggleMark(schema.marks.link, { href: attrs2.href, title: attrs2.title || null })(state2, dispatch);
+        if (!attrs2) return false;
+        const { from: from2, to, empty: empty2 } = state2.selection;
+        if (empty2) return false;
+        if (dispatch) {
+          let tr = state2.tr;
+          tr = tr.removeMark(from2, to, schema.marks.link);
+          const href = typeof attrs2.href === "string" ? attrs2.href.trim() : "";
+          if (href) {
+            const mark = schema.marks.link.create({ href, title: attrs2.title || null });
+            tr = tr.addMark(from2, to, mark);
+          }
+          dispatch(tr.scrollIntoView());
+        }
+        return true;
+      },
+      tableDelete: (state2, dispatch, view2, attrs2) => {
+        if (attrs2 && attrs2.coords) {
+          setCellSelection(view2, attrs2.coords);
+          state2 = view2.state;
+        }
+        return deleteTable(state2, dispatch);
       },
       insertImage: (state2, dispatch, view2, attrs2) => {
         if (!attrs2 || !attrs2.src) return false;
@@ -28414,6 +28458,56 @@
         return true;
       }
     };
+    function getLinkAttrsAtSelection() {
+      const state2 = view.state;
+      const { $from } = state2.selection;
+      const linkType = schema.marks.link;
+      const marks2 = $from.marks();
+      let linkMark = null;
+      for (const m of marks2) {
+        if (m.type === linkType) {
+          linkMark = m;
+          break;
+        }
+      }
+      if (!linkMark) {
+        const before = $from.nodeBefore;
+        if (before && before.marks) {
+          for (const m of before.marks) {
+            if (m.type === linkType) {
+              linkMark = m;
+              break;
+            }
+          }
+        }
+      }
+      if (!linkMark) return null;
+      const parent2 = $from.parent;
+      const parentStart = $from.start();
+      const posInParent = $from.parentOffset;
+      let markStart = posInParent;
+      let markEnd = posInParent;
+      let offset = 0;
+      parent2.forEach((child, _off, _idx) => {
+        const childSize = child.nodeSize;
+        const childHasLink = child.marks && child.marks.some((m) => m.type === linkType && m.attrs.href === linkMark.attrs.href);
+        if (childHasLink) {
+          if (offset <= posInParent && posInParent <= offset + childSize) {
+            markStart = Math.min(markStart, offset);
+            markEnd = Math.max(markEnd, offset + childSize);
+          }
+        }
+        offset += childSize;
+      });
+      const from2 = parentStart + markStart;
+      const to = parentStart + markEnd;
+      return {
+        href: linkMark.attrs.href || "",
+        title: linkMark.attrs.title || "",
+        from: from2,
+        to
+      };
+    }
     return {
       destroy() {
         view.destroy();
@@ -28443,6 +28537,15 @@
         const result = cmd(view.state, view.dispatch, view, attrs2);
         view.focus();
         return !!result;
+      },
+      getLinkAttrsAtSelection,
+      // 暴露扩展选区到指定范围（供 link popover 确认前用）
+      setSelectionRange(from2, to) {
+        const doc4 = view.state.doc;
+        if (from2 < 0 || to < 0 || from2 > doc4.content.size || to > doc4.content.size || from2 > to) return false;
+        const sel = TextSelection.create(doc4, from2, to);
+        view.dispatch(view.state.tr.setSelection(sel));
+        return true;
       }
     };
   }

@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### 🐛 Bug Fixes (Rich Mode editor)
+- **Fix custom color button** — Clicking the "Custom" button in the Text Color popover now opens the native OS color picker dialog (via `customInput.click()`) instead of silently reading a stale value. A `change` listener on the hidden `<input type="color">` dispatches the `textColor` command after the user confirms a color, closing all popovers afterward.
+- **Fix task list round-trip** — The `taskList` toolbar command now produces valid GFM task-list markdown (`- [ ] item`). Previously the wrapped `list_item` nodes kept `checked === null`, which the Markdown serializer rendered as plain bullet items. The command now iterates the newly wrapped `bullet_list` via `setNodeMarkup` and assigns `{ checked: false }` to each list_item, guaranteeing `- [ ] ` output.
+- **Fix link popover semantics** — Opening the link popover on an existing hyperlink now pre-fills the URL and title inputs (via new `getLinkAttrsAtSelection()` API) and selects the full link range so confirming replaces the link atomically. The `link` command now uses `removeMark` + `addMark` instead of `toggleMark` (replacement semantics), and an empty href is treated as "remove link" rather than being short-circuited.
+- **Add "Delete entire table" context-menu entry** — The table context menu (right-click on a table cell) now has a destructive "🗑️ Delete entire table" item that dispatches a new `tableDelete` command (wrapping `deleteTable` from `prosemirror-tables`). Full i18n support (zh / en) added.
+- **Add hover "+" overlay for adding rows / columns** — Hovering over a table in Rich Mode now shows two half-transparent "+" buttons: one below the last row (adds a new row) and one to the right of the last column (adds a new column). The overlay is scroll-synced via rAF and cleaned up on `rich-mode-exit`.
+- **Fix Rich Mode background in light theme** — `#richModeContainer .ProseMirror` now uses `var(--bg-white, var(--vscode-editor-background, #ffffff))` so it follows the active VS Code theme. Additional scoped rules for `pre` / `code` / `.frontmatter` / `.math-inline` / `.math-display` ensure readable contrast on light backgrounds.
+- **Raise table context menu viewport clamp to 360 px** — The viewport clamp for the table context menu's top position was raised from 320 to 360 px margin so the newly added "Delete entire table" row is never clipped by the bottom of the window.
+
+### ✅ Tests
+- Added `test/suite/rich-mode-editor-bugfix.test.ts` — 23 regression assertions across Tier 1 (existence: 9), Tier 2 (bundle behaviour: 6), and Tier 3 (per-bug named `BT-RichModeBugfix.*`: 8). All 838 tests pass.
+
 ## [1.5.0] - 2026-04-30
 
 ### ✨ New Features
@@ -139,8 +153,6 @@ All notable changes to this project will be documented in this file.
 ### 🔨 Refactor
 - Remove all `[DIAG]` diagnostic console.log statements from `app.js` and `settings.js` after code font bug was confirmed fixed
 
-### 📖 Docs
-- Streamline project-continuity rule file (388 → 333 lines): compress redundant sections, remove `.aikp` references, retain design rationale
 
 ## [1.3.9] - 2026-04-22
 
@@ -192,7 +204,6 @@ All notable changes to this project will be documented in this file.
 
 ### 📝 Documentation
 - Fix README badge links, expand package.json keywords/categories to improve Marketplace search visibility
-- CLAUDE.md dev workflow section switched to `@.aikp/rules/` import syntax
 
 ## [1.3.5] - 2026-04-19
 
@@ -207,9 +218,6 @@ All notable changes to this project will be documented in this file.
 - Fix AI fix not persisting new version number placeholder, causing old annotations to restore on reopen
 - Fix version number not upgrading when source file is externally modified while panel is closed
 - One-click AI fix no longer pops up output window (silently writes to log only)
-
-### 🔧 Other
-- Add `.aikp` source-of-truth directory with shim bridge mechanism, supporting `.codebuddy` / `.claude` / `.cursor` triple-tool reuse of the same aikit rules
 
 ## [1.3.0] - 2026-04-08
 

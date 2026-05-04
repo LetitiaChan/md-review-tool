@@ -123,6 +123,7 @@
         "context_menu.insert_col_right": "\u5728\u53F3\u4FA7\u63D2\u5165\u5217",
         "context_menu.delete_row": "\u5220\u9664\u5F53\u524D\u884C",
         "context_menu.delete_col": "\u5220\u9664\u5F53\u524D\u5217",
+        "context_menu.delete_table": "\u5220\u9664\u6574\u4E2A\u8868\u683C",
         // ===== 评论弹窗 =====
         "modal.comment.title": "\u6DFB\u52A0\u8BC4\u8BBA",
         "modal.comment.edit_title": "\u7F16\u8F91\u8BC4\u8BBA",
@@ -597,6 +598,7 @@
         "context_menu.insert_col_right": "Insert column right",
         "context_menu.delete_row": "Delete current row",
         "context_menu.delete_col": "Delete current column",
+        "context_menu.delete_table": "Delete entire table",
         // ===== Comment Modal =====
         "modal.comment.title": "Add Comment",
         "modal.comment.edit_title": "Edit Comment",
@@ -5060,12 +5062,30 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
   function isAnyEditorActive() {
     return _mode !== MODE.INACTIVE;
   }
+  function getLinkAttrsAtSelection() {
+    if (_mode !== MODE.RICH || !_editor || typeof _editor.getLinkAttrsAtSelection !== "function") return null;
+    try {
+      return _editor.getLinkAttrsAtSelection();
+    } catch (e) {
+      return null;
+    }
+  }
+  function setSelectionRange(from, to) {
+    if (_mode !== MODE.RICH || !_editor || typeof _editor.setSelectionRange !== "function") return false;
+    try {
+      return _editor.setSelectionRange(from, to);
+    } catch (e) {
+      return false;
+    }
+  }
   var EditMode2 = {
     enterRich,
     exitRich,
     isRichActive,
     isAnyEditorActive,
-    execCommand
+    execCommand,
+    getLinkAttrsAtSelection,
+    setSelectionRange
   };
 
   // webview/js/app.js
@@ -5405,6 +5425,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
       });
       setupTableContextMenu();
+      setupTableHoverOverlay();
       document.getElementById("btnExport").addEventListener("click", async () => {
         await Exporter.exportReviewDocument();
       });
@@ -6402,7 +6423,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         tableMenuCoords = { left: e.clientX, top: e.clientY };
         tableMenu.style.display = "block";
         tableMenu.style.left = Math.min(e.clientX, window.innerWidth - 220) + "px";
-        tableMenu.style.top = Math.min(e.clientY, window.innerHeight - 320) + "px";
+        tableMenu.style.top = Math.min(e.clientY, window.innerHeight - 400) + "px";
         const totalRows = table.querySelectorAll("tr").length;
         const totalCols = row.children.length;
         document.getElementById("tableMenuDeleteRow").style.opacity = totalRows <= 1 ? "0.4" : "1";
@@ -6444,6 +6465,133 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         tableMenu.style.display = "none";
         EditMode.execCommand("tableDeleteCol", { coords: tableMenuCoords });
       });
+      const tableMenuDeleteTableEl = document.getElementById("tableMenuDeleteTable");
+      if (tableMenuDeleteTableEl) {
+        tableMenuDeleteTableEl.addEventListener("click", () => {
+          tableMenu.style.display = "none";
+          EditMode.execCommand("tableDelete", { coords: tableMenuCoords });
+        });
+      }
+    }
+    let _tableHoverOverlay = null;
+    let _tableHoverTable = null;
+    let _tableHoverTimer = null;
+    let _tableHoverRafId = null;
+    function removeTableHoverOverlay() {
+      if (_tableHoverOverlay && _tableHoverOverlay.parentNode) {
+        _tableHoverOverlay.parentNode.removeChild(_tableHoverOverlay);
+      }
+      _tableHoverOverlay = null;
+      _tableHoverTable = null;
+      if (_tableHoverTimer) {
+        clearTimeout(_tableHoverTimer);
+        _tableHoverTimer = null;
+      }
+      if (_tableHoverRafId) {
+        cancelAnimationFrame(_tableHoverRafId);
+        _tableHoverRafId = null;
+      }
+    }
+    function positionTableHoverOverlay() {
+      if (!_tableHoverOverlay || !_tableHoverTable || !_tableHoverTable.isConnected) {
+        removeTableHoverOverlay();
+        return;
+      }
+      const rect = _tableHoverTable.getBoundingClientRect();
+      _tableHoverOverlay.style.left = rect.left + window.scrollX + "px";
+      _tableHoverOverlay.style.top = rect.top + window.scrollY + "px";
+      _tableHoverOverlay.style.width = rect.width + "px";
+      _tableHoverOverlay.style.height = rect.height + "px";
+      const rowBtn = _tableHoverOverlay.querySelector(".table-hover-add-row");
+      const colBtn = _tableHoverOverlay.querySelector(".table-hover-add-col");
+      if (rowBtn) {
+        rowBtn.style.left = rect.width / 2 - 10 + "px";
+        rowBtn.style.top = rect.height + 2 + "px";
+      }
+      if (colBtn) {
+        colBtn.style.left = rect.width + 2 + "px";
+        colBtn.style.top = rect.height / 2 - 10 + "px";
+      }
+    }
+    function createTableHoverOverlay(table) {
+      removeTableHoverOverlay();
+      _tableHoverTable = table;
+      const overlay = document.createElement("div");
+      overlay.className = "table-hover-overlay";
+      const rowBtn = document.createElement("button");
+      rowBtn.className = "table-hover-add-row";
+      rowBtn.setAttribute("type", "button");
+      rowBtn.title = globalThis.i18n ? globalThis.i18n.t("context_menu.insert_row_below") : "\u5728\u4E0B\u65B9\u63D2\u5165\u884C";
+      rowBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!_tableHoverTable) return;
+        const lastRow = _tableHoverTable.querySelector("tr:last-child");
+        const lastCell = lastRow ? lastRow.querySelector("td,th") : null;
+        if (lastCell) {
+          const r = lastCell.getBoundingClientRect();
+          EditMode.execCommand("tableInsertRowBelow", { coords: { left: r.left + r.width / 2, top: r.top + r.height / 2 } });
+          setTimeout(positionTableHoverOverlay, 0);
+        }
+      });
+      const colBtn = document.createElement("button");
+      colBtn.className = "table-hover-add-col";
+      colBtn.setAttribute("type", "button");
+      colBtn.title = globalThis.i18n ? globalThis.i18n.t("context_menu.insert_col_right") : "\u5728\u53F3\u4FA7\u63D2\u5165\u5217";
+      colBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!_tableHoverTable) return;
+        const firstRow = _tableHoverTable.querySelector("tr");
+        const lastCell = firstRow ? firstRow.querySelector("td:last-child, th:last-child") : null;
+        if (lastCell) {
+          const r = lastCell.getBoundingClientRect();
+          EditMode.execCommand("tableInsertColRight", { coords: { left: r.left + r.width / 2, top: r.top + r.height / 2 } });
+          setTimeout(positionTableHoverOverlay, 0);
+        }
+      });
+      overlay.appendChild(rowBtn);
+      overlay.appendChild(colBtn);
+      document.body.appendChild(overlay);
+      _tableHoverOverlay = overlay;
+      positionTableHoverOverlay();
+    }
+    function setupTableHoverOverlay() {
+      document.addEventListener("mouseover", (e) => {
+        if (currentMode !== "rich") return;
+        const rich = document.getElementById("richModeContainer");
+        if (!rich || !rich.contains(e.target)) return;
+        const table = e.target.closest("table");
+        if (!table) return;
+        if (_tableHoverTable === table) return;
+        createTableHoverOverlay(table);
+      });
+      document.addEventListener("mouseout", (e) => {
+        if (!_tableHoverOverlay || !_tableHoverTable) return;
+        const to = e.relatedTarget;
+        const stillInTable = to && _tableHoverTable.contains(to);
+        const stillInOverlay = to && _tableHoverOverlay.contains(to);
+        if (!stillInTable && !stillInOverlay) {
+          if (_tableHoverTimer) clearTimeout(_tableHoverTimer);
+          _tableHoverTimer = setTimeout(removeTableHoverOverlay, 280);
+        }
+      });
+      document.addEventListener("mouseover", (e) => {
+        if (_tableHoverOverlay && _tableHoverOverlay.contains(e.target) && _tableHoverTimer) {
+          clearTimeout(_tableHoverTimer);
+          _tableHoverTimer = null;
+        }
+      });
+      const onScroll = () => {
+        if (_tableHoverRafId) return;
+        _tableHoverRafId = requestAnimationFrame(() => {
+          _tableHoverRafId = null;
+          positionTableHoverOverlay();
+        });
+      };
+      document.addEventListener("scroll", onScroll, true);
+      window.addEventListener("resize", onScroll);
+      window.addEventListener("rich-mode-exit", removeTableHoverOverlay);
     }
     function getScrollAnchor() {
       const docContent = document.getElementById("documentContent");
@@ -6508,12 +6656,36 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         btn.classList.remove("active");
       }
     }
+    let _pendingLinkRange = null;
     function toggleToolbarPopover(wrapper) {
       const popover = wrapper.querySelector(".toolbar-popover");
       if (!popover) return;
       const isActive = popover.classList.contains("active");
       closeAllPopovers();
       if (!isActive) {
+        if (wrapper.id === "btnLink") {
+          const urlInput = document.getElementById("linkUrlInput");
+          const titleInput = document.getElementById("linkTitleInput");
+          let attrs = null;
+          try {
+            attrs = EditMode.getLinkAttrsAtSelection ? EditMode.getLinkAttrsAtSelection() : null;
+          } catch (e) {
+            attrs = null;
+          }
+          if (attrs) {
+            if (urlInput) urlInput.value = attrs.href || "";
+            if (titleInput) titleInput.value = attrs.title || "";
+            _pendingLinkRange = { from: attrs.from, to: attrs.to };
+          } else {
+            if (urlInput) urlInput.value = "";
+            if (titleInput) titleInput.value = "";
+            _pendingLinkRange = null;
+          }
+          setTimeout(() => {
+            if (urlInput) urlInput.focus();
+            if (urlInput) urlInput.select();
+          }, 0);
+        }
         popover.classList.add("active");
       }
     }
@@ -6540,11 +6712,19 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       if (customApply && customInput) {
         customApply.addEventListener("click", (e) => {
           e.stopPropagation();
+          if (!EditMode.isRichActive()) return;
+          customInput.click();
+        });
+        customInput.addEventListener("change", (e) => {
+          e.stopPropagation();
           const color = customInput.value;
           if (color && EditMode.isRichActive()) {
             EditMode.execCommand("textColor", { color });
           }
           closeAllPopovers();
+        });
+        customInput.addEventListener("click", (e) => {
+          e.stopPropagation();
         });
       }
     }
@@ -6555,12 +6735,22 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       if (confirmBtn && urlInput) {
         confirmBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          const href = urlInput.value.trim();
-          if (href && EditMode.isRichActive()) {
-            EditMode.execCommand("link", { href, title: titleInput ? titleInput.value.trim() : "" });
+          if (!EditMode.isRichActive()) {
+            closeAllPopovers();
+            return;
           }
+          const href = urlInput.value.trim();
+          const title = titleInput ? titleInput.value.trim() : "";
+          if (_pendingLinkRange && EditMode.setSelectionRange) {
+            try {
+              EditMode.setSelectionRange(_pendingLinkRange.from, _pendingLinkRange.to);
+            } catch (err) {
+            }
+          }
+          EditMode.execCommand("link", { href, title });
           urlInput.value = "";
           if (titleInput) titleInput.value = "";
+          _pendingLinkRange = null;
           closeAllPopovers();
         });
         urlInput.addEventListener("keydown", (e) => {

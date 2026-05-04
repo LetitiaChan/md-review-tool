@@ -1678,7 +1678,7 @@ body.rich-mode-active #richModeContainer {
     font-size: var(--vscode-editor-fontSize, 14px);
     line-height: 1.6;
     color: var(--vscode-editor-foreground);
-    background: var(--vscode-editor-background);
+    background: var(--bg-white, var(--vscode-editor-background, #ffffff));
     outline: none;
 }
 #richModeContainer .ProseMirror:focus {
@@ -2052,4 +2052,60 @@ body.rich-mode-active #editorToolbar {
 }
 .emoji-item:hover {
     background: var(--vscode-toolbar-hoverBackground, rgba(90,93,94,0.31));
+}
+
+/* ===== Bug 5 / Table Hover "+" Overlay ===== */
+/* 表格 hover 时顶层显示 2 个浮动 "+" 按钮（下方添加行、右侧添加列） */
+.table-hover-overlay {
+    position: absolute;
+    pointer-events: none;   /* 容器本身不吃事件，让子按钮自己吃 */
+    z-index: 50;
+}
+.table-hover-add-row,
+.table-hover-add-col {
+    position: absolute;
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--vscode-focusBorder, #007fd4);
+    background: var(--vscode-editor-background, #fff);
+    color: var(--vscode-focusBorder, #007fd4);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    transition: background 0.12s, color 0.12s, transform 0.12s;
+}
+.table-hover-add-row::before { content: '+'; font-weight: bold; }
+.table-hover-add-col::before { content: '+'; font-weight: bold; }
+.table-hover-add-row:hover,
+.table-hover-add-col:hover {
+    background: var(--vscode-focusBorder, #007fd4);
+    color: #fff;
+    transform: scale(1.1);
+}
+
+/* ===== Bug 6 / Rich Mode 主题跟随（亮色适配） ===== */
+/* 亮色主题下 pre/code/frontmatter/math 使用浅色背景，覆盖原深色 fallback */
+body:not(.theme-dark) #richModeContainer .ProseMirror pre {
+    background: var(--vscode-textCodeBlock-background, #f6f8fa);
+    color: inherit;
+}
+body:not(.theme-dark) #richModeContainer .ProseMirror code {
+    background: var(--vscode-textCodeBlock-background, rgba(175, 184, 193, 0.2));
+}
+body:not(.theme-dark) #richModeContainer .ProseMirror pre code {
+    background: none;
+}
+body:not(.theme-dark) #richModeContainer .frontmatter {
+    background: var(--vscode-textCodeBlock-background, #f6f8fa);
+}
+body:not(.theme-dark) #richModeContainer .math-inline,
+body:not(.theme-dark) #richModeContainer .math-display {
+    background: var(--vscode-textCodeBlock-background, rgba(175, 184, 193, 0.15));
 }

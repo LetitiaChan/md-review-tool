@@ -132,7 +132,20 @@ function execCommand(name, attrs) {
 function isRichActive() { return _mode === MODE.RICH; }
 function isAnyEditorActive() { return _mode !== MODE.INACTIVE; }
 
+// ===== 链接查询/选区扩展代理（供工具栏 link popover 使用） =====
+
+function getLinkAttrsAtSelection() {
+    if (_mode !== MODE.RICH || !_editor || typeof _editor.getLinkAttrsAtSelection !== 'function') return null;
+    try { return _editor.getLinkAttrsAtSelection(); } catch (e) { return null; }
+}
+
+function setSelectionRange(from, to) {
+    if (_mode !== MODE.RICH || !_editor || typeof _editor.setSelectionRange !== 'function') return false;
+    try { return _editor.setSelectionRange(from, to); } catch (e) { return false; }
+}
+
 export const EditMode = {
     enterRich, exitRich, isRichActive,
     isAnyEditorActive, execCommand,
+    getLinkAttrsAtSelection, setSelectionRange,
 };

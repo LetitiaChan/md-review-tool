@@ -130,8 +130,9 @@ window.I18n = (() => {
             'context_menu.insert_row_below': '在下方插入行',
             'context_menu.insert_col_left': '在左侧插入列',
             'context_menu.insert_col_right': '在右侧插入列',
-            'context_menu.delete_row': '删除当前行',
-            'context_menu.delete_col': '删除当前列',
+        'context_menu.delete_row': '删除当前行',
+        'context_menu.delete_col': '删除当前列',
+        'context_menu.delete_table': '删除整个表格',
 
             // ===== 评论弹窗 =====
             'modal.comment.title': '添加评论',
@@ -627,8 +628,9 @@ window.I18n = (() => {
             'context_menu.insert_row_below': 'Insert row below',
             'context_menu.insert_col_left': 'Insert column left',
             'context_menu.insert_col_right': 'Insert column right',
-            'context_menu.delete_row': 'Delete current row',
-            'context_menu.delete_col': 'Delete current column',
+        'context_menu.delete_row': 'Delete current row',
+        'context_menu.delete_col': 'Delete current column',
+        'context_menu.delete_table': 'Delete entire table',
 
             // ===== Comment Modal =====
             'modal.comment.title': 'Add Comment',

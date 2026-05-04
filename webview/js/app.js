@@ -446,6 +446,7 @@ export function initApp() {
 
 
         setupTableContextMenu();
+        setupTableHoverOverlay();
 
         // 导出
         document.getElementById('btnExport').addEventListener('click', async () => {
@@ -1640,7 +1641,7 @@ this.innerHTML = t('modal.ai_result.copied');
 
             tableMenu.style.display = 'block';
             tableMenu.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
-            tableMenu.style.top = Math.min(e.clientY, window.innerHeight - 320) + 'px';
+            tableMenu.style.top = Math.min(e.clientY, window.innerHeight - 400) + 'px';
 
             // 通过 prosemirror-tables 命令的可执行性判断禁用状态
             const totalRows = table.querySelectorAll('tr').length;
@@ -1689,6 +1690,144 @@ this.innerHTML = t('modal.ai_result.copied');
             tableMenu.style.display = 'none';
             EditMode.execCommand('tableDeleteCol', { coords: tableMenuCoords });
         });
+        const tableMenuDeleteTableEl = document.getElementById('tableMenuDeleteTable');
+        if (tableMenuDeleteTableEl) {
+            tableMenuDeleteTableEl.addEventListener('click', () => {
+                tableMenu.style.display = 'none';
+                EditMode.execCommand('tableDelete', { coords: tableMenuCoords });
+            });
+        }
+    }
+
+    // ===== 表格 hover 浮动 "+" 按钮（Bug 5 / add-rich-mode-editor-bugfix） =====
+    let _tableHoverOverlay = null;
+    let _tableHoverTable = null;
+    let _tableHoverTimer = null;
+    let _tableHoverRafId = null;
+
+    function removeTableHoverOverlay() {
+        if (_tableHoverOverlay && _tableHoverOverlay.parentNode) {
+            _tableHoverOverlay.parentNode.removeChild(_tableHoverOverlay);
+        }
+        _tableHoverOverlay = null;
+        _tableHoverTable = null;
+        if (_tableHoverTimer) { clearTimeout(_tableHoverTimer); _tableHoverTimer = null; }
+        if (_tableHoverRafId) { cancelAnimationFrame(_tableHoverRafId); _tableHoverRafId = null; }
+    }
+
+    function positionTableHoverOverlay() {
+        if (!_tableHoverOverlay || !_tableHoverTable || !_tableHoverTable.isConnected) {
+            removeTableHoverOverlay();
+            return;
+        }
+        const rect = _tableHoverTable.getBoundingClientRect();
+        // overlay 整体覆盖 table 区域
+        _tableHoverOverlay.style.left = (rect.left + window.scrollX) + 'px';
+        _tableHoverOverlay.style.top = (rect.top + window.scrollY) + 'px';
+        _tableHoverOverlay.style.width = rect.width + 'px';
+        _tableHoverOverlay.style.height = rect.height + 'px';
+        // 按钮定位：行按钮在底部中间、列按钮在右侧中间
+        const rowBtn = _tableHoverOverlay.querySelector('.table-hover-add-row');
+        const colBtn = _tableHoverOverlay.querySelector('.table-hover-add-col');
+        if (rowBtn) {
+            rowBtn.style.left = (rect.width / 2 - 10) + 'px';
+            rowBtn.style.top = (rect.height + 2) + 'px';
+        }
+        if (colBtn) {
+            colBtn.style.left = (rect.width + 2) + 'px';
+            colBtn.style.top = (rect.height / 2 - 10) + 'px';
+        }
+    }
+
+    function createTableHoverOverlay(table) {
+        removeTableHoverOverlay();
+        _tableHoverTable = table;
+        const overlay = document.createElement('div');
+        overlay.className = 'table-hover-overlay';
+
+        const rowBtn = document.createElement('button');
+        rowBtn.className = 'table-hover-add-row';
+        rowBtn.setAttribute('type', 'button');
+        rowBtn.title = globalThis.i18n ? globalThis.i18n.t('context_menu.insert_row_below') : '在下方插入行';
+        rowBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!_tableHoverTable) return;
+            const lastRow = _tableHoverTable.querySelector('tr:last-child');
+            const lastCell = lastRow ? lastRow.querySelector('td,th') : null;
+            if (lastCell) {
+                const r = lastCell.getBoundingClientRect();
+                EditMode.execCommand('tableInsertRowBelow', { coords: { left: r.left + r.width / 2, top: r.top + r.height / 2 } });
+                // 插入后 DOM 更新，重新计算 overlay
+                setTimeout(positionTableHoverOverlay, 0);
+            }
+        });
+
+        const colBtn = document.createElement('button');
+        colBtn.className = 'table-hover-add-col';
+        colBtn.setAttribute('type', 'button');
+        colBtn.title = globalThis.i18n ? globalThis.i18n.t('context_menu.insert_col_right') : '在右侧插入列';
+        colBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!_tableHoverTable) return;
+            const firstRow = _tableHoverTable.querySelector('tr');
+            const lastCell = firstRow ? firstRow.querySelector('td:last-child, th:last-child') : null;
+            if (lastCell) {
+                const r = lastCell.getBoundingClientRect();
+                EditMode.execCommand('tableInsertColRight', { coords: { left: r.left + r.width / 2, top: r.top + r.height / 2 } });
+                setTimeout(positionTableHoverOverlay, 0);
+            }
+        });
+
+        overlay.appendChild(rowBtn);
+        overlay.appendChild(colBtn);
+        document.body.appendChild(overlay);
+        _tableHoverOverlay = overlay;
+        positionTableHoverOverlay();
+    }
+
+    function setupTableHoverOverlay() {
+        // 监听顶层 mouseover/mouseout（事件委托），仅在 Rich Mode 激活时处理
+        document.addEventListener('mouseover', (e) => {
+            if (currentMode !== 'rich') return;
+            const rich = document.getElementById('richModeContainer');
+            if (!rich || !rich.contains(e.target)) return;
+            const table = e.target.closest('table');
+            if (!table) return;
+            if (_tableHoverTable === table) return;
+            createTableHoverOverlay(table);
+        });
+        document.addEventListener('mouseout', (e) => {
+            if (!_tableHoverOverlay || !_tableHoverTable) return;
+            const to = e.relatedTarget;
+            // 如果鼠标移到 table 外且不在 overlay 上 → 启动定时移除
+            const stillInTable = to && _tableHoverTable.contains(to);
+            const stillInOverlay = to && _tableHoverOverlay.contains(to);
+            if (!stillInTable && !stillInOverlay) {
+                if (_tableHoverTimer) clearTimeout(_tableHoverTimer);
+                _tableHoverTimer = setTimeout(removeTableHoverOverlay, 280);
+            }
+        });
+        // 鼠标再次进入 overlay 时取消移除
+        document.addEventListener('mouseover', (e) => {
+            if (_tableHoverOverlay && _tableHoverOverlay.contains(e.target) && _tableHoverTimer) {
+                clearTimeout(_tableHoverTimer);
+                _tableHoverTimer = null;
+            }
+        });
+        // 容器滚动时重新定位（rAF 节流）
+        const onScroll = () => {
+            if (_tableHoverRafId) return;
+            _tableHoverRafId = requestAnimationFrame(() => {
+                _tableHoverRafId = null;
+                positionTableHoverOverlay();
+            });
+        };
+        document.addEventListener('scroll', onScroll, true);
+        window.addEventListener('resize', onScroll);
+        // 退出 Rich Mode 时清理
+        window.addEventListener('rich-mode-exit', removeTableHoverOverlay);
     }
 
     // ===== 编辑/预览模式切换 =====
@@ -1771,12 +1910,35 @@ this.innerHTML = t('modal.ai_result.copied');
     }
 
     // ===== 工具栏 Popover 辅助函数 =====
+    // 保存打开 linkPopover 时缓存的 link mark 覆盖范围，用于确认时扩展选区
+    let _pendingLinkRange = null;
+
     function toggleToolbarPopover(wrapper) {
         const popover = wrapper.querySelector('.toolbar-popover');
         if (!popover) return;
         const isActive = popover.classList.contains('active');
         closeAllPopovers();
         if (!isActive) {
+            // 链接 popover 特殊分支：预填当前选区已有 link 的 href/title
+            if (wrapper.id === 'btnLink') {
+                const urlInput = document.getElementById('linkUrlInput');
+                const titleInput = document.getElementById('linkTitleInput');
+                let attrs = null;
+                try {
+                    attrs = EditMode.getLinkAttrsAtSelection ? EditMode.getLinkAttrsAtSelection() : null;
+                } catch (e) { attrs = null; }
+                if (attrs) {
+                    if (urlInput) urlInput.value = attrs.href || '';
+                    if (titleInput) titleInput.value = attrs.title || '';
+                    _pendingLinkRange = { from: attrs.from, to: attrs.to };
+                } else {
+                    if (urlInput) urlInput.value = '';
+                    if (titleInput) titleInput.value = '';
+                    _pendingLinkRange = null;
+                }
+                // 下一帧聚焦到 URL 输入框，方便修改
+                setTimeout(() => { if (urlInput) urlInput.focus(); if (urlInput) urlInput.select(); }, 0);
+            }
             popover.classList.add('active');
         }
     }
@@ -1803,7 +1965,14 @@ this.innerHTML = t('modal.ai_result.copied');
         const customApply = document.getElementById('colorCustomApply');
         const customInput = document.getElementById('colorCustomInput');
         if (customApply && customInput) {
+            // 点击"自定义"按钮 → 直接触发原生调色板（单击 UX，代替原先"先点色块再点按钮"的两步）
             customApply.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!EditMode.isRichActive()) return;
+                customInput.click();
+            });
+            // 原生调色板选定后 → 应用颜色到选区
+            customInput.addEventListener('change', (e) => {
                 e.stopPropagation();
                 const color = customInput.value;
                 if (color && EditMode.isRichActive()) {
@@ -1811,6 +1980,8 @@ this.innerHTML = t('modal.ai_result.copied');
                 }
                 closeAllPopovers();
             });
+            // 避免点击 input 本身时冒泡导致 popover 关闭
+            customInput.addEventListener('click', (e) => { e.stopPropagation(); });
         }
     }
 
@@ -1821,12 +1992,18 @@ this.innerHTML = t('modal.ai_result.copied');
         if (confirmBtn && urlInput) {
             confirmBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                if (!EditMode.isRichActive()) { closeAllPopovers(); return; }
                 const href = urlInput.value.trim();
-                if (href && EditMode.isRichActive()) {
-                    EditMode.execCommand('link', { href, title: titleInput ? titleInput.value.trim() : '' });
+                const title = titleInput ? titleInput.value.trim() : '';
+                // 如果有待处理的 link mark 范围（预填场景），先扩展选区到完整范围
+                if (_pendingLinkRange && EditMode.setSelectionRange) {
+                    try { EditMode.setSelectionRange(_pendingLinkRange.from, _pendingLinkRange.to); } catch (err) { /* 容错 */ }
                 }
+                // 派发 link 命令：空 href = 移除链接，非空 = 替换/新增
+                EditMode.execCommand('link', { href, title });
                 urlInput.value = '';
                 if (titleInput) titleInput.value = '';
+                _pendingLinkRange = null;
                 closeAllPopovers();
             });
             urlInput.addEventListener('keydown', (e) => {

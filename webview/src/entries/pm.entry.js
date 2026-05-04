@@ -8,14 +8,14 @@
  */
 
 import { EditorView } from 'prosemirror-view';
-import { EditorState, Plugin, Selection } from 'prosemirror-state';
+import { EditorState, Plugin, Selection, TextSelection } from 'prosemirror-state';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap, toggleMark, setBlockType, wrapIn, chainCommands, exitCode, joinUp, joinDown, lift, selectParentNode } from 'prosemirror-commands';
 import { history, undo, redo } from 'prosemirror-history';
 import { inputRules, wrappingInputRule, textblockTypeInputRule, smartQuotes, emDash, ellipsis } from 'prosemirror-inputrules';
 import { wrapInList, splitListItem, liftListItem, sinkListItem } from 'prosemirror-schema-list';
 import { gapCursor } from 'prosemirror-gapcursor';
-import { columnResizing, tableEditing, goToNextCell, addRowBefore, addRowAfter, addColumnBefore, addColumnAfter, deleteRow, deleteColumn } from 'prosemirror-tables';
+import { columnResizing, tableEditing, goToNextCell, addRowBefore, addRowAfter, addColumnBefore, addColumnAfter, deleteRow, deleteColumn, deleteTable } from 'prosemirror-tables';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 
 import { schema } from '../../js/pm-schema.js';
@@ -524,22 +524,59 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
             return toggleMark(schema.marks.colored_text, { color: attrs.color })(state, dispatch);
         },
         taskList:      (state, dispatch) => {
-            // 先包裹为 bullet_list，再将 list_item 的 checked 设为 false
-            const wrapped = wrapInList(schema.nodes.bullet_list)(state, dispatch ? (tr) => {
-                // 遍历新创建的 list_item 设置 checked=false
-                const { from, to } = tr.selection;
-                tr.doc.nodesBetween(from, to, (node, pos) => {
-                    if (node.type === schema.nodes.list_item && node.attrs.checked === null) {
-                        tr.setNodeMarkup(pos, null, { ...node.attrs, checked: false });
+            // 先包裹为 bullet_list，再将新包裹 list 中所有 checked===null 的 list_item 改为 checked=false
+            // 关键修正：遍历新包裹的 bullet_list 节点本身（不用旧 selection 的 from/to 范围），
+            // 确保序列化时输出 `- [ ] ` 前缀。
+            if (!dispatch) {
+                return wrapInList(schema.nodes.bullet_list)(state);
+            }
+            return wrapInList(schema.nodes.bullet_list)(state, (tr) => {
+                const $from = tr.selection.$from;
+                // 向上查找最近的 bullet_list 节点及其位置
+                let listPos = -1;
+                let listNode = null;
+                for (let d = $from.depth; d > 0; d--) {
+                    const node = $from.node(d);
+                    if (node.type === schema.nodes.bullet_list) {
+                        listPos = $from.before(d);
+                        listNode = node;
+                        break;
                     }
-                });
+                }
+                if (listNode) {
+                    // 遍历 list 的直接子节点（list_item），将 checked===null 的改为 false
+                    let childOffset = 0;
+                    listNode.forEach((item, _offset, _idx) => {
+                        if (item.type === schema.nodes.list_item && item.attrs.checked === null) {
+                            const itemPos = listPos + 1 + childOffset;
+                            tr.setNodeMarkup(itemPos, null, { ...item.attrs, checked: false });
+                        }
+                        childOffset += item.nodeSize;
+                    });
+                }
                 dispatch(tr);
-            } : undefined);
-            return wrapped;
+            });
         },
         link:          (state, dispatch, view, attrs) => {
-            if (!attrs || !attrs.href) return false;
-            return toggleMark(schema.marks.link, { href: attrs.href, title: attrs.title || null })(state, dispatch);
+            if (!attrs) return false;
+            const { from, to, empty } = state.selection;
+            if (empty) return false;
+            if (dispatch) {
+                let tr = state.tr;
+                // 替换语义：先移除选区内已有的 link mark，再按需添加新的
+                tr = tr.removeMark(from, to, schema.marks.link);
+                const href = typeof attrs.href === 'string' ? attrs.href.trim() : '';
+                if (href) {
+                    const mark = schema.marks.link.create({ href, title: attrs.title || null });
+                    tr = tr.addMark(from, to, mark);
+                }
+                dispatch(tr.scrollIntoView());
+            }
+            return true;
+        },
+        tableDelete: (state, dispatch, view, attrs) => {
+            if (attrs && attrs.coords) { setCellSelection(view, attrs.coords); state = view.state; }
+            return deleteTable(state, dispatch);
         },
         insertImage:   (state, dispatch, view, attrs) => {
             if (!attrs || !attrs.src) return false;
@@ -599,6 +636,61 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
         },
     };
 
+    // ===== 辅助：读取当前选区所处 link mark 的属性与覆盖范围 =====
+    function getLinkAttrsAtSelection() {
+        const state = view.state;
+        const { $from } = state.selection;
+        const linkType = schema.marks.link;
+        // 查找 $from 位置上的 link mark
+        const marks = $from.marks();
+        let linkMark = null;
+        for (const m of marks) {
+            if (m.type === linkType) { linkMark = m; break; }
+        }
+        // 如果 $from 上没有，尝试 parent 内前一位置（选区边界情况）
+        if (!linkMark) {
+            const before = $from.nodeBefore;
+            if (before && before.marks) {
+                for (const m of before.marks) {
+                    if (m.type === linkType) { linkMark = m; break; }
+                }
+            }
+        }
+        if (!linkMark) return null;
+
+        // 找到 link mark 的完整覆盖范围（在当前 parent 节点内扩展）
+        const parent = $from.parent;
+        const parentStart = $from.start();
+        const posInParent = $from.parentOffset;
+        let markStart = posInParent;
+        let markEnd = posInParent;
+        // 遍历 parent 的 inline 内容，找到 link mark 连续区间
+        let offset = 0;
+        parent.forEach((child, _off, _idx) => {
+            const childSize = child.nodeSize;
+            const childHasLink = child.marks && child.marks.some(m => (
+                m.type === linkType && m.attrs.href === linkMark.attrs.href
+            ));
+            if (childHasLink) {
+                if (offset <= posInParent && posInParent <= offset + childSize) {
+                    // 命中区间：扩展边界
+                    markStart = Math.min(markStart, offset);
+                    markEnd = Math.max(markEnd, offset + childSize);
+                }
+            }
+            offset += childSize;
+        });
+        // 退路：如果上述遍历没有扩展到，则至少返回 mark 的属性与当前选区
+        const from = parentStart + markStart;
+        const to = parentStart + markEnd;
+        return {
+            href: linkMark.attrs.href || '',
+            title: linkMark.attrs.title || '',
+            from: from,
+            to: to,
+        };
+    }
+
     return {
         destroy() { view.destroy(); },
         getMarkdown() { return serializeMarkdown(view.state.doc); },
@@ -619,6 +711,15 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
             const result = cmd(view.state, view.dispatch, view, attrs);
             view.focus();
             return !!result;
+        },
+        getLinkAttrsAtSelection,
+        // 暴露扩展选区到指定范围（供 link popover 确认前用）
+        setSelectionRange(from, to) {
+            const doc = view.state.doc;
+            if (from < 0 || to < 0 || from > doc.content.size || to > doc.content.size || from > to) return false;
+            const sel = TextSelection.create(doc, from, to);
+            view.dispatch(view.state.tr.setSelection(sel));
+            return true;
         },
     };
 }
