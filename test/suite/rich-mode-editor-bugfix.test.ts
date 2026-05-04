@@ -299,4 +299,43 @@ suite('Rich Mode Editor Bugfix Test Suite', () => {
         assert.strictEqual(bgValue, 'var(--vscode-editor-background)',
             `背景色应为纯 var(--vscode-editor-background)，实际为 "${bgValue}"`);
     });
+
+    // ===== Hotfix: currentMode 在进入 Rich Mode 时必须设为 'rich' =====
+
+    test('BT-RichModeBugfix.T1.8 Tier1 — btnToggleRich click handler 应设置 currentMode = rich', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+        // 找到 btnToggleRich 事件绑定区域
+        const btnIdx = src.indexOf("btnToggleRich.addEventListener('click'");
+        assert.ok(btnIdx > 0, '应有 btnToggleRich click 事件绑定');
+        const block = src.slice(btnIdx, btnIdx + 600);
+        assert.ok(block.includes("currentMode = 'rich'"),
+            "btnToggleRich click handler 进入 Rich Mode 时应设置 currentMode = 'rich'");
+    });
+
+    test('BT-RichModeBugfix.T1.9 Tier1 — Ctrl+Shift+E 快捷键应设置 currentMode = rich', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+        // 找到 Ctrl+Shift+E 处理区域
+        const shortcutIdx = src.indexOf("e.key === 'E' || e.key === 'e'");
+        assert.ok(shortcutIdx > 0, '应有 Ctrl+Shift+E 快捷键处理');
+        const block = src.slice(shortcutIdx, shortcutIdx + 800);
+        assert.ok(block.includes("currentMode = 'rich'"),
+            "Ctrl+Shift+E 快捷键进入 Rich Mode 时应设置 currentMode = 'rich'");
+    });
+
+    test('BT-RichModeBugfix.10 Tier3 — handleTableContextMenu 的 currentMode 守卫在 Rich Mode 下应通过', () => {
+        if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+        // 确认 handleTableContextMenu 仍有 currentMode !== 'rich' 守卫
+        const funcIdx = src.indexOf('function handleTableContextMenu');
+        assert.ok(funcIdx > 0, '应有 handleTableContextMenu 函数');
+        const funcBody = src.slice(funcIdx, funcIdx + 300);
+        assert.ok(funcBody.includes("currentMode !== 'rich'"),
+            "handleTableContextMenu 应保留 currentMode !== 'rich' 守卫");
+        // 确认进入 Rich Mode 的两条路径都设置了 currentMode
+        const enterPaths = (src.match(/currentMode\s*=\s*'rich'/g) || []).length;
+        assert.ok(enterPaths >= 2,
+            `应有至少 2 处 currentMode = 'rich' 赋值（btnToggleRich + Ctrl+Shift+E），实际 ${enterPaths}`);
+    });
 });

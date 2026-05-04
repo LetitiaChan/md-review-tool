@@ -5372,11 +5372,13 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           if (EditMode.isRichActive()) {
             EditMode.exitRich();
             btnToggleRich.classList.remove("active");
+            currentMode = "preview";
           } else {
             EditMode.enterRich({
               onSelectionChange: updateEditorToolbarState
             });
             btnToggleRich.classList.add("active");
+            currentMode = "rich";
           }
         });
       }
@@ -5700,7 +5702,18 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           e.preventDefault();
           const data = Store.getData();
           if (data.rawMarkdown) {
-            switchMode(currentMode === "preview" ? "rich" : "preview");
+            const btn = document.getElementById("btnToggleRich");
+            if (EditMode.isRichActive()) {
+              EditMode.exitRich();
+              if (btn) btn.classList.remove("active");
+              currentMode = "preview";
+            } else {
+              EditMode.enterRich({
+                onSelectionChange: updateEditorToolbarState
+              });
+              if (btn) btn.classList.add("active");
+              currentMode = "rich";
+            }
           }
         }
       });
