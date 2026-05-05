@@ -21,6 +21,7 @@ All notable changes to this project will be documented in this file.
 - Remove obsolete UI test cases: `diagnostic.spec.ts` (debug-only skipped tests), contenteditable-based tests in `edit-mode.spec.ts` and `checkbox.spec.ts` (replaced by ProseMirror)
 
 ### 🐛 Bug Fixes
+- Fix Mermaid ER diagram and Git graph failing on first render (added retry-after-layout mechanism using `requestAnimationFrame`)
 - Fix task list items separated by blank lines after Enter in Rich Mode (added `tight` attribute)
 - Fix excessive spacing between task list items (changed contentDOM from `<span>` to `<div>`)
 - Render task list checkboxes in Rich Mode (added interactive checkbox NodeView)

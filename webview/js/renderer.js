@@ -2106,9 +2106,83 @@ wrapper.innerHTML = `<div class="frontmatter-card"><div class="fm-header"><span 
                     }
                 }
             } catch (e) {
-                console.warn('[Renderer] Mermaid 渲染失败:', e);
-                container.innerHTML = `<div class="mermaid-error"><span class="mermaid-error-icon">⚠️</span> Mermaid 图表渲染失败<pre>${escapeHtml(code)}</pre></div>`;
+                console.warn('[Renderer] Mermaid 渲染失败（将在布局完成后重试）:', e);
+                // 标记为待重试，保留源码数据以便重试时使用
+                container.dataset.mermaidRetry = code;
             }
+        }
+
+        // 收集首次渲染失败的图表，延迟重试一次
+        // ER 图和 Git 图在渲染时需要 getBBox() 计算文本尺寸，
+        // 首次加载时浏览器可能还未完成布局（display 刚从 none 变为 flex），
+        // 导致 getBBox() 返回零值或抛出异常。等待一帧后布局完成即可正常渲染。
+        const retryContainers = document.querySelectorAll('.mermaid-container[data-mermaid-retry]');
+        if (retryContainers.length > 0) {
+            requestAnimationFrame(() => {
+                setTimeout(async () => {
+                    for (const container of retryContainers) {
+                        const code = container.dataset.mermaidRetry;
+                        delete container.dataset.mermaidRetry;
+                        if (!code || !container.isConnected) continue;
+
+                        const retryId = 'mermaid-' + Date.now() + '-' + (++_mermaidCounter);
+                        try {
+                            const { svg } = await mermaid.render(retryId, code, container);
+                            // 清理临时元素
+                            const tempDiv = document.getElementById('d' + retryId);
+                            if (tempDiv) tempDiv.remove();
+                            const tempSvg = document.getElementById(retryId);
+                            if (tempSvg && !tempSvg.closest('.mermaid-container')) tempSvg.remove();
+                            const tempIframe = document.getElementById('i' + retryId);
+                            if (tempIframe) tempIframe.remove();
+
+                            const latestBase64 = btoa(unescape(encodeURIComponent(code)));
+                            container.innerHTML = `<div class="mermaid-rendered" data-source="${latestBase64}">${svg}</div>`;
+
+                            // 文字对比度修正
+                            try { fixMermaidNodeTextContrast(container, isDark); } catch (ex) { /* noop */ }
+
+                            // SVG 自适应
+                            const svgEl = container.querySelector('svg');
+                            if (svgEl) {
+                                const rawW = parseFloat(svgEl.getAttribute('width')) || svgEl.getBoundingClientRect().width;
+                                const rawH = parseFloat(svgEl.getAttribute('height')) || svgEl.getBoundingClientRect().height;
+                                if (!svgEl.getAttribute('viewBox') && rawW && rawH) {
+                                    svgEl.setAttribute('viewBox', `0 0 ${rawW} ${rawH}`);
+                                }
+                                svgEl.removeAttribute('style');
+                                svgEl.removeAttribute('width');
+                                svgEl.removeAttribute('height');
+                                svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                                const containerW = container.clientWidth - 32 || 800;
+                                const aspect = rawW / rawH;
+                                if (aspect > 2.5) {
+                                    const calcH = Math.max(containerW / aspect, 300);
+                                    svgEl.style.cssText = `width:100%;height:${calcH}px;max-width:100%;`;
+                                } else if (aspect > 1.5) {
+                                    const calcH = Math.max(containerW / aspect, 250);
+                                    svgEl.style.cssText = `width:100%;height:${calcH}px;max-width:100%;`;
+                                } else {
+                                    svgEl.style.cssText = `width:100%;height:auto;max-width:100%;`;
+                                    if (rawH > 100) {
+                                        svgEl.style.minHeight = Math.min(rawH, 600) + 'px';
+                                    }
+                                }
+                            }
+                            console.info('[Renderer] Mermaid 重试渲染成功:', retryId);
+                        } catch (retryErr) {
+                            console.warn('[Renderer] Mermaid 重试渲染仍失败:', retryErr);
+                            container.innerHTML = `<div class="mermaid-error"><span class="mermaid-error-icon">⚠️</span> Mermaid 图表渲染失败<pre>${escapeHtml(code)}</pre></div>`;
+                        }
+                    }
+                    // 重试完成后清理临时元素
+                    document.querySelectorAll('div[id^="dmermaid-"]').forEach(el => el.remove());
+                    document.querySelectorAll('svg[id^="mermaid-"]').forEach(el => {
+                        if (!el.closest('.mermaid-container')) el.remove();
+                    });
+                    document.querySelectorAll('iframe[id^="imermaid-"]').forEach(el => el.remove());
+                }, 50);
+            });
         }
 
         // 所有图表渲染完成后，统一清理可能遗漏的临时 DOM 元素（安全网）

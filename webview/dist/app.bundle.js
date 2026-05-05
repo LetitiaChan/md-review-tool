@@ -3110,9 +3110,72 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
             }
           }
         } catch (e) {
-          console.warn("[Renderer] Mermaid \u6E32\u67D3\u5931\u8D25:", e);
-          container.innerHTML = `<div class="mermaid-error"><span class="mermaid-error-icon">\u26A0\uFE0F</span> Mermaid \u56FE\u8868\u6E32\u67D3\u5931\u8D25<pre>${escapeHtml(code)}</pre></div>`;
+          console.warn("[Renderer] Mermaid \u6E32\u67D3\u5931\u8D25\uFF08\u5C06\u5728\u5E03\u5C40\u5B8C\u6210\u540E\u91CD\u8BD5\uFF09:", e);
+          container.dataset.mermaidRetry = code;
         }
+      }
+      const retryContainers = document.querySelectorAll(".mermaid-container[data-mermaid-retry]");
+      if (retryContainers.length > 0) {
+        requestAnimationFrame(() => {
+          setTimeout(async () => {
+            for (const container of retryContainers) {
+              const code = container.dataset.mermaidRetry;
+              delete container.dataset.mermaidRetry;
+              if (!code || !container.isConnected) continue;
+              const retryId = "mermaid-" + Date.now() + "-" + ++_mermaidCounter;
+              try {
+                const { svg } = await mermaid.render(retryId, code, container);
+                const tempDiv = document.getElementById("d" + retryId);
+                if (tempDiv) tempDiv.remove();
+                const tempSvg = document.getElementById(retryId);
+                if (tempSvg && !tempSvg.closest(".mermaid-container")) tempSvg.remove();
+                const tempIframe = document.getElementById("i" + retryId);
+                if (tempIframe) tempIframe.remove();
+                const latestBase64 = btoa(unescape(encodeURIComponent(code)));
+                container.innerHTML = `<div class="mermaid-rendered" data-source="${latestBase64}">${svg}</div>`;
+                try {
+                  fixMermaidNodeTextContrast(container, isDark);
+                } catch (ex) {
+                }
+                const svgEl = container.querySelector("svg");
+                if (svgEl) {
+                  const rawW = parseFloat(svgEl.getAttribute("width")) || svgEl.getBoundingClientRect().width;
+                  const rawH = parseFloat(svgEl.getAttribute("height")) || svgEl.getBoundingClientRect().height;
+                  if (!svgEl.getAttribute("viewBox") && rawW && rawH) {
+                    svgEl.setAttribute("viewBox", `0 0 ${rawW} ${rawH}`);
+                  }
+                  svgEl.removeAttribute("style");
+                  svgEl.removeAttribute("width");
+                  svgEl.removeAttribute("height");
+                  svgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
+                  const containerW = container.clientWidth - 32 || 800;
+                  const aspect = rawW / rawH;
+                  if (aspect > 2.5) {
+                    const calcH = Math.max(containerW / aspect, 300);
+                    svgEl.style.cssText = `width:100%;height:${calcH}px;max-width:100%;`;
+                  } else if (aspect > 1.5) {
+                    const calcH = Math.max(containerW / aspect, 250);
+                    svgEl.style.cssText = `width:100%;height:${calcH}px;max-width:100%;`;
+                  } else {
+                    svgEl.style.cssText = `width:100%;height:auto;max-width:100%;`;
+                    if (rawH > 100) {
+                      svgEl.style.minHeight = Math.min(rawH, 600) + "px";
+                    }
+                  }
+                }
+                console.info("[Renderer] Mermaid \u91CD\u8BD5\u6E32\u67D3\u6210\u529F:", retryId);
+              } catch (retryErr) {
+                console.warn("[Renderer] Mermaid \u91CD\u8BD5\u6E32\u67D3\u4ECD\u5931\u8D25:", retryErr);
+                container.innerHTML = `<div class="mermaid-error"><span class="mermaid-error-icon">\u26A0\uFE0F</span> Mermaid \u56FE\u8868\u6E32\u67D3\u5931\u8D25<pre>${escapeHtml(code)}</pre></div>`;
+              }
+            }
+            document.querySelectorAll('div[id^="dmermaid-"]').forEach((el) => el.remove());
+            document.querySelectorAll('svg[id^="mermaid-"]').forEach((el) => {
+              if (!el.closest(".mermaid-container")) el.remove();
+            });
+            document.querySelectorAll('iframe[id^="imermaid-"]').forEach((el) => el.remove());
+          }, 50);
+        });
       }
       document.querySelectorAll('div[id^="dmermaid-"]').forEach((el) => el.remove());
       document.querySelectorAll('svg[id^="mermaid-"]').forEach((el) => {

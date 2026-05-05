@@ -303,6 +303,115 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             );
         });
 
+        test('BT-mermaid-retry.T1.1 Tier1 — renderer.js 应包含 mermaidRetry 重试标记逻辑', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) {
+                assert.ok(true, '测试环境中扩展路径不可用');
+                return;
+            }
+
+            const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
+            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+
+            assert.ok(
+                rendererCode.includes('dataset.mermaidRetry'),
+                'renderer.js 应包含 mermaidRetry 数据属性用于标记待重试的图表'
+            );
+        });
+
+        test('BT-mermaid-retry.T1.2 Tier1 — renderer.js 应包含 requestAnimationFrame 重试机制', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) {
+                assert.ok(true, '测试环境中扩展路径不可用');
+                return;
+            }
+
+            const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
+            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+
+            assert.ok(
+                rendererCode.includes('requestAnimationFrame'),
+                'renderer.js 应使用 requestAnimationFrame 确保布局完成后重试渲染'
+            );
+        });
+
+        test('BT-mermaid-retry.1 Tier3 — 渲染失败时应标记为待重试而非立即显示错误', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) {
+                assert.ok(true, '测试环境中扩展路径不可用');
+                return;
+            }
+
+            const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
+            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+
+            // 验证 catch 块中先标记为重试，而非直接显示错误
+            assert.ok(
+                rendererCode.includes("container.dataset.mermaidRetry = code"),
+                '首次渲染失败时应将源码存入 dataset.mermaidRetry 以便重试'
+            );
+            // 验证重试逻辑使用 data-mermaid-retry 选择器收集失败的图表
+            assert.ok(
+                rendererCode.includes(".mermaid-container[data-mermaid-retry]"),
+                '应通过 [data-mermaid-retry] 选择器收集待重试的图表容器'
+            );
+        });
+
+        test('BT-mermaid-retry.2 Tier3 — 重试仍失败时应显示错误提示', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) {
+                assert.ok(true, '测试环境中扩展路径不可用');
+                return;
+            }
+
+            const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
+            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+
+            // 验证重试失败后有 fallback 错误提示
+            assert.ok(
+                rendererCode.includes('Mermaid 重试渲染仍失败'),
+                '重试失败时应输出 console.warn 日志'
+            );
+            // 验证重试成功时有成功日志
+            assert.ok(
+                rendererCode.includes('Mermaid 重试渲染成功'),
+                '重试成功时应输出 console.info 日志'
+            );
+        });
+
+        test('BT-mermaid-retry.3 Tier3 — 重试前应检查容器是否仍在 DOM 中（防止文档切换后的无效重试）', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) {
+                assert.ok(true, '测试环境中扩展路径不可用');
+                return;
+            }
+
+            const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
+            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+
+            // 验证重试时检查 container.isConnected
+            assert.ok(
+                rendererCode.includes('container.isConnected'),
+                '重试前应检查 container.isConnected 防止对已移除的容器进行无效渲染'
+            );
+        });
+
+        test('BT-mermaid-retry.4 Tier3 — app.bundle.js 应包含重试渲染逻辑', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) {
+                assert.ok(true, '测试环境中扩展路径不可用');
+                return;
+            }
+
+            const bundlePath = path.join(extPath, 'webview', 'dist', 'app.bundle.js');
+            const bundleCode = fs.readFileSync(bundlePath, 'utf-8');
+
+            assert.ok(
+                bundleCode.includes('mermaidRetry'),
+                'app.bundle.js 应包含 mermaidRetry 重试逻辑（确认 bundle 已更新）'
+            );
+        });
+
         test('BT-mermaid-seq-special-chars.1 含 C++ participant 的 sequenceDiagram 文档 → 读取正常', () => {
             const content = [
                 '# SequenceDiagram 特殊字符测试',
