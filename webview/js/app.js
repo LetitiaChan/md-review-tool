@@ -1865,6 +1865,8 @@ this.innerHTML = t('modal.ai_result.copied');
                 fileResult.relPath || data.relPath,
                 fileResult.pathHash || data.pathHash
             );
+            // 刷新完成后隐藏"文件已更新"徽章（无论内容是否变化，刷新动作本身表示用户已知晓）
+            hideFileChangeBadge();
             if (contentChanged) {
                 showNotification(I18n.t('toolbar.refresh_disk_updated'));
             } else {

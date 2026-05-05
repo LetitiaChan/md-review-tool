@@ -64,6 +64,9 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         const stateService = new StateService(this._context);
         const disposables: vscode.Disposable[] = [];
 
+        // 标志位：抑制 webview 自身保存触发的 fileChanged 通知
+        let _suppressFileChanged = false;
+
         // 创建共享消息处理上下文
         const handlerCtx: MessageHandlerContext = {
             postMessage: (msg) => webviewPanel.webview.postMessage(msg),
@@ -78,6 +81,10 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
             saveFileImpl: async (filePath, content, requestId) => {
                 // Custom Editor 模式：通过 WorkspaceEdit 修改 TextDocument
                 try {
+                    // 抑制自身保存触发的 fileChanged 通知（防止"文件已更新"徽章闪烁）
+                    _suppressFileChanged = true;
+                    setTimeout(() => { _suppressFileChanged = false; }, 1500);
+
                     const edit = new vscode.WorkspaceEdit();
                     const fullRange = new vscode.Range(
                         0, 0,
@@ -153,6 +160,8 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
             )
         );
         fileWatcher.onDidChange(() => {
+            // 如果是 webview 自身保存触发的磁盘变更，不通知（防止闪烁）
+            if (_suppressFileChanged) { return; }
             handlerCtx.postMessage({
                 type: 'fileChanged',
                 payload: { filePath: document.uri.fsPath }

@@ -268,4 +268,53 @@ suite('Custom Editor Provider Tests', () => {
         assert.ok(content.includes('mdReview.markdownEditor'),
             'openWithReview 命令应指定 mdReview.markdownEditor viewType');
     });
+
+    // ===== Hotfix: 文件已更新徽章闪烁 + 刷新无法消除 =====
+
+    test('BT-custom-editor.T1.33 Tier1 — customEditorProvider.ts 应包含 _suppressFileChanged 标志位', () => {
+        const content = fs.readFileSync(path.join(projectRoot, 'src', 'customEditorProvider.ts'), 'utf-8');
+        assert.ok(content.includes('_suppressFileChanged'),
+            'customEditorProvider.ts 应定义 _suppressFileChanged 标志位');
+    });
+
+    test('BT-custom-editor.T1.34 Tier1 — app.js refreshFromDisk 应调用 hideFileChangeBadge', () => {
+        const content = fs.readFileSync(path.join(projectRoot, 'webview', 'js', 'app.js'), 'utf-8');
+        assert.ok(content.includes('hideFileChangeBadge()'),
+            'app.js 应在 refreshFromDisk 中调用 hideFileChangeBadge()');
+    });
+
+    test('BT-custom-editor.31 Tier3 — fileWatcher.onDidChange 应检查 _suppressFileChanged 后再发送 fileChanged', () => {
+        const content = fs.readFileSync(path.join(projectRoot, 'src', 'customEditorProvider.ts'), 'utf-8');
+        const watcherIdx = content.indexOf('fileWatcher.onDidChange');
+        assert.ok(watcherIdx > -1, 'customEditorProvider.ts 应包含 fileWatcher.onDidChange');
+        const watcherBlock = content.substring(watcherIdx, watcherIdx + 300);
+        assert.ok(watcherBlock.includes('_suppressFileChanged'),
+            'fileWatcher.onDidChange 回调应检查 _suppressFileChanged 标志位');
+    });
+
+    test('BT-custom-editor.32 Tier3 — saveFileImpl 应在 applyEdit 前设置 _suppressFileChanged = true', () => {
+        const content = fs.readFileSync(path.join(projectRoot, 'src', 'customEditorProvider.ts'), 'utf-8');
+        const saveIdx = content.indexOf('saveFileImpl');
+        assert.ok(saveIdx > -1, 'customEditorProvider.ts 应包含 saveFileImpl');
+        const saveBlock = content.substring(saveIdx, saveIdx + 1000);
+        const suppressIdx = saveBlock.indexOf('_suppressFileChanged = true');
+        const applyIdx = saveBlock.indexOf('applyEdit');
+        assert.ok(suppressIdx > -1, 'saveFileImpl 应设置 _suppressFileChanged = true');
+        assert.ok(applyIdx > -1, 'saveFileImpl 应调用 applyEdit');
+        assert.ok(suppressIdx < applyIdx,
+            '_suppressFileChanged = true 应在 applyEdit 之前设置');
+    });
+
+    test('BT-custom-editor.33 Tier3 — refreshFromDisk 中 hideFileChangeBadge 应在 loadDocument 之后调用', () => {
+        const content = fs.readFileSync(path.join(projectRoot, 'webview', 'js', 'app.js'), 'utf-8');
+        const refreshIdx = content.indexOf('async function refreshFromDisk');
+        assert.ok(refreshIdx > -1, 'app.js 应包含 refreshFromDisk 函数');
+        const refreshBlock = content.substring(refreshIdx, refreshIdx + 2000);
+        const loadDocIdx = refreshBlock.indexOf('loadDocument(');
+        const hideIdx = refreshBlock.indexOf('hideFileChangeBadge()');
+        assert.ok(loadDocIdx > -1, 'refreshFromDisk 应调用 loadDocument');
+        assert.ok(hideIdx > -1, 'refreshFromDisk 应调用 hideFileChangeBadge');
+        assert.ok(hideIdx > loadDocIdx,
+            'hideFileChangeBadge 应在 loadDocument 之后调用');
+    });
 });

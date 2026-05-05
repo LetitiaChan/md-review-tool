@@ -6723,6 +6723,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           fileResult.relPath || data.relPath,
           fileResult.pathHash || data.pathHash
         );
+        hideFileChangeBadge();
         if (contentChanged) {
           showNotification(I18n.t("toolbar.refresh_disk_updated"));
         } else {
