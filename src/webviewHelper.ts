@@ -5,6 +5,10 @@ import { FileService } from './fileService';
 import { StateService } from './stateService';
 import { detectIdeKind, dispatchAiChat, IdeKind } from './aiChatAdapters';
 
+// ===== Reusable OutputChannels (avoid creating new ones on every error) =====
+let _webviewErrorChannel: vscode.OutputChannel | undefined;
+let _aiChatChannel: vscode.OutputChannel | undefined;
+
 // ===== 国际化消息 =====
 const _hostMessages: Record<string, Record<string, string>> = {
     'zh-CN': {
@@ -133,11 +137,11 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
 
         switch (type) {
             case 'webviewError': {
-                const errCh = vscode.window.createOutputChannel('MD Review - Webview');
-                errCh.appendLine(`[Webview Error] ${payload.message}`);
-                if (payload.filename) { errCh.appendLine(`  File: ${payload.filename}:${payload.lineno}:${payload.colno}`); }
-                if (payload.stack) { errCh.appendLine(`  Stack: ${payload.stack}`); }
-                errCh.show(true);
+                if (!_webviewErrorChannel) { _webviewErrorChannel = vscode.window.createOutputChannel('MD Review - Webview'); }
+                _webviewErrorChannel.appendLine(`[Webview Error] ${payload.message}`);
+                if (payload.filename) { _webviewErrorChannel.appendLine(`  File: ${payload.filename}:${payload.lineno}:${payload.colno}`); }
+                if (payload.stack) { _webviewErrorChannel.appendLine(`  Stack: ${payload.stack}`); }
+                _webviewErrorChannel.show(true);
                 break;
             }
             case 'ready': {
@@ -310,16 +314,16 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
             case 'getSettings': {
                 const config = vscode.workspace.getConfiguration('mdReview');
                 const settings = {
-                    fontSize: config.get<number>('fontSize', 18),
-                    lineHeight: config.get<number>('lineHeight', 1.8),
-                    contentMaxWidth: config.get<number>('contentMaxWidth', 1200),
+                    fontSize: config.get<number>('fontSize', 16),
+                    lineHeight: config.get<number>('lineHeight', 1.6),
+                    contentMaxWidth: config.get<number>('contentMaxWidth', 1100),
                     fontFamily: config.get<string>('fontFamily', ''),
                     codeFontFamily: config.get<string>('codeFontFamily', ''),
                     theme: config.get<string>('theme', 'light'),
                     showToc: config.get<boolean>('showToc', true),
                     showAnnotations: config.get<boolean>('showAnnotations', true),
                     sidebarLayout: config.get<string>('sidebarLayout', 'toc-left'),
-                    panelMode: config.get<string>('panelMode', 'floating'),
+                    panelMode: config.get<string>('panelMode', 'embedded'),
                     documentAlign: config.get<string>('documentAlign', 'center'),
                     enableMermaid: config.get<boolean>('enableMermaid', true),
                     enableMath: config.get<boolean>('enableMath', true),
@@ -328,7 +332,7 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
                     showLineNumbers: config.get<boolean>('showLineNumbers', false),
                     autoSave: config.get<boolean>('autoSave', true),
                     autoSaveDelay: config.get<number>('autoSaveDelay', 1500),
-                    codeTheme: config.get<string>('codeTheme', 'default-light-modern'),
+                    codeTheme: config.get<string>('codeTheme', 'default-dark-modern'),
                     language: config.get<string>('language', 'zh-CN'),
                     customCss: config.get<string>('customCss', ''),
                     imageAssetsPath: config.get<string>('imageAssetsPath', 'assets/images'),
@@ -481,21 +485,21 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
             case 'openCodeBuddyChat': {
                 const instruction = payload.instruction || '';
                 try {
-                    const outputChannel = vscode.window.createOutputChannel('MD Human Review - AI Chat');
-                    outputChannel.clear();
+                    if (!_aiChatChannel) { _aiChatChannel = vscode.window.createOutputChannel('MD Human Review - AI Chat'); }
+                    _aiChatChannel.clear();
 
                     await vscode.env.clipboard.writeText(instruction);
-                    outputChannel.appendLine(`[DIAG:aiChat] clipboard written, length=${instruction.length}`);
+                    _aiChatChannel.appendLine(`[DIAG:aiChat] clipboard written, length=${instruction.length}`);
 
                     const allCommands = await vscode.commands.getCommands(true);
                     const commandSet = new Set(allCommands);
                     const appName = vscode.env.appName || '';
                     const ide: IdeKind = detectIdeKind(appName, commandSet);
-                    outputChannel.appendLine(`[DIAG:aiChat] ide=${ide} appName=${appName} commands=${allCommands.length} total`);
+                    _aiChatChannel.appendLine(`[DIAG:aiChat] ide=${ide} appName=${appName} commands=${allCommands.length} total`);
 
                     const result = await dispatchAiChat(ide, {
                         instruction,
-                        log: (line) => outputChannel.appendLine(line),
+                        log: (line) => _aiChatChannel!.appendLine(line),
                         availableCommands: commandSet
                     });
 
@@ -505,9 +509,9 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
                             : `ai.chat_success_${ide}`;
                         vscode.window.showInformationMessage(_hostT(successKey));
                     } else {
-                        outputChannel.appendLine('');
-                        outputChannel.appendLine('[NEXT-STEP] 自动派发未完成。请在 AI 对话窗口输入框按 Ctrl+V 粘贴，然后按回车发送。');
-                        outputChannel.appendLine('[NEXT-STEP] Auto-dispatch did not complete. In the AI chat input, press Ctrl+V to paste, then Enter to send.');
+                        _aiChatChannel.appendLine('');
+                        _aiChatChannel.appendLine('[NEXT-STEP] 自动派发未完成。请在 AI 对话窗口输入框按 Ctrl+V 粘贴，然后按回车发送。');
+                        _aiChatChannel.appendLine('[NEXT-STEP] Auto-dispatch did not complete. In the AI chat input, press Ctrl+V to paste, then Enter to send.');
                         vscode.window.showWarningMessage(_hostT('ai.chat_fallback'));
                     }
                 } catch (e: any) {

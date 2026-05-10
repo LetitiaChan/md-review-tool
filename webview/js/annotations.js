@@ -52,7 +52,7 @@ const Annotations = (() => {
             setTimeout(() => {
                 window.removeEventListener('message', handler);
                 reject(new Error('请求超时: ' + type));
-            }, 10000);
+            }, 15000);
         });
     }
 

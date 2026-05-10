@@ -48,6 +48,12 @@ llms.txt
 .gitignore
 .vscodeignore
 todo.md
+.review/**
+
+# ===== Webview 源文件（已打包到 dist/，运行时不需要） =====
+webview/js/**
+webview/src/**
+webview/build.config.mjs
 
 # README 引用的大图（改用 GitHub 绝对 URL，不打入包内）
 assets/intro.gif

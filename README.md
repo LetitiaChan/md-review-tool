@@ -168,7 +168,7 @@ This extension's review styles, interaction logic, and AI instruction templates 
 | `mdReview.showToc` | boolean | true | Show TOC navigation by default |
 | `mdReview.showAnnotations` | boolean | true | Show annotations panel by default |
 | `mdReview.sidebarLayout` | string | `"toc-left"` | Sidebar layout (toc-left / toc-right) |
-| `mdReview.panelMode` | string | `"floating"` | Side panel display mode (floating / embedded) |
+| `mdReview.panelMode` | string | `"embedded"` | Side panel display mode (floating / embedded) |
 | `mdReview.documentAlign` | string | `"center"` | Document alignment (left / center / right) |
 | `mdReview.autoSave` | boolean | true | Enable auto-save for annotations |
 | `mdReview.autoSaveDelay` | number | 1500 | Auto-save delay (500-10000 ms) |
@@ -432,7 +432,7 @@ MIT
 | `mdReview.showToc` | boolean | true | 默认显示目录导航栏 |
 | `mdReview.showAnnotations` | boolean | true | 默认显示批注列表面板 |
 | `mdReview.sidebarLayout` | string | `"toc-left"` | 侧边栏布局（toc-left / toc-right） |
-| `mdReview.panelMode` | string | `"floating"` | 侧边面板显示模式（floating 悬浮 / embedded 嵌入） |
+| `mdReview.panelMode` | string | `"embedded"` | 侧边面板显示模式（floating 悬浮 / embedded 嵌入） |
 | `mdReview.documentAlign` | string | `"center"` | 主文档对齐方式（left / center / right） |
 | `mdReview.autoSave` | boolean | true | 启用批注自动保存 |
 | `mdReview.autoSaveDelay` | number | 1500 | 自动保存延迟（500-10000 毫秒） |

@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [1.5.0] - 2026-05-06
 
+### 🐛 Bug Fixes
+- **Restore light theme button in settings** — The "Light" theme option was missing from the settings panel theme mode selector; restored the `☀️ Light` button alongside Dark and Auto
+- **Fix settings.js DEFAULTS mismatch** — `theme` default was `dark` in settings.js but `light` in package.json; "Reset Settings" now correctly restores package.json defaults
+- **Fix webviewHelper.ts fallback defaults** — Align `fontSize` (18→16), `lineHeight` (1.8→1.6), `contentMaxWidth` (1200→1100) fallbacks with package.json declared defaults
+- **Guard content search in Rich Mode** — `performContentSearch()` now skips DOM manipulation when ProseMirror editor is active, preventing editor state corruption
+- **Fix auto-save without dirty check** — `scheduleAutoSave()` now checks `editorDirty` flag before invoking save, preventing unnecessary disk writes
+- **Fix OutputChannel resource leak** — Reuse a single `OutputChannel` instance instead of creating a new one on every webview error or AI chat dispatch
+- **Fix _suppressFileChanged timer race** — Cancel previous timer with `clearTimeout` before setting a new one, preventing premature flag reset on rapid saves
+- **Unify callHost timeout** — Align annotations.js `_callHost` timeout from 10s to 15s to match app.js, preventing premature timeout on slow operations
+
+### 📦 Package Size Optimization
+- **Exclude webview source files from .vsix** — Added `webview/js/**`, `webview/src/**`, `webview/build.config.mjs`, `.review/**` to `.vscodeignore`; reduced package from 68→53 files (2.5→2.3 MB)
+
+### 🔧 Configuration Changes
+- **Panel mode default changed to "embedded"** — New installations default to embedded panel mode instead of floating
+- **Code theme default changed to "Default Dark Modern"** — New installations default to dark modern code highlighting theme
+
 ### ✨ New Features
 - **Editable YAML Front Matter in Rich Mode** — Double-click to edit frontmatter with textarea, Ctrl+Enter to confirm
 - **Link bubble menu in Rich Mode** — Click hyperlink to show floating menu (preview, edit, open, copy, unlink)

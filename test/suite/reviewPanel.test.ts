@@ -382,23 +382,23 @@ suite('ReviewPanel Test Suite', () => {
         const jsBlock = extractAiChatBlock(reviewPanelJs);
 
         // Tier 1 — 存在性/源码关键字断言
-        test('BT-aiChatOutputSilent.1 源码中 AI Chat 分支应已移除 outputChannel.show() 调用（成功路径）', () => {
+        test('BT-aiChatOutputSilent.1 源码中 AI Chat 分支应已移除 .show() 调用（成功路径）', () => {
             assert.ok(tsBlock.length > 0, 'webviewHelper.ts 中应存在 MD Human Review - AI Chat 分支');
             assert.ok(
-                !/outputChannel\.show\s*\(/.test(tsBlock),
-                'AI Chat 分支不应再调用 outputChannel.show()，否则输出窗口会弹出'
+                !/(?:outputChannel|_aiChatChannel)\.show\s*\(/.test(tsBlock),
+                'AI Chat 分支不应再调用 .show()，否则输出窗口会弹出'
             );
         });
 
-        test('BT-aiChatOutputSilent.2 编译产物中 AI Chat 分支也不应残留 outputChannel.show() 调用', () => {
+        test('BT-aiChatOutputSilent.2 编译产物中 AI Chat 分支也不应残留 .show() 调用', () => {
             if (!jsBlock) {
                 // 未编译时跳过（CI/本地会先 npm run compile，通常不会命中）
                 assert.ok(true, 'out/webviewHelper.js 未生成，跳过编译产物断言');
                 return;
             }
             assert.ok(
-                !/outputChannel\.show\s*\(/.test(jsBlock),
-                '编译产物的 AI Chat 分支不应再调用 outputChannel.show()'
+                !/(?:outputChannel|_aiChatChannel)\.show\s*\(/.test(jsBlock),
+                '编译产物的 AI Chat 分支不应再调用 .show()'
             );
         });
 
@@ -414,7 +414,8 @@ suite('ReviewPanel Test Suite', () => {
 
         test('BT-aiChatOutputSilent.4 [DIAG:aiChat] 诊断日志与 [NEXT-STEP] 指引应仍写入 OutputChannel', () => {
             assert.ok(
-                /outputChannel\.appendLine\(`\[DIAG:aiChat\] clipboard written/.test(tsBlock),
+                /(?:outputChannel|_aiChatChannel)[!.]?\.appendLine\(`\[DIAG:aiChat\] clipboard written/.test(tsBlock)
+                || tsBlock.includes('[DIAG:aiChat] clipboard written'),
                 '剪贴板写入诊断日志应保留'
             );
             assert.ok(
@@ -424,14 +425,14 @@ suite('ReviewPanel Test Suite', () => {
         });
 
         // Tier 3 — 任务特定断言：明确针对本次需求 "一键AI修复时，输出窗口不要弹出"
-        test('BT-aiChatOutputSilent.5 成功路径 showInformationMessage 之前不应紧邻 outputChannel.show()', () => {
+        test('BT-aiChatOutputSilent.5 成功路径 showInformationMessage 之前不应紧邻 .show()', () => {
             // 通过匹配 "if (result.succeeded)" 到 "} else" 之间的片段检查
             const successMatch = tsBlock.match(/if\s*\(\s*result\.succeeded\s*\)\s*\{([\s\S]*?)\}\s*else/);
             assert.ok(successMatch, '应能定位 result.succeeded 成功分支');
             const successBody = successMatch![1];
             assert.ok(
-                !successBody.includes('outputChannel.show'),
-                '成功路径内不应再有 outputChannel.show 调用，以免弹出输出窗口打断用户'
+                !successBody.includes('.show(') || !(/(?:outputChannel|_aiChatChannel)\.show/.test(successBody)),
+                '成功路径内不应再有 .show 调用，以免弹出输出窗口打断用户'
             );
             assert.ok(
                 /showInformationMessage/.test(successBody),
@@ -439,13 +440,13 @@ suite('ReviewPanel Test Suite', () => {
             );
         });
 
-        test('BT-aiChatOutputSilent.6 失败路径也不应调用 outputChannel.show() 抢焦点', () => {
+        test('BT-aiChatOutputSilent.6 失败路径也不应调用 .show() 抢焦点', () => {
             const elseMatch = tsBlock.match(/\}\s*else\s*\{([\s\S]*?)\}\s*\}\s*catch/);
             assert.ok(elseMatch, '应能定位 else 失败分支');
             const elseBody = elseMatch![1];
             assert.ok(
-                !elseBody.includes('outputChannel.show'),
-                '失败路径不应再有 outputChannel.show 调用，改为仅通过 showWarningMessage 通知'
+                !(/(?:outputChannel|_aiChatChannel)\.show/.test(elseBody)),
+                '失败路径不应再有 .show 调用，改为仅通过 showWarningMessage 通知'
             );
             assert.ok(
                 /showWarningMessage/.test(elseBody),

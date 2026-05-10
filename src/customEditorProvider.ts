@@ -66,6 +66,7 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
 
         // 标志位：抑制 webview 自身保存触发的 fileChanged 通知
         let _suppressFileChanged = false;
+        let _suppressTimer: ReturnType<typeof setTimeout> | undefined;
 
         // 创建共享消息处理上下文
         const handlerCtx: MessageHandlerContext = {
@@ -83,7 +84,8 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
                 try {
                     // 抑制自身保存触发的 fileChanged 通知（防止"文件已更新"徽章闪烁）
                     _suppressFileChanged = true;
-                    setTimeout(() => { _suppressFileChanged = false; }, 1500);
+                    if (_suppressTimer) { clearTimeout(_suppressTimer); }
+                    _suppressTimer = setTimeout(() => { _suppressFileChanged = false; }, 1500);
 
                     const edit = new vscode.WorkspaceEdit();
                     const fullRange = new vscode.Range(

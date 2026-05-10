@@ -2301,9 +2301,8 @@ this.innerHTML = t('modal.ai_result.copied');
     function scheduleAutoSave() {
         clearAutoSaveTimer();
         autoSaveTimer = setTimeout(() => {
-            // Rich Mode 下自动保存
-            if (currentMode === 'rich' && editorDirty) handleSaveMd();
-            else if (globalThis.EditMode && EditMode.isRichActive()) handleSaveMd();
+            // Rich Mode 下自动保存（仅在有未保存变更时）
+            if (editorDirty && globalThis.EditMode && EditMode.isRichActive()) handleSaveMd();
         }, AUTO_SAVE_DELAY);
     }
 
@@ -2464,6 +2463,9 @@ this.innerHTML = t('modal.ai_result.copied');
         clearSearchHighlights();
         searchMatches = [];
         searchCurrentIndex = -1;
+
+        // Skip DOM manipulation when ProseMirror is active to avoid state corruption
+        if (globalThis.EditMode && EditMode.isRichActive()) return;
 
         const query = document.getElementById('searchInput').value.trim();
         if (!query) {

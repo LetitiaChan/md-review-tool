@@ -236,7 +236,7 @@
         },
         "mdReview.panelMode": {
           "type": "string",
-          "default": "floating",
+          "default": "embedded",
           "enum": [
             "floating",
             "embedded"
@@ -302,7 +302,7 @@
         },
         "mdReview.codeTheme": {
           "type": "string",
-          "default": "default-light-modern",
+          "default": "default-dark-modern",
           "enum": [
             "auto",
             "github",

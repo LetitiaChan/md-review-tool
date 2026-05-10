@@ -107,7 +107,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.strictEqual(settings.showLineNumbers, false);
             assert.strictEqual(settings.autoSave, true);
             assert.strictEqual(settings.autoSaveDelay, 1500);
-            assert.strictEqual(settings.codeTheme, 'default-light-modern');
+            assert.strictEqual(settings.codeTheme, 'default-dark-modern');
         });
 
         test('配置项应有正确的类型', () => {
@@ -142,6 +142,89 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(themeConfig.enum.includes('light'), '应包含 light');
             assert.ok(themeConfig.enum.includes('dark'), '应包含 dark');
             assert.ok(themeConfig.enum.includes('auto'), '应包含 auto');
+        });
+
+        test('BT-DefaultSync.T1.1 Tier1 — settings.js DEFAULTS 应与 package.json 默认值一致', () => {
+            const ext = vscode.extensions.getExtension('letitia.md-human-review')!;
+            const properties = ext.packageJSON.contributes.configuration.properties;
+            const extPath = ext.extensionPath;
+            const settingsJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'settings.js'), 'utf-8');
+
+            // 提取 settings.js 中的 DEFAULTS 对象
+            const themeMatch = settingsJs.match(/theme:\s*'(\w+)'/);
+            const panelModeMatch = settingsJs.match(/panelMode:\s*'(\w+)'/);
+            const codeThemeMatch = settingsJs.match(/codeTheme:\s*'([\w-]+)'/);
+
+            assert.ok(themeMatch, 'settings.js 应有 theme 默认值');
+            assert.strictEqual(themeMatch![1], properties['mdReview.theme'].default,
+                `theme: settings.js(${themeMatch![1]}) 应与 package.json(${properties['mdReview.theme'].default}) 一致`);
+
+            assert.ok(panelModeMatch, 'settings.js 应有 panelMode 默认值');
+            assert.strictEqual(panelModeMatch![1], properties['mdReview.panelMode'].default,
+                `panelMode: settings.js(${panelModeMatch![1]}) 应与 package.json(${properties['mdReview.panelMode'].default}) 一致`);
+
+            assert.ok(codeThemeMatch, 'settings.js 应有 codeTheme 默认值');
+            assert.strictEqual(codeThemeMatch![1], properties['mdReview.codeTheme'].default,
+                `codeTheme: settings.js(${codeThemeMatch![1]}) 应与 package.json(${properties['mdReview.codeTheme'].default}) 一致`);
+        });
+
+        test('BT-DefaultSync.T1.2 Tier1 — webviewHelper.ts fallback 默认值应与 package.json 一致', () => {
+            const ext = vscode.extensions.getExtension('letitia.md-human-review')!;
+            const properties = ext.packageJSON.contributes.configuration.properties;
+            const extPath = ext.extensionPath;
+            const helperJs = fs.readFileSync(path.join(extPath, 'out', 'webviewHelper.js'), 'utf-8');
+
+            // fontSize fallback
+            const fontSizeMatch = helperJs.match(/config\.get\([^)]*'fontSize'[^)]*,\s*(\d+)/);
+            assert.ok(fontSizeMatch, 'webviewHelper 应有 fontSize fallback');
+            assert.strictEqual(parseInt(fontSizeMatch![1]), properties['mdReview.fontSize'].default,
+                `fontSize fallback: webviewHelper(${fontSizeMatch![1]}) 应与 package.json(${properties['mdReview.fontSize'].default}) 一致`);
+
+            // lineHeight fallback
+            const lineHeightMatch = helperJs.match(/config\.get\([^)]*'lineHeight'[^)]*,\s*([\d.]+)/);
+            assert.ok(lineHeightMatch, 'webviewHelper 应有 lineHeight fallback');
+            assert.strictEqual(parseFloat(lineHeightMatch![1]), properties['mdReview.lineHeight'].default,
+                `lineHeight fallback: webviewHelper(${lineHeightMatch![1]}) 应与 package.json(${properties['mdReview.lineHeight'].default}) 一致`);
+
+            // contentMaxWidth fallback
+            const maxWidthMatch = helperJs.match(/config\.get\([^)]*'contentMaxWidth'[^)]*,\s*(\d+)/);
+            assert.ok(maxWidthMatch, 'webviewHelper 应有 contentMaxWidth fallback');
+            assert.strictEqual(parseInt(maxWidthMatch![1]), properties['mdReview.contentMaxWidth'].default,
+                `contentMaxWidth fallback: webviewHelper(${maxWidthMatch![1]}) 应与 package.json(${properties['mdReview.contentMaxWidth'].default}) 一致`);
+        });
+
+        test('BT-SearchGuard.1 Tier3 — performContentSearch 应在 Rich Mode 下跳过 DOM 修改', () => {
+            const ext = vscode.extensions.getExtension('letitia.md-human-review')!;
+            const appJs = fs.readFileSync(path.join(ext.extensionPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // performContentSearch 应在 EditMode.isRichActive() 时 return
+            const funcBody = appJs.match(/function performContentSearch\(\)\s*\{[\s\S]*?clearSearchHighlights[\s\S]*?EditMode\.isRichActive\(\)/);
+            assert.ok(funcBody, 'performContentSearch 应在检查 EditMode.isRichActive() 后 return');
+        });
+
+        test('BT-AutoSave.1 Tier3 — scheduleAutoSave 应检查 editorDirty 后才调用 handleSaveMd', () => {
+            const ext = vscode.extensions.getExtension('letitia.md-human-review')!;
+            const appJs = fs.readFileSync(path.join(ext.extensionPath, 'webview', 'js', 'app.js'), 'utf-8');
+
+            // scheduleAutoSave 应在 setTimeout 内同时检查 editorDirty 和 EditMode.isRichActive()
+            const autoSaveBody = appJs.match(/function scheduleAutoSave[\s\S]*?editorDirty[\s\S]*?isRichActive/);
+            assert.ok(autoSaveBody, 'scheduleAutoSave 应同时检查 editorDirty 和 isRichActive');
+        });
+
+        test('BT-OutputChannel.1 Tier3 — webviewHelper 应复用 OutputChannel 而非每次创建新实例', () => {
+            const ext = vscode.extensions.getExtension('letitia.md-human-review')!;
+            const helperJs = fs.readFileSync(path.join(ext.extensionPath, 'out', 'webviewHelper.js'), 'utf-8');
+
+            // 应使用模块级缓存变量，而非在 case 块内直接 createOutputChannel
+            const webviewErrorMatches = helperJs.match(/createOutputChannel\('MD Review - Webview'\)/g) || [];
+            assert.ok(webviewErrorMatches.length <= 1, `createOutputChannel("MD Review - Webview") 应最多调用 1 次（实际 ${webviewErrorMatches.length} 次），应复用缓存`);
+        });
+
+        test('BT-SuppressTimer.1 Tier3 — _suppressFileChanged 应使用 clearTimeout 防止竞态', () => {
+            const ext = vscode.extensions.getExtension('letitia.md-human-review')!;
+            const providerJs = fs.readFileSync(path.join(ext.extensionPath, 'out', 'customEditorProvider.js'), 'utf-8');
+
+            assert.ok(providerJs.includes('clearTimeout'), 'customEditorProvider 应使用 clearTimeout 取消旧计时器');
         });
     });
 
@@ -591,6 +674,28 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.ok(html.includes('id="settingEnableGraphviz"'), '应包含 Graphviz 设置开关');
             assert.ok(html.includes('PlantUML 图表渲染'), '应包含 PlantUML 设置标签');
             assert.ok(html.includes('Graphviz 图表渲染'), '应包含 Graphviz 设置标签');
+        });
+
+        test('BT-ThemeLight.T1.1 Tier1 — 设置面板应包含 light/dark/auto 三个主题按钮', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+
+            assert.ok(html.includes('data-theme="light"'), '应包含亮色主题按钮 data-theme="light"');
+            assert.ok(html.includes('data-theme="dark"'), '应包含暗色主题按钮 data-theme="dark"');
+            assert.ok(html.includes('data-theme="auto"'), '应包含跟随系统按钮 data-theme="auto"');
+
+            // 统计 theme-btn 数量应为 3
+            const themeBtnCount = (html.match(/class="theme-btn[^"]*"/g) || []).length;
+            assert.strictEqual(themeBtnCount, 3, '应有 3 个主题按钮（light/dark/auto）');
+        });
+
+        test('BT-ThemeLight.1 Tier3 — 亮色主题按钮应使用 data-i18n="settings.theme_light"', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
+            const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
+
+            const lightBtnMatch = html.match(/<button[^>]*data-theme="light"[^>]*>/);
+            assert.ok(lightBtnMatch, '应存在 data-theme="light" 按钮');
+            assert.ok(lightBtnMatch![0].includes('data-i18n="settings.theme_light"'), '亮色按钮应有 i18n 属性');
         });
 
         test('BT-toolbarIconOnly.1 工具栏按钮（目录/主题/预览/批注）应仅含图标无文字 span（Tier 1 — 存在性断言）', () => {

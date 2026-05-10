@@ -3459,7 +3459,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         setTimeout(() => {
           window.removeEventListener("message", handler);
           reject(new Error("\u8BF7\u6C42\u8D85\u65F6: " + type));
-        }, 1e4);
+        }, 15e3);
       });
     }
     async function resolveAnnotationImageUris(imagePaths) {
@@ -4484,11 +4484,11 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       contentMaxWidth: 1100,
       fontFamily: "",
       codeFontFamily: "",
-      theme: "dark",
+      theme: "light",
       showToc: true,
       showAnnotations: true,
       sidebarLayout: "toc-left",
-      panelMode: "floating",
+      panelMode: "embedded",
       documentAlign: "center",
       enableMermaid: true,
       enableMath: true,
@@ -7201,8 +7201,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     function scheduleAutoSave() {
       clearAutoSaveTimer();
       autoSaveTimer = setTimeout(() => {
-        if (currentMode === "rich" && editorDirty) handleSaveMd();
-        else if (globalThis.EditMode && EditMode.isRichActive()) handleSaveMd();
+        if (editorDirty && globalThis.EditMode && EditMode.isRichActive()) handleSaveMd();
       }, AUTO_SAVE_DELAY);
     }
     function clearAutoSaveTimer() {
@@ -7336,6 +7335,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       clearSearchHighlights();
       searchMatches = [];
       searchCurrentIndex = -1;
+      if (globalThis.EditMode && EditMode.isRichActive()) return;
       const query = document.getElementById("searchInput").value.trim();
       if (!query) {
         updateSearchCount();

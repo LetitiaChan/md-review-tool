@@ -544,7 +544,7 @@ suite('E2E Review Flow Test Suite — 完整批阅流程端到端', () => {
             assert.strictEqual(config.get<boolean>('enablePlantUML'), true);
             assert.strictEqual(config.get<boolean>('enableGraphviz'), true);
             assert.strictEqual(config.get<boolean>('showLineNumbers'), false);
-            assert.strictEqual(config.get<string>('codeTheme'), 'default-light-modern');
+            assert.strictEqual(config.get<string>('codeTheme'), 'default-dark-modern');
         });
 
         test('设置对象应包含所有必要字段', () => {
@@ -565,7 +565,7 @@ suite('E2E Review Flow Test Suite — 完整批阅流程端到端', () => {
                 showLineNumbers: config.get<boolean>('showLineNumbers', false),
                 autoSave: config.get<boolean>('autoSave', true),
                 autoSaveDelay: config.get<number>('autoSaveDelay', 1500),
-                codeTheme: config.get<string>('codeTheme', 'default-light-modern')
+                codeTheme: config.get<string>('codeTheme', 'default-dark-modern')
             };
 
             // 验证所有字段存在且类型正确
