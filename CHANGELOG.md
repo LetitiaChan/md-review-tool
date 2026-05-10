@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.5.0] - 2026-05-06
+## [1.5.1] - 2026-05-10
 
 ### 🐛 Bug Fixes
 - **Restore light theme button in settings** — The "Light" theme option was missing from the settings panel theme mode selector; restored the `☀️ Light` button alongside Dark and Auto
