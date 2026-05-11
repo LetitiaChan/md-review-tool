@@ -482,6 +482,20 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
                 }
                 break;
             }
+            case 'zenModeChanged': {
+                const entering = payload.entering;
+                if (entering) {
+                    // Hide VS Code sidebars and bottom panel
+                    await vscode.commands.executeCommand('workbench.action.closeSidebar');
+                    await vscode.commands.executeCommand('workbench.action.closePanel');
+                    await vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
+                } else {
+                    // Restore VS Code sidebars
+                    await vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
+                    await vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
+                }
+                break;
+            }
             case 'openCodeBuddyChat': {
                 const instruction = payload.instruction || '';
                 try {

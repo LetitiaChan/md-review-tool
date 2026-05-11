@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - **Distinct annotation list icon** — Replace the annotation list toggle icon from generic hamburger (three lines) to a "list + ×" combo icon, visually distinguishing it from the TOC button
 
 ### 🐛 Bug Fixes
+- **Fix zen mode not hiding VS Code sidebars** — Add `zenModeChanged` message handler in extension host to close/restore VS Code sidebar, auxiliary bar, and bottom panel when toggling zen mode
 - **Restore light theme button in settings** — The "Light" theme option was missing from the settings panel theme mode selector; restored the `☀️ Light` button alongside Dark and Auto
 - **Fix settings.js DEFAULTS mismatch** — `theme` default was `dark` in settings.js but `light` in package.json; "Reset Settings" now correctly restores package.json defaults
 - **Fix webviewHelper.ts fallback defaults** — Align `fontSize` (18→16), `lineHeight` (1.8→1.6), `contentMaxWidth` (1200→1100) fallbacks with package.json declared defaults
