@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.2] - 2026-05-11
+
+### 🐛 Bug Fixes
+- **Fix zen mode sidebar toggle** — Add `zenModeChanged` message handler to close/restore VS Code sidebar, auxiliary bar, and bottom panel when toggling zen mode
+- **Distinct annotation list icon** — Replace annotation list toggle icon from generic hamburger to a "list + ×" combo icon, visually distinguishing it from the TOC button
+
+### 🧪 Test Fixes
+- **Fix BT-TaskListCheckbox.2 CI failure** — Widen substring window from 1500 to 2500 chars to cover `!currentChecked` assertion
+- **Relax BT-RemoveSourceMode.4 version assertion** — Use `>= 1.5.0` instead of exact match
+
 ## [1.5.1] - 2026-05-10
 
 ### 🔧 UI Improvements
