@@ -1961,9 +1961,11 @@ body:not(.theme-dark) #richModeContainer .frontmatter-edit-textarea {
 #richModeContainer .ProseMirror .task-list-item:hover {
     background-color: rgba(127, 127, 127, 0.08);
 }
-#richModeContainer .ProseMirror .task-list-item .task-list-checkbox {
-    appearance: none;
-    -webkit-appearance: none;
+#richModeContainer .ProseMirror .task-list-item .task-checkbox {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 18px;
     height: 18px;
     min-width: 18px;
@@ -1975,26 +1977,17 @@ body:not(.theme-dark) #richModeContainer .frontmatter-edit-textarea {
     cursor: pointer;
     flex-shrink: 0;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
 }
-#richModeContainer .ProseMirror .task-list-item .task-list-checkbox:hover {
+#richModeContainer .ProseMirror .task-list-item .task-checkbox:hover {
     border-color: #0969da;
     box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1);
 }
-#richModeContainer .ProseMirror .task-list-item .task-list-checkbox:checked {
+#richModeContainer .ProseMirror .task-list-item .task-checkbox.checked {
     background: #0969da;
     border-color: #0969da;
 }
-#richModeContainer .ProseMirror .task-list-item .task-list-checkbox:checked::after {
-    content: '';
-    position: absolute;
-    left: 4px;
-    top: 1px;
-    width: 6px;
-    height: 10px;
-    border: solid #ffffff;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
+#richModeContainer .ProseMirror .task-list-item .task-checkbox .task-check-icon {
+    color: #ffffff;
 }
 #richModeContainer .ProseMirror .task-list-item .task-list-content {
     flex: 1;
@@ -2011,20 +2004,20 @@ body:not(.theme-dark) #richModeContainer .frontmatter-edit-textarea {
 .theme-dark #richModeContainer .ProseMirror .task-list-item:hover {
     background-color: rgba(127, 127, 127, 0.12);
 }
-.theme-dark #richModeContainer .ProseMirror .task-list-item .task-list-checkbox {
+.theme-dark #richModeContainer .ProseMirror .task-list-item .task-checkbox {
     border-color: #4a4a4a;
     background: #141414;
 }
-.theme-dark #richModeContainer .ProseMirror .task-list-item .task-list-checkbox:hover {
+.theme-dark #richModeContainer .ProseMirror .task-list-item .task-checkbox:hover {
     border-color: #34d399;
     box-shadow: 0 0 0 3px rgba(110, 231, 183, 0.1);
 }
-.theme-dark #richModeContainer .ProseMirror .task-list-item .task-list-checkbox:checked {
+.theme-dark #richModeContainer .ProseMirror .task-list-item .task-checkbox.checked {
     background: #34d399;
     border-color: #34d399;
 }
-.theme-dark #richModeContainer .ProseMirror .task-list-item .task-list-checkbox:checked::after {
-    border-color: #141414;
+.theme-dark #richModeContainer .ProseMirror .task-list-item .task-checkbox.checked .task-check-icon {
+    color: #141414;
 }
 .theme-dark #richModeContainer .ProseMirror .task-list-item.checked .task-list-content {
     color: #6b6b6b;

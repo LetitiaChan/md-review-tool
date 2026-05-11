@@ -633,15 +633,19 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
                 // 只有 task list item（checked !== null）才使用自定义 NodeView
                 if (node.attrs.checked === null) return undefined;
 
+                const CHECK_SVG = '<svg class="task-check-icon" viewBox="0 0 16 16" width="14" height="14"><path fill="currentColor" d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>';
+
                 const dom = document.createElement('li');
                 dom.classList.add('task-list-item');
                 if (node.attrs.checked) dom.classList.add('checked');
 
-                // 创建 checkbox 元素
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.classList.add('task-list-checkbox');
-                checkbox.checked = node.attrs.checked;
+                // 使用 span 自定义 checkbox（与预览模式一致，避免原生 input 在 webview 中样式泄露）
+                const checkbox = document.createElement('span');
+                checkbox.classList.add('task-checkbox');
+                if (node.attrs.checked) {
+                    checkbox.classList.add('checked');
+                    checkbox.innerHTML = CHECK_SVG;
+                }
                 checkbox.contentEditable = 'false';
                 checkbox.addEventListener('mousedown', (e) => {
                     e.preventDefault(); // 阻止 ProseMirror 失焦
@@ -668,8 +672,10 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
                     update(updatedNode) {
                         if (updatedNode.type.name !== 'list_item') return false;
                         if (updatedNode.attrs.checked === null) return false;
-                        checkbox.checked = updatedNode.attrs.checked;
-                        dom.classList.toggle('checked', updatedNode.attrs.checked);
+                        const isChecked = updatedNode.attrs.checked;
+                        checkbox.classList.toggle('checked', isChecked);
+                        checkbox.innerHTML = isChecked ? CHECK_SVG : '';
+                        dom.classList.toggle('checked', isChecked);
                         return true;
                     },
                 };

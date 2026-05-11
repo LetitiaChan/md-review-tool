@@ -20969,8 +20969,10 @@
       parseDOM: [{
         tag: "li",
         getAttrs(dom) {
-          const checkbox = dom.querySelector('input[type="checkbox"]');
-          if (checkbox) return { checked: checkbox.checked };
+          const inputCb = dom.querySelector('input[type="checkbox"]');
+          if (inputCb) return { checked: inputCb.checked };
+          const spanCb = dom.querySelector(".task-checkbox");
+          if (spanCb) return { checked: spanCb.classList.contains("checked") };
           return { checked: null };
         },
         contentElement(dom) {
@@ -20980,12 +20982,11 @@
       }],
       toDOM(node) {
         if (node.attrs.checked !== null) {
-          const checkboxAttrs = { type: "checkbox", class: "task-list-checkbox" };
-          if (node.attrs.checked) checkboxAttrs.checked = "checked";
+          const checkboxAttrs = { class: `task-checkbox${node.attrs.checked ? " checked" : ""}`, contenteditable: "false" };
           return [
             "li",
             { class: `task-list-item${node.attrs.checked ? " checked" : ""}` },
-            ["input", checkboxAttrs],
+            ["span", checkboxAttrs],
             ["div", { class: "task-list-content" }, 0]
           ];
         }
@@ -28716,13 +28717,16 @@
         },
         list_item(node, view2, getPos) {
           if (node.attrs.checked === null) return void 0;
+          const CHECK_SVG = '<svg class="task-check-icon" viewBox="0 0 16 16" width="14" height="14"><path fill="currentColor" d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>';
           const dom = document.createElement("li");
           dom.classList.add("task-list-item");
           if (node.attrs.checked) dom.classList.add("checked");
-          const checkbox = document.createElement("input");
-          checkbox.type = "checkbox";
-          checkbox.classList.add("task-list-checkbox");
-          checkbox.checked = node.attrs.checked;
+          const checkbox = document.createElement("span");
+          checkbox.classList.add("task-checkbox");
+          if (node.attrs.checked) {
+            checkbox.classList.add("checked");
+            checkbox.innerHTML = CHECK_SVG;
+          }
           checkbox.contentEditable = "false";
           checkbox.addEventListener("mousedown", (e) => {
             e.preventDefault();
@@ -28745,8 +28749,10 @@
             update(updatedNode) {
               if (updatedNode.type.name !== "list_item") return false;
               if (updatedNode.attrs.checked === null) return false;
-              checkbox.checked = updatedNode.attrs.checked;
-              dom.classList.toggle("checked", updatedNode.attrs.checked);
+              const isChecked = updatedNode.attrs.checked;
+              checkbox.classList.toggle("checked", isChecked);
+              checkbox.innerHTML = isChecked ? CHECK_SVG : "";
+              dom.classList.toggle("checked", isChecked);
               return true;
             }
           };

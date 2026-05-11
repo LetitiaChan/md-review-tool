@@ -140,8 +140,11 @@ const nodes = {
         parseDOM: [{
             tag: 'li',
             getAttrs(dom) {
-                const checkbox = dom.querySelector('input[type="checkbox"]');
-                if (checkbox) return { checked: checkbox.checked };
+                // 兼容原生 input checkbox 和自定义 span.task-checkbox
+                const inputCb = dom.querySelector('input[type="checkbox"]');
+                if (inputCb) return { checked: inputCb.checked };
+                const spanCb = dom.querySelector('.task-checkbox');
+                if (spanCb) return { checked: spanCb.classList.contains('checked') };
                 return { checked: null };
             },
             contentElement(dom) {
@@ -152,10 +155,9 @@ const nodes = {
         }],
         toDOM(node) {
             if (node.attrs.checked !== null) {
-                const checkboxAttrs = { type: 'checkbox', class: 'task-list-checkbox' };
-                if (node.attrs.checked) checkboxAttrs.checked = 'checked';
+                const checkboxAttrs = { class: `task-checkbox${node.attrs.checked ? ' checked' : ''}`, contenteditable: 'false' };
                 return ['li', { class: `task-list-item${node.attrs.checked ? ' checked' : ''}` },
-                    ['input', checkboxAttrs],
+                    ['span', checkboxAttrs],
                     ['div', { class: 'task-list-content' }, 0]
                 ];
             }

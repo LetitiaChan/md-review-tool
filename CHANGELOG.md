@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [1.5.1] - 2026-05-10
 
+### 🔧 UI Improvements
+- **Distinct annotation list icon** — Replace the annotation list toggle icon from generic hamburger (three lines) to a "list + ×" combo icon, visually distinguishing it from the TOC button
+
 ### 🐛 Bug Fixes
 - **Restore light theme button in settings** — The "Light" theme option was missing from the settings panel theme mode selector; restored the `☀️ Light` button alongside Dark and Auto
 - **Fix settings.js DEFAULTS mismatch** — `theme` default was `dark` in settings.js but `light` in package.json; "Reset Settings" now correctly restores package.json defaults
