@@ -250,6 +250,13 @@ export function initApp() {
         // 暴露保存函数给 edit-mode.js
         globalThis.handleSaveMd = handleSaveMd;
         globalThis.triggerAutoSave = scheduleAutoSave;
+        // 暴露 dirty 标记函数给 edit-mode.js（ProseMirror onChange 需要设置 dirty 以触发自动保存）
+        globalThis.markEditorDirty = () => {
+            if (currentMode === 'rich' && !editorDirty) {
+                editorDirty = true;
+                updateEditStatus('modified', t('notification.unsaved'));
+            }
+        };
 
 
         // ===== 刷新按钮 + 三策略弹出菜单 =====
@@ -329,6 +336,25 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
         window.addEventListener('rich-mode-exit', () => {
             const btn = document.getElementById('btnToggleRich');
             if (btn) btn.classList.remove('active');
+
+            // 退出编辑时如果有未保存的更改，立即保存（不等待自动保存 timer）
+            if (editorDirty) {
+                clearAutoSaveTimer();
+                const data = Store.getData();
+                if (data.fileName) {
+                    const filePath = data.sourceFilePath || data.fileName;
+                    callHost('saveFile', { filePath, content: data.rawMarkdown }).then(result => {
+                        if (result && result.success) {
+                            console.log('[rich-mode-exit] saved on exit');
+                        } else {
+                            console.error('[rich-mode-exit] save on exit failed:', result && result.error);
+                        }
+                    }).catch(e => {
+                        console.error('[rich-mode-exit] save on exit failed', e);
+                    });
+                }
+            }
+
             currentMode = 'preview';
             editorDirty = false;
             updateEditStatus('', '');

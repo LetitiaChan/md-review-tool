@@ -100,4 +100,40 @@ suite('Hotfix — Task List Checkbox Rich Mode 渲染', () => {
         assert.ok(src.includes('.task-checkbox'), 'parseDOM 应识别 span.task-checkbox');
         assert.ok(src.includes('input[type="checkbox"]'), 'parseDOM 应兼容原生 input checkbox');
     });
+
+    // ===== 补充：Checkbox 勾选后自动保存修复 =====
+
+    test('BT-TaskListCheckbox.T1.5 Tier1 — app.js 必须暴露 globalThis.markEditorDirty 函数', () => {
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+        assert.ok(src.includes('globalThis.markEditorDirty'), 'app.js 应暴露 globalThis.markEditorDirty');
+    });
+
+    test('BT-TaskListCheckbox.T1.6 Tier1 — edit-mode.js onChange 回调必须调用 markEditorDirty', () => {
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'js', 'edit-mode.js'), 'utf-8');
+        assert.ok(src.includes('markEditorDirty'), 'edit-mode.js 应调用 markEditorDirty');
+    });
+
+    test('BT-TaskListCheckbox.9 Tier3 — markEditorDirty 应仅在 rich 模式且未 dirty 时设置 editorDirty', () => {
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
+        // markEditorDirty 应检查 currentMode === 'rich' 和 !editorDirty
+        const fnIdx = src.indexOf('globalThis.markEditorDirty');
+        assert.ok(fnIdx > -1, 'app.js 应定义 markEditorDirty');
+        const fnSection = src.substring(fnIdx, fnIdx + 300);
+        assert.ok(fnSection.includes("currentMode === 'rich'"), 'markEditorDirty 应检查 currentMode === rich');
+        assert.ok(fnSection.includes('!editorDirty'), 'markEditorDirty 应检查 !editorDirty 避免重复设置');
+        assert.ok(fnSection.includes('editorDirty = true'), 'markEditorDirty 应设置 editorDirty = true');
+    });
+
+    test('BT-TaskListCheckbox.10 Tier3 — onChange 中 markEditorDirty 应在 triggerAutoSave 之前调用', () => {
+        const src = fs.readFileSync(path.join(extPath, 'webview', 'js', 'edit-mode.js'), 'utf-8');
+        // 定位 onChange 回调内部（在 setRawMarkdown 之后的区域）
+        const onChangeIdx = src.indexOf('onChange:');
+        assert.ok(onChangeIdx > -1, 'edit-mode.js 应包含 onChange 回调');
+        const onChangeSection = src.substring(onChangeIdx, onChangeIdx + 500);
+        const dirtyIdx = onChangeSection.indexOf('markEditorDirty');
+        const autoSaveIdx = onChangeSection.indexOf('triggerAutoSave');
+        assert.ok(dirtyIdx > -1, 'onChange 回调应包含 markEditorDirty 调用');
+        assert.ok(autoSaveIdx > -1, 'onChange 回调应包含 triggerAutoSave 调用');
+        assert.ok(dirtyIdx < autoSaveIdx, 'markEditorDirty 应在 triggerAutoSave 之前调用（确保 dirty 标记先设置）');
+    });
 });

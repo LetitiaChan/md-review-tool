@@ -68,6 +68,10 @@ function enterRich(options) {
             if (typeof store.setRawMarkdown === 'function') {
                 store.setRawMarkdown(newMarkdown);
             }
+            // 标记编辑器为 dirty（触发状态栏更新 + 自动保存前置条件）
+            if (typeof globalThis.markEditorDirty === 'function') {
+                globalThis.markEditorDirty();
+            }
             if (typeof globalThis.triggerAutoSave === 'function') {
                 globalThis.triggerAutoSave();
             }

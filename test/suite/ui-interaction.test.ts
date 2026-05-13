@@ -3691,7 +3691,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         test('BT-richExitRefresh.1 Tier1 — app.js rich-mode-exit 监听器应包含 refreshCurrentView 调用', () => {
             const exitIdx = appJsText.indexOf("'rich-mode-exit'");
             assert.ok(exitIdx > 0, '应有 rich-mode-exit 事件监听');
-            const afterExit = appJsText.slice(exitIdx, exitIdx + 500);
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 1500);
             assert.ok(
                 afterExit.includes('refreshCurrentView()'),
                 'rich-mode-exit 监听器应调用 refreshCurrentView() 刷新文档'
@@ -3702,7 +3702,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             // 搜索 addEventListener("rich-mode-exit" 而非仅 "rich-mode-exit"，避免匹配到 dispatchEvent
             const exitIdx = bundleText.indexOf('addEventListener("rich-mode-exit"');
             assert.ok(exitIdx > 0, 'bundle 中应有 rich-mode-exit 事件监听');
-            const afterExit = bundleText.slice(exitIdx, exitIdx + 500);
+            const afterExit = bundleText.slice(exitIdx, exitIdx + 1500);
             assert.ok(
                 afterExit.includes('refreshCurrentView()'),
                 'bundle 中 rich-mode-exit 监听器应调用 refreshCurrentView()'
@@ -3713,7 +3713,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
         test('BT-richExitRefresh.3 Tier2 — rich-mode-exit 监听器不应再调用 switchMode', () => {
             const exitIdx = appJsText.indexOf("'rich-mode-exit'");
-            const afterExit = appJsText.slice(exitIdx, exitIdx + 500);
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 1500);
             // 提取到下一个 addEventListener 或函数结束
             const nextListener = afterExit.indexOf('addEventListener', 10);
             const block = nextListener > 0 ? afterExit.slice(0, nextListener) : afterExit;
@@ -3725,7 +3725,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
         test('BT-richExitRefresh.4 Tier2 — rich-mode-exit 监听器应将 currentMode 设为 preview', () => {
             const exitIdx = appJsText.indexOf("'rich-mode-exit'");
-            const afterExit = appJsText.slice(exitIdx, exitIdx + 500);
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 1500);
             assert.ok(
                 afterExit.includes("currentMode = 'preview'"),
                 'rich-mode-exit 监听器应将 currentMode 设为 preview'
@@ -3734,7 +3734,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
         test('BT-richExitRefresh.5 Tier2 — rich-mode-exit 监听器应重置 editorDirty', () => {
             const exitIdx = appJsText.indexOf("'rich-mode-exit'");
-            const afterExit = appJsText.slice(exitIdx, exitIdx + 500);
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 1500);
             assert.ok(
                 afterExit.includes('editorDirty = false'),
                 'rich-mode-exit 监听器应将 editorDirty 重置为 false'
@@ -3763,10 +3763,57 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
         test('BT-richExitRefresh.7 Tier3 — rich-mode-exit 监听器应清除编辑状态提示', () => {
             const exitIdx = appJsText.indexOf("'rich-mode-exit'");
-            const afterExit = appJsText.slice(exitIdx, exitIdx + 500);
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 1500);
             assert.ok(
                 afterExit.includes("updateEditStatus('', '')"),
                 'rich-mode-exit 监听器应清除编辑状态提示文字'
+            );
+        });
+
+        // ---- 退出编辑时立即保存 ----
+
+        test('BT-richExitSave.1 Tier1 — app.js rich-mode-exit 监听器应包含 saveFile 调用', () => {
+            const exitIdx = appJsText.indexOf("'rich-mode-exit'");
+            assert.ok(exitIdx > 0, '应有 rich-mode-exit 事件监听');
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 1500);
+            assert.ok(
+                afterExit.includes("callHost('saveFile'"),
+                'rich-mode-exit 监听器应在退出时调用 callHost saveFile 立即保存'
+            );
+        });
+
+        test('BT-richExitSave.2 Tier1 — bundle 中 rich-mode-exit 监听器应包含 saveFile 调用', () => {
+            const exitIdx = bundleText.indexOf('addEventListener("rich-mode-exit"');
+            assert.ok(exitIdx > 0, 'bundle 中应有 rich-mode-exit 事件监听');
+            const afterExit = bundleText.slice(exitIdx, exitIdx + 1500);
+            assert.ok(
+                afterExit.includes('callHost("saveFile"'),
+                'bundle 中 rich-mode-exit 监听器应在退出时调用 callHost saveFile'
+            );
+        });
+
+        test('BT-richExitSave.3 Tier3 — 退出保存应仅在 editorDirty 为 true 时触发', () => {
+            const exitIdx = appJsText.indexOf("'rich-mode-exit'");
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 1500);
+            const saveIdx = afterExit.indexOf("callHost('saveFile'");
+            assert.ok(saveIdx > 0, '应有 callHost saveFile 调用');
+            // saveFile 调用应在 editorDirty 条件判断之后
+            const beforeSave = afterExit.slice(0, saveIdx);
+            assert.ok(
+                beforeSave.includes('if (editorDirty)'),
+                '退出保存应在 editorDirty 条件判断内，仅在有未保存更改时触发'
+            );
+        });
+
+        test('BT-richExitSave.4 Tier3 — 退出保存前应清除自动保存 timer', () => {
+            const exitIdx = appJsText.indexOf("'rich-mode-exit'");
+            const afterExit = appJsText.slice(exitIdx, exitIdx + 1500);
+            const dirtyIdx = afterExit.indexOf('if (editorDirty)');
+            assert.ok(dirtyIdx > 0, '应有 editorDirty 条件判断');
+            const dirtyBlock = afterExit.slice(dirtyIdx, dirtyIdx + 200);
+            assert.ok(
+                dirtyBlock.includes('clearAutoSaveTimer()'),
+                '退出保存前应调用 clearAutoSaveTimer() 避免重复保存'
             );
         });
     });

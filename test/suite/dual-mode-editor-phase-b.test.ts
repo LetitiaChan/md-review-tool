@@ -468,7 +468,7 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
             assert.ok(appJs.includes('clearEditorToolbarState'), 'app.js 应包含 clearEditorToolbarState 函数');
             // 确认在 rich-mode-exit handler 中调用
             const exitIdx = appJs.indexOf("'rich-mode-exit'");
-            const afterExit = appJs.slice(exitIdx, exitIdx + 500);
+            const afterExit = appJs.slice(exitIdx, exitIdx + 1500);
             assert.ok(afterExit.includes('clearEditorToolbarState'), 'rich-mode-exit handler 应调用 clearEditorToolbarState');
         });
 

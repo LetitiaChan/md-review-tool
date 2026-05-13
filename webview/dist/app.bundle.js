@@ -5145,6 +5145,9 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         if (typeof store.setRawMarkdown === "function") {
           store.setRawMarkdown(newMarkdown);
         }
+        if (typeof globalThis.markEditorDirty === "function") {
+          globalThis.markEditorDirty();
+        }
         if (typeof globalThis.triggerAutoSave === "function") {
           globalThis.triggerAutoSave();
         }
@@ -5440,6 +5443,12 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     function bindEvents() {
       globalThis.handleSaveMd = handleSaveMd;
       globalThis.triggerAutoSave = scheduleAutoSave;
+      globalThis.markEditorDirty = () => {
+        if (currentMode === "rich" && !editorDirty) {
+          editorDirty = true;
+          updateEditStatus("modified", t("notification.unsaved"));
+        }
+      };
       setupRefreshButton();
       const btnToggleRich = document.getElementById("btnToggleRich");
       if (btnToggleRich && globalThis.EditMode) {
@@ -5494,6 +5503,22 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       window.addEventListener("rich-mode-exit", () => {
         const btn = document.getElementById("btnToggleRich");
         if (btn) btn.classList.remove("active");
+        if (editorDirty) {
+          clearAutoSaveTimer();
+          const data = Store.getData();
+          if (data.fileName) {
+            const filePath = data.sourceFilePath || data.fileName;
+            callHost("saveFile", { filePath, content: data.rawMarkdown }).then((result) => {
+              if (result && result.success) {
+                console.log("[rich-mode-exit] saved on exit");
+              } else {
+                console.error("[rich-mode-exit] save on exit failed:", result && result.error);
+              }
+            }).catch((e) => {
+              console.error("[rich-mode-exit] save on exit failed", e);
+            });
+          }
+        }
         currentMode = "preview";
         editorDirty = false;
         updateEditStatus("", "");
