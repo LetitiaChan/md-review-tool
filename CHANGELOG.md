@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.5.3] - 2026-05-13
+## [1.5.4] - 2026-05-13
 
 ### 🐛 Bug Fixes
 - **Mark editor dirty on ProseMirror changes** — Expose `markEditorDirty()` to ProseMirror onChange handler so edits are properly flagged as dirty, enabling auto-save and status bar updates
