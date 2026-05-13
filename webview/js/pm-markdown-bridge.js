@@ -457,7 +457,9 @@ const serializer = new MarkdownSerializer(
         },
         heading(state, node) {
             state.write('#'.repeat(node.attrs.level) + ' ');
-            state.renderInline(node);
+            // 传入 false：heading 行以 # 开头，内容不在行首，
+            // 避免 esc() 误将 "0. " 等模式转义为 "0\. "
+            state.renderInline(node, false);
             state.closeBlock(node);
         },
         blockquote(state, node) {

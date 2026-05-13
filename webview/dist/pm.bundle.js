@@ -27771,7 +27771,7 @@
       },
       heading(state, node) {
         state.write("#".repeat(node.attrs.level) + " ");
-        state.renderInline(node);
+        state.renderInline(node, false);
         state.closeBlock(node);
       },
       blockquote(state, node) {

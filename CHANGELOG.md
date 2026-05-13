@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### 🐛 Bug Fixes
 - **Mark editor dirty on ProseMirror changes** — Expose `markEditorDirty()` to ProseMirror onChange handler so edits are properly flagged as dirty, enabling auto-save and status bar updates
 - **Save immediately on exit edit mode** — When exiting Rich Mode, unsaved changes are now saved immediately instead of relying on the auto-save timer (which could be cancelled during exit)
+- **Fix heading serialization escaping digits before dot** — Pass `fromBlockStart=false` to `renderInline()` in heading serializer to prevent ProseMirror from escaping `0.` → `0\.` patterns in headings like `## 0. 编码前验证`
 
 ### 🧪 Tests
 - **Add Custom Editor integration tests** — 5 new tests (`BT-custom-editor.INT.1~5`) that actually open `.md`/`.mdc` files via `vscode.openWith` and verify Custom Editor creation using `TabInputCustom` type checks

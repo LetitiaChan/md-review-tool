@@ -523,4 +523,30 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
             assert.ok(bundle.includes('updateEditorToolbarState'), 'app.bundle.js 应包含 updateEditorToolbarState');
         });
     });
+
+    suite('Hotfix — heading 序列化不应转义数字+点号', () => {
+        test('BT-HeadingEscape.1 Tier1 — pm-markdown-bridge.js heading 序列化器应传入 false 给 renderInline', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const bridge = fs.readFileSync(path.join(extPath, 'webview', 'js', 'pm-markdown-bridge.js'), 'utf-8');
+            // heading 序列化器应调用 state.renderInline(node, false) 而非 state.renderInline(node)
+            assert.ok(
+                /heading\s*\(state,\s*node\)\s*\{[^}]*renderInline\s*\(\s*node\s*,\s*false\s*\)/.test(bridge),
+                'heading 序列化器应调用 renderInline(node, false) 避免行首转义'
+            );
+        });
+
+        test('BT-HeadingEscape.2 Tier3 — pm.bundle.js heading 序列化器不应对 "0. " 等模式添加反斜杠转义', () => {
+            const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
+            if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+            const bundle = fs.readFileSync(path.join(extPath, 'webview', 'dist', 'pm.bundle.js'), 'utf-8');
+            // 在 bundle 中搜索 heading 序列化器，确认 renderInline 传入了 false
+            // heading 序列化器的特征：write('#'.repeat(...)) 后跟 renderInline(node, false)
+            const headingPattern = /write\s*\(\s*["']#["']\.repeat[^)]*\)[^;]*;\s*[^;]*renderInline\s*\(\s*node\s*,\s*false\s*\)/;
+            assert.ok(
+                headingPattern.test(bundle),
+                'pm.bundle.js 中 heading 序列化器应调用 renderInline(node, false)'
+            );
+        });
+    });
 });
