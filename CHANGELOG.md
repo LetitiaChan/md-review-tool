@@ -2,9 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.5.2] - 2026-05-11
+## [1.5.2] - 2026-05-13
+
+### 🧪 Tests
+- **Add Custom Editor integration tests** — 5 new tests (`BT-custom-editor.INT.1~5`) that actually open `.md`/`.mdc` files via `vscode.openWith` and verify Custom Editor creation using `TabInputCustom` type checks
 
 ### 🐛 Bug Fixes
+- **Save immediately on exit edit mode** — When exiting Rich Mode, unsaved changes are now saved immediately instead of relying on the auto-save timer (which could be cancelled during exit)
 - **Fix zen mode sidebar toggle** — Add `zenModeChanged` message handler to close/restore VS Code sidebar, auxiliary bar, and bottom panel when toggling zen mode
 - **Distinct annotation list icon** — Replace annotation list toggle icon from generic hamburger to a "list + ×" combo icon, visually distinguishing it from the TOC button
 

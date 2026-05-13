@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as vscode from 'vscode';
 
 /**
  * Custom Editor Provider + Shared Webview Helper 测试
@@ -9,6 +10,7 @@ import * as fs from 'fs';
  * - Tier 1: 存在性断言（文件存在、导出存在、package.json 配置正确）
  * - Tier 2: 行为级断言（模块导入、函数调用）
  * - Tier 3: 任务特定断言（Custom Editor 注册、文件列表移除验证）
+ * - Integration: 真正通过 vscode.openWith 打开 md 文件，验证 Custom Editor 实际工作
  */
 suite('Custom Editor Provider Tests', () => {
 
@@ -316,5 +318,173 @@ suite('Custom Editor Provider Tests', () => {
         assert.ok(hideIdx > -1, 'refreshFromDisk 应调用 hideFileChangeBadge');
         assert.ok(hideIdx > loadDocIdx,
             'hideFileChangeBadge 应在 loadDocument 之后调用');
+    });
+
+    // ===== Integration: 真正通过 VS Code API 打开 md 文件，验证 Custom Editor 实际工作 =====
+
+    suite('Integration — 通过 vscode.openWith 打开 md 文件', () => {
+        const testIntegrationDir = path.join(projectRoot, '.test-custom-editor-integration');
+        let testFilePath: string;
+
+        suiteSetup(async () => {
+            // 确保扩展已激活
+            const ext = vscode.extensions.getExtension('letitia.md-human-review');
+            if (ext && !ext.isActive) {
+                await ext.activate();
+            }
+            // 创建临时测试目录
+            if (!fs.existsSync(testIntegrationDir)) {
+                fs.mkdirSync(testIntegrationDir, { recursive: true });
+            }
+        });
+
+        suiteTeardown(async () => {
+            // 关闭所有编辑器
+            await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+            await new Promise(resolve => setTimeout(resolve, 300));
+            // 清理临时目录
+            if (fs.existsSync(testIntegrationDir)) {
+                fs.rmSync(testIntegrationDir, { recursive: true, force: true });
+            }
+        });
+
+        setup(() => {
+            testFilePath = path.join(testIntegrationDir, 'integration-test.md');
+            fs.writeFileSync(testFilePath, [
+                '# 集成测试文档',
+                '',
+                '**文档版本**：v1.0.0',
+                '',
+                '## 概述',
+                '',
+                '这是一份用于集成测试的 Markdown 文档。',
+                '',
+                '## 详细内容',
+                '',
+                '- 列表项 1',
+                '- 列表项 2',
+                '- 列表项 3',
+                '',
+                '## 总结',
+                '',
+                '测试完成。'
+            ].join('\n'), 'utf-8');
+        });
+
+        teardown(async () => {
+            // 每个测试后关闭所有编辑器
+            await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+            await new Promise(resolve => setTimeout(resolve, 300));
+            if (fs.existsSync(testFilePath)) {
+                fs.unlinkSync(testFilePath);
+            }
+        });
+
+        test('BT-custom-editor.INT.1 vscode.openWith 应成功打开 md 文件为 Custom Editor', async () => {
+            const uri = vscode.Uri.file(testFilePath);
+
+            // 通过 vscode.openWith 命令打开文件
+            await vscode.commands.executeCommand('vscode.openWith', uri, 'mdReview.markdownEditor');
+            // 等待 Custom Editor 初始化
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // 验证：当前活跃编辑器的 tab 应该存在
+            const activeTab = vscode.window.tabGroups.activeTabGroup.activeTab;
+            assert.ok(activeTab, '应有活跃的 tab');
+            assert.ok(activeTab!.label.includes('integration-test.md'),
+                `活跃 tab 的标签应包含文件名，实际为: ${activeTab!.label}`);
+        });
+
+        test('BT-custom-editor.INT.2 Custom Editor 打开后 tab 的 input 应为 CustomEditorTabInput', async () => {
+            const uri = vscode.Uri.file(testFilePath);
+
+            await vscode.commands.executeCommand('vscode.openWith', uri, 'mdReview.markdownEditor');
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            const activeTab = vscode.window.tabGroups.activeTabGroup.activeTab;
+            assert.ok(activeTab, '应有活跃的 tab');
+
+            // TabInputCustom 表示这是一个 Custom Editor（而非普通文本编辑器）
+            const input = activeTab!.input;
+            assert.ok(input instanceof vscode.TabInputCustom,
+                `tab input 应为 TabInputCustom 类型，实际为: ${input?.constructor?.name}`);
+
+            // 验证 viewType 正确
+            if (input instanceof vscode.TabInputCustom) {
+                assert.strictEqual(input.viewType, 'mdReview.markdownEditor',
+                    'Custom Editor 的 viewType 应为 mdReview.markdownEditor');
+                assert.strictEqual(input.uri.fsPath, uri.fsPath,
+                    'Custom Editor 打开的文件路径应与请求的路径一致');
+            }
+        });
+
+        test('BT-custom-editor.INT.3 openWithReview 命令应能打开 md 文件为 Custom Editor', async () => {
+            const uri = vscode.Uri.file(testFilePath);
+
+            // 使用扩展自定义的 openWithReview 命令
+            await vscode.commands.executeCommand('mdReview.openWithReview', uri);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            const activeTab = vscode.window.tabGroups.activeTabGroup.activeTab;
+            assert.ok(activeTab, '应有活跃的 tab');
+
+            const input = activeTab!.input;
+            assert.ok(input instanceof vscode.TabInputCustom,
+                `openWithReview 命令应打开 Custom Editor，实际 tab input 类型: ${input?.constructor?.name}`);
+        });
+
+        test('BT-custom-editor.INT.4 同时打开多个 md 文件应各自独立', async () => {
+            // 创建第二个测试文件
+            const testFilePath2 = path.join(testIntegrationDir, 'integration-test-2.md');
+            fs.writeFileSync(testFilePath2, '# 第二个测试文档\n\n内容。\n', 'utf-8');
+
+            try {
+                const uri1 = vscode.Uri.file(testFilePath);
+                const uri2 = vscode.Uri.file(testFilePath2);
+
+                // 打开两个文件
+                await vscode.commands.executeCommand('vscode.openWith', uri1, 'mdReview.markdownEditor');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                await vscode.commands.executeCommand('vscode.openWith', uri2, 'mdReview.markdownEditor');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 验证：应有至少 2 个 tab
+                const tabs = vscode.window.tabGroups.activeTabGroup.tabs;
+                const customEditorTabs = tabs.filter(t => t.input instanceof vscode.TabInputCustom);
+                assert.ok(customEditorTabs.length >= 2,
+                    `应有至少 2 个 Custom Editor tab，实际: ${customEditorTabs.length}`);
+
+                // 验证两个 tab 的文件路径不同
+                const paths = customEditorTabs
+                    .map(t => (t.input as vscode.TabInputCustom).uri.fsPath);
+                assert.ok(paths.includes(uri1.fsPath), '应包含第一个文件');
+                assert.ok(paths.includes(uri2.fsPath), '应包含第二个文件');
+            } finally {
+                if (fs.existsSync(testFilePath2)) {
+                    fs.unlinkSync(testFilePath2);
+                }
+            }
+        });
+
+        test('BT-custom-editor.INT.5 打开 .mdc 文件也应使用 Custom Editor', async () => {
+            const mdcFilePath = path.join(testIntegrationDir, 'test.mdc');
+            fs.writeFileSync(mdcFilePath, '# MDC 测试\n\n内容。\n', 'utf-8');
+
+            try {
+                const uri = vscode.Uri.file(mdcFilePath);
+                await vscode.commands.executeCommand('vscode.openWith', uri, 'mdReview.markdownEditor');
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                const activeTab = vscode.window.tabGroups.activeTabGroup.activeTab;
+                assert.ok(activeTab, '应有活跃的 tab');
+                const input = activeTab!.input;
+                assert.ok(input instanceof vscode.TabInputCustom,
+                    '.mdc 文件应能通过 Custom Editor 打开');
+            } finally {
+                if (fs.existsSync(mdcFilePath)) {
+                    fs.unlinkSync(mdcFilePath);
+                }
+            }
+        });
     });
 });
