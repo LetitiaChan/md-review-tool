@@ -910,6 +910,13 @@ const Annotations = (() => {
     function refreshView() {
         const data = Store.getData();
         Renderer.renderBlocks(blocks, data.annotations);
+        if (typeof globalThis.mdReviewRunPostRenderEffects === 'function') {
+            try {
+                globalThis.mdReviewRunPostRenderEffects();
+            } catch (e) {
+                console.warn('[annotations] 后渲染处理失败:', e);
+            }
+        }
         renderAnnotationsList();
         updateToolbarState();
         // 批注变更后触发自动保存，确保磁盘上的批阅记录及时更新
