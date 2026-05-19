@@ -162,6 +162,47 @@ test.describe('图表渲染测试', () => {
             const errorCount = await errorContainer.count();
             expect(errorCount).toBe(0);
         });
+
+        test('BT-chart.12 标注刷新后 Mermaid 仍应保持 SVG 预览', async ({ page }) => {
+            const markdown = [
+                '这是一段可标注文本。',
+                '',
+                '```mermaid',
+                'graph TD',
+                '    A[开始] --> B[结束]',
+                '```'
+            ].join('\n');
+
+            await injectMarkdown(page, markdown);
+            await waitForRender(page);
+            await expect(page.locator('.mermaid-rendered svg').first()).toBeVisible({ timeout: 10000 });
+
+            await page.evaluate((md) => {
+                const Renderer = (window as any).Renderer;
+                const Store = (window as any).Store;
+                const Annotations = (window as any).Annotations;
+                const blocks = Renderer.parseMarkdown(md);
+
+                Store.reset();
+                Store.setFile('mermaid-annotation.md', md);
+                Annotations.setBlocks(blocks);
+                Store.addAnnotation({
+                    type: 'comment',
+                    selectedText: '可标注文本',
+                    blockIndex: 0,
+                    endBlockIndex: 0,
+                    startOffset: 3,
+                    endOffset: 8,
+                    comment: '测试批注',
+                    images: []
+                });
+
+                Annotations.refreshView();
+            }, markdown);
+
+            await expect(page.locator('.mermaid-rendered svg').first()).toBeVisible({ timeout: 10000 });
+            await expect(page.locator('.mermaid-source').first()).not.toBeVisible();
+        });
     });
 
     test.describe('Graphviz 图表', () => {

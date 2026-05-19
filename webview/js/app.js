@@ -257,6 +257,9 @@ export function initApp() {
                 updateEditStatus('modified', t('notification.unsaved'));
             }
         };
+        // 暴露统一后渲染处理给 annotations.js。批注刷新会重建文档 DOM，
+        // 需要重新运行 Mermaid/KaTeX/PlantUML/Graphviz 和代码块事件绑定。
+        globalThis.mdReviewRunPostRenderEffects = renderMathAndMermaid;
 
 
         // ===== 刷新按钮 + 三策略弹出菜单 =====

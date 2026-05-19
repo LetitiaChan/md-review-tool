@@ -4150,6 +4150,13 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     function refreshView() {
       const data = Store.getData();
       Renderer.renderBlocks(blocks, data.annotations);
+      if (typeof globalThis.mdReviewRunPostRenderEffects === "function") {
+        try {
+          globalThis.mdReviewRunPostRenderEffects();
+        } catch (e) {
+          console.warn("[annotations] \u540E\u6E32\u67D3\u5904\u7406\u5931\u8D25:", e);
+        }
+      }
       renderAnnotationsList();
       updateToolbarState();
       if (globalThis.Exporter && Exporter.triggerAutoSave) {
@@ -5449,6 +5456,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           updateEditStatus("modified", t("notification.unsaved"));
         }
       };
+      globalThis.mdReviewRunPostRenderEffects = renderMathAndMermaid;
       setupRefreshButton();
       const btnToggleRich = document.getElementById("btnToggleRich");
       if (btnToggleRich && globalThis.EditMode) {
