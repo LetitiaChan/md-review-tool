@@ -2,7 +2,7 @@
   "name": "md-human-review",
   "displayName": "MD Human Review",
   "description": "Markdown review & annotation tool — Comment, highlight, dual-mode editor (Source + Rich), Mermaid/KaTeX/PlantUML preview, and generate AI fix instructions. Document reviewer for technical writing | Markdown 批阅批注工具，支持评论、删除标记、双模式编辑器（源码+富文本），一键生成 AI 修改指令",
-"version": "1.5.5",
+  "version": "1.5.6",
   "license": "MIT",
   "publisher": "letitia",
   "repository": {
@@ -77,9 +77,15 @@
         "viewType": "mdReview.markdownEditor",
         "displayName": "MD Human Review",
         "selector": [
-          { "filenamePattern": "*.md" },
-          { "filenamePattern": "*.mdc" },
-          { "filenamePattern": "*.markdown" }
+          {
+            "filenamePattern": "*.md"
+          },
+          {
+            "filenamePattern": "*.mdc"
+          },
+          {
+            "filenamePattern": "*.markdown"
+          }
         ],
         "priority": "option"
       }
