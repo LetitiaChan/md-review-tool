@@ -108,7 +108,7 @@ export class FileService {
     /**
      * 读取文件内容
      */
-    readFile(filePath: string): { name: string; content: string; docVersion: string | null; sourceFilePath: string; sourceDir: string; relPath: string; pathHash: string } {
+    readFile(filePath: string): { name: string; content: string; docVersion: string | null; sourceFilePath: string; sourceDir: string; relPath: string; pathHash: string; footnoteComments: any[] } {
         const absPath = path.isAbsolute(filePath) ? filePath : path.join(this.workspaceRoot, filePath);
         if (!fs.existsSync(absPath)) {
             throw new Error('文件不存在: ' + absPath);
@@ -123,7 +123,8 @@ export class FileService {
             sourceFilePath: absPath.replace(/\\/g, '/'),
             sourceDir: path.dirname(absPath).replace(/\\/g, '/'),
             relPath,
-            pathHash: this.pathHash(relPath)
+            pathHash: this.pathHash(relPath),
+            footnoteComments: this.extractFootnoteComments(content)
         };
     }
 
@@ -152,6 +153,75 @@ export class FileService {
 
         const docVersion = this.extractDocVersion(content);
         return { success: true, changed: true, backupFile: backupName, docVersion };
+    }
+
+    /**
+     * 将一条评论写回源 Markdown，使用脚注引用作为稳定锚点。
+     */
+    addFootnoteComment(sourceFile: string, annotation: any): { success: boolean; footnoteId: string; content: string } {
+        const absPath = path.isAbsolute(sourceFile) ? sourceFile : path.join(this.workspaceRoot, sourceFile);
+        if (!fs.existsSync(absPath)) {
+            throw new Error('文件不存在: ' + absPath);
+        }
+
+        const content = fs.readFileSync(absPath, 'utf-8');
+        const footnoteId = this.nextMdhrFootnoteId(content);
+        const marker = `[^${footnoteId}]`;
+        const selectedText = String(annotation.selectedText || '');
+        if (!selectedText) {
+            throw new Error('脚注评论缺少选中文本');
+        }
+
+        const targetIndex = this.findAnnotationTargetIndex(content, selectedText, annotation.startOffset, annotation.blockIndex);
+        if (targetIndex < 0) {
+            throw new Error('无法在源文件中定位选中文本');
+        }
+
+        const insertAt = targetIndex + selectedText.length;
+        const withReference = content.slice(0, insertAt) + marker + content.slice(insertAt);
+        const comment = this.sanitizeFootnoteComment(annotation.comment || '');
+        const definition = `[^${footnoteId}]: MDHR-COMMENT: ${comment}`;
+        const separator = withReference.endsWith('\n') ? '\n' : '\n\n';
+        const updated = `${withReference}${separator}${definition}\n`;
+
+        fs.writeFileSync(absPath, updated, 'utf-8');
+        return { success: true, footnoteId, content: updated };
+    }
+
+    /**
+     * 从 Markdown 脚注定义恢复 MD Human Review 的评论批注。
+     */
+    extractFootnoteComments(markdown: string): any[] {
+        const definitions = new Map<string, string>();
+        const defRegex = /^\[\^(mdhr-\d+)\]:\s*MDHR-COMMENT:\s*(.*)$/gm;
+        let defMatch: RegExpExecArray | null;
+        while ((defMatch = defRegex.exec(markdown)) !== null) {
+            definitions.set(defMatch[1], defMatch[2].trim());
+        }
+
+        const annotations: any[] = [];
+        for (const [footnoteId, comment] of definitions.entries()) {
+            const refRegex = new RegExp(`\\[\\^${this.escapeRegExp(footnoteId)}\\]`);
+            const refMatch = refRegex.exec(markdown);
+            if (!refMatch || this.isFootnoteDefinitionPosition(markdown, refMatch.index)) {
+                continue;
+            }
+
+            const selectedText = this.extractTextBeforeFootnoteRef(markdown, refMatch.index);
+            annotations.push({
+                type: 'comment',
+                selectedText,
+                comment,
+                footnoteId,
+                blockIndex: this.getBlockIndexAtOffset(markdown, refMatch.index),
+                startOffset: Math.max(0, selectedText ? refMatch.index - selectedText.length : refMatch.index),
+                endOffset: refMatch.index,
+                images: [],
+                source: 'footnote'
+            });
+        }
+
+        return annotations;
     }
 
     /**
@@ -694,6 +764,79 @@ console.error('删除批阅记录失败:', fullPath, e);
             if (match) { return match[1]; }
         }
         return null;
+    }
+
+    private nextMdhrFootnoteId(markdown: string): string {
+        const ids = [...markdown.matchAll(/\[\^mdhr-(\d+)\]/g)]
+            .map(match => parseInt(match[1], 10))
+            .filter(n => Number.isFinite(n));
+        const next = ids.length > 0 ? Math.max(...ids) + 1 : 1;
+        return `mdhr-${next}`;
+    }
+
+    private findAnnotationTargetIndex(markdown: string, selectedText: string, startOffset?: number, blockIndex?: number): number {
+        if (blockIndex != null && blockIndex >= 0) {
+            const blocks = this.splitMarkdownToBlocks(markdown);
+            const block = blocks[blockIndex];
+            if (block) {
+                const blockStart = this.findBlockStart(markdown, blocks, blockIndex);
+                const localIndex = block.indexOf(selectedText);
+                if (blockStart >= 0 && localIndex >= 0) {
+                    return blockStart + localIndex;
+                }
+            }
+        }
+
+        const candidates: number[] = [];
+        let from = 0;
+        while (from < markdown.length) {
+            const idx = markdown.indexOf(selectedText, from);
+            if (idx < 0) { break; }
+            candidates.push(idx);
+            from = idx + selectedText.length;
+        }
+        if (candidates.length === 0) { return -1; }
+        if (startOffset == null || candidates.length === 1) { return candidates[0]; }
+        return candidates.reduce((best, idx) => {
+            return Math.abs(idx - startOffset) < Math.abs(best - startOffset) ? idx : best;
+        }, candidates[0]);
+    }
+
+    private findBlockStart(markdown: string, blocks: string[], blockIndex: number): number {
+        let cursor = 0;
+        for (let i = 0; i <= blockIndex; i++) {
+            const idx = markdown.indexOf(blocks[i], cursor);
+            if (idx < 0) { return -1; }
+            if (i === blockIndex) { return idx; }
+            cursor = idx + blocks[i].length;
+        }
+        return -1;
+    }
+
+    private sanitizeFootnoteComment(comment: string): string {
+        return String(comment || '').replace(/\r?\n/g, ' ').trim();
+    }
+
+    private escapeRegExp(value: string): string {
+        return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    private isFootnoteDefinitionPosition(markdown: string, index: number): boolean {
+        const lineStart = markdown.lastIndexOf('\n', index - 1) + 1;
+        return markdown.slice(lineStart, index).trim() === '';
+    }
+
+    private extractTextBeforeFootnoteRef(markdown: string, refIndex: number): string {
+        const lineStart = markdown.lastIndexOf('\n', refIndex - 1) + 1;
+        const beforeRef = markdown.slice(lineStart, refIndex).trimEnd();
+        const match = beforeRef.match(/([\p{L}\p{N}_\-\u4e00-\u9fff，。！？、；：“”‘’（）《》【】]+)$/u);
+        return match ? match[1] : beforeRef.trim();
+    }
+
+    private getBlockIndexAtOffset(markdown: string, offset: number): number {
+        const before = markdown.slice(0, offset);
+        const blocks = this.splitMarkdownToBlocks(before);
+        return Math.max(0, blocks.length - 1);
     }
 
     private extractReviewVersion(fileName: string): number {

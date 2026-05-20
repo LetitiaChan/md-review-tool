@@ -254,6 +254,71 @@ suite('FileService Test Suite', () => {
         });
     });
 
+    // ===== Markdown 脚注评论测试 =====
+
+    suite('footnote comments', () => {
+        test('应将评论写回源 Markdown 为脚注引用和定义', () => {
+            const testFilePath = path.join(testDir, 'test-footnote-comment.md');
+            fs.writeFileSync(testFilePath, '# 标题\n\n这是需要评论的句子。', 'utf-8');
+
+            const result = fileService.addFootnoteComment(testFilePath, {
+                selectedText: '这是需要评论的句子',
+                comment: '这里需要补充背景',
+                blockIndex: 1,
+                startOffset: 0,
+                endOffset: 9
+            });
+
+            assert.strictEqual(result.success, true);
+            assert.strictEqual(result.footnoteId, 'mdhr-1');
+
+            const saved = fs.readFileSync(testFilePath, 'utf-8');
+            assert.ok(saved.includes('这是需要评论的句子[^mdhr-1]。'), '正文应插入脚注引用');
+            assert.ok(saved.includes('[^mdhr-1]: MDHR-COMMENT: 这里需要补充背景'), '文末应插入脚注定义');
+        });
+
+        test('已有 mdhr 脚注时应使用下一个编号', () => {
+            const testFilePath = path.join(testDir, 'test-footnote-next-id.md');
+            fs.writeFileSync(testFilePath, [
+                '第一段[^mdhr-1]',
+                '',
+                '[^mdhr-1]: MDHR-COMMENT: 旧评论'
+            ].join('\n'), 'utf-8');
+
+            const result = fileService.addFootnoteComment(testFilePath, {
+                selectedText: '第一段',
+                comment: '新评论',
+                blockIndex: 0,
+                startOffset: 0,
+                endOffset: 3
+            });
+
+            assert.strictEqual(result.success, true);
+            assert.strictEqual(result.footnoteId, 'mdhr-2');
+
+            const saved = fs.readFileSync(testFilePath, 'utf-8');
+            assert.ok(saved.includes('[^mdhr-2]: MDHR-COMMENT: 新评论'), '应追加新的脚注定义');
+        });
+
+        test('应从源 Markdown 脚注恢复评论批注', () => {
+            const markdown = [
+                '# 标题',
+                '',
+                '这是需要评论的句子[^mdhr-1]。',
+                '',
+                '[^mdhr-1]: MDHR-COMMENT: 这里需要补充背景'
+            ].join('\n');
+
+            const annotations = fileService.extractFootnoteComments(markdown);
+
+            assert.strictEqual(annotations.length, 1);
+            assert.strictEqual(annotations[0].type, 'comment');
+            assert.strictEqual(annotations[0].footnoteId, 'mdhr-1');
+            assert.strictEqual(annotations[0].comment, '这里需要补充背景');
+            assert.strictEqual(annotations[0].selectedText, '这是需要评论的句子');
+        });
+    });
+
     // ===== saveAnnotationImage 测试 =====
 
     suite('saveAnnotationImage', () => {

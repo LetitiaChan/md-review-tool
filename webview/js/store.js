@@ -225,6 +225,37 @@ const Store = (() => {
         console.log('[Store] 从 .review 恢复批阅记录:', fileName, '评审版本:', data.reviewVersion, '批注数:', data.annotations.length);
     }
 
+    function restoreFootnoteComments(footnoteComments) {
+        if (!Array.isArray(footnoteComments) || footnoteComments.length === 0) {
+            return false;
+        }
+        const existing = new Set(data.annotations
+            .map(a => a.footnoteId)
+            .filter(Boolean));
+        let changed = false;
+        footnoteComments.forEach(comment => {
+            if (!comment || !comment.footnoteId || existing.has(comment.footnoteId)) {
+                return;
+            }
+            data.annotations.push({
+                ...comment,
+                id: data.nextId++,
+                timestamp: new Date().toISOString(),
+                images: Array.isArray(comment.images) ? comment.images : []
+            });
+            existing.add(comment.footnoteId);
+            changed = true;
+        });
+        if (changed) {
+            data.annotations.sort((a, b) => {
+                if (a.blockIndex !== b.blockIndex) return a.blockIndex - b.blockIndex;
+                return (a.startOffset || 0) - (b.startOffset || 0);
+            });
+            save();
+        }
+        return changed;
+    }
+
     /**
      * 强制升级版本号（用于"关闭期间源文件被修改"场景）
      * 场景：webview 关闭时磁盘上 md 文件被外部修改，重新打开时 webview 检测到
@@ -265,6 +296,7 @@ const Store = (() => {
         getFileHash, setFileHash, getDocVersion, setDocVersion,
         getSourceFilePath, getSourceDir, getRelPath,
         archiveCurrentRecord, getArchivedRecords, restoreFromReviewRecord,
+        restoreFootnoteComments,
         forceBumpVersion,
         setRawMarkdown
     };
