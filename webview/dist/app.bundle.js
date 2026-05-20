@@ -170,6 +170,7 @@
         "modal.comment.placeholder": "\u8F93\u5165\u4F60\u7684\u8BC4\u8BBA...",
         "modal.comment.image_label": "\u63D2\u5165\u56FE\u7247\uFF08\u53EF\u9009\uFF09\uFF1A",
         "modal.comment.image_hint": "\u70B9\u51FB\u3001\u62D6\u62FD\u6216 Ctrl+V \u7C98\u8D34\u56FE\u7247",
+        "modal.comment.as_footnote": "\u5199\u5165\u6E90 Markdown \u811A\u6CE8",
         "modal.comment.cancel": "\u53D6\u6D88",
         "modal.comment.submit": "\u63D0\u4EA4\u8BC4\u8BBA",
         // ===== 插入弹窗 =====
@@ -685,6 +686,7 @@
         "modal.comment.placeholder": "Enter your comment...",
         "modal.comment.image_label": "Insert image (optional):",
         "modal.comment.image_hint": "Click, drag, or Ctrl+V to paste image",
+        "modal.comment.as_footnote": "Write to source Markdown footnote",
         "modal.comment.cancel": "Cancel",
         "modal.comment.submit": "Submit Comment",
         // ===== Insert Modal =====
@@ -1449,6 +1451,34 @@
       save();
       console.log("[Store] \u4ECE .review \u6062\u590D\u6279\u9605\u8BB0\u5F55:", fileName, "\u8BC4\u5BA1\u7248\u672C:", data.reviewVersion, "\u6279\u6CE8\u6570:", data.annotations.length);
     }
+    function restoreFootnoteComments(footnoteComments) {
+      if (!Array.isArray(footnoteComments) || footnoteComments.length === 0) {
+        return false;
+      }
+      const existing = new Set(data.annotations.map((a) => a.footnoteId).filter(Boolean));
+      let changed = false;
+      footnoteComments.forEach((comment) => {
+        if (!comment || !comment.footnoteId || existing.has(comment.footnoteId)) {
+          return;
+        }
+        data.annotations.push({
+          ...comment,
+          id: data.nextId++,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+          images: Array.isArray(comment.images) ? comment.images : []
+        });
+        existing.add(comment.footnoteId);
+        changed = true;
+      });
+      if (changed) {
+        data.annotations.sort((a, b) => {
+          if (a.blockIndex !== b.blockIndex) return a.blockIndex - b.blockIndex;
+          return (a.startOffset || 0) - (b.startOffset || 0);
+        });
+        save();
+      }
+      return changed;
+    }
     function forceBumpVersion(fromVersion, markdown, docVersion) {
       data.reviewVersion = (fromVersion || 1) + 1;
       data.rawMarkdown = markdown;
@@ -1486,6 +1516,7 @@
       archiveCurrentRecord,
       getArchivedRecords,
       restoreFromReviewRecord,
+      restoreFootnoteComments,
       forceBumpVersion,
       setRawMarkdown
     };
@@ -3766,12 +3797,22 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
         document.getElementById("selectedTextPreview").textContent = ann.selectedText;
         document.getElementById("commentText").value = ann.comment || "";
+        const footnoteCheckbox = document.getElementById("commentAsFootnote");
+        if (footnoteCheckbox) {
+          footnoteCheckbox.checked = false;
+          footnoteCheckbox.disabled = true;
+        }
         document.getElementById("commentModalTitle").textContent = t("modal.comment.edit_title");
       } else {
         if (!currentSelection) return;
         pendingImages = [];
         document.getElementById("selectedTextPreview").textContent = currentSelection.text;
         document.getElementById("commentText").value = "";
+        const footnoteCheckbox = document.getElementById("commentAsFootnote");
+        if (footnoteCheckbox) {
+          footnoteCheckbox.checked = false;
+          footnoteCheckbox.disabled = false;
+        }
         document.getElementById("commentModalTitle").textContent = t("modal.comment.title");
       }
       renderImagePreviews();
@@ -3784,7 +3825,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       currentSelection = null;
       editingAnnotationId = null;
     }
-    function submitComment() {
+    async function submitComment() {
       const comment = document.getElementById("commentText").value.trim();
       if (!comment && pendingImages.length === 0) {
         document.getElementById("commentText").focus();
@@ -3797,6 +3838,35 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         });
       } else {
         if (!currentSelection) return;
+        let footnoteId = "";
+        const asFootnote = document.getElementById("commentAsFootnote")?.checked;
+        if (asFootnote) {
+          try {
+            const data = Store.getData();
+            const sourceFile = data.sourceFilePath || data.fileName;
+            const result = await _callHost("addFootnoteComment", {
+              sourceFile,
+              annotation: {
+                selectedText: currentSelection.text,
+                comment,
+                blockIndex: currentSelection.blockIndex,
+                startOffset: currentSelection.startOffset,
+                endOffset: currentSelection.endOffset
+              }
+            });
+            if (!result || !result.success) {
+              console.warn("[annotations] \u811A\u6CE8\u8BC4\u8BBA\u5199\u5165\u5931\u8D25:", result && result.error);
+              return;
+            }
+            footnoteId = result.footnoteId || "";
+            if (typeof result.content === "string") {
+              Store.setRawMarkdown(result.content);
+            }
+          } catch (e) {
+            console.warn("[annotations] \u811A\u6CE8\u8BC4\u8BBA\u5199\u5165\u5F02\u5E38:", e);
+            return;
+          }
+        }
         Store.addAnnotation({
           type: "comment",
           selectedText: currentSelection.text,
@@ -3805,6 +3875,8 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           startOffset: currentSelection.startOffset,
           endOffset: currentSelection.endOffset,
           comment,
+          footnoteId,
+          source: footnoteId ? "footnote" : "",
           images: [...pendingImages]
         });
       }
@@ -4150,6 +4222,13 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     function refreshView() {
       const data = Store.getData();
       Renderer.renderBlocks(blocks, data.annotations);
+      if (typeof globalThis.mdReviewRunPostRenderEffects === "function") {
+        try {
+          globalThis.mdReviewRunPostRenderEffects();
+        } catch (e) {
+          console.warn("[annotations] \u540E\u6E32\u67D3\u5904\u7406\u5931\u8D25:", e);
+        }
+      }
       renderAnnotationsList();
       updateToolbarState();
       if (globalThis.Exporter && Exporter.triggerAutoSave) {
@@ -5350,6 +5429,9 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
             loadDocument(data.name, data.content, true, void 0, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
             requestImageUris(data.content, data.sourceDir);
             Store.forceBumpVersion(matchedRecord.reviewVersion || 1, data.content, data.docVersion);
+            if (Store.restoreFootnoteComments(data.footnoteComments || [])) {
+              refreshCurrentView();
+            }
             if (Exporter && Exporter.triggerAutoSave) {
               Exporter.triggerAutoSave();
             }
@@ -5360,6 +5442,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           loadDocument(data.name, data.content, true, void 0, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
           requestImageUris(data.content, data.sourceDir);
           Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
+          Store.restoreFootnoteComments(data.footnoteComments || []);
           const newBlocks = Renderer.parseMarkdown(data.content);
           Renderer.renderBlocks(newBlocks, Store.getAnnotations());
           renderMathAndMermaid();
@@ -5376,6 +5459,9 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         console.warn("[App] \u63A8\u9001\u6062\u590D\u6279\u9605\u8BB0\u5F55\u5931\u8D25:", e);
       }
       loadDocument(data.name, data.content, true, void 0, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
+      if (Store.restoreFootnoteComments(data.footnoteComments || [])) {
+        refreshCurrentView();
+      }
       requestImageUris(data.content, data.sourceDir);
     }
     async function init() {
@@ -5449,6 +5535,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           updateEditStatus("modified", t("notification.unsaved"));
         }
       };
+      globalThis.mdReviewRunPostRenderEffects = renderMathAndMermaid;
       setupRefreshButton();
       const btnToggleRich = document.getElementById("btnToggleRich");
       if (btnToggleRich && globalThis.EditMode) {

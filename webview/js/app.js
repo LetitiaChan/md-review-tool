@@ -130,6 +130,9 @@ export function initApp() {
                     loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
                     requestImageUris(data.content, data.sourceDir);
                     Store.forceBumpVersion(matchedRecord.reviewVersion || 1, data.content, data.docVersion);
+                    if (Store.restoreFootnoteComments(data.footnoteComments || [])) {
+                        refreshCurrentView();
+                    }
                     if (Exporter && Exporter.triggerAutoSave) { Exporter.triggerAutoSave(); }
                     showNotification(t('notification.stale_content_bumped', { version: Store.getData().reviewVersion }));
                     console.log('[App] 批阅记录过期 (' + staleCheck.reason + ')，已升级到 v' + Store.getData().reviewVersion);
@@ -140,6 +143,7 @@ export function initApp() {
                 loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
                 requestImageUris(data.content, data.sourceDir);
                 Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
+                Store.restoreFootnoteComments(data.footnoteComments || []);
                 const newBlocks = Renderer.parseMarkdown(data.content);
                 Renderer.renderBlocks(newBlocks, Store.getAnnotations());
                 renderMathAndMermaid();
@@ -157,6 +161,9 @@ export function initApp() {
         }
         // 无批阅记录时，正常加载
         loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
+        if (Store.restoreFootnoteComments(data.footnoteComments || [])) {
+            refreshCurrentView();
+        }
         requestImageUris(data.content, data.sourceDir);
     }
 
@@ -257,6 +264,9 @@ export function initApp() {
                 updateEditStatus('modified', t('notification.unsaved'));
             }
         };
+        // 暴露统一后渲染处理给 annotations.js。批注刷新会重建文档 DOM，
+        // 需要重新运行 Mermaid/KaTeX/PlantUML/Graphviz 和代码块事件绑定。
+        globalThis.mdReviewRunPostRenderEffects = renderMathAndMermaid;
 
 
         // ===== 刷新按钮 + 三策略弹出菜单 =====

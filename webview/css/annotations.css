@@ -135,6 +135,20 @@
     background: var(--insert-light);
 }
 
+.checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 14px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.checkbox-option input {
+    margin: 0;
+}
+
 .annotation-index {
     font-size: 11px;
     color: var(--text-light);

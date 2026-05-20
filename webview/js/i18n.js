@@ -180,6 +180,7 @@ window.I18n = (() => {
             'modal.comment.placeholder': '输入你的评论...',
             'modal.comment.image_label': '插入图片（可选）：',
             'modal.comment.image_hint': '点击、拖拽或 Ctrl+V 粘贴图片',
+            'modal.comment.as_footnote': '写入源 Markdown 脚注',
             'modal.comment.cancel': '取消',
             'modal.comment.submit': '提交评论',
 
@@ -718,6 +719,7 @@ window.I18n = (() => {
             'modal.comment.placeholder': 'Enter your comment...',
             'modal.comment.image_label': 'Insert image (optional):',
             'modal.comment.image_hint': 'Click, drag, or Ctrl+V to paste image',
+            'modal.comment.as_footnote': 'Write to source Markdown footnote',
             'modal.comment.cancel': 'Cancel',
             'modal.comment.submit': 'Submit Comment',
 

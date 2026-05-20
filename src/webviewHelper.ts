@@ -162,6 +162,15 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
                 await ctx.saveFileImpl(payload.filePath, payload.content, requestId);
                 break;
             }
+            case 'addFootnoteComment': {
+                try {
+                    const result = ctx.fileService.addFootnoteComment(payload.sourceFile, payload.annotation);
+                    ctx.postMessage({ type: 'footnoteCommentSaved', payload: result, requestId });
+                } catch (e: any) {
+                    ctx.postMessage({ type: 'footnoteCommentSaved', payload: { success: false, error: e.message }, requestId });
+                }
+                break;
+            }
             case 'saveReview': {
                 try {
                     const result = ctx.fileService.saveReview(payload.fileName, payload.content);
