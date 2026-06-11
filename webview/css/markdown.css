@@ -234,6 +234,42 @@
     color: #cdd6f4;
     font-size: 13px;
     font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+}
+
+.fm-header:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.fm-toggle-arrow {
+    font-size: 10px;
+    transition: transform 0.2s ease;
+    display: inline-block;
+    color: #6c7086;
+}
+
+.frontmatter-card:not(.fm-collapsed) .fm-toggle-arrow {
+    transform: rotate(90deg);
+}
+
+.fm-body {
+    padding: 12px 16px;
+    overflow: hidden;
+    transition: max-height 0.25s ease, padding 0.25s ease, opacity 0.2s ease;
+    max-height: 500px;
+    opacity: 1;
+}
+
+.fm-collapsed .fm-body {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+}
+
+.fm-collapsed .fm-header {
+    border-bottom-color: transparent;
 }
 
 .fm-icon {
@@ -244,10 +280,6 @@
 .fm-title {
     color: #cdd6f4;
     letter-spacing: 0.3px;
-}
-
-.fm-body {
-    padding: 12px 16px;
 }
 
 .fm-prop {
@@ -276,6 +308,14 @@ body:not(.theme-dark) .frontmatter-card {
 body:not(.theme-dark) .fm-header {
     border-bottom-color: var(--border);
     color: var(--text);
+}
+
+body:not(.theme-dark) .fm-header:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+body:not(.theme-dark) .fm-toggle-arrow {
+    color: var(--text-light);
 }
 
 body:not(.theme-dark) .fm-title {

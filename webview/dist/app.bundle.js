@@ -2299,7 +2299,12 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
               propsHtml += `<div class="fm-prop"><span class="fm-value">${escapeHtml(line.trim())}</span></div>`;
             }
           }
-          wrapper.innerHTML = `<div class="frontmatter-card"><div class="fm-header"><span class="fm-icon">\u2699\uFE0F</span><span class="fm-title">YAML Front Matter</span></div><div class="fm-body">${propsHtml}</div></div>`;
+          wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-header"><span class="fm-toggle-arrow">\u25B6</span><span class="fm-icon">\u2699\uFE0F</span><span class="fm-title">YAML Front Matter</span></div><div class="fm-body">${propsHtml}</div></div>`;
+          const fmCard = wrapper.querySelector(".frontmatter-card");
+          const fmHeader = wrapper.querySelector(".fm-header");
+          fmHeader.addEventListener("click", () => {
+            fmCard.classList.toggle("fm-collapsed");
+          });
           container.appendChild(wrapper);
           return;
         }

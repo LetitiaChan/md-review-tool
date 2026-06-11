@@ -1085,7 +1085,12 @@ const Renderer = (() => {
                         propsHtml += `<div class="fm-prop"><span class="fm-value">${escapeHtml(line.trim())}</span></div>`;
                     }
                 }
-wrapper.innerHTML = `<div class="frontmatter-card"><div class="fm-header"><span class="fm-icon">⚙️</span><span class="fm-title">YAML Front Matter</span></div><div class="fm-body">${propsHtml}</div></div>`;
+wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-header"><span class="fm-toggle-arrow">▶</span><span class="fm-icon">⚙️</span><span class="fm-title">YAML Front Matter</span></div><div class="fm-body">${propsHtml}</div></div>`;
+                const fmCard = wrapper.querySelector('.frontmatter-card');
+                const fmHeader = wrapper.querySelector('.fm-header');
+                fmHeader.addEventListener('click', () => {
+                    fmCard.classList.toggle('fm-collapsed');
+                });
                 container.appendChild(wrapper);
                 return; // 跳过后续 marked 解析流程
             }

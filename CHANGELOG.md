@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.5] - 2026-06-11
+
+### ✨ Features
+- **Collapsible YAML Front Matter** — Front matter card now defaults to collapsed state; click the header to expand/collapse with smooth animation and arrow indicator
+
 ## [1.5.4] - 2026-05-13
 
 ### 🐛 Bug Fixes
