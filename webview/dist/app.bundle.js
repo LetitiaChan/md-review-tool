@@ -2079,7 +2079,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
         return `<li>${text}</li>`;
       };
-      marked.setOptions({ renderer, gfm: true, breaks: false });
+      marked.setOptions({ renderer, gfm: true, breaks: true });
       if (typeof markedFootnote !== "undefined") {
         marked.use(markedFootnote({ prefixId: "fn-", description: "Footnotes" }));
       }

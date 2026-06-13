@@ -845,7 +845,7 @@ const Renderer = (() => {
             return `<li>${text}</li>`;
         };
 
-        marked.setOptions({ renderer, gfm: true, breaks: false });
+        marked.setOptions({ renderer, gfm: true, breaks: true });
 
         // ===== 注册 marked-footnote 插件（处理 [^id] 引用和 [^id]: 定义） =====
         if (typeof markedFootnote !== 'undefined') {
