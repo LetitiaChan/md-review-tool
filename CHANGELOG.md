@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.6] - 2026-06-13
+
+### 🐛 Bug Fixes
+- **Enable GFM line breaks** — Single newlines in paragraphs now render as `<br>` instead of being merged into one line, matching user expectation that each line break in source produces a visible line break in preview
+
 ## [1.5.5] - 2026-06-11
 
 ### ✨ Features
