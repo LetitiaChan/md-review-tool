@@ -16,11 +16,31 @@ test-results/
 src/**/*.js
 src/**/*.js.map
 
-# AI 工具本地配置：仅忽略用户级 settings，允许追踪 aikit shim 子目录
+# AI 工具配置：追踪共享 aikit 真源与 Cursor shim，忽略本地私有项
 .claude/
-.codebuddy/
-.cursor/
 CODEBUDDY.md
+
+# CodeBuddy aikit 真源
+.codebuddy/*
+!.codebuddy/agents/
+!.codebuddy/agents/**
+!.codebuddy/commands/
+!.codebuddy/commands/**
+!.codebuddy/rules/
+!.codebuddy/rules/**
+!.codebuddy/skills/
+!.codebuddy/skills/**
+
+# Cursor aikit shim（软链到 .codebuddy）
+.cursor/*
+!.cursor/agents
+!.cursor/agents/**
+!.cursor/commands
+!.cursor/commands/**
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/skills
+!.cursor/skills/**
 
 # OpenSpec 工作流产物
 openspec/

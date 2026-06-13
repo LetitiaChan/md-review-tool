@@ -30,7 +30,7 @@ test-output*.log
 test-output*.txt
 test-out*.log
 
-# ===== AI 工具 aikit 真源 + shim（仅开发期使用，不打入发行包） =====
+# ===== AI 工具 aikit（CodeBuddy 真源 + Cursor shim，仅开发期使用，不打入发行包） =====
 .claude/**
 .codebuddy/**
 .cursor/**

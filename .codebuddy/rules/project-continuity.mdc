@@ -1,0 +1,147 @@
+---
+description: 每次会话开始时必须执行
+alwaysApply: true
+type: always
+enabled: true
+---
+
+> 🤖 读取本文件时输出：`📖 project-continuity`
+
+# Project Continuity — 跨会话上下文恢复 + 开发纪律（精简版）
+
+## 一、会话启动
+
+1. 读取 `AGENT-PROGRESS.md`（跨会话记忆：项目概要、已/待变更、活跃 change、已知坑、下次建议），内化"上次做到哪、当前阶段、有什么坑"。
+2. 运行 `git --no-pager log --oneline -5` 确认与 AGENT-PROGRESS.md 一致；发现未推送 commit → 提醒用户；发现未记录的活跃 change → 自动补记。
+
+## 二、强制 OpenSpec 工作流（最重要）
+
+> 核心：本项目采用 OpenSpec spec-driven 工作流。任何功能开发/重大修改必须走 OpenSpec，绝不跳过 spec 直接写代码。
+
+### 规则 1：变更分级（单人项目精简模式）
+
+收到"实现 XXX / 做下一个功能 / 加一个 XXX"或任何新增页面/接口/数据表/服务模块的需求时，先定级并告知理由：
+
+| 等级 | 判定 | 必需产物 |
+|------|------|----------|
+| **XS** | ≤3 源码文件 且 ≤30 行 | 不走 OpenSpec，走 Hotfix Mini-Pipeline（规则 2） |
+| **S** | ≤5 源码文件 且 ≤150 行，单一 capability，无架构影响、无新依赖 | 合并 `proposal.md`（方案要点+任务 checklist+验收标准）+ `tasks.md`；免 design.md、免新增 spec（实施记录写在 proposal 末尾） |
+| **M** | 跨模块 / 新 capability / 新依赖 / 影响外部契约 | `proposal.md` + `design.md` + `tasks.md` + `specs/<cap>/spec.md` |
+| **L** | 架构级变更（多阶段实施） | M 级全部产物 + phase 拆分为多个独立 change |
+
+> **Spec 收敛原则**：只有"预期被后续多个 change 复用的稳定契约"才进 `openspec/specs/`；一次性实施细节留在 change 的 proposal 即可，不为每个 change 都产新 spec。
+
+执行流程：定级 → 检查 `openspec/changes/` 是否已有对应 change（有且有 tasks.md → 直接 apply；有但缺 artifacts → 先 continue 补齐再 apply；没有 → 按等级创建产物后 apply。S 级只创建合并版 proposal+tasks；M/L 调 openspec-propose 创建完整提案）。
+
+### 规则 2：Hotfix 例外 + Mini-Pipeline
+
+可不走 OpenSpec 直接改的情况：typo、1-2 行明显 bug、纯样式微调、配置/注释、纯文档变更。**判定阈值：源码文件 ≤3 个 且 改动 ≤30 行**（测试文件不计入）。超阈值必须走 OpenSpec。
+
+> ⚠️ 侦查阶段（读码/分析根因/提方案/征询用户）**不触发** Hotfix 管线；管线只在**代码实际修改完成后**启动。
+
+**Hotfix Mini-Pipeline（代码改完后强制执行，不可跳过）：**
+
+- **H0 分流**：Doc-Only（仅文档/规则/进度笔记）→ 只走 H5→H6→H7，前缀 `docs:`/`chore:`；Refactor（不改外部行为）→ 全流程跳过 H3.3，前缀 `refactor:`；Bugfix/功能微调 → 完整 H1~H7。
+- **H1 影响面分析**：列出改动文件与行数、直接/间接影响、不受影响模块（作回归对照）。
+- **H2 构建**：`npm run compile`，失败修复（≤3 次重试）。
+- **H3 回归测试**：`npm test`，失败进 Auto-Fix Loop（≤3 轮），仍失败 STOP 报告。
+- **H3.3 测试补全（强制，按需分层）**：Tier 1 存在性断言（必选：API/DOM/源码关键字）+ Tier 3 任务特定断言（必选：≥1 个命名 `BT-<模块>.<序号> <描述>`）+ Tier 2 行为级断言（仅当修复涉及真实 UI 交互时需要；纯数据/状态/非交互逻辑可免，在 H7 注明"Tier 2 不适用"）。无对应测试则新增，已有则检查覆盖本次场景。补全后统一跑一次 `npm run compile && npm test`；若 H3 已全绿，可只跑新增测试（`npm test -- --grep "名"`）。
+- **H3.5 运行时 Bug 诊断（按需）**：Bug 仅运行时复现时——策略 A：插 `[DIAG]` 日志 + 测试 mock 捕获，修复后清理；策略 B：保留日志请用户复现反馈。H7 注明诊断方式与结论。
+- **H3.7 更新 CHANGELOG.md（强制）**：英文撰写（emoji 保留），格式 `## [x.y.z] - YYYY-MM-DD` + 分类。未升版本号则追加当前条目，已升则新建条目。纯内部文档变更可跳过。
+- **H4 打包**：`npx vsce package --no-dependencies`（失败报告但不阻塞）。
+- **H5 Commit**：`git add -A && git commit -m "fix: <简述>"`。
+- **H6 Push**：`git push`（失败报告等待用户）。
+- **H7 Hotfix 报告**：输出结果表（分流/影响面/构建/回归/测试补全/诊断/CHANGELOG/打包/Commit/Push）。Doc-Only 只显示分流→Commit→Push；Refactor 不显示测试补全、诊断两行。
+
+> Mini-Pipeline 与全管线区别：无 verify/archive/spec-sync/AGENT-PROGRESS 更新，但有完整 构建→影响分析→回归→打包→commit→push。
+> 连续 Hotfix 可累积，最后统一走一次管线；累积超阈值（3 文件/30 行）转 OpenSpec。
+
+### 规则 3：优先级意识
+
+对照 AGENT-PROGRESS.md 的优先级建议：与建议一致 → 直接执行；不同 → 简短提醒后服从用户决定。
+
+### 规则 4：禁止行为
+
+- ❌ 收到"实现 X"直接写代码（须走 OpenSpec，XS 除外）
+- ❌ 不看 changes 目录就创建重复 change；跳过 proposal/design 直接写 tasks
+- ❌ 实现完不跑测试就宣布完成；archive 时遗漏 spec sync
+- ❌ 未归档未 commit 就开始下一变更；管线执行到一半开始新工作（须走完或显式刹车报告）
+- ❌ Git commit message 描述用中文；对同一文件同一轮发起多次并行 replace（须串行）
+- ❌ 测试只写 Tier 1 不写 Tier 3（Tier 1+3 必选，Tier 2 按交互需要补）
+- ❌ 功能增删改后不更新文档（见规则 6）
+- ❌ 在侦查/分析阶段就启动 Hotfix 管线
+
+### 规则 4.5：阶段完成自检（防提前收尾）
+
+每完成一阶段立即自检：回溯用户原始请求确认"完成"边界（"完成 X"→全管线；"propose X"→只需 propose）。未达到 → 立即继续，不输出总结、不暗示用户手动触发；已达到 → 输出最终报告 + 更新 AGENT-PROGRESS.md。禁止管线中途输出"会话总结"或因上下文长而收尾。
+
+### 规则 5：归档前置检查（软提醒）
+
+每次 propose/apply/新功能前：扫描 `openspec/changes/` 非 archive 目录，对存在 tasks.md 且全部 `[x]` 完成的变更 → 提醒"已实施未归档，建议先归档"，默认自动执行归档后半段（build→test→archive→commit）再继续；用户要求"先做新的"则尊重，但会话结束前必须统一归档。发现活跃 change 未记入 AGENT-PROGRESS.md 则自动补记。
+**硬底线**：单次会话结束前，所有"任务 100% 完成"的 change 必须全部归档，不得跨会话遗留。
+
+### 规则 6：文档同步纪律
+
+任何用户可感知的功能变更（新增/修改/删除）必须同步更新文档：`README.md` 相关章节、`docs/` 用户指南、`package.json` 的 `contributes`。时机：全管线在测试通过后、打包前；Hotfix 在 H3.3 后、H4 前（并在 H3.7 更新 CHANGELOG）。判定：纯内部重构/修复文档已描述的预期行为 → 免；新功能/功能变更/删除/修复后行为与文档不符 → 必须更新。
+
+### 规则 7：tasks.md 简化
+
+tasks 服务于"追踪进度"，非施工蓝图。每个 task ≈ 1 次可提交的实际动作；层级不超过 2 级（除非 L 级）；不把"分析/设计/思考"作为独立 task（放 proposal/design）。禁止过度分层（T10→T10.1→T10.1.1→BT-...）。
+
+### 规则 8：OpenSpec 制品中文书写
+
+`openspec/changes/` 与 `openspec/specs/` 下所有制品（proposal/design/tasks/spec）及 AGENT-PROGRESS.md 描述统一用中文。不适用：Git commit message、CHANGELOG.md、代码注释。
+
+### 规则 9：批量执行 todo.md
+
+触发词："做todo"/"实施 todo"/"开始 todo"/"执行 todo 清单"/"做完 todo"。流程：读 `todo.md`，按顺序逐项处理 `- [ ]`（编码→compile→test，全通过才把 `- [ ]` 改 `- [x]`，继续下一项）。失败处理：无后续依赖 → 记录失败备注后跳过；有后续依赖 → 该项保持 `- [ ]` 加备注，下游标"⚠️ 因前置失败阻塞"，继续无关任务。仅"编码+测试均通过"才算完成。最后输出执行报告表（完成/失败/阻塞）。
+
+## 三、会话结束
+
+完成 apply/propose/重大修改后，**主动**更新 AGENT-PROGRESS.md：追加当日记录、更新变更状态、更新"已知问题"与"下次会话建议"。
+
+## 四、项目级措辞规则覆盖（output-phrasing-engineering 降级）
+
+> 本节为项目级覆盖条款，仅在本项目（md-review-tool）内生效，优先于用户级 output-phrasing-engineering skill 的对应要求。目的：本项目已有 OpenSpec/Hotfix 四阶段管线作为质量保障，避免双重重型流程叠加。
+
+- **缓存/归档免除**：本项目内**不要求**写入 `.analysis-cache.md`、不要求生成 `.analysis-archive/` 归档文件。四阶段思考（侦察/分析/执行/验收）保留为推理质量手段，但**不强制持久化到文件**。
+- **流程合并**：output-phrasing 的"侦察→分析→执行→验收"与本项目 OpenSpec/Hotfix 管线**视为同一套流程**，不重复执行。走 OpenSpec 全管线或 Hotfix Mini-Pipeline 即视为已满足四阶段要求，无需再单独输出四阶段结构块。
+- **decision_point 简化**：执行期遇意外问题时，可用简短自然语言说明问题+方案选择即可，**不强制**三方案对比与结构化 decision_point 块。
+- **措辞原则保留**：output-phrasing 的反降级措辞原则（不走捷径、不虚假完成、不省略关联文件、不擅自缩减范围）**继续有效**——这是质量底线，不在降级范围内。
+
+## 项目关键文件索引
+
+| 文件 | 用途 |
+|------|------|
+| `AGENT-PROGRESS.md` | 跨会话记忆（最重要） |
+| `openspec/changes/` | OpenSpec 变更管理 |
+| `openspec/specs/` | 能力规格库 |
+| `src/` | 扩展核心代码 |
+| `webview/` | Webview 前端 |
+| `CODEBUDDY.md` | 项目入口文件（本体说明 + 工作流摘要） |
+
+## 开发环境
+
+- OS：Windows / PowerShell (Core)
+- 技术栈：TypeScript + VS Code Extension API + Mocha + marked + ProseMirror + esbuild
+- 构建：`npm run compile`（tsc + esbuild webview bundle）；工作流：OpenSpec，通过 `/opsx:*` 命令驱动
+
+## 发布规则（双市场，缺一不可）
+
+用户说"发布"时同时发布 VSCode Marketplace 与 Open VSX：
+1. `npx vsce package --no-dependencies`
+2. `npx vsce publish --no-dependencies`
+3. `npx ovsx publish <.vsix> -p $env:OVSX_TOKEN`
+4. 输出两个市场安装链接。两个都成功才算"发布完成"，任一失败须报告并修复。
+
+## 命令执行策略
+
+所有命令（构建/测试/打包/Git commit·push/装依赖等）直接执行，无需逐步确认。
+
+## Git 规范
+
+- Commit message：`feat:` / `fix:` / `refactor:` / `chore:` + 描述（描述用英文）。
+
+## 设计理念
+
+灵感来自 Anthropic "Effective Harnesses for Long-Running Agents"，针对 Agent 跨会话 8 大失败模式：one-shot 倾向（读 AGENT-PROGRESS 恢复上下文）、提前宣称完成（OpenSpec task list 追踪真实进度）、缺乏跨会话记忆（文件持久化进度笔记）、脏环境（构建检查）、跳过结构化流程（强制 OpenSpec）、管线不完整（规则 5 归档门禁）、提前退出（规则 4.5 自检）、未验证 hotfix（规则 2 Mini-Pipeline）。

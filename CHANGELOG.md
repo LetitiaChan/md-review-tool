@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 ### 🐛 Bug Fixes
 - **Enable GFM line breaks** — Single newlines in paragraphs now render as `<br>` instead of being merged into one line, matching user expectation that each line break in source produces a visible line break in preview
 
+### 📦 Package Size Optimization
+- **Exclude AI workflow files from VSIX** — Keep CodeBuddy/Cursor AI workflow files available for repository collaboration while excluding `.claude/**`, `.codebuddy/**`, `.cursor/**`, `todo.md`, and `.review/**` from packaged extension artifacts
+
 ## [1.5.5] - 2026-06-11
 
 ### ✨ Features
