@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.7] - 2026-09-09
+
+### 🐛 Bug Fixes
+- **Preserve annotations after source changes** — Re-anchor annotations against the updated Markdown instead of clearing them when the source file changes
+- **Keep unresolved annotations visible** — Mark annotations as unresolved when their target text is missing or ambiguous, preserving them for manual review
+- **Prevent incorrect annotation targeting** — Handle repeated text, cross-block selections, and same-name files in different directories without silently moving annotations
+- **Exclude unresolved annotations from AI apply** — Avoid generating executable AI instructions with stale block indexes and offsets
+
+### 🧪 Tests
+- **Add annotation re-anchoring regression coverage** — Cover source updates, closed-file changes, duplicate anchors, cross-block anchors, same-name files, and unresolved exports
+
 ## [1.5.6] - 2026-06-13
 
 ### 🐛 Bug Fixes
