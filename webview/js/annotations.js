@@ -832,16 +832,19 @@ const Annotations = (() => {
             const insertHtml = (ann.type === 'insert' && ann.insertContent)
                 ? `<div class="annotation-insert-content">📝 ${escapeHtml(ann.insertContent)}</div>`
                 : '';
+            const locationLabel = ann.orphaned
+                ? t('annotation.unresolved')
+                : t('annotation.block_index', { index: ann.blockIndex + 1 });
             const locale = (window.I18n && window.I18n.getLocale() === 'en') ? 'en-US' : 'zh-CN';
             const time = new Date(ann.timestamp).toLocaleString(locale, {
                 month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
             });
 
             return `
-                <div class="annotation-card type-${ann.type}" data-id="${ann.id}">
+                <div class="annotation-card type-${ann.type}${ann.orphaned ? ' orphaned' : ''}" data-id="${ann.id}">
                     <div class="annotation-card-header">
                         <span class="annotation-type ${ann.type}">#${ann.id} ${typeLabel}</span>
-                        <span class="annotation-index">${t('annotation.block_index', { index: ann.blockIndex + 1 })}</span>
+                        <span class="annotation-index">${locationLabel}</span>
                     </div>
                     <div class="annotation-selected-text">${ann.type === 'insert' ? (ann.insertPosition === 'before' ? t('annotation.insert_before_label') : t('annotation.insert_after_label')) : ''}${escapeHtml(ann.selectedText)}</div>
                     ${commentHtml}

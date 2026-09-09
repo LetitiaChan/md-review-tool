@@ -88,7 +88,7 @@ export function initApp() {
      * 思路 B（辅助信号）：批阅记录 docVersion 与当前源文件 docVersion 不一致 → 额外佐证源文件版本已前进
      *
      * 只要 A 命中（主判据）即判定过期；B 用于补充日志/提示，不单独作为过期判据（避免 docVersion 未填写时误伤）。
-     * 返回：{ stale: boolean, reason: string } — stale=true 表示应触发 forceBumpVersion 而非 restoreFromReviewRecord
+     * 返回：{ stale: boolean, reason: string } — stale=true 表示应升级版本并重新定位已有批注
      */
     function _isRecordStaleOnOpen(record, currentContent, currentDocVersion) {
         // 旧格式批阅记录没有 rawMarkdown 字段，无法做 A 判据 → 保守放行（不视为过期）
@@ -126,16 +126,24 @@ export function initApp() {
                 // 思路 A + B：检测批阅记录是否已过期（关闭期间源文件被外部修改）
                 const staleCheck = _isRecordStaleOnOpen(matchedRecord, data.content, data.docVersion);
                 if (staleCheck.stale) {
-                    // 过期 → 强制升级版本号，不恢复旧批注（否则锚点已失效）
+                    // 源文件已变化：升级版本，但保留旧批注并按 selectedText 重新定位。
                     loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
                     requestImageUris(data.content, data.sourceDir);
-                    Store.forceBumpVersion(matchedRecord.reviewVersion || 1, data.content, data.docVersion);
+                    Store.forceBumpVersion(
+                        matchedRecord.reviewVersion || 1,
+                        data.content,
+                        data.docVersion,
+                        matchedRecord.annotations || []
+                    );
+                    const reanchorResult = Store.reanchorAnnotations(Renderer.parseMarkdown(data.content));
                     if (Store.restoreFootnoteComments(data.footnoteComments || [])) {
-                        refreshCurrentView();
+                        Store.reanchorAnnotations(Renderer.parseMarkdown(data.content));
                     }
+                    refreshCurrentView();
                     if (Exporter && Exporter.triggerAutoSave) { Exporter.triggerAutoSave(); }
                     showNotification(t('notification.stale_content_bumped', { version: Store.getData().reviewVersion }));
-                    console.log('[App] 批阅记录过期 (' + staleCheck.reason + ')，已升级到 v' + Store.getData().reviewVersion);
+                    console.log('[App] 批阅记录过期 (' + staleCheck.reason + ')，已升级到 v'
+                        + Store.getData().reviewVersion + '；批注重定位：', reanchorResult);
                     return;
                 }
                 // 即使最新记录批注为空（v>1 空占位），也要 restoreFromReviewRecord
@@ -765,6 +773,9 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
         fileNameEl.title = fileRelPath;
 
         blocks = Renderer.parseMarkdown(markdown);
+        if (isNew && Store.getAnnotations().length > 0) {
+            Store.reanchorAnnotations(blocks);
+        }
         const data = Store.getData();
         Renderer.renderBlocks(blocks, data.annotations);
 

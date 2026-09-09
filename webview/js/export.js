@@ -129,13 +129,17 @@ showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
             lines.push(`### 指令 ${num}${ann.type === 'comment' ? '（修改）' : ann.type === 'delete' ? '（删除）' : insertLabel}`);
             lines.push(``);
 
+            if (ann.orphaned) {
+                lines.push(`- **定位状态**：未定位（源文件变化后无法唯一匹配，请人工确认）`);
+            }
+
             if (ann.type === 'comment') {
                 lines.push(`- **操作**：根据评论修改内容`);
-                lines.push(`- **定位块**：第 ${ann.blockIndex + 1} 块`);
-                if (blockFingerprint) {
+                if (!ann.orphaned) lines.push(`- **定位块**：第 ${ann.blockIndex + 1} 块`);
+                if (!ann.orphaned && blockFingerprint) {
                     lines.push(`- **文本锚点**：\`${blockFingerprint}\``);
                 }
-                if (ann.startOffset != null) {
+                if (!ann.orphaned && ann.startOffset != null) {
                     lines.push(`- **块内偏移**：第 ${ann.startOffset} 个字符处（startOffset=${ann.startOffset}）`);
                 }
                 lines.push(`- **目标文本**：`);
@@ -152,11 +156,11 @@ showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
                 }
             } else if (ann.type === 'delete') {
                 lines.push(`- **操作**：删除以下文本`);
-                lines.push(`- **定位块**：第 ${ann.blockIndex + 1} 块`);
-                if (blockFingerprint) {
+                if (!ann.orphaned) lines.push(`- **定位块**：第 ${ann.blockIndex + 1} 块`);
+                if (!ann.orphaned && blockFingerprint) {
                     lines.push(`- **文本锚点**：\`${blockFingerprint}\``);
                 }
-                if (ann.startOffset != null) {
+                if (!ann.orphaned && ann.startOffset != null) {
                     lines.push(`- **块内偏移**：第 ${ann.startOffset} 个字符处（startOffset=${ann.startOffset}）`);
                 }
                 lines.push(`- **要删除的文本**：`);
@@ -166,11 +170,11 @@ showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
             } else if (ann.type === 'insert') {
                 const isBefore = ann.insertPosition === 'before';
                 lines.push(`- **操作**：在指定位置${isBefore ? '前' : '后'}插入新内容`);
-                lines.push(`- **定位块**：第 ${ann.blockIndex + 1} 块`);
-                if (blockFingerprint) {
+                if (!ann.orphaned) lines.push(`- **定位块**：第 ${ann.blockIndex + 1} 块`);
+                if (!ann.orphaned && blockFingerprint) {
                     lines.push(`- **文本锚点**：\`${blockFingerprint}\``);
                 }
-                if (ann.startOffset != null) {
+                if (!ann.orphaned && ann.startOffset != null) {
                     lines.push(`- **块内偏移**：第 ${ann.startOffset} 个字符处（startOffset=${ann.startOffset}）`);
                 }
                 lines.push(`- **插入位置（在此文本之${isBefore ? '前' : '后'}）**：`);

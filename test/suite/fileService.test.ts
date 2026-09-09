@@ -484,6 +484,16 @@ suite('FileService Test Suite', () => {
             assert.strictEqual(result.message, '无有效指令');
         });
 
+        test('未定位批注不应生成可执行 AI 指令', () => {
+            const result = fileService.applyReview([{
+                type: 'comment', selectedText: '旧文本', comment: '请修改',
+                blockIndex: 0, startOffset: 0, orphaned: true
+            }], '', 'test.md');
+            assert.strictEqual(result.success, true);
+            assert.strictEqual(result.needsAi, 0);
+            assert.strictEqual(result.message, '无有效指令');
+        });
+
         test('批注目标文本不存在于源文件 → 仍应生成指令', () => {
             const testFilePath = path.join(testDir, 'test-missing-text.md');
             fs.writeFileSync(testFilePath, '# 标题\n\n实际内容', 'utf-8');

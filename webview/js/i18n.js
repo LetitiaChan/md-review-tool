@@ -441,6 +441,7 @@ window.I18n = (() => {
             'annotation.insert_after_label': '📍 在此之后插入：',
             'annotation.edit': '编辑',
             'annotation.block_index': '块 {index}',
+            'annotation.unresolved': '未定位',
             'annotation.image_alt': '附图',
             'annotation.preview_alt': '预览{index}',
 
@@ -980,6 +981,7 @@ window.I18n = (() => {
             'annotation.insert_after_label': '📍 Insert after:',
             'annotation.edit': 'Edit',
             'annotation.block_index': 'Block {index}',
+            'annotation.unresolved': 'Unresolved',
             'annotation.image_alt': 'Image',
             'annotation.preview_alt': 'Preview {index}',
 

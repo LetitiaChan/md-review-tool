@@ -245,9 +245,11 @@ export class FileService {
         const rbaseName = this.reviewBaseName(safeName, relPath);
 
         const validAnnotations = annotations.filter((a: any) =>
-            (a.type === 'comment') ||
-            (a.type === 'delete' && a.selectedText) ||
-            (a.type === 'insert' && a.insertContent && a.selectedText)
+            a.orphaned !== true && (
+                (a.type === 'comment') ||
+                (a.type === 'delete' && a.selectedText) ||
+                (a.type === 'insert' && a.insertContent && a.selectedText)
+            )
         );
 
 

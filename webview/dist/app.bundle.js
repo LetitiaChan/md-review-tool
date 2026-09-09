@@ -422,6 +422,7 @@
         "annotation.insert_after_label": "\u{1F4CD} \u5728\u6B64\u4E4B\u540E\u63D2\u5165\uFF1A",
         "annotation.edit": "\u7F16\u8F91",
         "annotation.block_index": "\u5757 {index}",
+        "annotation.unresolved": "\u672A\u5B9A\u4F4D",
         "annotation.image_alt": "\u9644\u56FE",
         "annotation.preview_alt": "\u9884\u89C8{index}",
         // ===== AI 修复 =====
@@ -938,6 +939,7 @@
         "annotation.insert_after_label": "\u{1F4CD} Insert after:",
         "annotation.edit": "Edit",
         "annotation.block_index": "Block {index}",
+        "annotation.unresolved": "Unresolved",
         "annotation.image_alt": "Image",
         "annotation.preview_alt": "Preview {index}",
         // ===== AI Fix =====
@@ -1327,7 +1329,7 @@
       save();
     }
     function setFile(name, markdown, fileHash, docVersion, sourceFilePath, sourceDir, relPath, pathHash) {
-      const sameFile = data.fileName === name;
+      const sameFile = pathHash && data.pathHash ? pathHash === data.pathHash : sourceFilePath && data.sourceFilePath ? sourceFilePath === data.sourceFilePath : relPath && data.relPath ? relPath === data.relPath : data.fileName === name;
       const hashChanged = sameFile && data.fileHash && fileHash && data.fileHash !== fileHash;
       const contentChanged = sameFile && !fileHash && data.rawMarkdown && markdown && data.rawMarkdown.trim() !== markdown.trim();
       if (hashChanged || contentChanged) {
@@ -1339,11 +1341,9 @@
         data.sourceDir = sourceDir || data.sourceDir || "";
         data.relPath = relPath || data.relPath || "";
         data.pathHash = pathHash || data.pathHash || "";
-        data.annotations = [];
-        data.nextId = 1;
         data.reviewVersion = (data.reviewVersion || 1) + 1;
         data.createdAt = (/* @__PURE__ */ new Date()).toISOString();
-      } else if (data.fileName !== name) {
+      } else if (!sameFile) {
         data.fileName = name;
         data.rawMarkdown = markdown;
         data.fileHash = fileHash || "";
@@ -1479,15 +1479,84 @@
       }
       return changed;
     }
-    function forceBumpVersion(fromVersion, markdown, docVersion) {
+    function normalizeAnchorText(text) {
+      return String(text || "").replace(/^%%FRONTMATTER%%\n/, "").replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/<[^>]+>/g, " ").replace(/^\s{0,3}(?:#{1,6}\s+|>\s*|[-*+]\s+|\d+[.)]\s+)/gm, "").replace(/[*_~`]/g, "").replace(/\s+/g, " ").trim();
+    }
+    function reanchorAnnotations(newBlocks) {
+      if (!Array.isArray(newBlocks)) {
+        return { resolved: 0, unresolved: data.annotations.length };
+      }
+      const searchableBlocks = newBlocks.map(normalizeAnchorText);
+      const blockRanges = [];
+      let searchableDocument = "";
+      searchableBlocks.forEach((blockText, blockIndex) => {
+        if (blockIndex > 0) searchableDocument += " ";
+        const start = searchableDocument.length;
+        searchableDocument += blockText;
+        blockRanges.push({ start, end: searchableDocument.length });
+      });
+      let resolved = 0;
+      let unresolved = 0;
+      data.annotations.forEach((annotation) => {
+        const anchor = normalizeAnchorText(annotation.selectedText);
+        if (!anchor) {
+          annotation.orphaned = true;
+          unresolved++;
+          return;
+        }
+        const candidates = [];
+        let matchAt = searchableDocument.indexOf(anchor);
+        while (matchAt >= 0) {
+          const matchEnd = matchAt + anchor.length;
+          const blockIndex = blockRanges.findIndex((range) => matchAt >= range.start && matchAt < range.end);
+          const endBlockIndex = blockRanges.findIndex((range) => matchEnd - 1 >= range.start && matchEnd - 1 < range.end);
+          if (blockIndex >= 0 && endBlockIndex >= blockIndex) {
+            candidates.push({
+              blockIndex,
+              endBlockIndex,
+              offset: matchAt - blockRanges[blockIndex].start,
+              endOffset: matchEnd - blockRanges[endBlockIndex].start
+            });
+          }
+          matchAt = searchableDocument.indexOf(anchor, matchAt + 1);
+        }
+        if (candidates.length === 0) {
+          annotation.orphaned = true;
+          unresolved++;
+          return;
+        }
+        const oldBlockIndex = Number.isInteger(annotation.blockIndex) ? annotation.blockIndex : 0;
+        const oldStartOffset = Number.isInteger(annotation.startOffset) ? annotation.startOffset : 0;
+        const oldPositionCandidate = candidates.find(
+          (candidate) => candidate.blockIndex === oldBlockIndex && candidate.offset === oldStartOffset
+        );
+        const best = oldPositionCandidate || (candidates.length === 1 ? candidates[0] : null);
+        if (!best) {
+          annotation.orphaned = true;
+          unresolved++;
+          return;
+        }
+        annotation.blockIndex = best.blockIndex;
+        annotation.endBlockIndex = best.endBlockIndex;
+        annotation.startOffset = best.offset;
+        if (annotation.type !== "insert") {
+          annotation.endOffset = best.endOffset;
+        }
+        annotation.orphaned = false;
+        resolved++;
+      });
+      save();
+      return { resolved, unresolved };
+    }
+    function forceBumpVersion(fromVersion, markdown, docVersion, annotations) {
       data.reviewVersion = (fromVersion || 1) + 1;
       data.rawMarkdown = markdown;
       if (docVersion) data.docVersion = docVersion;
-      data.annotations = [];
-      data.nextId = 1;
+      data.annotations = Array.isArray(annotations) ? annotations.map((annotation) => ({ ...annotation })) : data.annotations;
+      data.nextId = data.annotations.length > 0 ? Math.max(...data.annotations.map((annotation) => annotation.id || 0)) + 1 : 1;
       data.createdAt = (/* @__PURE__ */ new Date()).toISOString();
       save();
-      console.log("[Store] \u5173\u95ED\u671F\u95F4\u6E90\u6587\u4EF6\u53D8\u5316\uFF0C\u5F3A\u5236\u5347\u7EA7\u5230 v" + data.reviewVersion);
+      console.log("[Store] \u5173\u95ED\u671F\u95F4\u6E90\u6587\u4EF6\u53D8\u5316\uFF0C\u4FDD\u7559\u6279\u6CE8\u5E76\u5347\u7EA7\u5230 v" + data.reviewVersion);
     }
     function setRawMarkdown(markdown) {
       if (typeof markdown !== "string") return;
@@ -1517,6 +1586,7 @@
       getArchivedRecords,
       restoreFromReviewRecord,
       restoreFootnoteComments,
+      reanchorAnnotations,
       forceBumpVersion,
       setRawMarkdown
     };
@@ -4119,6 +4189,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         const imagesHtml = ann.images && ann.images.length > 0 ? `<div class="annotation-images">${ann.images.map((img) => `<img src="${getImageSrc(img)}" alt="${t("annotation.image_alt")}" data-lightbox>`).join("")}</div>` : "";
         const commentHtml = ann.comment ? `<div class="annotation-comment">${escapeHtml(ann.comment)}</div>` : "";
         const insertHtml = ann.type === "insert" && ann.insertContent ? `<div class="annotation-insert-content">\u{1F4DD} ${escapeHtml(ann.insertContent)}</div>` : "";
+        const locationLabel = ann.orphaned ? t("annotation.unresolved") : t("annotation.block_index", { index: ann.blockIndex + 1 });
         const locale = window.I18n && window.I18n.getLocale() === "en" ? "en-US" : "zh-CN";
         const time = new Date(ann.timestamp).toLocaleString(locale, {
           month: "2-digit",
@@ -4127,10 +4198,10 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           minute: "2-digit"
         });
         return `
-                <div class="annotation-card type-${ann.type}" data-id="${ann.id}">
+                <div class="annotation-card type-${ann.type}${ann.orphaned ? " orphaned" : ""}" data-id="${ann.id}">
                     <div class="annotation-card-header">
                         <span class="annotation-type ${ann.type}">#${ann.id} ${typeLabel}</span>
-                        <span class="annotation-index">${t("annotation.block_index", { index: ann.blockIndex + 1 })}</span>
+                        <span class="annotation-index">${locationLabel}</span>
                     </div>
                     <div class="annotation-selected-text">${ann.type === "insert" ? ann.insertPosition === "before" ? t("annotation.insert_before_label") : t("annotation.insert_after_label") : ""}${escapeHtml(ann.selectedText)}</div>
                     ${commentHtml}
@@ -4355,13 +4426,16 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         const insertLabel = ann.type === "insert" ? ann.insertPosition === "before" ? "\uFF08\u524D\u63D2\uFF09" : "\uFF08\u540E\u63D2\uFF09" : "";
         lines.push(`### \u6307\u4EE4 ${num}${ann.type === "comment" ? "\uFF08\u4FEE\u6539\uFF09" : ann.type === "delete" ? "\uFF08\u5220\u9664\uFF09" : insertLabel}`);
         lines.push(``);
+        if (ann.orphaned) {
+          lines.push(`- **\u5B9A\u4F4D\u72B6\u6001**\uFF1A\u672A\u5B9A\u4F4D\uFF08\u6E90\u6587\u4EF6\u53D8\u5316\u540E\u65E0\u6CD5\u552F\u4E00\u5339\u914D\uFF0C\u8BF7\u4EBA\u5DE5\u786E\u8BA4\uFF09`);
+        }
         if (ann.type === "comment") {
           lines.push(`- **\u64CD\u4F5C**\uFF1A\u6839\u636E\u8BC4\u8BBA\u4FEE\u6539\u5185\u5BB9`);
-          lines.push(`- **\u5B9A\u4F4D\u5757**\uFF1A\u7B2C ${ann.blockIndex + 1} \u5757`);
-          if (blockFingerprint) {
+          if (!ann.orphaned) lines.push(`- **\u5B9A\u4F4D\u5757**\uFF1A\u7B2C ${ann.blockIndex + 1} \u5757`);
+          if (!ann.orphaned && blockFingerprint) {
             lines.push(`- **\u6587\u672C\u951A\u70B9**\uFF1A\`${blockFingerprint}\``);
           }
-          if (ann.startOffset != null) {
+          if (!ann.orphaned && ann.startOffset != null) {
             lines.push(`- **\u5757\u5185\u504F\u79FB**\uFF1A\u7B2C ${ann.startOffset} \u4E2A\u5B57\u7B26\u5904\uFF08startOffset=${ann.startOffset}\uFF09`);
           }
           lines.push(`- **\u76EE\u6807\u6587\u672C**\uFF1A`);
@@ -4378,11 +4452,11 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           }
         } else if (ann.type === "delete") {
           lines.push(`- **\u64CD\u4F5C**\uFF1A\u5220\u9664\u4EE5\u4E0B\u6587\u672C`);
-          lines.push(`- **\u5B9A\u4F4D\u5757**\uFF1A\u7B2C ${ann.blockIndex + 1} \u5757`);
-          if (blockFingerprint) {
+          if (!ann.orphaned) lines.push(`- **\u5B9A\u4F4D\u5757**\uFF1A\u7B2C ${ann.blockIndex + 1} \u5757`);
+          if (!ann.orphaned && blockFingerprint) {
             lines.push(`- **\u6587\u672C\u951A\u70B9**\uFF1A\`${blockFingerprint}\``);
           }
-          if (ann.startOffset != null) {
+          if (!ann.orphaned && ann.startOffset != null) {
             lines.push(`- **\u5757\u5185\u504F\u79FB**\uFF1A\u7B2C ${ann.startOffset} \u4E2A\u5B57\u7B26\u5904\uFF08startOffset=${ann.startOffset}\uFF09`);
           }
           lines.push(`- **\u8981\u5220\u9664\u7684\u6587\u672C**\uFF1A`);
@@ -4392,11 +4466,11 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         } else if (ann.type === "insert") {
           const isBefore = ann.insertPosition === "before";
           lines.push(`- **\u64CD\u4F5C**\uFF1A\u5728\u6307\u5B9A\u4F4D\u7F6E${isBefore ? "\u524D" : "\u540E"}\u63D2\u5165\u65B0\u5185\u5BB9`);
-          lines.push(`- **\u5B9A\u4F4D\u5757**\uFF1A\u7B2C ${ann.blockIndex + 1} \u5757`);
-          if (blockFingerprint) {
+          if (!ann.orphaned) lines.push(`- **\u5B9A\u4F4D\u5757**\uFF1A\u7B2C ${ann.blockIndex + 1} \u5757`);
+          if (!ann.orphaned && blockFingerprint) {
             lines.push(`- **\u6587\u672C\u951A\u70B9**\uFF1A\`${blockFingerprint}\``);
           }
-          if (ann.startOffset != null) {
+          if (!ann.orphaned && ann.startOffset != null) {
             lines.push(`- **\u5757\u5185\u504F\u79FB**\uFF1A\u7B2C ${ann.startOffset} \u4E2A\u5B57\u7B26\u5904\uFF08startOffset=${ann.startOffset}\uFF09`);
           }
           lines.push(`- **\u63D2\u5165\u4F4D\u7F6E\uFF08\u5728\u6B64\u6587\u672C\u4E4B${isBefore ? "\u524D" : "\u540E"}\uFF09**\uFF1A`);
@@ -5433,15 +5507,22 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           if (staleCheck.stale) {
             loadDocument(data.name, data.content, true, void 0, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
             requestImageUris(data.content, data.sourceDir);
-            Store.forceBumpVersion(matchedRecord.reviewVersion || 1, data.content, data.docVersion);
+            Store.forceBumpVersion(
+              matchedRecord.reviewVersion || 1,
+              data.content,
+              data.docVersion,
+              matchedRecord.annotations || []
+            );
+            const reanchorResult = Store.reanchorAnnotations(Renderer.parseMarkdown(data.content));
             if (Store.restoreFootnoteComments(data.footnoteComments || [])) {
-              refreshCurrentView();
+              Store.reanchorAnnotations(Renderer.parseMarkdown(data.content));
             }
+            refreshCurrentView();
             if (Exporter && Exporter.triggerAutoSave) {
               Exporter.triggerAutoSave();
             }
             showNotification(t("notification.stale_content_bumped", { version: Store.getData().reviewVersion }));
-            console.log("[App] \u6279\u9605\u8BB0\u5F55\u8FC7\u671F (" + staleCheck.reason + ")\uFF0C\u5DF2\u5347\u7EA7\u5230 v" + Store.getData().reviewVersion);
+            console.log("[App] \u6279\u9605\u8BB0\u5F55\u8FC7\u671F (" + staleCheck.reason + ")\uFF0C\u5DF2\u5347\u7EA7\u5230 v" + Store.getData().reviewVersion + "\uFF1B\u6279\u6CE8\u91CD\u5B9A\u4F4D\uFF1A", reanchorResult);
             return;
           }
           loadDocument(data.name, data.content, true, void 0, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
@@ -5930,6 +6011,9 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       const fileRelPath = storeData.relPath || storeData.sourceFilePath || fileName;
       fileNameEl.title = fileRelPath;
       blocks = Renderer.parseMarkdown(markdown);
+      if (isNew && Store.getAnnotations().length > 0) {
+        Store.reanchorAnnotations(blocks);
+      }
       const data = Store.getData();
       Renderer.renderBlocks(blocks, data.annotations);
       renderMathAndMermaid();

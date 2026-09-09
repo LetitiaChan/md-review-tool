@@ -105,6 +105,16 @@
     border-left: 3px solid var(--insert-color);
 }
 
+.annotation-card.orphaned {
+    border-style: dashed;
+    opacity: 0.85;
+}
+
+.annotation-card.orphaned .annotation-index {
+    color: var(--danger);
+    font-weight: 600;
+}
+
 .annotation-card-header {
     display: flex;
     align-items: center;

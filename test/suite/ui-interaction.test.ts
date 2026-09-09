@@ -2398,7 +2398,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             // 内容变化 → 应进入 contentChanged 分支并自增到 v2
             Store.setFile('a.md', 'content v2 changed', '', '1.0', '', '', '', '');
             assert.strictEqual(Store.getData().reviewVersion, 2, '内容变化后 reviewVersion 应自增到 v2');
-            assert.strictEqual(Store.getData().annotations.length, 0, '内容变化后 annotations 应被清空');
+            assert.strictEqual(Store.getData().annotations.length, 1, '内容变化后 annotations 应保留，等待重新定位');
 
             // 再次内容变化（AI 第二轮修复） → v3
             Store.setFile('a.md', 'content v3 changed again', '', '1.0', '', '', '', '');
@@ -2442,22 +2442,26 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.strictEqual(v1Snapshot.reviewVersion, 1);
             assert.strictEqual(v1Snapshot.annotations.length, 1);
 
-            // Step 2: AI 修复完成，文件内容变化 → 刷新 → loadDocument(isNew=true) → setFile 触发 v2 + 清空批注
+            // Step 2: AI 修复完成，文件内容变化 → 刷新 → loadDocument(isNew=true) → setFile 触发 v2 并保留批注
             Store.setFile('a.md', '新内容（AI 已修改）', '', '1.0', '', '', '', '');
             assert.strictEqual(Store.getData().reviewVersion, 2, '刷新后应为 v2');
-            assert.strictEqual(Store.getData().annotations.length, 0, '新版本应为空批注');
+            assert.strictEqual(Store.getData().annotations.length, 1, '新版本应保留批注，避免源文件变化导致批注丢失');
 
-            // Step 3: 假设 doAutoSave 正确落盘了 v2 空占位记录到磁盘（这里用另一个 record 模拟）
-            const v2PlaceholderOnDisk = { reviewVersion: 2, annotations: [], createdAt: new Date().toISOString() };
+            // Step 3: 假设 doAutoSave 正确落盘了带保留批注的 v2 记录
+            const v2PlaceholderOnDisk = {
+                reviewVersion: 2,
+                annotations: [...Store.getData().annotations],
+                createdAt: new Date().toISOString()
+            };
 
             // Step 4: 用户关闭文件后重新打开 → getReviewRecords 返回 v2 placeholder（已按版本倒序）
-            // restoreFromReviewRecord 应恢复到 v2，不应复活 v1 的旧批注
+            // restoreFromReviewRecord 应恢复到 v2，并保留可继续处理的批注
             Store.restoreFromReviewRecord(v2PlaceholderOnDisk, 'a.md', '新内容（AI 已修改）', '1.0');
             assert.strictEqual(Store.getData().reviewVersion, 2, '重新打开应恢复到 v2（而非 v1）');
             assert.strictEqual(
                 Store.getData().annotations.length,
-                0,
-                '重新打开应恢复为空批注（而非 v1 的旧批注）— 本次 Bug 核心修复点'
+                1,
+                '重新打开应恢复 v2 中保留的批注'
             );
         });
     });
@@ -2468,7 +2472,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
     // 修复思路：
     //   A（主判据）：批阅记录 JSON 块写入 rawMarkdown 快照；打开时与当前源文件 trim 对比
     //   B（辅助信号）：批阅记录 docVersion 与当前源文件 docVersion 对比
-    //   过期 → Store.forceBumpVersion(prevVersion, content, docVersion) → 自动升级 v+1
+    //   过期 → Store.forceBumpVersion(prevVersion, content, docVersion, annotations) → 自动升级 v+1 并重定位批注
     //   不过期 → 继续原 restoreFromReviewRecord 恢复
     suite('21. Hotfix — 关闭期间源文件被外部修改的过期检测', () => {
         const extPath21 = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
@@ -2507,10 +2511,10 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
                 'store.js 应定义 forceBumpVersion 函数'
             );
             // 校验 return 对象列表里也导出了
-            const returnMatch = storeJsText21.match(/return\s*\{([\s\S]*?)\};/);
-            assert.ok(returnMatch, 'store.js 应有 return 导出对象');
+            const storeExportBlock = storeJsText21.slice(storeJsText21.lastIndexOf('return {'));
+            assert.ok(storeExportBlock, 'store.js 应有 return 导出对象');
             assert.ok(
-                /\bforceBumpVersion\b/.test(returnMatch![1]),
+                /\bforceBumpVersion\b/.test(storeExportBlock),
                 'forceBumpVersion 必须在 return 列表中导出，否则 app.js 无法调用'
             );
         });
@@ -2534,10 +2538,10 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             // 过期分支必须触发 autosave 落盘新版本
             const forceBumpIdx = appJsText21.indexOf('Store.forceBumpVersion(');
             assert.ok(forceBumpIdx > 0);
-            const next200 = appJsText21.slice(forceBumpIdx, forceBumpIdx + 300);
+            const nextCalls = appJsText21.slice(forceBumpIdx, forceBumpIdx + 1000);
             assert.ok(
-                /triggerAutoSave\(/.test(next200),
-                'forceBumpVersion 后应触发 triggerAutoSave 让新空版本立即落盘'
+                /triggerAutoSave\(/.test(nextCalls),
+                'forceBumpVersion 和重定位完成后应触发 triggerAutoSave 让新版本立即落盘'
             );
         });
 
@@ -2553,7 +2557,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
         // ---- Tier 2：行为级断言 ----
 
-        test('BT-staleContentDetect.6 Tier2 — forceBumpVersion 在沙箱中应正确升级版本号并清空批注', () => {
+        test('BT-staleContentDetect.6 Tier2 — forceBumpVersion 在沙箱中应正确升级版本号并保留批注', () => {
             const sandbox: any = { window: {}, localStorage: { getItem: () => null, setItem: () => {} } };
             // @ts-ignore
             const vm = require('vm');
@@ -2575,12 +2579,12 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.strictEqual(Store.getData().annotations.length, 5);
 
             // 调用 forceBumpVersion → 基准 v3 → 升级到 v4
-            Store.forceBumpVersion(3, '新内容（外部修改）', '1.1');
+            Store.forceBumpVersion(3, '新内容（外部修改）', '1.1', Store.getAnnotations());
             assert.strictEqual(Store.getData().reviewVersion, 4, '应升级到 v4');
-            assert.strictEqual(Store.getData().annotations.length, 0, '应清空旧批注');
+            assert.strictEqual(Store.getData().annotations.length, 5, '应保留旧批注，等待重新定位');
             assert.strictEqual(Store.getData().rawMarkdown, '新内容（外部修改）', '应采用新内容为 rawMarkdown');
             assert.strictEqual(Store.getData().docVersion, '1.1', '应采用新 docVersion');
-            assert.strictEqual(Store.getData().nextId, 1, 'nextId 应重置');
+            assert.strictEqual(Store.getData().nextId, 6, 'nextId 应接续保留批注的最大 id');
         });
 
         // ---- Tier 3：任务特定断言 ----
@@ -2588,7 +2592,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         test('BT-staleContentDetect.7 Tier3 — 端到端：关闭期间文件被外部修改，重开应升级 v+1 而非恢复旧批注', () => {
             // 完整闭环：v1 添加批注 → 生成 record.md 含 rawMarkdown='旧内容' → 关闭
             // → 外部工具改文件为 '全新内容' → 重开 webview → 触发 _isRecordStaleOnOpen 检测
-            // → forceBumpVersion 升级到 v2 且清空批注（避免旧锚点应用到新文件上）
+            // → forceBumpVersion 升级到 v2 且保留批注，再由重定位逻辑更新锚点
             const sandbox: any = { window: {}, localStorage: { getItem: () => null, setItem: () => {} } };
             // @ts-ignore
             const vm = require('vm');
@@ -2620,12 +2624,12 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             assert.strictEqual(isStale, true, '思路 A 必须检测到内容差异');
 
             // Step 5: 过期 → forceBumpVersion
-            Store.forceBumpVersion(v1RecordOnDisk.reviewVersion, currentFileContent, currentDocVersion);
+            Store.forceBumpVersion(v1RecordOnDisk.reviewVersion, currentFileContent, currentDocVersion, v1RecordOnDisk.annotations);
             assert.strictEqual(Store.getData().reviewVersion, 2, '应升级到 v2');
             assert.strictEqual(
                 Store.getData().annotations.length,
-                0,
-                '关键：不应恢复 v1 的旧批注（锚点可能已失效），应以空批注状态开启 v2'
+                1,
+                '关键：源文件变化后仍应保留 v1 批注，由重定位逻辑处理锚点'
             );
             assert.strictEqual(Store.getData().rawMarkdown, currentFileContent, 'rawMarkdown 应为新文件内容');
         });
@@ -3644,7 +3648,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
         test('BT-annotAutoSave.5 Tier2 — submitComment 后应调用 refreshView（间接触发 triggerAutoSave）', () => {
             const submitIdx = annotationsText.indexOf('function submitComment()');
             assert.ok(submitIdx > 0, '应有 submitComment 函数');
-            const funcBody = annotationsText.slice(submitIdx, submitIdx + 2000);
+            const funcBody = annotationsText.slice(submitIdx, submitIdx + 3500);
             assert.ok(
                 funcBody.includes('refreshView()'),
                 'submitComment 后应调用 refreshView()'
@@ -3657,7 +3661,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             // 确保 triggerAutoSave 在 UI 更新完成后调用
             const refreshViewIdx = annotationsText.indexOf('function refreshView()');
             assert.ok(refreshViewIdx > 0, '应有 refreshView 函数');
-            const funcBody = annotationsText.slice(refreshViewIdx, refreshViewIdx + 500);
+            const funcBody = annotationsText.slice(refreshViewIdx, refreshViewIdx + 1000);
             const renderIdx = funcBody.indexOf('renderAnnotationsList()');
             const triggerIdx = funcBody.indexOf('triggerAutoSave');
             assert.ok(renderIdx > 0 && triggerIdx > 0, '应同时包含 renderAnnotationsList 和 triggerAutoSave');
