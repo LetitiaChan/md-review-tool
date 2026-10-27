@@ -1,6 +1,12 @@
 import { test, expect } from '@playwright/test';
+import * as path from 'path';
 import { openContainer, injectMarkdown, waitForRender } from '../helpers/test-utils';
 import { createRichEditor } from '../helpers/pm-test-utils';
+
+const LAZY_CONTAINER_PATH = path.resolve(__dirname, '..', 'lazy-container.html');
+function lazyContainerUrl(): string {
+    return `file:///${LAZY_CONTAINER_PATH.replace(/\\/g, '/')}`;
+}
 
 /**
  * 渲染正确性与性能回归
@@ -157,6 +163,44 @@ test.describe('批注刷新后的渲染完整性', () => {
         // 未受影响的块必须保持同一个 DOM 节点（没有被整篇重建）
         expect(result.sameNode).toBe(true);
         expect(result.ms).toBeLessThan(50);
+    });
+
+    test('BT-perf.7 大依赖按需加载：默认不加载，需要时才拉取', async ({ page }) => {
+        await page.goto(lazyContainerUrl());
+        await page.waitForFunction(() => (window as any).Renderer && (window as any).AssetLoader, { timeout: 15000 });
+
+        const before = await page.evaluate(() => ({
+            katex: typeof (globalThis as any).katex,
+            mermaid: typeof (globalThis as any).mermaid,
+            viz: typeof (globalThis as any).Viz,
+            pm: typeof (globalThis as any).PM,
+        }));
+        expect(before).toEqual({ katex: 'undefined', mermaid: 'undefined', viz: 'undefined', pm: 'undefined' });
+
+        // 含数学公式的文档应触发 KaTeX 按需加载
+        await page.evaluate(() => {
+            const Settings = (window as any).Settings;
+            Settings.applySettings({ enableMath: true, enableMermaid: false, enablePlantUML: false, enableGraphviz: false });
+            const Renderer = (window as any).Renderer;
+            Renderer.renderBlocks(Renderer.parseMarkdown('公式 $x^2$ 结尾'), []);
+        });
+        await expect(page.locator('#documentContent .katex')).toHaveCount(1, { timeout: 15000 });
+        expect(await page.evaluate(() => typeof (globalThis as any).katex)).toBe('object');
+
+        // Mermaid 未使用，不应被加载
+        expect(await page.evaluate(() => typeof (globalThis as any).mermaid)).toBe('undefined');
+
+        // PM 引擎在进入富文本时才加载
+        const pm = await page.evaluate(async () => {
+            const AssetLoader = (window as any).AssetLoader;
+            const ok = await AssetLoader.ensure('pm');
+            return {
+                ok,
+                hasPM: typeof (globalThis as any).PM !== 'undefined',
+                hasCreate: typeof (globalThis as any).PM?.createRichEditor === 'function',
+            };
+        });
+        expect(pm).toEqual({ ok: true, hasPM: true, hasCreate: true });
     });
 });
 

@@ -44,11 +44,20 @@ function ensureRichContainer() {
 
 // ===== Rich Mode =====
 
-function enterRich(options) {
-    if (_mode !== MODE.INACTIVE) return;
+async function enterRich(options) {
+    if (_mode !== MODE.INACTIVE) return false;
     if (!globalThis.PM || typeof globalThis.PM.createRichEditor !== 'function') {
-        console.warn('[edit-mode] PM not loaded, cannot enter rich mode');
-        return;
+        // ProseMirror bundle 已改为按需加载（约 1.2MB）
+        const loader = globalThis.AssetLoader;
+        if (!loader) {
+            console.warn('[edit-mode] PM not loaded, cannot enter rich mode');
+            return false;
+        }
+        const ok = await loader.ensure('pm');
+        if (!ok || !globalThis.PM || typeof globalThis.PM.createRichEditor !== 'function') {
+            console.warn('[edit-mode] PM 加载失败，保持预览模式');
+            return false;
+        }
     }
     const store = globalThis.Store;
     if (!store || typeof store.getData !== 'function') {
@@ -108,6 +117,7 @@ function enterRich(options) {
     _mode = MODE.RICH;
 
     try { _editor.focus(); } catch (e) { /* 容错 */ }
+    return true;
 }
 
 function exitRich() {

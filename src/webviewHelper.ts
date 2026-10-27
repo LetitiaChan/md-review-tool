@@ -298,8 +298,10 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
                 break;
             }
             case 'getReviewRecords': {
-                const records = ctx.fileService.getReviewRecords(payload.fileName, payload.relPath);
-                ctx.postMessage({ type: 'reviewRecords', payload: { records }, requestId });
+                // 打开文档的热路径：只读最新版本，历史再多也不阻塞宿主线程。
+                // webview 侧只消费 records[0]，协议保持为数组。
+                const latest = ctx.fileService.getLatestReviewRecord(payload.fileName, payload.relPath);
+                ctx.postMessage({ type: 'reviewRecords', payload: { records: latest ? [latest] : [] }, requestId });
                 break;
             }
             case 'deleteReviewRecords': {

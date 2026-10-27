@@ -314,17 +314,19 @@ export function initApp() {
         // Rich Mode 切换按钮（扩展内唯一编辑器）
         const btnToggleRich = document.getElementById('btnToggleRich');
         if (btnToggleRich && globalThis.EditMode) {
-            btnToggleRich.addEventListener('click', () => {
+            btnToggleRich.addEventListener('click', async () => {
                 if (EditMode.isRichActive()) {
                     EditMode.exitRich();
                     btnToggleRich.classList.remove('active');
                     currentMode = 'preview';
                 } else {
-                    EditMode.enterRich({
+                    const ok = await EditMode.enterRich({
                         onSelectionChange: updateEditorToolbarState,
                     });
-                    btnToggleRich.classList.add('active');
-                    currentMode = 'rich';
+                    if (ok !== false) {
+                        btnToggleRich.classList.add('active');
+                        currentMode = 'rich';
+                    }
                 }
             });
         }
@@ -706,7 +708,7 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
         });
 
         // 快捷键
-        document.addEventListener('keydown', (e) => {
+        document.addEventListener('keydown', async (e) => {
             if (e.key === 'Escape') {
                 // ESC 优先关闭搜索栏
                 if (document.getElementById('searchBar').style.display !== 'none') {
@@ -756,11 +758,13 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
                         if (btn) btn.classList.remove('active');
                         currentMode = 'preview';
                     } else {
-                        EditMode.enterRich({
+                        const ok = await EditMode.enterRich({
                             onSelectionChange: updateEditorToolbarState,
                         });
-                        if (btn) btn.classList.add('active');
-                        currentMode = 'rich';
+                        if (ok !== false) {
+                            if (btn) btn.classList.add('active');
+                            currentMode = 'rich';
+                        }
                     }
                 }
             }
@@ -851,9 +855,12 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
             each((root) => Renderer.renderMath(root));
         }
         if (settings.enableMermaid) {
-            each((root) => Renderer.renderMermaid(root));
-            // 渲染完成后绑定大图弹窗事件（全量渲染时）
-            if (!scoped) setTimeout(bindMermaidLightbox, 200);
+            if (scoped) {
+                each((root) => Renderer.renderMermaid(root));
+            } else {
+                // renderMermaid 内部会按需加载 mermaid 库，等它完成后再绑定大图弹窗
+                Promise.resolve(Renderer.renderMermaid()).then(() => bindMermaidLightbox());
+            }
         }
         if (settings.enablePlantUML) {
             each((root) => Renderer.renderPlantUML(root));

@@ -1012,11 +1012,18 @@
     <script src="${markedUri}"></script>
     <script src="${markedFootnoteUri}"></script>
     <script src="${hljsUri}"></script>
-
-    <script src="${katexUri}"></script>
-    <script src="${mermaidUri}"></script>
-    <script src="${vizUri}"></script>
     <script src="${emojiMapUri}"></script>
+
+    <!-- 大体积依赖按需加载：KaTeX / Mermaid / Viz / ProseMirror 的 URI 由宿主注入，
+         首次真正需要时再由 asset-loader.js 插入 <script>，避免预览模式加载约 6MB JS -->
+    <script nonce="${nonce}">
+        window.__mdReviewAssets = {
+            katex: "${katexUri}",
+            mermaid: "${mermaidUri}",
+            viz: "${vizUri}",
+            pm: "${pmBundleUri}"
+        };
+    </script>
     <!-- 全局错误监听器（必须在所有 JS 之前加载，捕获 SyntaxError 等加载错误） -->
     <script nonce="${nonce}">
         (function() {
@@ -1070,8 +1077,7 @@
             window.__pendingErrors = [];
         }
     </script>
-    <!-- ProseMirror bundle（Rich Mode 引擎）——挂 globalThis.PM，appBundleUri 依赖它 -->
-    <script src="${pmBundleUri}"></script>
+    <!-- ProseMirror bundle（Rich Mode 引擎）由 asset-loader.js 在首次进入富文本时按需加载 -->
     <!-- 应用脚本（由 webview/build.config.mjs 打包为 webview/dist/app.bundle.js）-->
     <script src="${appBundleUri}"></script>
 </body>

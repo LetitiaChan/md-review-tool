@@ -2266,7 +2266,14 @@ const Renderer = (() => {
      * 在 renderBlocks 之后调用；传入 root 时只渲染该子树（增量渲染）
      */
     async function renderMermaid(root) {
-        if (typeof mermaid === 'undefined') return;
+        if (typeof mermaid === 'undefined') {
+            const loader = globalThis.AssetLoader;
+            if (loader) {
+                const ok = await loader.ensure('mermaid');
+                if (ok && typeof mermaid !== 'undefined') return renderMermaid(root);
+            }
+            return;
+        }
 
         const scope = root || document;
         const containers = scope.querySelectorAll('.mermaid-container');
@@ -2543,7 +2550,14 @@ const Renderer = (() => {
      * 使用 TreeWalker 遍历 DOM，将占位符替换为 KaTeX 渲染结果
      */
     function renderMath(root) {
-        if (typeof katex === 'undefined') return;
+        if (typeof katex === 'undefined') {
+            // 按需加载 KaTeX 后重入
+            const loader = globalThis.AssetLoader;
+            if (loader && !loader.isLoaded('katex')) {
+                loader.ensure('katex').then((ok) => { if (ok) renderMath(root); });
+            }
+            return;
+        }
         if (_mathExpressions.length === 0) return;
 
         const container = root || document.getElementById('documentContent');
@@ -2709,12 +2723,21 @@ const Renderer = (() => {
      * 渲染 Graphviz DOT 图表（使用 Viz.js）
      */
     async function renderGraphviz(root) {
-        const containers = (root || document).querySelectorAll('.graphviz-container');
-        if (containers.length === 0) return;
         if (typeof Viz === 'undefined') {
-            console.warn('[Renderer] Viz.js 未加载');
+            // 按需加载 Viz.js 后重入
+            const loader = globalThis.AssetLoader;
+            if (loader) {
+                const ok = await loader.ensure('viz');
+                if (ok && typeof Viz !== 'undefined') return renderGraphviz(root);
+            }
+            if ((root || document).querySelectorAll('.graphviz-container').length > 0) {
+                console.warn('[Renderer] Viz.js 未加载');
+            }
             return;
         }
+
+        const containers = (root || document).querySelectorAll('.graphviz-container');
+        if (containers.length === 0) return;
 
         let vizInstance;
         try {

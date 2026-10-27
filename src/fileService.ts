@@ -369,13 +369,52 @@ console.error('删除批阅记录失败:', fullPath, e);
                     annotations: annotationData ? annotationData.annotations : [],
                     // 批阅记录生成时的源文件内容快照（用于打开时比对是否在关闭期间被外部修改）
                     rawMarkdown: annotationData ? annotationData.rawMarkdown : '',
-                    rawContent: content
                 });
             }
         }
 
         records.sort((a, b) => b.reviewVersion - a.reviewVersion);
         return records;
+    }
+
+    /**
+     * 只读取最新一个批阅记录（打开文档的热路径）
+     *
+     * 与 getReviewRecords 的区别：只对版本号最高的文件做一次 readFile + parse，
+     * 历史版本再多也不会阻塞扩展宿主线程。返回结构与单条 record 一致。
+     */
+    getLatestReviewRecord(fileName: string, relPath?: string): any | null {
+        if (!fs.existsSync(this.reviewDir)) { return null; }
+        const rbaseName = this.reviewBaseName(fileName, relPath);
+        const ext = path.extname(fileName);
+        const plainBase = path.basename(fileName).replace(ext, '');
+        const allFiles = fs.readdirSync(this.reviewDir).filter(f => f.endsWith('.md') || f.endsWith('.mdc'));
+
+        let bestFile: string | null = null;
+        let bestVersion = -1;
+        for (const f of allFiles) {
+            const matchesNew = f.startsWith(`${rbaseName}_v`) && f.includes('_record.');
+            const matchesOld = f.startsWith(`批阅记录_${rbaseName}_v`) || (rbaseName !== plainBase && f.startsWith(`批阅记录_${plainBase}_v`));
+            if (!matchesNew && !matchesOld) { continue; }
+            const version = this.extractReviewVersion(f);
+            if (version > bestVersion) {
+                bestVersion = version;
+                bestFile = f;
+            }
+        }
+        if (!bestFile) { return null; }
+
+        const content = fs.readFileSync(path.join(this.reviewDir, bestFile), 'utf-8');
+        const annotationData = this.extractAnnotationsFromReview(content);
+        return {
+            fileName: bestFile,
+            reviewVersion: bestVersion,
+            docVersion: this.extractDocVersionFromReview(content),
+            annotationCount: annotationData ? annotationData.annotationCount : 0,
+            annotations: annotationData ? annotationData.annotations : [],
+            // 批阅记录生成时的源文件内容快照（用于判断关闭期间文件是否被外部修改）
+            rawMarkdown: annotationData ? annotationData.rawMarkdown : '',
+        };
     }
 
     /**

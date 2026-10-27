@@ -319,7 +319,7 @@ suite('Rich Mode Editor Bugfix Test Suite', () => {
         // 找到 Ctrl+Shift+E 处理区域
         const shortcutIdx = src.indexOf("e.key === 'E' || e.key === 'e'");
         assert.ok(shortcutIdx > 0, '应有 Ctrl+Shift+E 快捷键处理');
-        const block = src.slice(shortcutIdx, shortcutIdx + 800);
+        const block = src.slice(shortcutIdx, shortcutIdx + 1200);
         assert.ok(block.includes("currentMode = 'rich'"),
             "Ctrl+Shift+E 快捷键进入 Rich Mode 时应设置 currentMode = 'rich'");
     });
