@@ -53,3 +53,5 @@ todo.md
 # 分析缓存与归档（output-phrasing-engineering skill 产物）
 .analysis-cache.md
 .analysis-archive/
+# Webview 构建产物（由 npm run build:webview 生成，不再入库）
+webview/dist/

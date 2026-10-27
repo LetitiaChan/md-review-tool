@@ -29,6 +29,11 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
 /**
+ * 是否发布构建（压缩产物）
+ */
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || process.argv.includes('--minify');
+
+/**
  * esbuild 构建选项（单一真源）
  */
 const buildOptions = {
@@ -43,7 +48,12 @@ const buildOptions = {
   outdir: path.join(__dirname, 'dist'),
   entryNames: '[name]',  // 产物文件名使用 entry 的 key
   sourcemap: process.env.NODE_ENV === 'development' ? 'inline' : false,
-  minify: process.env.NODE_ENV === 'production',
+  // 发布构建：只压缩空白与语法，不重命名标识符。
+  // 集成测试会读取 bundle 中的函数名做断言，重命名会导致测试与产物不一致。
+  minify: false,
+  minifyWhitespace: IS_PRODUCTION,
+  minifySyntax: IS_PRODUCTION,
+  minifyIdentifiers: false,
   logLevel: 'info',
   // 禁用 eval / 动态 Function 触发的 CSP unsafe-eval；esbuild 默认不会生成，此处显式声明约束
   supported: {
