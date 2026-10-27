@@ -21,7 +21,7 @@ export function getSlashCommands(getI18n) {
         { id: 'blockquote', labelKey: 'slash.blockquote', label: t('slash.blockquote'), icon: '❝', category: 'block' },
         { id: 'codeBlock', labelKey: 'slash.code_block', label: t('slash.code_block'), icon: '⌨', category: 'block' },
         { id: 'hr', labelKey: 'slash.horizontal_rule', label: t('slash.horizontal_rule'), icon: '─', category: 'block' },
-        { id: 'table', labelKey: 'slash.table', label: t('slash.table'), icon: '▦', category: 'block' },
+        { id: 'insertTable', labelKey: 'slash.table', label: t('slash.table'), icon: '▦', category: 'block' },
         { id: 'ul', labelKey: 'slash.bullet_list', label: t('slash.bullet_list'), icon: '•', category: 'list' },
         { id: 'ol', labelKey: 'slash.ordered_list', label: t('slash.ordered_list'), icon: '1.', category: 'list' },
         { id: 'taskList', labelKey: 'slash.task_list', label: t('slash.task_list'), icon: '☑', category: 'list' },

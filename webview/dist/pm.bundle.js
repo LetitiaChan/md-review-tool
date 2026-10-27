@@ -27973,7 +27973,7 @@
       { id: "blockquote", labelKey: "slash.blockquote", label: t("slash.blockquote"), icon: "\u275D", category: "block" },
       { id: "codeBlock", labelKey: "slash.code_block", label: t("slash.code_block"), icon: "\u2328", category: "block" },
       { id: "hr", labelKey: "slash.horizontal_rule", label: t("slash.horizontal_rule"), icon: "\u2500", category: "block" },
-      { id: "table", labelKey: "slash.table", label: t("slash.table"), icon: "\u25A6", category: "block" },
+      { id: "insertTable", labelKey: "slash.table", label: t("slash.table"), icon: "\u25A6", category: "block" },
       { id: "ul", labelKey: "slash.bullet_list", label: t("slash.bullet_list"), icon: "\u2022", category: "list" },
       { id: "ol", labelKey: "slash.ordered_list", label: t("slash.ordered_list"), icon: "1.", category: "list" },
       { id: "taskList", labelKey: "slash.task_list", label: t("slash.task_list"), icon: "\u2611", category: "list" },
@@ -28202,7 +28202,7 @@
           cmdFn(view.state, view.dispatch, view, { type: "NOTE" });
         } else if (cmd.id === "codeBlock") {
           cmdFn(view.state, view.dispatch, view, { language: "" });
-        } else if (cmd.id === "table") {
+        } else if (cmd.id === "insertTable") {
           cmdFn(view.state, view.dispatch, view, { rows: 3, cols: 3 });
         } else {
           cmdFn(view.state, view.dispatch, view);

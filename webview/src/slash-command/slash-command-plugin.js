@@ -279,7 +279,7 @@ export function createSlashCommandPlugin({ commandMap, getI18n }) {
                 cmdFn(view.state, view.dispatch, view, { type: 'NOTE' });
             } else if (cmd.id === 'codeBlock') {
                 cmdFn(view.state, view.dispatch, view, { language: '' });
-            } else if (cmd.id === 'table') {
+            } else if (cmd.id === 'insertTable') {
                 cmdFn(view.state, view.dispatch, view, { rows: 3, cols: 3 });
             } else {
                 cmdFn(view.state, view.dispatch, view);

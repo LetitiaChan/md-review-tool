@@ -124,7 +124,7 @@ suite('InputRules & Slash Command Test Suite', () => {
     test('BT-SlashCmd.T2.6 Tier2 — 命令集包含所有预期的 command id', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
         const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'slash-command', 'slash-commands.js'), 'utf-8');
-        const expectedIds = ['h1', 'h2', 'h3', 'blockquote', 'codeBlock', 'hr', 'table', 'ul', 'ol', 'taskList', 'alertBlock', 'insertImage'];
+        const expectedIds = ['h1', 'h2', 'h3', 'blockquote', 'codeBlock', 'hr', 'insertTable', 'ul', 'ol', 'taskList', 'alertBlock', 'insertImage'];
         for (const id of expectedIds) {
             assert.ok(src.includes(`id: '${id}'`), `命令集应包含 id: '${id}'`);
         }

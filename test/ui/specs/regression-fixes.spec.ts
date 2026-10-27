@@ -220,4 +220,24 @@ test.describe('回归：ProseMirror 批注与斜杠命令', () => {
         await expect(page.locator('.ProseMirror h1')).toHaveCount(0);
         await expect(menu).toBeHidden();
     });
+
+    test('BT-regression.pm.3 斜杠命令 /table 应插入 3×3 表格', async ({ page }) => {
+        await createRichEditor(page, '');
+        await page.locator('.ProseMirror').click();
+
+        await page.keyboard.type('/');
+        const menu = page.locator('.slash-command-menu');
+        await expect(menu).toBeVisible();
+
+        await page.keyboard.type('table');
+        await expect(menu.locator('.slash-command-item')).toHaveCount(1);
+
+        await page.keyboard.press('Enter');
+
+        // 命令 id 曾与 commandMap 的 insertTable 不一致，导致选中后什么都不发生
+        await expect(page.locator('.ProseMirror table')).toHaveCount(1);
+        await expect(page.locator('.ProseMirror table tr')).toHaveCount(3);
+        await expect(page.locator('.ProseMirror table th')).toHaveCount(3);
+        await expect(menu).toBeHidden();
+    });
 });

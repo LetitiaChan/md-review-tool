@@ -233,5 +233,33 @@ suite('Review Fixes Regression Test Suite', () => {
             assert.ok(/commands\[pluginState\.selectedIndex\]\s*\|\|\s*commands\[0\]/.test(source),
                 'selectedIndex 越界时应回退到 commands[0]');
         });
+
+        test('BT-ReviewFixes.T3.4 每个斜杠命令 id 都必须在 commandMap 中有实现', () => {
+            const slashSource = readSource('webview', 'src', 'slash-command', 'slash-commands.js');
+            const pmSource = readSource('webview', 'src', 'entries', 'pm.entry.js');
+            if (!slashSource || !pmSource) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+
+            // 解析命令集里的 id
+            const ids: string[] = [];
+            const idRe = /\{\s*id:\s*'([^']+)'/g;
+            let match: RegExpExecArray | null;
+            while ((match = idRe.exec(slashSource)) !== null) {
+                ids.push(match[1]);
+            }
+            assert.ok(ids.length >= 12, `应解析出至少 12 个斜杠命令，实际 ${ids.length}`);
+
+            // 截取 commandMap 对象字面量
+            const mapStart = pmSource.indexOf('const commandMap = {');
+            const mapEnd = mapStart === -1 ? -1 : pmSource.indexOf('\n    };', mapStart);
+            const mapSource = mapStart === -1 ? '' : pmSource.slice(mapStart, mapEnd === -1 ? undefined : mapEnd);
+            assert.ok(mapSource, '应能找到 pm.entry.js 中的 commandMap 定义');
+
+            for (const id of ids) {
+                // 避免 "table" 误匹配 "insertTable"
+                const keyRe = new RegExp(`(^|[\\s,{])${id}\\s*:`, 'm');
+                assert.ok(keyRe.test(mapSource),
+                    `斜杠命令 id "${id}" 在 commandMap 中没有对应实现，选中后会静默无效果`);
+            }
+        });
     });
 });
