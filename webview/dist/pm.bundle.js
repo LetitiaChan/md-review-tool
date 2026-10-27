@@ -27993,19 +27993,16 @@
         init() {
           return { active: false, filterText: "", selectedIndex: 0, triggerPos: -1 };
         },
-        apply(tr, prev) {
+        apply(tr, prev, oldState, newState) {
           const meta = tr.getMeta(slashCommandKey);
           if (meta) return meta;
           if (prev.active && tr.docChanged) {
-            const state = tr.state || null;
-            if (state) {
-              const $from = state.selection.$from;
-              const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
-              if (textBefore.startsWith("/")) {
-                return { ...prev, filterText: textBefore.slice(1), selectedIndex: 0 };
-              } else {
-                return { active: false, filterText: "", selectedIndex: 0, triggerPos: -1 };
-              }
+            const $from = newState.selection.$from;
+            const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
+            if (textBefore.startsWith("/")) {
+              return { ...prev, filterText: textBefore.slice(1), selectedIndex: 0 };
+            } else {
+              return { active: false, filterText: "", selectedIndex: 0, triggerPos: -1 };
             }
           }
           return prev;
@@ -28055,8 +28052,9 @@
             }
             case "Enter": {
               event.preventDefault();
-              if (commands.length > 0) {
-                executeCommand(view, commands[pluginState.selectedIndex], pluginState, commandMap);
+              const cmd = commands[pluginState.selectedIndex] || commands[0];
+              if (cmd) {
+                executeCommand(view, cmd, pluginState, commandMap);
               }
               return true;
             }
@@ -28308,24 +28306,35 @@
       currentAnnotations = anns;
     } };
   }
+  function collectTextblocks(node, pos, out) {
+    if (node.isTextblock) {
+      out.push({ node, start: pos + 1 });
+      return;
+    }
+    if (node.isLeaf) return;
+    let childPos = pos + 1;
+    for (let i = 0; i < node.childCount; i++) {
+      const child = node.child(i);
+      collectTextblocks(child, childPos, out);
+      childPos += child.nodeSize;
+    }
+  }
   function blockIndexToPos(doc3, blockIndex, offset) {
-    let blockCount = 0;
-    let result = null;
-    doc3.descendants((node, pos) => {
-      if (result !== null) return false;
-      if (node.isBlock && node.type.name !== "doc") {
-        if (blockCount === blockIndex) {
-          result = pos + 1 + Math.min(offset, node.content.size);
-          return false;
-        }
-        blockCount++;
-        if (node.type.name === "blockquote" || node.type.name === "gh_alert" || node.type.name === "bullet_list" || node.type.name === "ordered_list" || node.type.name === "table") {
-          return true;
-        }
-        return false;
-      }
-    });
-    return result;
+    if (blockIndex == null || blockIndex < 0 || blockIndex >= doc3.childCount) return null;
+    let blockPos = 0;
+    for (let i = 0; i < blockIndex; i++) blockPos += doc3.child(i).nodeSize;
+    const node = doc3.child(blockIndex);
+    const textblocks = [];
+    collectTextblocks(node, blockPos, textblocks);
+    if (textblocks.length === 0) return blockPos + 1;
+    let remaining = Math.max(0, offset || 0);
+    for (const tb of textblocks) {
+      const size = tb.node.content.size;
+      if (remaining <= size) return tb.start + remaining;
+      remaining -= size;
+    }
+    const last = textblocks[textblocks.length - 1];
+    return last.start + last.node.content.size;
   }
   function buildKeymap(onSave) {
     const keys2 = {};
@@ -28656,6 +28665,9 @@
     });
     const plugins = [
       buildKeymap(onSave),
+      // 斜杠命令面板必须排在 baseKeymap 之前：面板打开时 Enter/方向键要先被它拦截，
+      // 否则 baseKeymap 的 splitBlock 会先消费 Enter，命令永远执行不到
+      slashCommandPlugin,
       keymap(baseKeymap),
       buildInputRules(),
       history(),
@@ -28663,7 +28675,6 @@
       columnResizing(),
       tableEditing(),
       annotationPlugin,
-      slashCommandPlugin,
       // onChange 监听
       new Plugin({
         view() {

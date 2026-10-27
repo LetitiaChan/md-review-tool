@@ -143,18 +143,33 @@ const Annotations = (() => {
 
     /**
      * 计算选区在块内的全局文本偏移量
-     * 遍历块（.md-block）内所有文本节点，累加到目标节点之前的文本长度 + 节点内偏移
+     * 遍历块（.md-block）内的文本节点，累加到目标节点之前的文本长度 + 节点内偏移。
+     *
+     * 注意：renderer 使用 marked 的 breaks:true，源码中的软换行会渲染成 <br>，
+     * 它不产生文本节点。若不把每个 <br> 计为 1 个 '\n'，偏移量会比源文本少，
+     * 导致富文本高亮和导出的 AI 指令位置整体前移。
      */
     function computeGlobalOffset(container, targetNode, localOffset) {
-        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+        const walker = document.createTreeWalker(
+            container,
+            NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+            {
+                acceptNode(node) {
+                    if (node.nodeType === Node.TEXT_NODE) return NodeFilter.FILTER_ACCEPT;
+                    return node.nodeName === 'BR' ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+                }
+            },
+            false
+        );
         let globalOffset = 0;
         while (walker.nextNode()) {
-            if (walker.currentNode === targetNode) {
+            const node = walker.currentNode;
+            if (node === targetNode) {
                 return globalOffset + localOffset;
             }
-            globalOffset += walker.currentNode.textContent.length;
+            globalOffset += node.nodeType === Node.TEXT_NODE ? node.textContent.length : 1;
         }
-        // fallback：如果没找到精确节点，返回 localOffset
+        // fallback：如果没找到精确节点（端点落在元素/BR 上），返回 localOffset
         return localOffset;
     }
 

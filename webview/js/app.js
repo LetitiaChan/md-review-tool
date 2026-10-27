@@ -19,6 +19,7 @@ export function initApp() {
     const TOC_REFRESH_DELAY = 800;
     let zenMode = false;
     let _ideType = 'codebuddy'; // 默认 CodeBuddy，由 Extension Host 通知实际类型
+    let _settingsReceived = false; // 是否已收到宿主的真实设置（此前不能按默认值写盘）
 
 
     // ===== postMessage 通信辅助 =====
@@ -71,6 +72,8 @@ export function initApp() {
             case 'settingsData':
                 Settings.applySettings(message.payload);
                 updateThemeButtonLabel(Settings.getSettings().theme);
+                _settingsReceived = true;
+                syncAutoSaveWithSettings();
                 break;
             case 'ideType':
                 _ideType = message.payload.ideType || 'codebuddy';
@@ -229,8 +232,31 @@ export function initApp() {
         // 通知 Extension Host webview 已就绪（必须确保发出，否则文件内容不会被加载）
         vscode.postMessage({ type: 'ready' });
 
-        // 启用自动保存
-        Exporter.enableAutoSave();
+        // 自动保存按用户配置启用：等待宿主的 settingsData（关闭时不能静默打开）。
+        // 极端情况下宿主未返回设置，2 秒后回退到默认配置。
+        setTimeout(() => {
+            if (!_settingsReceived) {
+                _settingsReceived = true;
+                syncAutoSaveWithSettings();
+            }
+        }, 2000);
+    }
+
+    /**
+     * 按当前设置同步自动保存状态。
+     * triggerAutoSave 不再隐式打开开关，所以这里必须显式处理关闭的情况。
+     */
+    function syncAutoSaveWithSettings() {
+        const settings = Settings.getSettings() || {};
+        if (settings.autoSaveDelay) {
+            Exporter.setAutoSaveDelay(settings.autoSaveDelay);
+        }
+        const wantAutoSave = settings.autoSave !== false;
+        if (wantAutoSave && !Exporter.isAutoSaveEnabled()) {
+            Exporter.enableAutoSave();
+        } else if (!wantAutoSave && Exporter.isAutoSaveEnabled()) {
+            Exporter.disableAutoSave();
+        }
     }
 
     // ===== 请求图片 URI 批量转换 =====

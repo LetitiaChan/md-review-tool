@@ -28,6 +28,11 @@ const Renderer = (() => {
     let _mermaidCounter = 0;
     // Mermaid 是否已初始化
     let _mermaidInitialized = false;
+    // 标题 slug 去重计数（每次 renderBlocks 重置）
+    let _slugCounts = Object.create(null);
+    // YAML Front Matter 卡片是否展开（重渲染后保持；内容变化时重置）
+    let _frontmatterExpanded = false;
+    let _frontmatterKey = null;
 
     // 数学公式占位符机制
     const MATH_PLACEHOLDER_PREFIX = '%%MATH_EXPR_';
@@ -48,6 +53,21 @@ const Renderer = (() => {
     // ===== HTML 转义辅助 =====
     function escapeHtml(str) {
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /**
+     * 生成文档内唯一的标题 slug。
+     * 同名标题依次追加 -1、-2 ...，否则重复 id 会让 TOC 项和 #锚点永远定位到第一个标题。
+     */
+    function uniqueHeadingSlug(base) {
+        const root = base || 'section';
+        let slug = root;
+        let n = 1;
+        while (Object.prototype.hasOwnProperty.call(_slugCounts, slug)) {
+            slug = root + '-' + n++;
+        }
+        _slugCounts[slug] = true;
+        return slug;
     }
 
     function parseMarkdown(markdown) {
@@ -708,11 +728,13 @@ const Renderer = (() => {
             const depth = data.depth;
             // 生成 slug：取纯文本 → 转小写 → 去除非字母数字中文字符 → 空格转连字符 → 去除首尾连字符
             const rawText = text.replace(/<[^>]*>/g, '').trim();
-            const slug = rawText
+            const baseSlug = rawText
                 .toLowerCase()
                 .replace(/[^\w\u4e00-\u9fff\u3400-\u4dbf\s-]/g, '')
                 .replace(/\s+/g, '-')
                 .replace(/^-+|-+$/g, '');
+            // 同名标题追加 -1 / -2，避免重复 id 导致 TOC 与 #锚点 永远只定位到第一个
+            const slug = uniqueHeadingSlug(baseSlug);
             return `<h${depth} id="${slug}">${text}</h${depth}>\n`;
         };
 
@@ -720,17 +742,19 @@ const Renderer = (() => {
         renderer.link = function(data) {
             const href = data.href || '';
             const title = data.title;
-            let text = data.text || '';
             const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
             const isExternal = href.startsWith('http://') || href.startsWith('https://');
             const isAnchor = href.startsWith('#');
             const targetAttr = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
 
-            // 处理链接内嵌套图片 [![alt](img)](link)
-            if (data.tokens && data.tokens.length > 0 && data.tokens[0].type === 'image') {
-                const img = data.tokens[0];
-                const imgTitle = img.title ? ` title="${escapeHtml(img.title)}"` : '';
-                text = `<img src="${img.href}" alt="${escapeHtml(img.text)}"${imgTitle} loading="lazy" class="md-image" />`;
+            // 用 parseInline 渲染链接文本：既支持链接内的行内 Markdown（[**重要**](url)），
+            // 也支持图片+文字（[![alt](img.png) caption](url)）——旧实现直接用 data.text
+            // 会把 ** 原样输出，并丢掉图片后的文字
+            let text;
+            if (data.tokens && data.tokens.length > 0) {
+                text = this.parser.parseInline(data.tokens);
+            } else {
+                text = escapeHtml(data.text || '');
             }
 
             // 工作区内文件链接：非外部、非锚点的链接视为相对文件路径
@@ -743,19 +767,14 @@ const Renderer = (() => {
 
         // ===== 自定义图片渲染 — 使用 <span> 替代 <figure> =====
         // <figure> 是块级元素，不能嵌套在 <p> 中，会导致浏览器 DOM 修复异常
+        // 注意：失败兜底不能写成内联 onerror 属性，webview 的 CSP 禁止内联事件处理器，
+        // 由 bindImageFallbacks() 在渲染完成后统一绑定
         renderer.image = function(data) {
             const href = data.href || '';
             const title = data.title;
             const text = data.text || '';
             const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
-            const safeAlt = escapeHtml(text).replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            const errorHandler = `this.onerror=null;this.style.display='none';` +
-                `var p=document.createElement('div');` +
-                `p.className='img-placeholder';` +
-                `p.innerHTML='🖼️ 图片加载失败: ${safeAlt}';` +
-                `this.parentNode.insertBefore(p,this);` +
-                `var cap=this.parentNode.querySelector('.md-image-caption');if(cap)cap.style.display='';`;
-            return `<span class="md-image-container"><img src="${href}" alt="${escapeHtml(text)}"${titleAttr} loading="lazy" class="md-image" onerror="${errorHandler}" />${text ? `<span class="md-image-caption" style="display:none">${escapeHtml(text)}</span>` : ''}</span>`;
+            return `<span class="md-image-container"><img src="${href}" alt="${escapeHtml(text)}"${titleAttr} loading="lazy" class="md-image" />${text ? `<span class="md-image-caption" style="display:none">${escapeHtml(text)}</span>` : ''}</span>`;
         };
 
         // ===== 自定义表格渲染 — table-wrapper 支持横向滚动 =====
@@ -1048,6 +1067,9 @@ const Renderer = (() => {
         const container = document.getElementById('documentContent');
         container.innerHTML = '';
 
+        // 每次整篇重渲染都重新计数标题 slug，保证 id 唯一且稳定
+        _slugCounts = Object.create(null);
+
         // 统一清空数学公式缓存，后续逐块 preprocessMath 会累积填充
         _mathExpressions = [];
 
@@ -1085,11 +1107,18 @@ const Renderer = (() => {
                         propsHtml += `<div class="fm-prop"><span class="fm-value">${escapeHtml(line.trim())}</span></div>`;
                     }
                 }
-wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-header"><span class="fm-toggle-arrow">▶</span><span class="fm-icon">⚙️</span><span class="fm-title">YAML Front Matter</span></div><div class="fm-body">${propsHtml}</div></div>`;
+                // 同一篇文档重渲染时保持展开状态；文档内容变了则回到折叠
+                if (fmRaw !== _frontmatterKey) {
+                    _frontmatterKey = fmRaw;
+                    _frontmatterExpanded = false;
+                }
+                const collapsedClass = _frontmatterExpanded ? '' : ' fm-collapsed';
+                wrapper.innerHTML = `<div class="frontmatter-card${collapsedClass}"><div class="fm-header"><span class="fm-toggle-arrow">▶</span><span class="fm-icon">⚙️</span><span class="fm-title">YAML Front Matter</span></div><div class="fm-body">${propsHtml}</div></div>`;
                 const fmCard = wrapper.querySelector('.frontmatter-card');
                 const fmHeader = wrapper.querySelector('.fm-header');
                 fmHeader.addEventListener('click', () => {
-                    fmCard.classList.toggle('fm-collapsed');
+                    // classList.toggle 返回 true 表示现在带上了 fm-collapsed（即折叠）
+                    _frontmatterExpanded = !fmCard.classList.toggle('fm-collapsed');
                 });
                 container.appendChild(wrapper);
                 return; // 跳过后续 marked 解析流程
@@ -1174,6 +1203,9 @@ wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-h
             }
         }
 
+        // 图片加载失败兜底（CSP 禁止内联 onerror，必须在 DOM 就绪后绑定）
+        bindImageFallbacks(container);
+
         // 渲染完成后调用所有注册的回调（如重新应用代码字体内联样式）
         for (const cb of _renderCompleteCallbacks) {
             try { cb(); } catch (e) { console.warn('[Renderer] onRenderComplete callback error:', e); }
@@ -1211,6 +1243,39 @@ wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-h
         return temp.innerHTML;
     }
 
+    /**
+     * 按文档顺序收集容器内的文本片段。
+     * marked 的 breaks:true 会把软换行渲染为 <br>，它不产生文本节点，
+     * 但 Selection.toString() 会把换行产出为 '\n'。为了让批注文本匹配
+     * 与选区/源文本保持一致，这里把 <br> 视为长度为 1 的 '\n' 片段。
+     *
+     * @returns {{ fullText: string, segments: Array<{node: Node, start: number, end: number, isBreak: boolean}> }}
+     */
+    function collectTextSegments(container) {
+        const walker = document.createTreeWalker(
+            container,
+            NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+            {
+                acceptNode(node) {
+                    if (node.nodeType === Node.TEXT_NODE) return NodeFilter.FILTER_ACCEPT;
+                    return node.nodeName === 'BR' ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+                }
+            },
+            false
+        );
+        let fullText = '';
+        const segments = [];
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            const isBreak = node.nodeType === Node.ELEMENT_NODE;
+            const text = isBreak ? '\n' : node.textContent;
+            if (!text) continue;
+            segments.push({ node, start: fullText.length, end: fullText.length + text.length, isBreak });
+            fullText += text;
+        }
+        return { fullText, segments };
+    }
+
     function applyTextHighlight(container, annotation) {
         const searchText = annotation.selectedText;
         if (!searchText) return;
@@ -1224,23 +1289,21 @@ wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-h
     }
 
     function trySingleNodeHighlight(container, annotation, searchText) {
-        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-        const textNodes = [];
-        while (walker.nextNode()) { textNodes.push(walker.currentNode); }
+        // 偏移量必须包含 <br>（软换行），否则多个候选的排序会错
+        const { segments } = collectTextSegments(container);
+        const textSegments = segments.filter(s => !s.isBreak);
 
         // 先收集所有匹配候选（同一块中可能有多个相同文本）
         const candidates = [];
-        let globalOffset = 0;
-        for (const textNode of textNodes) {
-            const content = textNode.textContent;
+        for (const seg of textSegments) {
+            const content = seg.node.textContent;
             let searchFrom = 0;
             while (true) {
                 const idx = content.indexOf(searchText, searchFrom);
                 if (idx === -1) break;
-                candidates.push({ textNode, idx, globalOffset: globalOffset + idx });
+                candidates.push({ textNode: seg.node, idx, globalOffset: seg.start + idx });
                 searchFrom = idx + 1;
             }
-            globalOffset += content.length;
         }
 
         if (candidates.length === 0) return false;
@@ -1283,18 +1346,11 @@ wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-h
     }
 
     function tryCrossNodeHighlight(container, annotation, searchText) {
-        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-        const textNodes = [];
-        while (walker.nextNode()) { textNodes.push(walker.currentNode); }
-        if (textNodes.length === 0) return false;
-
-        let fullText = '';
-        const nodeMap = [];
-        for (const tn of textNodes) {
-            const start = fullText.length;
-            fullText += tn.textContent;
-            nodeMap.push({ node: tn, start, end: fullText.length });
-        }
+        // 用 collectTextSegments 而不是纯文本节点：软换行（<br>）要计入 fullText，
+        // 否则跨行的批注文本（含 '\n'）永远匹配不上
+        const { fullText, segments } = collectTextSegments(container);
+        if (segments.length === 0 || !fullText) return false;
+        const nodeMap = segments;
 
         // 收集所有精确匹配位置
         let allMatches = [];
@@ -1389,14 +1445,12 @@ wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-h
     }
 
     function tryPartialBlockHighlight(container, annotation, searchText) {
-        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-        const textNodes = [];
-        while (walker.nextNode()) { textNodes.push(walker.currentNode); }
+        // 包含软换行（<br>）后的块文本，与选区的 toString() 保持一致
+        const { fullText, segments } = collectTextSegments(container);
+        const textNodes = segments.filter(s => !s.isBreak).map(s => s.node);
         if (textNodes.length === 0) return false;
 
-        let blockText = '';
-        for (const tn of textNodes) { blockText += tn.textContent; }
-        blockText = blockText.trim();
+        let blockText = fullText.trim();
         if (!blockText) return false;
 
         const normBlock = blockText.replace(/\s+/g, ' ').trim();
@@ -1455,23 +1509,21 @@ wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-h
 
         const isBefore = annotation.insertPosition === 'before';
 
-        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-        const textNodes = [];
-        while (walker.nextNode()) { textNodes.push(walker.currentNode); }
+        // 偏移量需包含软换行（<br>），与选区/源文本保持一致
+        const { segments } = collectTextSegments(container);
+        const textNodes = segments.filter(s => !s.isBreak);
 
         // 收集所有候选匹配
         const candidates = [];
-        let globalOffset = 0;
-        for (const textNode of textNodes) {
-            const content = textNode.textContent;
+        for (const seg of textNodes) {
+            const content = seg.node.textContent;
             let searchFrom = 0;
             while (true) {
                 const idx = content.indexOf(afterText, searchFrom);
                 if (idx === -1) break;
-                candidates.push({ textNode, idx, globalOffset: globalOffset + idx });
+                candidates.push({ textNode: seg.node, idx, globalOffset: seg.start + idx });
                 searchFrom = idx + 1;
             }
-            globalOffset += content.length;
         }
 
         if (candidates.length === 0) return;
@@ -1534,6 +1586,40 @@ wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-h
     }
 
     /**
+     * 为图片绑定加载失败兜底。
+     * webview 的 CSP 没有 'unsafe-inline'，内联 onerror 会被浏览器拒绝执行，
+     * 因此改为渲染完成后统一用 JS 绑定；绑定前已经失败的图片用
+     * complete && naturalWidth === 0 补一次判断。
+     */
+    function bindImageFallbacks(root) {
+        if (!root || !root.querySelectorAll) return;
+        root.querySelectorAll('img').forEach(img => {
+            if (img.dataset.fallbackBound === 'true') return;
+            // PlantUML 图有自己的失败兜底
+            if (img.classList.contains('plantuml-rendered')) return;
+            img.dataset.fallbackBound = 'true';
+
+            const applyFallback = () => {
+                if (img.dataset.fallbackApplied === 'true') return;
+                img.dataset.fallbackApplied = 'true';
+                img.style.display = 'none';
+                const parent = img.parentNode;
+                if (!parent) return;
+                const placeholder = document.createElement('div');
+                placeholder.className = 'img-placeholder';
+                placeholder.textContent = img.dataset.loadingHint
+                    || ('🖼️ 图片加载失败: ' + (img.getAttribute('alt') || img.getAttribute('src') || ''));
+                parent.insertBefore(placeholder, img);
+                const caption = parent.querySelector ? parent.querySelector('.md-image-caption') : null;
+                if (caption) caption.style.display = '';
+            };
+
+            img.addEventListener('error', applyFallback);
+            if (img.complete && img.naturalWidth === 0) applyFallback();
+        });
+    }
+
+    /**
      * 重写 HTML 中图片的相对路径
      * 使用缓存的 webviewUri 映射，或显示占位提示
      */
@@ -1551,14 +1637,10 @@ wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-h
                 return `<img ${before}src="${_imageUriCache[decodedSrc]}"${after}>`;
             }
 
-            // Placeholder with error handler
-            const safeFileName = decodedSrc.replace(/&/g, '&amp;').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            const errorHandler = `this.onerror=null;this.style.display='none';` +
-                `var p=document.createElement('div');` +
-                `p.className='img-placeholder';` +
-                `p.innerHTML='🖼️ 图片加载中: ${safeFileName}';` +
-                `this.parentNode.insertBefore(p,this);`;
-            return `<img ${before}src="${src}"${after} onerror="${errorHandler}">`;
+            // 占位提示：加载失败时由 bindImageFallbacks() 读取 data-loading-hint 展示
+            // （不能使用内联 onerror，CSP 会拦截）
+            const hint = escapeHtml('🖼️ 图片加载中: ' + decodedSrc);
+            return `<img ${before}src="${src}"${after} data-loading-hint="${hint}">`;
         });
     }
 
@@ -2374,13 +2456,22 @@ wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-h
             const svgUrl = 'https://www.plantuml.com/plantuml/svg/~h' + hexCode;
 
             // 动态构建 <img>，保留 source-data 用于主题切换时重渲染
-            container.innerHTML = `<img class="plantuml-rendered" src="${svgUrl}" alt="PlantUML Diagram" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="plantuml-fallback" style="display:none"><div class="plantuml-error"><span class="plantuml-error-icon">⚠️</span> PlantUML 图表渲染失败（请检查网络连接）</div><pre class="plantuml-source">${escapeHtml(code)}</pre></div><pre class="plantuml-source-data" data-source="${sourceDataEl.dataset.source}" style="display:none"></pre>`;
+            // 失败兜底由下方 JS 绑定（CSP 禁止内联 onerror）
+            container.innerHTML = `<img class="plantuml-rendered" src="${svgUrl}" alt="PlantUML Diagram" /><div class="plantuml-fallback" style="display:none"><div class="plantuml-error"><span class="plantuml-error-icon">⚠️</span> PlantUML 图表渲染失败（请检查网络连接）</div><pre class="plantuml-source">${escapeHtml(code)}</pre></div><pre class="plantuml-source-data" data-source="${sourceDataEl.dataset.source}" style="display:none"></pre>`;
 
             const img = container.querySelector('.plantuml-rendered');
             if (img) {
                 img.dataset.lightboxBound = 'true';
                 img.title = '点击查看大图';
                 img.style.cursor = 'pointer';
+                const showFallback = () => {
+                    img.style.display = 'none';
+                    const fallback = container.querySelector('.plantuml-fallback');
+                    if (fallback) fallback.style.display = 'block';
+                };
+                img.addEventListener('error', showFallback);
+                // error 事件可能在绑定前就已触发
+                if (img.complete && img.naturalWidth === 0) showFallback();
             }
         });
     }

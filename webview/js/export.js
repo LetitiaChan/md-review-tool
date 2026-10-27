@@ -8,6 +8,8 @@ const Exporter = (() => {
     let autoSaveEnabled = false;
     let autoSaveTimer = null;
     const AUTO_SAVE_DELAY = 1500;
+    // 实际使用的延迟，可由设置（mdReview.autoSaveDelay）覆盖
+    let autoSaveDelay = AUTO_SAVE_DELAY;
     // 历史版本归档策略：
     // 1. doAutoSave 发现批注为空时，仅更新 UI 状态，不删除磁盘批阅记录（保留历史版本供日后回溯）
     // 2. 磁盘记录删除仅通过用户显式操作触发（见 app.js btnConfirmClearAll）
@@ -265,13 +267,22 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
     }
 
     function triggerAutoSave() {
-        if (!autoSaveEnabled) {
-            autoSaveEnabled = true;
-        }
+        // 用户关闭自动保存后不再静默重新打开；只有显式调用 enableAutoSave() 才能开启
+        if (!autoSaveEnabled) return;
         if (autoSaveTimer) {
             clearTimeout(autoSaveTimer);
         }
-        autoSaveTimer = setTimeout(() => doAutoSave(), AUTO_SAVE_DELAY);
+        autoSaveTimer = setTimeout(() => doAutoSave(), autoSaveDelay);
+    }
+
+    /**
+     * 应用设置中的自动保存延迟（毫秒）
+     */
+    function setAutoSaveDelay(ms) {
+        const value = parseInt(ms, 10);
+        if (Number.isFinite(value) && value > 0) {
+            autoSaveDelay = value;
+        }
     }
 
     async function doAutoSave() {
@@ -362,7 +373,7 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
 
     return {
         exportReviewDocument, generateReviewDoc,
-        enableAutoSave, disableAutoSave, triggerAutoSave, isAutoSaveEnabled
+        enableAutoSave, disableAutoSave, triggerAutoSave, isAutoSaveEnabled, setAutoSaveDelay
     };
 })();
 

@@ -30,21 +30,19 @@ export function createSlashCommandPlugin({ commandMap, getI18n }) {
             init() {
                 return { active: false, filterText: '', selectedIndex: 0, triggerPos: -1 };
             },
-            apply(tr, prev) {
+            apply(tr, prev, oldState, newState) {
                 const meta = tr.getMeta(slashCommandKey);
                 if (meta) return meta;
                 // 如果文档变化且面板打开，更新 filterText
+                // 注意：Transaction 没有 state 属性，必须用 apply 的 newState 参数
                 if (prev.active && tr.docChanged) {
-                    const state = tr.state || null;
-                    if (state) {
-                        const $from = state.selection.$from;
-                        const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
-                        if (textBefore.startsWith('/')) {
-                            return { ...prev, filterText: textBefore.slice(1), selectedIndex: 0 };
-                        } else {
-                            // "/" 被删除了，关闭面板
-                            return { active: false, filterText: '', selectedIndex: 0, triggerPos: -1 };
-                        }
+                    const $from = newState.selection.$from;
+                    const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
+                    if (textBefore.startsWith('/')) {
+                        return { ...prev, filterText: textBefore.slice(1), selectedIndex: 0 };
+                    } else {
+                        // "/" 被删除了，关闭面板
+                        return { active: false, filterText: '', selectedIndex: 0, triggerPos: -1 };
                     }
                 }
                 return prev;
@@ -100,8 +98,9 @@ export function createSlashCommandPlugin({ commandMap, getI18n }) {
                     }
                     case 'Enter': {
                         event.preventDefault();
-                        if (commands.length > 0) {
-                            executeCommand(view, commands[pluginState.selectedIndex], pluginState, commandMap);
+                        const cmd = commands[pluginState.selectedIndex] || commands[0];
+                        if (cmd) {
+                            executeCommand(view, cmd, pluginState, commandMap);
                         }
                         return true;
                     }

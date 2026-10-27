@@ -1496,6 +1496,9 @@
     let _imageUriCache = {};
     let _mermaidCounter = 0;
     let _mermaidInitialized = false;
+    let _slugCounts = /* @__PURE__ */ Object.create(null);
+    let _frontmatterExpanded = false;
+    let _frontmatterKey = null;
     const MATH_PLACEHOLDER_PREFIX = "%%MATH_EXPR_";
     const MATH_PLACEHOLDER_SUFFIX = "%%";
     let _mathExpressions = [];
@@ -1506,6 +1509,16 @@
     let _inlineExtractedDefs = [];
     function escapeHtml(str) {
       return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+    function uniqueHeadingSlug(base) {
+      const root = base || "section";
+      let slug = root;
+      let n = 1;
+      while (Object.prototype.hasOwnProperty.call(_slugCounts, slug)) {
+        slug = root + "-" + n++;
+      }
+      _slugCounts[slug] = true;
+      return slug;
     }
     function parseMarkdown(markdown) {
       let processedMarkdown = markdown;
@@ -1982,22 +1995,23 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         const text = this.parser.parseInline(data.tokens);
         const depth = data.depth;
         const rawText = text.replace(/<[^>]*>/g, "").trim();
-        const slug = rawText.toLowerCase().replace(/[^\w\u4e00-\u9fff\u3400-\u4dbf\s-]/g, "").replace(/\s+/g, "-").replace(/^-+|-+$/g, "");
+        const baseSlug = rawText.toLowerCase().replace(/[^\w\u4e00-\u9fff\u3400-\u4dbf\s-]/g, "").replace(/\s+/g, "-").replace(/^-+|-+$/g, "");
+        const slug = uniqueHeadingSlug(baseSlug);
         return `<h${depth} id="${slug}">${text}</h${depth}>
 `;
       };
       renderer.link = function(data) {
         const href = data.href || "";
         const title = data.title;
-        let text = data.text || "";
         const titleAttr = title ? ` title="${escapeHtml(title)}"` : "";
         const isExternal = href.startsWith("http://") || href.startsWith("https://");
         const isAnchor = href.startsWith("#");
         const targetAttr = isExternal ? ' target="_blank" rel="noopener noreferrer"' : "";
-        if (data.tokens && data.tokens.length > 0 && data.tokens[0].type === "image") {
-          const img = data.tokens[0];
-          const imgTitle = img.title ? ` title="${escapeHtml(img.title)}"` : "";
-          text = `<img src="${img.href}" alt="${escapeHtml(img.text)}"${imgTitle} loading="lazy" class="md-image" />`;
+        let text;
+        if (data.tokens && data.tokens.length > 0) {
+          text = this.parser.parseInline(data.tokens);
+        } else {
+          text = escapeHtml(data.text || "");
         }
         if (!isExternal && !isAnchor && href) {
           return `<a href="${href}"${titleAttr} class="workspace-file-link" data-filepath="${escapeHtml(href)}" title="${escapeHtml(href)}">${text}</a>`;
@@ -2009,9 +2023,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         const title = data.title;
         const text = data.text || "";
         const titleAttr = title ? ` title="${escapeHtml(title)}"` : "";
-        const safeAlt = escapeHtml(text).replace(/'/g, "\\'").replace(/"/g, "&quot;");
-        const errorHandler = `this.onerror=null;this.style.display='none';var p=document.createElement('div');p.className='img-placeholder';p.innerHTML='\u{1F5BC}\uFE0F \u56FE\u7247\u52A0\u8F7D\u5931\u8D25: ${safeAlt}';this.parentNode.insertBefore(p,this);var cap=this.parentNode.querySelector('.md-image-caption');if(cap)cap.style.display='';`;
-        return `<span class="md-image-container"><img src="${href}" alt="${escapeHtml(text)}"${titleAttr} loading="lazy" class="md-image" onerror="${errorHandler}" />${text ? `<span class="md-image-caption" style="display:none">${escapeHtml(text)}</span>` : ""}</span>`;
+        return `<span class="md-image-container"><img src="${href}" alt="${escapeHtml(text)}"${titleAttr} loading="lazy" class="md-image" />${text ? `<span class="md-image-caption" style="display:none">${escapeHtml(text)}</span>` : ""}</span>`;
       };
       renderer.table = function(data) {
         const header = data.header;
@@ -2269,6 +2281,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     function renderBlocks(blocks, annotations) {
       const container = document.getElementById("documentContent");
       container.innerHTML = "";
+      _slugCounts = /* @__PURE__ */ Object.create(null);
       _mathExpressions = [];
       const fnLabelToGlobalIndex = {};
       if (_footnoteDefs.length > 0) {
@@ -2299,11 +2312,16 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
               propsHtml += `<div class="fm-prop"><span class="fm-value">${escapeHtml(line.trim())}</span></div>`;
             }
           }
-          wrapper.innerHTML = `<div class="frontmatter-card fm-collapsed"><div class="fm-header"><span class="fm-toggle-arrow">\u25B6</span><span class="fm-icon">\u2699\uFE0F</span><span class="fm-title">YAML Front Matter</span></div><div class="fm-body">${propsHtml}</div></div>`;
+          if (fmRaw !== _frontmatterKey) {
+            _frontmatterKey = fmRaw;
+            _frontmatterExpanded = false;
+          }
+          const collapsedClass = _frontmatterExpanded ? "" : " fm-collapsed";
+          wrapper.innerHTML = `<div class="frontmatter-card${collapsedClass}"><div class="fm-header"><span class="fm-toggle-arrow">\u25B6</span><span class="fm-icon">\u2699\uFE0F</span><span class="fm-title">YAML Front Matter</span></div><div class="fm-body">${propsHtml}</div></div>`;
           const fmCard = wrapper.querySelector(".frontmatter-card");
           const fmHeader = wrapper.querySelector(".fm-header");
           fmHeader.addEventListener("click", () => {
-            fmCard.classList.toggle("fm-collapsed");
+            _frontmatterExpanded = !fmCard.classList.toggle("fm-collapsed");
           });
           container.appendChild(wrapper);
           return;
@@ -2371,6 +2389,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           }
         }
       }
+      bindImageFallbacks(container);
       for (const cb of _renderCompleteCallbacks) {
         try {
           cb();
@@ -2401,6 +2420,30 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
       return temp.innerHTML;
     }
+    function collectTextSegments(container) {
+      const walker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+        {
+          acceptNode(node) {
+            if (node.nodeType === Node.TEXT_NODE) return NodeFilter.FILTER_ACCEPT;
+            return node.nodeName === "BR" ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+          }
+        },
+        false
+      );
+      let fullText = "";
+      const segments = [];
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const isBreak = node.nodeType === Node.ELEMENT_NODE;
+        const text = isBreak ? "\n" : node.textContent;
+        if (!text) continue;
+        segments.push({ node, start: fullText.length, end: fullText.length + text.length, isBreak });
+        fullText += text;
+      }
+      return { fullText, segments };
+    }
     function applyTextHighlight(container, annotation) {
       const searchText = annotation.selectedText;
       if (!searchText) return;
@@ -2411,23 +2454,18 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       applyFallbackMarker(container, annotation);
     }
     function trySingleNodeHighlight(container, annotation, searchText) {
-      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-      const textNodes = [];
-      while (walker.nextNode()) {
-        textNodes.push(walker.currentNode);
-      }
+      const { segments } = collectTextSegments(container);
+      const textSegments = segments.filter((s) => !s.isBreak);
       const candidates = [];
-      let globalOffset = 0;
-      for (const textNode2 of textNodes) {
-        const content = textNode2.textContent;
+      for (const seg of textSegments) {
+        const content = seg.node.textContent;
         let searchFrom = 0;
         while (true) {
           const idx2 = content.indexOf(searchText, searchFrom);
           if (idx2 === -1) break;
-          candidates.push({ textNode: textNode2, idx: idx2, globalOffset: globalOffset + idx2 });
+          candidates.push({ textNode: seg.node, idx: idx2, globalOffset: seg.start + idx2 });
           searchFrom = idx2 + 1;
         }
-        globalOffset += content.length;
       }
       if (candidates.length === 0) return false;
       let best = candidates[0];
@@ -2463,19 +2501,9 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       return true;
     }
     function tryCrossNodeHighlight(container, annotation, searchText) {
-      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-      const textNodes = [];
-      while (walker.nextNode()) {
-        textNodes.push(walker.currentNode);
-      }
-      if (textNodes.length === 0) return false;
-      let fullText = "";
-      const nodeMap = [];
-      for (const tn of textNodes) {
-        const start = fullText.length;
-        fullText += tn.textContent;
-        nodeMap.push({ node: tn, start, end: fullText.length });
-      }
+      const { fullText, segments } = collectTextSegments(container);
+      if (segments.length === 0 || !fullText) return false;
+      const nodeMap = segments;
       let allMatches = [];
       let searchFrom = 0;
       while (true) {
@@ -2569,17 +2597,10 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       return !isFirst;
     }
     function tryPartialBlockHighlight(container, annotation, searchText) {
-      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-      const textNodes = [];
-      while (walker.nextNode()) {
-        textNodes.push(walker.currentNode);
-      }
+      const { fullText, segments } = collectTextSegments(container);
+      const textNodes = segments.filter((s) => !s.isBreak).map((s) => s.node);
       if (textNodes.length === 0) return false;
-      let blockText = "";
-      for (const tn of textNodes) {
-        blockText += tn.textContent;
-      }
-      blockText = blockText.trim();
+      let blockText = fullText.trim();
       if (!blockText) return false;
       const normBlock = blockText.replace(/\s+/g, " ").trim();
       const normSearch = searchText.replace(/\s+/g, " ").trim();
@@ -2637,23 +2658,18 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       const afterText = annotation.selectedText;
       if (!afterText) return;
       const isBefore = annotation.insertPosition === "before";
-      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
-      const textNodes = [];
-      while (walker.nextNode()) {
-        textNodes.push(walker.currentNode);
-      }
+      const { segments } = collectTextSegments(container);
+      const textNodes = segments.filter((s) => !s.isBreak);
       const candidates = [];
-      let globalOffset = 0;
-      for (const textNode2 of textNodes) {
-        const content = textNode2.textContent;
+      for (const seg of textNodes) {
+        const content = seg.node.textContent;
         let searchFrom = 0;
         while (true) {
           const idx2 = content.indexOf(afterText, searchFrom);
           if (idx2 === -1) break;
-          candidates.push({ textNode: textNode2, idx: idx2, globalOffset: globalOffset + idx2 });
+          candidates.push({ textNode: seg.node, idx: idx2, globalOffset: seg.start + idx2 });
           searchFrom = idx2 + 1;
         }
-        globalOffset += content.length;
       }
       if (candidates.length === 0) return;
       let best = candidates[0];
@@ -2707,6 +2723,29 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
       return -1;
     }
+    function bindImageFallbacks(root) {
+      if (!root || !root.querySelectorAll) return;
+      root.querySelectorAll("img").forEach((img) => {
+        if (img.dataset.fallbackBound === "true") return;
+        if (img.classList.contains("plantuml-rendered")) return;
+        img.dataset.fallbackBound = "true";
+        const applyFallback = () => {
+          if (img.dataset.fallbackApplied === "true") return;
+          img.dataset.fallbackApplied = "true";
+          img.style.display = "none";
+          const parent = img.parentNode;
+          if (!parent) return;
+          const placeholder = document.createElement("div");
+          placeholder.className = "img-placeholder";
+          placeholder.textContent = img.dataset.loadingHint || "\u{1F5BC}\uFE0F \u56FE\u7247\u52A0\u8F7D\u5931\u8D25: " + (img.getAttribute("alt") || img.getAttribute("src") || "");
+          parent.insertBefore(placeholder, img);
+          const caption = parent.querySelector ? parent.querySelector(".md-image-caption") : null;
+          if (caption) caption.style.display = "";
+        };
+        img.addEventListener("error", applyFallback);
+        if (img.complete && img.naturalWidth === 0) applyFallback();
+      });
+    }
     function rewriteImagePaths(html) {
       return html.replace(/<img\s+([^>]*?)src="([^"]*)"([^>]*?)>/gi, (match, before, src, after) => {
         if (/^(https?:\/\/|data:|vscode-)/i.test(src)) {
@@ -2721,9 +2760,8 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         if (_imageUriCache[decodedSrc]) {
           return `<img ${before}src="${_imageUriCache[decodedSrc]}"${after}>`;
         }
-        const safeFileName = decodedSrc.replace(/&/g, "&amp;").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-        const errorHandler = `this.onerror=null;this.style.display='none';var p=document.createElement('div');p.className='img-placeholder';p.innerHTML='\u{1F5BC}\uFE0F \u56FE\u7247\u52A0\u8F7D\u4E2D: ${safeFileName}';this.parentNode.insertBefore(p,this);`;
-        return `<img ${before}src="${src}"${after} onerror="${errorHandler}">`;
+        const hint = escapeHtml("\u{1F5BC}\uFE0F \u56FE\u7247\u52A0\u8F7D\u4E2D: " + decodedSrc);
+        return `<img ${before}src="${src}"${after} data-loading-hint="${hint}">`;
       });
     }
     function setImageUriCache(uriMap) {
@@ -3313,12 +3351,19 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
         const hexCode = plantumlHexEncode(code);
         const svgUrl = "https://www.plantuml.com/plantuml/svg/~h" + hexCode;
-        container.innerHTML = `<img class="plantuml-rendered" src="${svgUrl}" alt="PlantUML Diagram" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="plantuml-fallback" style="display:none"><div class="plantuml-error"><span class="plantuml-error-icon">\u26A0\uFE0F</span> PlantUML \u56FE\u8868\u6E32\u67D3\u5931\u8D25\uFF08\u8BF7\u68C0\u67E5\u7F51\u7EDC\u8FDE\u63A5\uFF09</div><pre class="plantuml-source">${escapeHtml(code)}</pre></div><pre class="plantuml-source-data" data-source="${sourceDataEl.dataset.source}" style="display:none"></pre>`;
+        container.innerHTML = `<img class="plantuml-rendered" src="${svgUrl}" alt="PlantUML Diagram" /><div class="plantuml-fallback" style="display:none"><div class="plantuml-error"><span class="plantuml-error-icon">\u26A0\uFE0F</span> PlantUML \u56FE\u8868\u6E32\u67D3\u5931\u8D25\uFF08\u8BF7\u68C0\u67E5\u7F51\u7EDC\u8FDE\u63A5\uFF09</div><pre class="plantuml-source">${escapeHtml(code)}</pre></div><pre class="plantuml-source-data" data-source="${sourceDataEl.dataset.source}" style="display:none"></pre>`;
         const img = container.querySelector(".plantuml-rendered");
         if (img) {
           img.dataset.lightboxBound = "true";
           img.title = "\u70B9\u51FB\u67E5\u770B\u5927\u56FE";
           img.style.cursor = "pointer";
+          const showFallback = () => {
+            img.style.display = "none";
+            const fallback = container.querySelector(".plantuml-fallback");
+            if (fallback) fallback.style.display = "block";
+          };
+          img.addEventListener("error", showFallback);
+          if (img.complete && img.naturalWidth === 0) showFallback();
         }
       });
     }
@@ -3532,13 +3577,24 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       return docContent && docContent.contentEditable === "true";
     }
     function computeGlobalOffset(container, targetNode, localOffset) {
-      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null, false);
+      const walker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+        {
+          acceptNode(node) {
+            if (node.nodeType === Node.TEXT_NODE) return NodeFilter.FILTER_ACCEPT;
+            return node.nodeName === "BR" ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+          }
+        },
+        false
+      );
       let globalOffset = 0;
       while (walker.nextNode()) {
-        if (walker.currentNode === targetNode) {
+        const node = walker.currentNode;
+        if (node === targetNode) {
           return globalOffset + localOffset;
         }
-        globalOffset += walker.currentNode.textContent.length;
+        globalOffset += node.nodeType === Node.TEXT_NODE ? node.textContent.length : 1;
       }
       return localOffset;
     }
@@ -4185,6 +4241,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     let autoSaveEnabled = false;
     let autoSaveTimer = null;
     const AUTO_SAVE_DELAY = 1500;
+    let autoSaveDelay = AUTO_SAVE_DELAY;
     function _reviewBaseName(data) {
       const baseName = data.fileName.replace(/\.(mdc|md)$/, "");
       const hash = data.pathHash || "";
@@ -4399,13 +4456,17 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
     }
     function triggerAutoSave() {
-      if (!autoSaveEnabled) {
-        autoSaveEnabled = true;
-      }
+      if (!autoSaveEnabled) return;
       if (autoSaveTimer) {
         clearTimeout(autoSaveTimer);
       }
-      autoSaveTimer = setTimeout(() => doAutoSave(), AUTO_SAVE_DELAY);
+      autoSaveTimer = setTimeout(() => doAutoSave(), autoSaveDelay);
+    }
+    function setAutoSaveDelay(ms) {
+      const value = parseInt(ms, 10);
+      if (Number.isFinite(value) && value > 0) {
+        autoSaveDelay = value;
+      }
     }
     async function doAutoSave() {
       const data = Store.getData();
@@ -4477,7 +4538,8 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       enableAutoSave,
       disableAutoSave,
       triggerAutoSave,
-      isAutoSaveEnabled
+      isAutoSaveEnabled,
+      setAutoSaveDelay
     };
   })();
 
@@ -5273,6 +5335,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     const TOC_REFRESH_DELAY = 800;
     let zenMode = false;
     let _ideType = "codebuddy";
+    let _settingsReceived = false;
     const _pendingRequests = /* @__PURE__ */ new Map();
     function callHost(type, payload) {
       return new Promise((resolve, reject) => {
@@ -5315,6 +5378,8 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         case "settingsData":
           Settings.applySettings(message.payload);
           updateThemeButtonLabel(Settings.getSettings().theme);
+          _settingsReceived = true;
+          syncAutoSaveWithSettings();
           break;
         case "ideType":
           _ideType = message.payload.ideType || "codebuddy";
@@ -5433,7 +5498,24 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         console.error("[App] \u72B6\u6001\u6062\u590D\u5931\u8D25:", e);
       }
       vscode.postMessage({ type: "ready" });
-      Exporter.enableAutoSave();
+      setTimeout(() => {
+        if (!_settingsReceived) {
+          _settingsReceived = true;
+          syncAutoSaveWithSettings();
+        }
+      }, 2e3);
+    }
+    function syncAutoSaveWithSettings() {
+      const settings = Settings.getSettings() || {};
+      if (settings.autoSaveDelay) {
+        Exporter.setAutoSaveDelay(settings.autoSaveDelay);
+      }
+      const wantAutoSave = settings.autoSave !== false;
+      if (wantAutoSave && !Exporter.isAutoSaveEnabled()) {
+        Exporter.enableAutoSave();
+      } else if (!wantAutoSave && Exporter.isAutoSaveEnabled()) {
+        Exporter.disableAutoSave();
+      }
     }
     function requestImageUris(markdown, sourceDir) {
       const html = marked.parse(markdown);

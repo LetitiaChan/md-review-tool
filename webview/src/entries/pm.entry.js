@@ -122,32 +122,53 @@ function buildAnnotationPlugin() {
 }
 
 /**
- * 将 blockIndex + offset 映射为 PM doc 中的绝对位置
+ * 收集一个块内所有叶子文本块（段落/标题/代码块等）及其内容起始位置。
+ * 用于把预览侧的「块内文本偏移」映射到 PM doc 坐标。
+ */
+function collectTextblocks(node, pos, out) {
+    if (node.isTextblock) {
+        out.push({ node, start: pos + 1 });
+        return;
+    }
+    // 叶子节点（图片/分隔线等）没有文本，直接跳过；
+    // 其余容器（列表、引用块、表格等）都继续下钻，不能只看 isBlock，
+    // 因为 table_cell 这类节点没有 block 分组
+    if (node.isLeaf) return;
+    let childPos = pos + 1;
+    for (let i = 0; i < node.childCount; i++) {
+        const child = node.child(i);
+        collectTextblocks(child, childPos, out);
+        childPos += child.nodeSize;
+    }
+}
+
+/**
+ * 将 blockIndex + offset 映射为 PM doc 中的绝对位置。
+ *
+ * 注意：blockIndex 来自预览侧按空行切分的「顶层块」序号，
+ * 因此这里只能统计 doc 的顶层子节点，不能把 list_item / table_cell
+ * 等嵌套块也计入（否则列表之后的批注会整体错位）。
  */
 function blockIndexToPos(doc, blockIndex, offset) {
-    let blockCount = 0;
-    let result = null;
+    if (blockIndex == null || blockIndex < 0 || blockIndex >= doc.childCount) return null;
 
-    doc.descendants((node, pos) => {
-        if (result !== null) return false;
-        if (node.isBlock && node.type.name !== 'doc') {
-            if (blockCount === blockIndex) {
-                // 找到目标 block，计算 offset 对应的位置
-                result = pos + 1 + Math.min(offset, node.content.size);
-                return false;
-            }
-            blockCount++;
-            // 不递归进入子 block（只计算顶层 block）
-            if (node.type.name === 'blockquote' || node.type.name === 'gh_alert' ||
-                node.type.name === 'bullet_list' || node.type.name === 'ordered_list' ||
-                node.type.name === 'table') {
-                return true; // 继续递归
-            }
-            return false;
-        }
-    });
+    let blockPos = 0;
+    for (let i = 0; i < blockIndex; i++) blockPos += doc.child(i).nodeSize;
 
-    return result;
+    const node = doc.child(blockIndex);
+    const textblocks = [];
+    collectTextblocks(node, blockPos, textblocks);
+    if (textblocks.length === 0) return blockPos + 1;
+
+    // 在块内的文本块之间摊平累加偏移，与预览侧拼接文本节点的顺序一致
+    let remaining = Math.max(0, offset || 0);
+    for (const tb of textblocks) {
+        const size = tb.node.content.size;
+        if (remaining <= size) return tb.start + remaining;
+        remaining -= size;
+    }
+    const last = textblocks[textblocks.length - 1];
+    return last.start + last.node.content.size;
 }
 
 // ===== 快捷键配置 =====
@@ -571,6 +592,9 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
 
     const plugins = [
         buildKeymap(onSave),
+        // 斜杠命令面板必须排在 baseKeymap 之前：面板打开时 Enter/方向键要先被它拦截，
+        // 否则 baseKeymap 的 splitBlock 会先消费 Enter，命令永远执行不到
+        slashCommandPlugin,
         keymap(baseKeymap),
         buildInputRules(),
         history(),
@@ -578,7 +602,6 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
         columnResizing(),
         tableEditing(),
         annotationPlugin,
-        slashCommandPlugin,
         // onChange 监听
         new Plugin({
             view() {
