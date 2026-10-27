@@ -79,4 +79,59 @@ test.describe('Rich Mode 往返保真', () => {
         expect(output).toContain('> 引用内容');
         expect(output).toContain('- 项目一');
     });
+
+    test('BT-roundtrip.6 分块序列化器与基类输出逐字节一致', async ({ page }) => {
+        const corpus = [
+            '# 标题\n\n段落 **粗体** *斜体* `代码` [链接](https://e.com)',
+            '- a\n- b\n- c\n\n1. x\n2. y',
+            '> 引用\n> 第二行',
+            '| a | b |\n| --- | --- |\n| [x](https://e.com) **b** | y |',
+            '```js\nconst a = 1;\nif (a) { console.log(a); }\n```',
+            '公式 $x^2$ 结尾',
+            '脚注[^1]\n\n[^1]: 内容',
+            '这是 ==高亮== 和 ~下标~ 与 ^上标^',
+            '> [!NOTE]\n> 告警块',
+            '- [x] 完成\n- [ ] 未完成',
+        ];
+
+        for (const md of corpus) {
+            const result = await page.evaluate((input) => {
+                const PM = (window as any).PM;
+                return {
+                    chunked: PM.serializeMarkdown(input, false),
+                    base: PM.serializeMarkdown(input, true),
+                };
+            }, md);
+            expect(result.chunked, `输入: ${md}`).toBe(result.base);
+        }
+    });
+
+    test('BT-roundtrip.7 大文档序列化应保持线性', async ({ page }) => {
+        const result = await page.evaluate(() => {
+            const parts: string[] = [];
+            for (let i = 0; i < 4000; i++) {
+                parts.push('## 标题 ' + i + '\n\n这是第 ' + i + ' 段正文，包含 **加粗** 和 [链接](https://example.com) 以及 `代码`。');
+            }
+            const md = parts.join('\n\n');
+            const PM = (window as any).PM;
+
+            const chunkedOut = PM.serializeMarkdown(md, false);
+            const baseOut = PM.serializeMarkdown(md, true);
+
+            const t0 = performance.now();
+            PM.serializeMarkdown(md, false);
+            const chunkedMs = performance.now() - t0;
+
+            return {
+                bytes: md.length,
+                chunkedMs: Math.round(chunkedMs),
+                equal: chunkedOut === baseOut,
+            };
+        });
+
+        expect(result.bytes).toBeGreaterThan(200000);
+        expect(result.equal).toBe(true);
+        // 修复前约 1~3 秒；分块实现目标 < 100ms（阈值留余量）
+        expect(result.chunkedMs).toBeLessThan(150);
+    });
 });

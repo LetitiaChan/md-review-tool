@@ -150,9 +150,15 @@ suite('Review Fixes Regression Test Suite', () => {
             if (!source) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const body = extractFunctionBody(source, 'blockIndexToPos');
             assert.ok(body, '应存在 blockIndexToPos 函数');
-            assert.ok(body.includes('doc.childCount'),
-                'blockIndexToPos 应使用 doc.childCount 判断顶层块范围');
-            assert.ok(!body.includes('doc.descendants'),
+            assert.ok(body.includes('idx.starts[blockIndex]'),
+                'blockIndexToPos 应使用预计算的顶层块索引');
+            assert.ok(source.includes('function buildBlockPositionIndex('),
+                '应提供 buildBlockPositionIndex 一次性构建块索引');
+
+            const indexBody = extractFunctionBody(source, 'buildBlockPositionIndex');
+            assert.ok(indexBody.includes('doc.childCount'),
+                '块索引应使用 doc.childCount 遍历顶层子节点');
+            assert.ok(!indexBody.includes('doc.descendants'),
                 '不得使用 descendants 全局计数（会把 list_item / table_cell 等嵌套块算进去）');
             assert.ok(source.includes('function collectTextblocks('),
                 '应提供 collectTextblocks 在块内摊平文本偏移');
@@ -208,9 +214,10 @@ suite('Review Fixes Regression Test Suite', () => {
             const source = readSource('webview', 'src', 'entries', 'pm.entry.js');
             if (!source) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const body = extractFunctionBody(source, 'blockIndexToPos');
-            assert.ok(/blockPos \+= child\.nodeSize/.test(body),
-                '应按顶层子节点累加 nodeSize 计算绝对位置');
-            assert.ok(body.includes("child.type.name !== 'footnote_def'"),
+            assert.ok(body.includes('idx.starts[blockIndex]'),
+                '应从预计算的顶层块索引中取块起点');
+            assert.ok(body.includes("child.type.name !== 'footnote_def'") ||
+                extractFunctionBody(source, 'buildBlockPositionIndex').includes("child.type.name !== 'footnote_def'"),
                 '计数时应跳过 footnote_def（预览块列表会移除纯脚注定义块）');
             assert.ok(body.includes('textblocks.length === 0'),
                 '块内无文本时应有兜底返回值');

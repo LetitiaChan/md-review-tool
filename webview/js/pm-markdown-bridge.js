@@ -9,7 +9,8 @@
  */
 
 import { schema } from './pm-schema.js';
-import { MarkdownParser, MarkdownSerializer, MarkdownSerializerState } from 'prosemirror-markdown';
+import { MarkdownParser, MarkdownSerializer } from 'prosemirror-markdown';
+import { ChunkedMarkdownSerializer, ChunkedMarkdownSerializerState } from '../src/pm/serializer-state.js';
 import markdownit from 'markdown-it';
 
 // ===== markdown-it 实例配置 =====
@@ -529,7 +530,7 @@ const parser = new MarkdownParser(schema, md, {
 });
 
 // ===== MarkdownSerializer 配置 =====
-const serializer = new MarkdownSerializer(
+const serializer = new ChunkedMarkdownSerializer(
     // 节点序列化器
     {
         doc(state, node) {
@@ -696,14 +697,19 @@ const serializer = new MarkdownSerializer(
 );
 
 /**
+ * 基准/诊断用的基类序列化器（与 Chunked 版本逐字节对比）
+ */
+const baseSerializer = new MarkdownSerializer(serializer.nodes, serializer.marks);
+
+/**
  * 表格单元格渲染为单行 markdown。
  * 单元格内容是 inline*，用独立的 serializer state 走 renderInline，
  * 这样链接、加粗、行内代码、图片、公式都不会丢失。
  */
 function serializeTableCell(cell) {
-    const sub = new MarkdownSerializerState(serializer.nodes, serializer.marks, {});
+    const sub = new ChunkedMarkdownSerializerState(serializer.nodes, serializer.marks, {});
     sub.renderInline(cell);
-    let text = sub.out.trim();
+    let text = sub.toString().trim();
     if (!text) return ' ';
     // 表格单元格内不允许裸换行
     text = text.replace(/\s*\n\s*/g, '<br>');
@@ -730,4 +736,4 @@ function serializeMarkdown(doc) {
     return serializer.serialize(doc);
 }
 
-export { parser, serializer, parseMarkdown, serializeMarkdown, schema };
+export { parser, serializer, baseSerializer, parseMarkdown, serializeMarkdown, schema };

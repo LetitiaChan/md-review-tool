@@ -738,6 +738,9 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
             if (e.ctrlKey && e.key === 'e') {
                 e.preventDefault();
                 if (Store.getAnnotations().length > 0) {
+                    if (globalThis.EditMode && EditMode.isRichActive() && typeof EditMode.flushMarkdown === 'function') {
+                        EditMode.flushMarkdown();
+                    }
                     Exporter.exportReviewDocument();
                 }
             }
@@ -2408,7 +2411,11 @@ this.innerHTML = t('modal.ai_result.copied');
     }
 
     async function handleSaveMd() {
-        // Rich Mode 下走 PM serializer 路径：直接用 Store 里的 rawMarkdown（edit-mode.js 的 onChange 已将最新 PM doc 序列化写入）
+        // Rich Mode 下先强制序列化最新内容（逐键序列化已改为防抖）
+        if (globalThis.EditMode && EditMode.isRichActive() && typeof EditMode.flushMarkdown === 'function') {
+            EditMode.flushMarkdown();
+        }
+        // Rich Mode 下走 PM serializer 路径：直接用 Store 里的 rawMarkdown
         if (globalThis.EditMode && EditMode.isRichActive()) {
             const dataPm = Store.getData();
             if (!dataPm.fileName) { showNotification(t('notification.no_open_file')); return; }

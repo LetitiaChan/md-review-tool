@@ -19,7 +19,7 @@ import { columnResizing, tableEditing, goToNextCell, addRowBefore, addRowAfter, 
 import { Decoration, DecorationSet } from 'prosemirror-view';
 
 import { schema } from '../../js/pm-schema.js';
-import { parseMarkdown, serializeMarkdown } from '../../js/pm-markdown-bridge.js';
+import { parseMarkdown, serializeMarkdown as serializeMarkdownFn, baseSerializer } from '../../js/pm-markdown-bridge.js';
 import { createSlashCommandPlugin } from '../slash-command/slash-command-plugin.js';
 
 // ===== 输入规则 =====
@@ -79,10 +79,13 @@ function buildAnnotationPlugin() {
 
         const decorations = [];
         const doc = state.doc;
+        // 一次构建块索引（O(块数)），之后每条批注 O(1) 定位，
+        // 避免每条批注都从 doc 头部遍历（原 O(批注数 × 块数)）。
+        const index = buildBlockPositionIndex(doc);
 
         for (const ann of annotations) {
-            const pos = blockIndexToPos(doc, ann.blockIndex, ann.startOffset || 0);
-            const endPos = blockIndexToPos(doc, ann.endBlockIndex || ann.blockIndex, ann.endOffset || (ann.startOffset || 0) + (ann.selectedText || '').length);
+            const pos = blockIndexToPos(doc, ann.blockIndex, ann.startOffset || 0, index);
+            const endPos = blockIndexToPos(doc, ann.endBlockIndex || ann.blockIndex, ann.endOffset || (ann.startOffset || 0) + (ann.selectedText || '').length, index);
 
             if (pos !== null && endPos !== null && pos < endPos && endPos <= doc.content.size) {
                 const className = `annotation-highlight annotation-${ann.type || 'comment'}`;
@@ -143,39 +146,47 @@ function collectTextblocks(node, pos, out) {
 }
 
 /**
+ * 构建顶层块位置索引：{ starts: [{node, start}], textblocks: Map<blockIndex, []> }
+ * 一次 O(块数) 遍历，供所有批注复用。
+ */
+function buildBlockPositionIndex(doc) {
+    const starts = [];
+    let pos = 0;
+    for (let i = 0; i < doc.childCount; i++) {
+        const child = doc.child(i);
+        // 预览侧会把「纯脚注定义块」从块列表中移除，PM 里的 footnote_def
+        // 不占 blockIndex，索引时必须跳过。
+        if (child.type.name !== 'footnote_def') {
+            starts.push({ node: child, start: pos });
+        }
+        pos += child.nodeSize;
+    }
+    return { starts, textblocks: new Map() };
+}
+
+/**
  * 将 blockIndex + offset 映射为 PM doc 中的绝对位置。
  *
  * 注意：blockIndex 来自预览侧按空行切分的「顶层块」序号，
  * 因此这里只能统计 doc 的顶层子节点，不能把 list_item / table_cell
  * 等嵌套块也计入（否则列表之后的批注会整体错位）。
+ *
+ * @param {object} [index] 可选的 buildBlockPositionIndex 结果（批量构建 decoration 时复用）
  */
-function blockIndexToPos(doc, blockIndex, offset) {
+function blockIndexToPos(doc, blockIndex, offset, index) {
     if (blockIndex == null || blockIndex < 0) return null;
 
-    // 预览侧会把「纯脚注定义块」从块列表中移除（见 renderer 的 orphanedDefBlocks），
-    // 因此 PM doc 里的 footnote_def 不占 blockIndex，这里计数时必须跳过，
-    // 否则脚注之后的所有批注都会错位。
-    let blockPos = 0;
-    let seen = -1;
-    let targetNode = null;
-    let targetPos = 0;
-    for (let i = 0; i < doc.childCount; i++) {
-        const child = doc.child(i);
-        if (child.type.name !== 'footnote_def') {
-            seen++;
-            if (seen === blockIndex) {
-                targetNode = child;
-                targetPos = blockPos;
-                break;
-            }
-        }
-        blockPos += child.nodeSize;
-    }
-    if (!targetNode) return null;
+    const idx = index || buildBlockPositionIndex(doc);
+    const entry = idx.starts[blockIndex];
+    if (!entry) return null;
 
-    const textblocks = [];
-    collectTextblocks(targetNode, targetPos, textblocks);
-    if (textblocks.length === 0) return targetPos + 1;
+    let textblocks = idx.textblocks.get(blockIndex);
+    if (!textblocks) {
+        textblocks = [];
+        collectTextblocks(entry.node, entry.start, textblocks);
+        idx.textblocks.set(blockIndex, textblocks);
+    }
+    if (textblocks.length === 0) return entry.start + 1;
 
     // 在块内的文本块之间摊平累加偏移，与预览侧拼接文本节点的顺序一致
     let remaining = Math.max(0, offset || 0);
@@ -243,6 +254,7 @@ class DiagramNodeView {
 
     renderPreview() {
         const { language, source } = this.node.attrs;
+        if (this._renderTimer) { clearTimeout(this._renderTimer); this._renderTimer = null; }
         this.dom.innerHTML = '';
 
         const header = document.createElement('div');
@@ -254,43 +266,70 @@ class DiagramNodeView {
         previewContainer.className = 'diagram-preview';
         this.dom.appendChild(previewContainer);
 
-        // 复用 Renderer 的图表渲染能力
-        try {
-            if (language === 'mermaid' && globalThis.Renderer?.renderMermaid) {
-                const pre = document.createElement('pre');
-                pre.className = 'mermaid';
-                pre.textContent = source;
-                previewContainer.appendChild(pre);
-                setTimeout(() => {
-                    try { globalThis.Renderer.renderMermaid(); } catch (e) { /* 容错 */ }
-                }, 50);
-            } else if (language === 'plantuml' && globalThis.Renderer?.renderPlantUML) {
-                const pre = document.createElement('pre');
-                pre.className = 'plantuml';
-                pre.textContent = source;
-                previewContainer.appendChild(pre);
-                setTimeout(() => {
-                    try { globalThis.Renderer.renderPlantUML(); } catch (e) { /* 容错 */ }
-                }, 50);
-            } else if ((language === 'dot' || language === 'graphviz') && globalThis.Renderer?.renderGraphviz) {
-                const pre = document.createElement('pre');
-                pre.className = 'graphviz';
-                pre.textContent = source;
-                previewContainer.appendChild(pre);
-                setTimeout(() => {
-                    try { globalThis.Renderer.renderGraphviz(); } catch (e) { /* 容错 */ }
-                }, 50);
-            } else {
-                // 降级：显示源码
-                const pre = document.createElement('pre');
-                pre.textContent = source;
-                previewContainer.appendChild(pre);
-            }
-        } catch (e) {
+        // 构造与预览一致的容器结构，并只渲染本 NodeView 的子树
+        // （旧实现创建 <pre class="mermaid"> 且调用全局 renderMermaid，
+        //   既渲染不到自身，又会重排隐藏的预览 DOM）
+        const lang = (language || '').toLowerCase();
+        let containerClass = '';
+        let sourceClass = '';
+        let dataClass = '';
+        let render = null;
+
+        if (lang === 'mermaid' && globalThis.Renderer?.renderMermaid) {
+            containerClass = 'mermaid-container';
+            sourceClass = 'mermaid-source';
+            dataClass = 'mermaid-source-data';
+            render = () => globalThis.Renderer.renderMermaid(previewContainer);
+        } else if (lang === 'plantuml' && globalThis.Renderer?.renderPlantUML) {
+            containerClass = 'plantuml-container';
+            sourceClass = 'plantuml-source';
+            dataClass = 'plantuml-source-data';
+            render = () => globalThis.Renderer.renderPlantUML(previewContainer);
+        } else if ((lang === 'dot' || lang === 'graphviz') && globalThis.Renderer?.renderGraphviz) {
+            containerClass = 'graphviz-container';
+            sourceClass = 'graphviz-source';
+            dataClass = 'graphviz-source-data';
+            render = () => globalThis.Renderer.renderGraphviz(previewContainer);
+        }
+
+        if (!render) {
             const pre = document.createElement('pre');
             pre.textContent = source;
             previewContainer.appendChild(pre);
+            return;
         }
+
+        const container = document.createElement('div');
+        container.className = containerClass;
+
+        const sourceData = document.createElement('div');
+        sourceData.className = dataClass;
+        sourceData.style.display = 'none';
+        try {
+            sourceData.dataset.source = btoa(unescape(encodeURIComponent(source)));
+        } catch (e) {
+            sourceData.dataset.source = '';
+        }
+
+        const pre = document.createElement('pre');
+        pre.className = sourceClass;
+        pre.textContent = source;
+
+        container.appendChild(sourceData);
+        container.appendChild(pre);
+        previewContainer.appendChild(container);
+
+        // 等 DOM 挂载后再渲染（构造阶段 NodeView 尚未进入文档）
+        const tryRender = (attempt) => {
+            if (!this.dom.isConnected) {
+                if (attempt < 10) {
+                    this._renderTimer = setTimeout(() => tryRender(attempt + 1), 50);
+                }
+                return;
+            }
+            try { render(); } catch (e) { /* 容错 */ }
+        };
+        this._renderTimer = setTimeout(() => tryRender(0), 50);
     }
 
     enterEdit() {
@@ -359,8 +398,11 @@ class DiagramNodeView {
 
     update(node) {
         if (node.type !== this.node.type) return false;
+        const languageChanged = node.attrs.language !== this.node.attrs.language;
+        const sourceChanged = node.attrs.source !== this.node.attrs.source;
         this.node = node;
-        if (!this.editing) {
+        // 属性没变时不重建 DOM（每次事务都会调用 update）
+        if (!this.editing && (languageChanged || sourceChanged)) {
             this.renderPreview();
         }
         return true;
@@ -376,7 +418,10 @@ class DiagramNodeView {
     }
 
     destroy() {
-        // 清理
+        if (this._renderTimer) {
+            clearTimeout(this._renderTimer);
+            this._renderTimer = null;
+        }
     }
 }
 
@@ -620,13 +665,14 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
         tableEditing(),
         annotationPlugin,
         // onChange 监听
+        // 注意：这里不再逐键序列化整篇文档。保存/退出/导出路径会显式调用
+        // getMarkdown() 取最新内容；预览同步由 edit-mode 做 250ms 防抖。
         new Plugin({
             view() {
                 return {
                     update(view, prevState) {
                         if (!view.state.doc.eq(prevState.doc) && typeof onChange === 'function') {
-                            const md = serializeMarkdown(view.state.doc);
-                            onChange(md);
+                            onChange();
                         }
                     },
                 };
@@ -1171,7 +1217,7 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
             window.removeEventListener('message', handleImageSaved);
             view.destroy();
         },
-        getMarkdown() { return serializeMarkdown(view.state.doc); },
+        getMarkdown() { return serializeMarkdownFn(view.state.doc); },
         setMarkdown(s) {
             const newDoc = parseMarkdown(s || '');
             const tr = view.state.tr.replaceWith(0, view.state.doc.content.size, newDoc.content);
@@ -1262,4 +1308,14 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
 }
 
 // 挂载到 globalThis
-globalThis.PM = { createRichEditor };
+globalThis.PM = {
+    createRichEditor,
+    /**
+     * 诊断/基准用：把 markdown 解析后重新序列化。
+     * useBase=true 时使用 prosemirror-markdown 的基类实现，用于逐字节对比。
+     */
+    serializeMarkdown(markdown, useBase) {
+        const doc = parseMarkdown(markdown || '');
+        return useBase ? baseSerializer.serialize(doc) : serializeMarkdownFn(doc);
+    },
+};

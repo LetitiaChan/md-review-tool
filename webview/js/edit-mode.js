@@ -18,12 +18,45 @@ const MODE = { INACTIVE: 'inactive', RICH: 'rich' };
 
 let _mode = MODE.INACTIVE;
 let _editor = null;       // PM 实例句柄
+let _markdownSyncTimer = null; // 预览内容同步防抖定时器
+const MARKDOWN_SYNC_DELAY = 250; // 逐键序列化改为 250ms 防抖
 
 // 光标位置记忆（per-file，session-scoped）
 const _cursorPositions = new Map(); // filePath → lineNumber
 
 const RICH_CONTAINER_ID = 'richModeContainer';
 const RICH_BODY_CLASS = 'rich-mode-active';
+
+// ===== Markdown 同步（防抖 + 强制 flush） =====
+
+function scheduleMarkdownSync() {
+    if (_markdownSyncTimer) clearTimeout(_markdownSyncTimer);
+    _markdownSyncTimer = setTimeout(() => {
+        _markdownSyncTimer = null;
+        flushMarkdown();
+    }, MARKDOWN_SYNC_DELAY);
+}
+
+/**
+ * 立即把编辑器内容序列化到 Store。
+ * 保存、退出富文本、导出等需要最新内容的路径必须先调用。
+ */
+function flushMarkdown() {
+    if (_mode !== MODE.RICH || !_editor) return;
+    try {
+        const store = globalThis.Store;
+        if (store && typeof store.setRawMarkdown === 'function') {
+            store.setRawMarkdown(_editor.getMarkdown());
+        }
+    } catch (e) { /* 容错 */ }
+}
+
+function clearMarkdownSyncTimer() {
+    if (_markdownSyncTimer) {
+        clearTimeout(_markdownSyncTimer);
+        _markdownSyncTimer = null;
+    }
+}
 
 // ===== Rich Mode 容器管理 =====
 
@@ -73,22 +106,20 @@ async function enterRich(options) {
         parent: container,
         markdown,
         annotations,
-        onChange: (newMarkdown) => {
-            if (typeof store.setRawMarkdown === 'function') {
-                store.setRawMarkdown(newMarkdown);
-            }
-            // 标记编辑器为 dirty（触发状态栏更新 + 自动保存前置条件）
+        onChange: () => {
+            // 不在这里序列化：ProseMirror 每键回调可能触发，序列化大文档代价高。
+            // 只标脏 + 调度自动保存；markdown 由 scheduleMarkdownSync 防抖同步。
             if (typeof globalThis.markEditorDirty === 'function') {
                 globalThis.markEditorDirty();
             }
+            scheduleMarkdownSync();
             if (typeof globalThis.triggerAutoSave === 'function') {
                 globalThis.triggerAutoSave();
             }
         },
         onSave: () => {
-            if (_editor && typeof store.setRawMarkdown === 'function') {
-                store.setRawMarkdown(_editor.getMarkdown());
-            }
+            // 保存前强制取最新 markdown
+            flushMarkdown();
             if (typeof globalThis.handleSaveMd === 'function') {
                 globalThis.handleSaveMd();
             }
@@ -122,6 +153,7 @@ async function enterRich(options) {
 
 function exitRich() {
     if (_mode !== MODE.RICH) return;
+    clearMarkdownSyncTimer();
 
     const store = globalThis.Store;
     let finalMarkdown = '';
@@ -186,4 +218,5 @@ export const EditMode = {
     enterRich, exitRich, isRichActive,
     isAnyEditorActive, execCommand,
     getLinkAttrsAtSelection, setSelectionRange,
+    flushMarkdown,
 };

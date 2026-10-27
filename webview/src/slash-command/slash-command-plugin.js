@@ -22,6 +22,7 @@ export const slashCommandKey = new PluginKey('slashCommand');
 export function createSlashCommandPlugin({ commandMap, getI18n }) {
     let menuEl = null;       // 命令面板 DOM 元素
     let activeView = null;   // 当前 EditorView 引用
+    let lastMenuKey = null;  // 上次渲染的过滤结果签名（避免重复重绘）
 
     return new Plugin({
         key: slashCommandKey,
@@ -147,6 +148,9 @@ export function createSlashCommandPlugin({ commandMap, getI18n }) {
                 },
                 destroy() {
                     hideMenu();
+                    if (menuEl && menuEl.parentNode) menuEl.parentNode.removeChild(menuEl);
+                    menuEl = null;
+                    lastMenuKey = null;
                     activeView = null;
                 },
             };
@@ -188,6 +192,7 @@ export function createSlashCommandPlugin({ commandMap, getI18n }) {
         });
         view.dispatch(tr);
         hideMenu();
+        lastMenuKey = null;
     }
 
     function renderMenu(view, pluginState) {
@@ -204,33 +209,40 @@ export function createSlashCommandPlugin({ commandMap, getI18n }) {
         menuEl.style.top = `${coords.bottom + 4}px`;
         menuEl.style.zIndex = '9999';
 
-        // 渲染命令列表
-        if (commands.length === 0) {
-            menuEl.innerHTML = `<div class="slash-command-empty">${getI18n ? getI18n('slash.no_results') : 'No results'}</div>`;
-        } else {
-            menuEl.innerHTML = commands.map((cmd, i) => {
-                const activeClass = i === pluginState.selectedIndex ? ' slash-command-item-active' : '';
-                return `<div class="slash-command-item${activeClass}" data-index="${i}" role="option">
+        // 只在过滤结果变化时重建列表；方向键/同结果输入不再重绘 DOM
+        const menuKey = commands.length === 0 ? 'empty' : commands.map((c) => c.id).join(',');
+        if (menuKey !== lastMenuKey) {
+            lastMenuKey = menuKey;
+            if (commands.length === 0) {
+                menuEl.innerHTML = `<div class="slash-command-empty">${getI18n ? getI18n('slash.no_results') : 'No results'}</div>`;
+            } else {
+                menuEl.innerHTML = commands.map((cmd, i) => {
+                    const activeClass = i === pluginState.selectedIndex ? ' slash-command-item-active' : '';
+                    return `<div class="slash-command-item${activeClass}" data-index="${i}" role="option">
                     <span class="slash-command-icon">${cmd.icon}</span>
                     <span class="slash-command-label">${cmd.label}</span>
                 </div>`;
-            }).join('');
+                }).join('');
 
-            // 鼠标点击事件
-            menuEl.querySelectorAll('.slash-command-item').forEach(item => {
-                item.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const index = parseInt(item.dataset.index, 10);
-                    executeCommand(view, commands[index], pluginState, commandMap);
+                // 鼠标点击事件（列表重建时才重新绑定）
+                menuEl.querySelectorAll('.slash-command-item').forEach(item => {
+                    item.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const index = parseInt(item.dataset.index, 10);
+                        executeCommand(view, commands[index], pluginState, commandMap);
+                    });
+                    item.addEventListener('mouseenter', () => {
+                        const index = parseInt(item.dataset.index, 10);
+                        updateMenuHighlight(index);
+                        const tr = view.state.tr.setMeta(slashCommandKey, { ...pluginState, selectedIndex: index });
+                        view.dispatch(tr);
+                    });
                 });
-                item.addEventListener('mouseenter', () => {
-                    const index = parseInt(item.dataset.index, 10);
-                    updateMenuHighlight(index);
-                    const tr = view.state.tr.setMeta(slashCommandKey, { ...pluginState, selectedIndex: index });
-                    view.dispatch(tr);
-                });
-            });
+            }
+        } else if (commands.length > 0) {
+            // 结果未变，只更新高亮
+            updateMenuHighlight(pluginState.selectedIndex);
         }
 
         // 确保面板不超出视口
