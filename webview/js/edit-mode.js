@@ -91,12 +91,15 @@ function enterRich(options) {
         editorOptions.onSelectionChange = options.onSelectionChange;
     }
 
-    // 传递上次退出时记录的光标行号
+    // 传递上次退出时记录的光标位置
     const store2 = globalThis.Store;
     const currentFile = (store2 && store2.getData) ? (store2.getData().relPath || '') : '';
-    const savedLine = _cursorPositions.get(currentFile);
-    if (savedLine !== undefined && savedLine > 0) {
-        editorOptions.initialCursorLine = savedLine;
+    const savedPos = _cursorPositions.get(currentFile);
+    if (savedPos && typeof savedPos === 'object' && typeof savedPos.blockIndex === 'number') {
+        editorOptions.initialCursorPosition = savedPos;
+    } else if (typeof savedPos === 'number' && savedPos > 0) {
+        // 旧格式（行号）兼容
+        editorOptions.initialCursorLine = savedPos;
     }
 
     _editor = globalThis.PM.createRichEditor(editorOptions);
@@ -113,12 +116,14 @@ function exitRich() {
     const store = globalThis.Store;
     let finalMarkdown = '';
     if (_editor) {
-        // 记录光标位置（行号）
+        // 记录光标位置（块索引 + 块内偏移，与预览的 blockIndex 语义一致）
         try {
-            if (typeof _editor.getCursorLine === 'function') {
-                const currentFile = (store && store.getData) ? (store.getData().relPath || '') : '';
-                const line = _editor.getCursorLine();
-                if (line > 0) _cursorPositions.set(currentFile, line);
+            const currentFile = (store && store.getData) ? (store.getData().relPath || '') : '';
+            const pos = typeof _editor.getCursorPosition === 'function'
+                ? _editor.getCursorPosition()
+                : null;
+            if (pos && typeof pos.blockIndex === 'number') {
+                _cursorPositions.set(currentFile, pos);
             }
         } catch (e) { /* 容错 */ }
         try { finalMarkdown = _editor.getMarkdown(); } catch (e) { finalMarkdown = ''; }

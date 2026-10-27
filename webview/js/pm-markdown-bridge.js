@@ -9,7 +9,7 @@
  */
 
 import { schema } from './pm-schema.js';
-import { MarkdownParser, MarkdownSerializer } from 'prosemirror-markdown';
+import { MarkdownParser, MarkdownSerializer, MarkdownSerializerState } from 'prosemirror-markdown';
 import markdownit from 'markdown-it';
 
 // ===== markdown-it 实例配置 =====
@@ -359,6 +359,83 @@ function taskListPlugin(md) {
     });
 }
 
+/**
+ * 脚注插件：识别 [^id] 引用与 [^id]: 定义。
+ * 不识别的话，CommonMark 会把定义当成链接引用定义，往返后变成 [^id](内容)。
+ */
+function footnotePlugin(md) {
+    md.block.ruler.before('reference', 'footnote_def', function (state, startLine, endLine, silent) {
+        const lineStart = state.bMarks[startLine] + state.tShift[startLine];
+        const lineEnd = state.eMarks[startLine];
+        const line = state.src.slice(lineStart, lineEnd);
+        const match = /^\[\^([^\]\s]+)\]:[ \t]*(.*)$/.exec(line);
+        if (!match) return false;
+        if (silent) return true;
+
+        const contentLines = [match[2]];
+        let nextLine = startLine + 1;
+        while (nextLine < endLine) {
+            const s = state.bMarks[nextLine] + state.tShift[nextLine];
+            const e = state.eMarks[nextLine];
+            const l = state.src.slice(s, e);
+            // 4 空格 / Tab 缩进的续行属于该脚注
+            if (/^(?: {4}|\t)/.test(l)) {
+                contentLines.push(l.replace(/^(?: {4}|\t)/, ''));
+                nextLine++;
+            } else {
+                break;
+            }
+        }
+
+        const content = contentLines.join('\n');
+        const token = state.push('footnote_def', '', 0);
+        token.meta = { id: match[1], content };
+        token.content = content;
+        token.block = true;
+        token.map = [startLine, nextLine];
+        state.line = nextLine;
+        return true;
+    });
+
+    md.inline.ruler.before('link', 'footnote_ref', function (state, silent) {
+        const start = state.pos;
+        if (state.src.charCodeAt(start) !== 0x5B /* [ */) return false;
+        if (state.src.charCodeAt(start + 1) !== 0x5E /* ^ */) return false;
+        const match = /^\[\^([^\]\n]+)\]/.exec(state.src.slice(start));
+        if (!match) return false;
+        if (!silent) {
+            const token = state.push('footnote_ref', '', 0);
+            token.meta = { id: match[1] };
+            token.markup = match[0];
+        }
+        state.pos = start + match[0].length;
+        return true;
+    });
+}
+
+/**
+ * 下标插件：识别 ~text~（单个波浪线），输出 subscript mark。
+ * 双波浪线 ~~text~~ 交给 strikethrough 处理。
+ */
+function subscriptPlugin(md) {
+    md.inline.ruler.before('strikethrough', 'subscript', function (state, silent) {
+        const start = state.pos;
+        if (state.src.charCodeAt(start) !== 0x7E /* ~ */) return false;
+        if (state.src.charCodeAt(start + 1) === 0x7E) return false; // ~~删除线
+        const match = /^~([^~\n]+)~/.exec(state.src.slice(start));
+        if (!match) return false;
+        if (match[1].trim() === '') return false;
+        if (!silent) {
+            state.push('subscript_open', 'sub', 1).markup = '~';
+            const text = state.push('text', '', 0);
+            text.content = match[1];
+            state.push('subscript_close', 'sub', -1).markup = '~';
+        }
+        state.pos = start + match[0].length;
+        return true;
+    });
+}
+
 // 注册插件
 md.use(frontmatterPlugin);
 md.use(mathPlugin);
@@ -367,6 +444,8 @@ md.use(coloredTextPlugin);
 md.use(diagramPlugin);
 md.use(htmlTagConverterPlugin);
 md.use(taskListPlugin);
+md.use(footnotePlugin);
+md.use(subscriptPlugin);
 
 // ===== 辅助函数：检测列表是否为 tight =====
 function listIsTight(tokens, i) {
@@ -421,6 +500,11 @@ const parser = new MarkdownParser(schema, md, {
         language: tok.meta?.language || 'mermaid',
         source: tok.meta?.source || tok.content || '',
     }) },
+    footnote_def: { node: 'footnote_def', getAttrs: tok => ({
+        id: tok.meta?.id || '',
+        content: tok.content || '',
+    }) },
+    footnote_ref: { node: 'footnote_ref', getAttrs: tok => ({ id: tok.meta?.id || '' }) },
     gh_alert: { block: 'gh_alert', getAttrs: tok => ({ alertType: tok.meta?.alertType || 'NOTE' }) },
     // 标记
     em: { mark: 'em' },
@@ -504,60 +588,33 @@ const serializer = new MarkdownSerializer(
         },
         // 表格序列化
         table(state, node) {
-            // 收集所有行
-            const rows = [];
-            node.forEach(row => {
+            // 逐行逐格渲染：单元格内容是 inline*，必须走真正的 renderInline，
+            // 否则链接、加粗、行内代码、图片、公式都会退化成纯文本（静默丢格式）。
+            let rowIndex = 0;
+            node.forEach((row) => {
                 const cells = [];
-                row.forEach(cell => {
-                    const isHeader = cell.type.name === 'table_header';
-                    const align = cell.attrs.align || null;
-                    // 序列化 cell 内容为 inline markdown
-                    let cellContent = '';
-                    const tmpState = new MarkdownSerializer(serializer.nodes, serializer.marks).serialize(cell);
-                    // 简化：直接提取文本
-                    cell.forEach(child => {
-                        // 对于简单 inline 内容，递归序列化
+                row.forEach((cell) => {
+                    cells.push({
+                        text: serializeTableCell(cell),
+                        align: cell.attrs.align || null,
                     });
-                    // 使用 state 的 renderInline 来获取 cell 内容
-                    cells.push({ content: '', isHeader, align });
                 });
-                rows.push(cells);
-            });
 
-            // 简化的表格序列化：逐行处理
-            let isFirstRow = true;
-            let headerAligns = [];
-            node.forEach((row, _, rowIdx) => {
-                let line = '|';
-                const cellAligns = [];
-                row.forEach(cell => {
-                    // 序列化 cell 内容
-                    let cellText = '';
-                    cell.forEach(p => {
-                        // 简单提取文本内容
-                        cellText += serializeInlineContent(state, p);
-                    });
-                    cellText = cellText.trim() || ' ';
-                    line += ' ' + cellText + ' |';
-                    cellAligns.push(cell.attrs.align || null);
-                });
-                state.write(line);
+                state.write('|' + cells.map(c => ' ' + c.text + ' |').join(''));
                 state.ensureNewLine();
 
-                // 在第一行后添加分隔行
-                if (isFirstRow) {
-                    headerAligns = cellAligns;
-                    let sepLine = '|';
-                    for (const align of cellAligns) {
-                        if (align === 'left') sepLine += ' :--- |';
-                        else if (align === 'center') sepLine += ' :---: |';
-                        else if (align === 'right') sepLine += ' ---: |';
-                        else sepLine += ' --- |';
-                    }
-                    state.write(sepLine);
+                // 第一行后写分隔行
+                if (rowIndex === 0) {
+                    const sep = cells.map((c) => {
+                        if (c.align === 'left') return ' :--- |';
+                        if (c.align === 'center') return ' :---: |';
+                        if (c.align === 'right') return ' ---: |';
+                        return ' --- |';
+                    }).join('');
+                    state.write('|' + sep);
                     state.ensureNewLine();
-                    isFirstRow = false;
                 }
+                rowIndex++;
             });
             state.closeBlock(node);
         },
@@ -594,6 +651,17 @@ const serializer = new MarkdownSerializer(
             state.write('```' + lang + '\n' + source + '\n```');
             state.closeBlock(node);
         },
+        footnote_def(state, node) {
+            const content = (node.attrs.content || '')
+                .split('\n')
+                .map((line, i) => i === 0 ? line : '    ' + line)
+                .join('\n');
+            state.write(`[^${node.attrs.id}]: ${content}`);
+            state.closeBlock(node);
+        },
+        footnote_ref(state, node) {
+            state.write(`[^${node.attrs.id}]`);
+        },
         frontmatter(state, node) {
             state.write('---\n' + node.attrs.content + '---');
             state.closeBlock(node);
@@ -621,42 +689,27 @@ const serializer = new MarkdownSerializer(
         },
         kbd: { open: '<kbd>', close: '</kbd>' },
         mark: { open: '<mark>', close: '</mark>' },
-        subscript: { open: '<sub>', close: '</sub>' },
+        subscript: { open: '~', close: '~' },
         superscript: { open: '<sup>', close: '</sup>' },
         underline: { open: '<ins>', close: '</ins>' },
     }
 );
 
 /**
- * 辅助函数：序列化 inline 内容为 markdown 字符串
+ * 表格单元格渲染为单行 markdown。
+ * 单元格内容是 inline*，用独立的 serializer state 走 renderInline，
+ * 这样链接、加粗、行内代码、图片、公式都不会丢失。
  */
-function serializeInlineContent(state, node) {
-    let result = '';
-    if (node.isText) {
-        return node.text || '';
-    }
-    node.forEach(child => {
-        if (child.isText) {
-            let text = child.text || '';
-            // 应用 marks
-            child.marks.forEach(mark => {
-                const markSpec = serializer.marks[mark.type.name];
-                if (markSpec) {
-                    const open = typeof markSpec.open === 'function' ? markSpec.open(state, mark) : markSpec.open;
-                    const close = typeof markSpec.close === 'function' ? markSpec.close(state, mark) : markSpec.close;
-                    text = open + text + close;
-                }
-            });
-            result += text;
-        } else if (child.type.name === 'image') {
-            result += `![${child.attrs.alt || ''}](${child.attrs.src})`;
-        } else if (child.type.name === 'hard_break') {
-            result += '<br>';
-        } else if (child.type.name === 'math_inline') {
-            result += `$${child.attrs.formula}$`;
-        }
-    });
-    return result;
+function serializeTableCell(cell) {
+    const sub = new MarkdownSerializerState(serializer.nodes, serializer.marks, {});
+    sub.renderInline(cell);
+    let text = sub.out.trim();
+    if (!text) return ' ';
+    // 表格单元格内不允许裸换行
+    text = text.replace(/\s*\n\s*/g, '<br>');
+    // 未转义的竖线会破坏列结构（跳过已转义的 \|）
+    text = text.replace(/(^|[^\\])\|/g, '$1\\|');
+    return text;
 }
 
 /**

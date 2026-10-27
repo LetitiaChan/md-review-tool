@@ -145,7 +145,6 @@ export function initApp() {
                 Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
                 const newBlocks = Renderer.parseMarkdown(data.content);
                 Renderer.renderBlocks(newBlocks, Store.getAnnotations());
-                renderMathAndMermaid();
                 Annotations.setBlocks(newBlocks);
                 Annotations.init(newBlocks);
                 Annotations.renderAnnotationsList();
@@ -180,9 +179,12 @@ export function initApp() {
             console.error('[App] 设置/渲染器初始化失败:', e);
         }
 
-        // 注册渲染完成回调：每次 renderBlocks 完成后重新应用代码字体内联样式
+        // 注册渲染完成回调：每次 renderBlocks 完成后统一重放
+        // 代码字体内联样式 + 数学公式 + 图表 + 代码复制按钮。
+        // 放在这里而不是各个调用点，保证任何调用方（含批注刷新）都不会漏掉重渲染。
         Renderer.onRenderComplete(() => {
             Settings.applyCodeFontToElements();
+            renderMathAndMermaid();
         });
 
         // 监听 Mermaid / 数学公式开关变化，触发文档重新渲染
@@ -782,10 +784,8 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
 
         blocks = Renderer.parseMarkdown(markdown);
         const data = Store.getData();
+        // renderMathAndMermaid 由 Renderer.onRenderComplete 统一触发
         Renderer.renderBlocks(blocks, data.annotations);
-
-        // 渲染数学公式和 Mermaid 图表
-        renderMathAndMermaid();
 
         Annotations.setBlocks(blocks);
         Annotations.init(blocks);
@@ -799,10 +799,8 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
         const data = Store.getData();
         if (!data.rawMarkdown) return;
         blocks = Renderer.parseMarkdown(data.rawMarkdown);
+        // renderMathAndMermaid 由 Renderer.onRenderComplete 统一触发
         Renderer.renderBlocks(blocks, data.annotations);
-
-        // 渲染数学公式和 Mermaid 图表
-        renderMathAndMermaid();
 
         Annotations.setBlocks(blocks);
         Annotations.init(blocks);

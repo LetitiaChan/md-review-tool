@@ -282,6 +282,48 @@ const nodes = {
         }],
     },
 
+    // 脚注定义（原子块，保留原始语法与内容，避免 rich 模式往返时被改写成链接）
+    footnote_def: {
+        attrs: {
+            id: { default: '' },
+            content: { default: '' },
+        },
+        group: 'block',
+        atom: true,
+        selectable: true,
+        toDOM(node) {
+            return ['div', {
+                class: 'pm-footnote-def',
+                'data-footnote-id': node.attrs.id,
+                'data-content': node.attrs.content,
+            }, `[^${node.attrs.id}]: ${node.attrs.content}`];
+        },
+        parseDOM: [{
+            tag: 'div.pm-footnote-def',
+            getAttrs(dom) {
+                return {
+                    id: dom.getAttribute('data-footnote-id') || '',
+                    content: dom.getAttribute('data-content') || '',
+                };
+            },
+        }],
+    },
+
+    // 脚注引用（原子行内节点，序列化回 [^id]）
+    footnote_ref: {
+        attrs: { id: { default: '' } },
+        inline: true,
+        group: 'inline',
+        atom: true,
+        toDOM(node) {
+            return ['sup', { class: 'pm-footnote-ref', 'data-footnote-id': node.attrs.id }, `[^${node.attrs.id}]`];
+        },
+        parseDOM: [{
+            tag: 'sup.pm-footnote-ref',
+            getAttrs(dom) { return { id: dom.getAttribute('data-footnote-id') || '' }; },
+        }],
+    },
+
     text: {
         group: 'inline',
     },

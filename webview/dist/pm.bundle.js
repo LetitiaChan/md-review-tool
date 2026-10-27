@@ -21107,6 +21107,48 @@
         }
       }]
     },
+    // 脚注定义（原子块，保留原始语法与内容，避免 rich 模式往返时被改写成链接）
+    footnote_def: {
+      attrs: {
+        id: { default: "" },
+        content: { default: "" }
+      },
+      group: "block",
+      atom: true,
+      selectable: true,
+      toDOM(node) {
+        return ["div", {
+          class: "pm-footnote-def",
+          "data-footnote-id": node.attrs.id,
+          "data-content": node.attrs.content
+        }, `[^${node.attrs.id}]: ${node.attrs.content}`];
+      },
+      parseDOM: [{
+        tag: "div.pm-footnote-def",
+        getAttrs(dom) {
+          return {
+            id: dom.getAttribute("data-footnote-id") || "",
+            content: dom.getAttribute("data-content") || ""
+          };
+        }
+      }]
+    },
+    // 脚注引用（原子行内节点，序列化回 [^id]）
+    footnote_ref: {
+      attrs: { id: { default: "" } },
+      inline: true,
+      group: "inline",
+      atom: true,
+      toDOM(node) {
+        return ["sup", { class: "pm-footnote-ref", "data-footnote-id": node.attrs.id }, `[^${node.attrs.id}]`];
+      },
+      parseDOM: [{
+        tag: "sup.pm-footnote-ref",
+        getAttrs(dom) {
+          return { id: dom.getAttribute("data-footnote-id") || "" };
+        }
+      }]
+    },
     text: {
       group: "inline"
     }
@@ -27680,6 +27722,69 @@
       }
     });
   }
+  function footnotePlugin(md2) {
+    md2.block.ruler.before("reference", "footnote_def", function(state, startLine, endLine, silent) {
+      const lineStart = state.bMarks[startLine] + state.tShift[startLine];
+      const lineEnd = state.eMarks[startLine];
+      const line = state.src.slice(lineStart, lineEnd);
+      const match2 = /^\[\^([^\]\s]+)\]:[ \t]*(.*)$/.exec(line);
+      if (!match2) return false;
+      if (silent) return true;
+      const contentLines = [match2[2]];
+      let nextLine = startLine + 1;
+      while (nextLine < endLine) {
+        const s = state.bMarks[nextLine] + state.tShift[nextLine];
+        const e = state.eMarks[nextLine];
+        const l = state.src.slice(s, e);
+        if (/^(?: {4}|\t)/.test(l)) {
+          contentLines.push(l.replace(/^(?: {4}|\t)/, ""));
+          nextLine++;
+        } else {
+          break;
+        }
+      }
+      const content = contentLines.join("\n");
+      const token = state.push("footnote_def", "", 0);
+      token.meta = { id: match2[1], content };
+      token.content = content;
+      token.block = true;
+      token.map = [startLine, nextLine];
+      state.line = nextLine;
+      return true;
+    });
+    md2.inline.ruler.before("link", "footnote_ref", function(state, silent) {
+      const start = state.pos;
+      if (state.src.charCodeAt(start) !== 91) return false;
+      if (state.src.charCodeAt(start + 1) !== 94) return false;
+      const match2 = /^\[\^([^\]\n]+)\]/.exec(state.src.slice(start));
+      if (!match2) return false;
+      if (!silent) {
+        const token = state.push("footnote_ref", "", 0);
+        token.meta = { id: match2[1] };
+        token.markup = match2[0];
+      }
+      state.pos = start + match2[0].length;
+      return true;
+    });
+  }
+  function subscriptPlugin(md2) {
+    md2.inline.ruler.before("strikethrough", "subscript", function(state, silent) {
+      const start = state.pos;
+      if (state.src.charCodeAt(start) !== 126) return false;
+      if (state.src.charCodeAt(start + 1) === 126) return false;
+      const match2 = /^~([^~\n]+)~/.exec(state.src.slice(start));
+      if (!match2) return false;
+      if (match2[1].trim() === "") return false;
+      if (!silent) {
+        state.push("subscript_open", "sub", 1).markup = "~";
+        const text2 = state.push("text", "", 0);
+        text2.content = match2[1];
+        state.push("subscript_close", "sub", -1).markup = "~";
+      }
+      state.pos = start + match2[0].length;
+      return true;
+    });
+  }
   md.use(frontmatterPlugin);
   md.use(mathPlugin);
   md.use(ghAlertPlugin);
@@ -27687,6 +27792,8 @@
   md.use(diagramPlugin);
   md.use(htmlTagConverterPlugin);
   md.use(taskListPlugin);
+  md.use(footnotePlugin);
+  md.use(subscriptPlugin);
   function listIsTight2(tokens, i) {
     while (++i < tokens.length)
       if (tokens[i].type !== "list_item_open") return tokens[i].hidden;
@@ -27737,6 +27844,11 @@
       language: tok.meta?.language || "mermaid",
       source: tok.meta?.source || tok.content || ""
     }) },
+    footnote_def: { node: "footnote_def", getAttrs: (tok) => ({
+      id: tok.meta?.id || "",
+      content: tok.content || ""
+    }) },
+    footnote_ref: { node: "footnote_ref", getAttrs: (tok) => ({ id: tok.meta?.id || "" }) },
     gh_alert: { block: "gh_alert", getAttrs: (tok) => ({ alertType: tok.meta?.alertType || "NOTE" }) },
     // 标记
     em: { mark: "em" },
@@ -27816,49 +27928,28 @@
       },
       // 表格序列化
       table(state, node) {
-        const rows = [];
+        let rowIndex = 0;
         node.forEach((row) => {
           const cells = [];
           row.forEach((cell) => {
-            const isHeader = cell.type.name === "table_header";
-            const align = cell.attrs.align || null;
-            let cellContent = "";
-            const tmpState = new MarkdownSerializer(serializer.nodes, serializer.marks).serialize(cell);
-            cell.forEach((child) => {
+            cells.push({
+              text: serializeTableCell(cell),
+              align: cell.attrs.align || null
             });
-            cells.push({ content: "", isHeader, align });
           });
-          rows.push(cells);
-        });
-        let isFirstRow = true;
-        let headerAligns = [];
-        node.forEach((row, _, rowIdx) => {
-          let line = "|";
-          const cellAligns = [];
-          row.forEach((cell) => {
-            let cellText = "";
-            cell.forEach((p) => {
-              cellText += serializeInlineContent(state, p);
-            });
-            cellText = cellText.trim() || " ";
-            line += " " + cellText + " |";
-            cellAligns.push(cell.attrs.align || null);
-          });
-          state.write(line);
+          state.write("|" + cells.map((c) => " " + c.text + " |").join(""));
           state.ensureNewLine();
-          if (isFirstRow) {
-            headerAligns = cellAligns;
-            let sepLine = "|";
-            for (const align of cellAligns) {
-              if (align === "left") sepLine += " :--- |";
-              else if (align === "center") sepLine += " :---: |";
-              else if (align === "right") sepLine += " ---: |";
-              else sepLine += " --- |";
-            }
-            state.write(sepLine);
+          if (rowIndex === 0) {
+            const sep = cells.map((c) => {
+              if (c.align === "left") return " :--- |";
+              if (c.align === "center") return " :---: |";
+              if (c.align === "right") return " ---: |";
+              return " --- |";
+            }).join("");
+            state.write("|" + sep);
             state.ensureNewLine();
-            isFirstRow = false;
           }
+          rowIndex++;
         });
         state.closeBlock(node);
       },
@@ -27890,6 +27981,14 @@
         const source = (node.attrs.source || "").replace(/\n$/, "");
         state.write("```" + lang + "\n" + source + "\n```");
         state.closeBlock(node);
+      },
+      footnote_def(state, node) {
+        const content = (node.attrs.content || "").split("\n").map((line, i) => i === 0 ? line : "    " + line).join("\n");
+        state.write(`[^${node.attrs.id}]: ${content}`);
+        state.closeBlock(node);
+      },
+      footnote_ref(state, node) {
+        state.write(`[^${node.attrs.id}]`);
       },
       frontmatter(state, node) {
         state.write("---\n" + node.attrs.content + "---");
@@ -27924,37 +28023,19 @@
       },
       kbd: { open: "<kbd>", close: "</kbd>" },
       mark: { open: "<mark>", close: "</mark>" },
-      subscript: { open: "<sub>", close: "</sub>" },
+      subscript: { open: "~", close: "~" },
       superscript: { open: "<sup>", close: "</sup>" },
       underline: { open: "<ins>", close: "</ins>" }
     }
   );
-  function serializeInlineContent(state, node) {
-    let result = "";
-    if (node.isText) {
-      return node.text || "";
-    }
-    node.forEach((child) => {
-      if (child.isText) {
-        let text2 = child.text || "";
-        child.marks.forEach((mark) => {
-          const markSpec = serializer.marks[mark.type.name];
-          if (markSpec) {
-            const open = typeof markSpec.open === "function" ? markSpec.open(state, mark) : markSpec.open;
-            const close2 = typeof markSpec.close === "function" ? markSpec.close(state, mark) : markSpec.close;
-            text2 = open + text2 + close2;
-          }
-        });
-        result += text2;
-      } else if (child.type.name === "image") {
-        result += `![${child.attrs.alt || ""}](${child.attrs.src})`;
-      } else if (child.type.name === "hard_break") {
-        result += "<br>";
-      } else if (child.type.name === "math_inline") {
-        result += `$${child.attrs.formula}$`;
-      }
-    });
-    return result;
+  function serializeTableCell(cell) {
+    const sub = new MarkdownSerializerState(serializer.nodes, serializer.marks, {});
+    sub.renderInline(cell);
+    let text2 = sub.out.trim();
+    if (!text2) return " ";
+    text2 = text2.replace(/\s*\n\s*/g, "<br>");
+    text2 = text2.replace(/(^|[^\\])\|/g, "$1\\|");
+    return text2;
   }
   function parseMarkdown(markdown) {
     return parser.parse(markdown || "");
@@ -28320,13 +28401,27 @@
     }
   }
   function blockIndexToPos(doc3, blockIndex, offset) {
-    if (blockIndex == null || blockIndex < 0 || blockIndex >= doc3.childCount) return null;
+    if (blockIndex == null || blockIndex < 0) return null;
     let blockPos = 0;
-    for (let i = 0; i < blockIndex; i++) blockPos += doc3.child(i).nodeSize;
-    const node = doc3.child(blockIndex);
+    let seen = -1;
+    let targetNode = null;
+    let targetPos = 0;
+    for (let i = 0; i < doc3.childCount; i++) {
+      const child = doc3.child(i);
+      if (child.type.name !== "footnote_def") {
+        seen++;
+        if (seen === blockIndex) {
+          targetNode = child;
+          targetPos = blockPos;
+          break;
+        }
+      }
+      blockPos += child.nodeSize;
+    }
+    if (!targetNode) return null;
     const textblocks = [];
-    collectTextblocks(node, blockPos, textblocks);
-    if (textblocks.length === 0) return blockPos + 1;
+    collectTextblocks(targetNode, targetPos, textblocks);
+    if (textblocks.length === 0) return targetPos + 1;
     let remaining = Math.max(0, offset || 0);
     for (const tb of textblocks) {
       const size = tb.node.content.size;
@@ -28654,7 +28749,7 @@
     }
     return false;
   }
-  function createRichEditor({ parent, markdown, onChange, onSave, annotations, onSelectionChange, initialCursorLine }) {
+  function createRichEditor({ parent, markdown, onChange, onSave, annotations, onSelectionChange, initialCursorLine, initialCursorPosition }) {
     const doc3 = parseMarkdown(markdown || "");
     const { plugin: annotationPlugin, setAnnotations } = buildAnnotationPlugin();
     if (annotations) setAnnotations(annotations);
@@ -28827,19 +28922,12 @@
         return false;
       }
     });
-    if (initialCursorLine && initialCursorLine > 0) {
+    const restorePos = initialCursorPosition || (initialCursorLine && initialCursorLine > 0 ? { blockIndex: initialCursorLine - 1, offset: 0 } : null);
+    if (restorePos) {
       try {
-        let targetPos = 0;
-        let blockCount = 0;
-        const targetBlock = Math.min(initialCursorLine, view.state.doc.childCount);
-        view.state.doc.forEach((node, offset) => {
-          blockCount++;
-          if (blockCount <= targetBlock) {
-            targetPos = offset + 1;
-          }
-        });
-        if (targetPos > 0 && targetPos <= view.state.doc.content.size) {
-          const sel = TextSelection.create(view.state.doc, Math.min(targetPos, view.state.doc.content.size));
+        const targetPos = blockIndexToPos(view.state.doc, restorePos.blockIndex, restorePos.offset || 0);
+        if (targetPos !== null && targetPos > 0 && targetPos <= view.state.doc.content.size) {
+          const sel = TextSelection.create(view.state.doc, targetPos);
           const tr = view.state.tr.setSelection(sel).scrollIntoView();
           view.dispatch(tr);
         }
@@ -29244,33 +29332,61 @@
         view.dispatch(view.state.tr.setSelection(sel));
         return true;
       },
-      // 光标位置查询：返回当前光标所在的 markdown 行号
-      getCursorLine() {
+      // 光标位置查询：返回与预览块索引一致的 { blockIndex, offset }。
+      // 之前的 getCursorLine 返回 markdown 行号，却被 enterRich 当成块索引用，
+      // 导致重新进入富文本时光标跳到错误块。
+      getCursorPosition() {
         try {
-          const md2 = serializeMarkdown(view.state.doc);
           const pos = view.state.selection.from;
-          let charCount = 0;
-          let lineNum = 1;
-          const lines = md2.split("\n");
-          let blockIndex = 0;
-          view.state.doc.forEach((node, offset) => {
-            if (offset + node.nodeSize <= pos) {
-              blockIndex++;
+          let blockStart = 0;
+          let seen = -1;
+          let targetStart = 0;
+          let targetNode = null;
+          let lastContent = null;
+          for (let i = 0; i < view.state.doc.childCount; i++) {
+            const child = view.state.doc.child(i);
+            if (child.type.name !== "footnote_def") {
+              seen++;
+              lastContent = { index: seen, node: child, start: blockStart };
+              if (pos < blockStart + child.nodeSize) {
+                targetStart = blockStart;
+                targetNode = child;
+                break;
+              }
             }
-          });
-          let currentLine = 0;
-          for (let i = 0; i < lines.length && blockIndex > 0; i++) {
-            currentLine = i + 1;
-            if (lines[i].trim() === "" && i > 0 && lines[i - 1].trim() !== "") {
-              blockIndex--;
-            } else if (lines[i].trim() !== "" && (i === 0 || lines[i - 1].trim() === "")) {
-              blockIndex--;
-            }
+            blockStart += child.nodeSize;
           }
-          return Math.max(currentLine, 1);
+          if (!targetNode) {
+            if (!lastContent) return { blockIndex: 0, offset: 0 };
+            const lastIndex = lastContent.index;
+            const lastStart = lastContent.start;
+            const textblocks2 = [];
+            collectTextblocks(lastContent.node, lastStart, textblocks2);
+            const total = textblocks2.reduce((n, tb) => n + tb.node.content.size, 0);
+            return { blockIndex: lastIndex, offset: total };
+          }
+          const textblocks = [];
+          collectTextblocks(targetNode, targetStart, textblocks);
+          let offset = 0;
+          let found2 = false;
+          for (const tb of textblocks) {
+            const size = tb.node.content.size;
+            if (pos < tb.start + size) {
+              offset += Math.max(0, pos - tb.start);
+              found2 = true;
+              break;
+            }
+            offset += size;
+          }
+          if (!found2) offset = textblocks.reduce((n, tb) => n + tb.node.content.size, 0);
+          return { blockIndex: seen, offset };
         } catch (e) {
-          return 1;
+          return { blockIndex: 0, offset: 0 };
         }
+      },
+      // 兼容旧接口：返回块序号（1-based），不再声称是行号
+      getCursorLine() {
+        return this.getCursorPosition().blockIndex + 1;
       }
     };
   }

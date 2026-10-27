@@ -150,15 +150,32 @@ function collectTextblocks(node, pos, out) {
  * 等嵌套块也计入（否则列表之后的批注会整体错位）。
  */
 function blockIndexToPos(doc, blockIndex, offset) {
-    if (blockIndex == null || blockIndex < 0 || blockIndex >= doc.childCount) return null;
+    if (blockIndex == null || blockIndex < 0) return null;
 
+    // 预览侧会把「纯脚注定义块」从块列表中移除（见 renderer 的 orphanedDefBlocks），
+    // 因此 PM doc 里的 footnote_def 不占 blockIndex，这里计数时必须跳过，
+    // 否则脚注之后的所有批注都会错位。
     let blockPos = 0;
-    for (let i = 0; i < blockIndex; i++) blockPos += doc.child(i).nodeSize;
+    let seen = -1;
+    let targetNode = null;
+    let targetPos = 0;
+    for (let i = 0; i < doc.childCount; i++) {
+        const child = doc.child(i);
+        if (child.type.name !== 'footnote_def') {
+            seen++;
+            if (seen === blockIndex) {
+                targetNode = child;
+                targetPos = blockPos;
+                break;
+            }
+        }
+        blockPos += child.nodeSize;
+    }
+    if (!targetNode) return null;
 
-    const node = doc.child(blockIndex);
     const textblocks = [];
-    collectTextblocks(node, blockPos, textblocks);
-    if (textblocks.length === 0) return blockPos + 1;
+    collectTextblocks(targetNode, targetPos, textblocks);
+    if (textblocks.length === 0) return targetPos + 1;
 
     // 在块内的文本块之间摊平累加偏移，与预览侧拼接文本节点的顺序一致
     let remaining = Math.max(0, offset || 0);
@@ -577,7 +594,7 @@ function handlePaste(view, event, slice) {
  * @param {(state: {activeMarks: string[], blockType: string, blockAttrs: object}) => void} [options.onSelectionChange] - 选区/文档变化回调（用于更新工具栏按钮状态）
  * @returns {{ destroy: () => void, getMarkdown: () => string, setMarkdown: (s: string) => void, focus: () => void, updateAnnotations: (annotations: Array) => void, execCommand: (name: string, attrs?: object) => boolean }}
  */
-function createRichEditor({ parent, markdown, onChange, onSave, annotations, onSelectionChange, initialCursorLine }) {
+function createRichEditor({ parent, markdown, onChange, onSave, annotations, onSelectionChange, initialCursorLine, initialCursorPosition }) {
     const doc = parseMarkdown(markdown || '');
 
     const { plugin: annotationPlugin, setAnnotations } = buildAnnotationPlugin();
@@ -761,20 +778,14 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
     });
 
     // ===== 恢复光标位置 =====
-    if (initialCursorLine && initialCursorLine > 0) {
+    // 优先使用结构化的 { blockIndex, offset }；initialCursorLine 仅作旧接口兼容
+    const restorePos = initialCursorPosition
+        || (initialCursorLine && initialCursorLine > 0 ? { blockIndex: initialCursorLine - 1, offset: 0 } : null);
+    if (restorePos) {
         try {
-            // 简化策略：遍历 PM doc 的顶层节点，找到对应行号的位置
-            let targetPos = 0;
-            let blockCount = 0;
-            const targetBlock = Math.min(initialCursorLine, view.state.doc.childCount);
-            view.state.doc.forEach((node, offset) => {
-                blockCount++;
-                if (blockCount <= targetBlock) {
-                    targetPos = offset + 1; // 进入节点内部
-                }
-            });
-            if (targetPos > 0 && targetPos <= view.state.doc.content.size) {
-                const sel = TextSelection.create(view.state.doc, Math.min(targetPos, view.state.doc.content.size));
+            const targetPos = blockIndexToPos(view.state.doc, restorePos.blockIndex, restorePos.offset || 0);
+            if (targetPos !== null && targetPos > 0 && targetPos <= view.state.doc.content.size) {
+                const sel = TextSelection.create(view.state.doc, targetPos);
                 const tr = view.state.tr.setSelection(sel).scrollIntoView();
                 view.dispatch(tr);
             }
@@ -1188,36 +1199,64 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
             view.dispatch(view.state.tr.setSelection(sel));
             return true;
         },
-        // 光标位置查询：返回当前光标所在的 markdown 行号
-        getCursorLine() {
+        // 光标位置查询：返回与预览块索引一致的 { blockIndex, offset }。
+        // 之前的 getCursorLine 返回 markdown 行号，却被 enterRich 当成块索引用，
+        // 导致重新进入富文本时光标跳到错误块。
+        getCursorPosition() {
             try {
-                const md = serializeMarkdown(view.state.doc);
                 const pos = view.state.selection.from;
-                // 计算 pos 之前的文本对应的行号
-                let charCount = 0;
-                let lineNum = 1;
-                const lines = md.split('\n');
-                // 简化策略：通过遍历 PM doc 节点计算块索引，映射到行号
-                let blockIndex = 0;
-                view.state.doc.forEach((node, offset) => {
-                    if (offset + node.nodeSize <= pos) {
-                        blockIndex++;
+                let blockStart = 0;
+                let seen = -1;
+                let targetStart = 0;
+                let targetNode = null;
+                let lastContent = null; // 最后一个非 footnote_def 块，用于文末兜底
+
+                for (let i = 0; i < view.state.doc.childCount; i++) {
+                    const child = view.state.doc.child(i);
+                    if (child.type.name !== 'footnote_def') {
+                        seen++;
+                        lastContent = { index: seen, node: child, start: blockStart };
+                        if (pos < blockStart + child.nodeSize) {
+                            targetStart = blockStart;
+                            targetNode = child;
+                            break;
+                        }
                     }
-                });
-                // 块索引映射到行号（简化：每个块大约对应 1-3 行）
-                let currentLine = 0;
-                for (let i = 0; i < lines.length && blockIndex > 0; i++) {
-                    currentLine = i + 1;
-                    if (lines[i].trim() === '' && i > 0 && lines[i - 1].trim() !== '') {
-                        blockIndex--;
-                    } else if (lines[i].trim() !== '' && (i === 0 || lines[i - 1].trim() === '')) {
-                        blockIndex--;
-                    }
+                    blockStart += child.nodeSize;
                 }
-                return Math.max(currentLine, 1);
+
+                if (!targetNode) {
+                    if (!lastContent) return { blockIndex: 0, offset: 0 };
+                    const lastIndex = lastContent.index;
+                    const lastStart = lastContent.start;
+                    const textblocks = [];
+                    collectTextblocks(lastContent.node, lastStart, textblocks);
+                    const total = textblocks.reduce((n, tb) => n + tb.node.content.size, 0);
+                    return { blockIndex: lastIndex, offset: total };
+                }
+
+                const textblocks = [];
+                collectTextblocks(targetNode, targetStart, textblocks);
+                let offset = 0;
+                let found = false;
+                for (const tb of textblocks) {
+                    const size = tb.node.content.size;
+                    if (pos < tb.start + size) {
+                        offset += Math.max(0, pos - tb.start);
+                        found = true;
+                        break;
+                    }
+                    offset += size;
+                }
+                if (!found) offset = textblocks.reduce((n, tb) => n + tb.node.content.size, 0);
+                return { blockIndex: seen, offset };
             } catch (e) {
-                return 1;
+                return { blockIndex: 0, offset: 0 };
             }
+        },
+        // 兼容旧接口：返回块序号（1-based），不再声称是行号
+        getCursorLine() {
+            return this.getCursorPosition().blockIndex + 1;
         },
     };
 }

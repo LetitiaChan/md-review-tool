@@ -1891,8 +1891,11 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       html = html.replace(/<section class="footnotes"[\s\S]*?<\/section>\s*/g, "");
       return html;
     }
+    let _highlightConfigured = false;
     function configureHighlight() {
       if (typeof marked === "undefined") return;
+      if (_highlightConfigured) return;
+      _highlightConfigured = true;
       const renderer = new marked.Renderer();
       renderer.code = function(data) {
         const code = data.text || "";
@@ -2197,13 +2200,12 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
             }
           },
           // 定义列表（PHP Markdown Extra 风格）Term\n: Definition
+          // 注意：不要提供 start(src)。block 扩展的 start 会在每个块起点
+          // 拿到剩余全文，本项目的正则会一路扫描到文末，导致 marked 整体
+          // 退化为 O(块数 × 文档长度)。tokenizer 本身是行首锚定的，足够。
           {
             name: "deflist",
             level: "block",
-            start(src) {
-              const match = src.match(/^[^\n]+\n(?=:[ \t])/m);
-              return match ? match.index : void 0;
-            },
             tokenizer(src) {
               const rule = /^(?:[^\n]+\n(?::[ \t]+[^\n]+(?:\n|$))+(?:\n|$)?)+/;
               const match = rule.exec(src);
@@ -3484,6 +3486,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     let currentInsertPosition = "after";
     let annotationSearchQuery = "";
     let annotationSearchDebounceTimer = null;
+    let _eventsBound = false;
     let _annotationImageUriCache = {};
     function isBase64Image(str) {
       return str && str.startsWith("data:image/");
@@ -3527,6 +3530,8 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     }
     function init(parsedBlocks) {
       blocks = parsedBlocks;
+      if (_eventsBound) return;
+      _eventsBound = true;
       setupTextSelection();
       setupContextMenu();
       setupCommentModal();
@@ -5233,9 +5238,11 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     }
     const store2 = globalThis.Store;
     const currentFile = store2 && store2.getData ? store2.getData().relPath || "" : "";
-    const savedLine = _cursorPositions.get(currentFile);
-    if (savedLine !== void 0 && savedLine > 0) {
-      editorOptions.initialCursorLine = savedLine;
+    const savedPos = _cursorPositions.get(currentFile);
+    if (savedPos && typeof savedPos === "object" && typeof savedPos.blockIndex === "number") {
+      editorOptions.initialCursorPosition = savedPos;
+    } else if (typeof savedPos === "number" && savedPos > 0) {
+      editorOptions.initialCursorLine = savedPos;
     }
     _editor = globalThis.PM.createRichEditor(editorOptions);
     document.body.classList.add(RICH_BODY_CLASS);
@@ -5251,10 +5258,10 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     let finalMarkdown = "";
     if (_editor) {
       try {
-        if (typeof _editor.getCursorLine === "function") {
-          const currentFile = store && store.getData ? store.getData().relPath || "" : "";
-          const line = _editor.getCursorLine();
-          if (line > 0) _cursorPositions.set(currentFile, line);
+        const currentFile = store && store.getData ? store.getData().relPath || "" : "";
+        const pos = typeof _editor.getCursorPosition === "function" ? _editor.getCursorPosition() : null;
+        if (pos && typeof pos.blockIndex === "number") {
+          _cursorPositions.set(currentFile, pos);
         }
       } catch (e) {
       }
@@ -5432,7 +5439,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
           const newBlocks = Renderer.parseMarkdown(data.content);
           Renderer.renderBlocks(newBlocks, Store.getAnnotations());
-          renderMathAndMermaid();
           Annotations.setBlocks(newBlocks);
           Annotations.init(newBlocks);
           Annotations.renderAnnotationsList();
@@ -5463,6 +5469,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
       Renderer.onRenderComplete(() => {
         Settings.applyCodeFontToElements();
+        renderMathAndMermaid();
       });
       Settings.onChange((key, value) => {
         if (key === "enableMermaid" || key === "enableMath" || key === "enablePlantUML" || key === "enableGraphviz" || key === "reset") {
@@ -5927,7 +5934,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       blocks = Renderer.parseMarkdown(markdown);
       const data = Store.getData();
       Renderer.renderBlocks(blocks, data.annotations);
-      renderMathAndMermaid();
       Annotations.setBlocks(blocks);
       Annotations.init(blocks);
       Annotations.renderAnnotationsList();
@@ -5939,7 +5945,6 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       if (!data.rawMarkdown) return;
       blocks = Renderer.parseMarkdown(data.rawMarkdown);
       Renderer.renderBlocks(blocks, data.annotations);
-      renderMathAndMermaid();
       Annotations.setBlocks(blocks);
       Annotations.init(blocks);
       Annotations.renderAnnotationsList();

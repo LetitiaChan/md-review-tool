@@ -100,8 +100,10 @@ suite('Custom CSS / Image Paste / Cursor Restore Test Suite', () => {
         const src = fs.readFileSync(path.join(extPath, 'webview', 'js', 'edit-mode.js'), 'utf-8');
         assert.ok(src.includes('_cursorPositions'), 'edit-mode.js 应包含 _cursorPositions');
         assert.ok(src.includes('new Map()'), 'edit-mode.js 应使用 Map 存储光标位置');
-        assert.ok(src.includes('getCursorLine'), 'exitRich 应调用 getCursorLine');
-        assert.ok(src.includes('initialCursorLine'), 'enterRich 应传递 initialCursorLine');
+        assert.ok(src.includes('getCursorPosition'), 'exitRich 应调用 getCursorPosition 记录块索引');
+        assert.ok(src.includes('initialCursorPosition'), 'enterRich 应传递 initialCursorPosition');
+        // 旧接口保留兼容
+        assert.ok(src.includes('initialCursorLine'), '应保留 initialCursorLine 兼容旧格式');
     });
 
     test('BT-CssImgCursor.T2.5 Tier2 — pm.entry.js createRichEditor 接收 initialCursorLine 并恢复光标', () => {

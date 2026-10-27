@@ -208,8 +208,10 @@ suite('Review Fixes Regression Test Suite', () => {
             const source = readSource('webview', 'src', 'entries', 'pm.entry.js');
             if (!source) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const body = extractFunctionBody(source, 'blockIndexToPos');
-            assert.ok(/blockPos \+= doc\.child\(i\)\.nodeSize/.test(body),
+            assert.ok(/blockPos \+= child\.nodeSize/.test(body),
                 '应按顶层子节点累加 nodeSize 计算绝对位置');
+            assert.ok(body.includes("child.type.name !== 'footnote_def'"),
+                '计数时应跳过 footnote_def（预览块列表会移除纯脚注定义块）');
             assert.ok(body.includes('textblocks.length === 0'),
                 '块内无文本时应有兜底返回值');
         });

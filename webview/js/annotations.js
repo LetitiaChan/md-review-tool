@@ -13,6 +13,7 @@ const Annotations = (() => {
     let currentInsertPosition = 'after'; // 'before' | 'after' — 当前插入弹窗的方向
     let annotationSearchQuery = ''; // 批注搜索关键词
     let annotationSearchDebounceTimer = null;
+    let _eventsBound = false; // init() 的事件监听是否已绑定（防止重复绑定）
 
     // 批注图片 URI 缓存：路径 -> webview URI
     let _annotationImageUriCache = {};
@@ -76,6 +77,12 @@ const Annotations = (() => {
 
     function init(parsedBlocks) {
         blocks = parsedBlocks;
+        // 事件监听只绑定一次：init 会在 loadDocument / refreshCurrentView /
+        // 恢复批阅记录等路径被反复调用，重复绑定会导致粘贴图片被处理 N 次、
+        // 文件选择框弹出 N 个。所有 handler 都在触发时通过 getElementById 取节点，
+        // 不依赖绑定时的 DOM 内容，因此守卫是安全的。
+        if (_eventsBound) return;
+        _eventsBound = true;
         setupTextSelection();
         setupContextMenu();
         setupCommentModal();

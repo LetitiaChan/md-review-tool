@@ -567,8 +567,14 @@ const Renderer = (() => {
      * link(外部链接新窗口)、image(span容器)、listitem(自定义checkbox)、
      * 定义列表扩展
      */
+    // marked 配置是否已完成（configureHighlight 幂等：重复调用会重复注册扩展，
+    // 实测 4000 块文档解析耗时从 70ms 涨到 376ms）
+    let _highlightConfigured = false;
+
     function configureHighlight() {
         if (typeof marked === 'undefined') return;
+        if (_highlightConfigured) return;
+        _highlightConfigured = true;
 
         const renderer = new marked.Renderer();
 
@@ -980,13 +986,12 @@ const Renderer = (() => {
                     }
                 },
                 // 定义列表（PHP Markdown Extra 风格）Term\n: Definition
+                // 注意：不要提供 start(src)。block 扩展的 start 会在每个块起点
+                // 拿到剩余全文，本项目的正则会一路扫描到文末，导致 marked 整体
+                // 退化为 O(块数 × 文档长度)。tokenizer 本身是行首锚定的，足够。
                 {
                     name: 'deflist',
                     level: 'block',
-                    start(src) {
-                        const match = src.match(/^[^\n]+\n(?=:[ \t])/m);
-                        return match ? match.index : undefined;
-                    },
                     tokenizer(src) {
                         const rule = /^(?:[^\n]+\n(?::[ \t]+[^\n]+(?:\n|$))+(?:\n|$)?)+/;
                         const match = rule.exec(src);
