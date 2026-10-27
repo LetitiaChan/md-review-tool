@@ -1496,9 +1496,14 @@
     let _imageUriCache = {};
     let _mermaidCounter = 0;
     let _mermaidInitialized = false;
+    let _mermaidTheme = null;
     let _slugCounts = /* @__PURE__ */ Object.create(null);
     let _frontmatterExpanded = false;
     let _frontmatterKey = null;
+    let _blockBaseHtml = [];
+    let _blockRaw = [];
+    let _lastAnnotations = [];
+    let _collectedImagePaths = /* @__PURE__ */ new Set();
     const MATH_PLACEHOLDER_PREFIX = "%%MATH_EXPR_";
     const MATH_PLACEHOLDER_SUFFIX = "%%";
     let _mathExpressions = [];
@@ -1519,6 +1524,66 @@
       }
       _slugCounts[slug] = true;
       return slug;
+    }
+    const _highlightCache = /* @__PURE__ */ new Map();
+    const HIGHLIGHT_CACHE_MAX = 200;
+    const HIGHLIGHT_AUTO_MAX_LENGTH = 2048;
+    function getHighlightedCode(lang, code) {
+      const cacheKey = (lang || "") + "\0" + code;
+      const cached = _highlightCache.get(cacheKey);
+      if (cached !== void 0) {
+        _highlightCache.delete(cacheKey);
+        _highlightCache.set(cacheKey, cached);
+        return cached;
+      }
+      let highlighted = "";
+      if (typeof hljs !== "undefined") {
+        if (lang && hljs.getLanguage(lang)) {
+          try {
+            highlighted = hljs.highlight(code, { language: lang }).value;
+          } catch (e) {
+          }
+        }
+        if (!highlighted && code.length <= HIGHLIGHT_AUTO_MAX_LENGTH) {
+          try {
+            highlighted = hljs.highlightAuto(code).value;
+          } catch (e) {
+          }
+        }
+      }
+      if (highlighted) {
+        const hasRunawayEmphasis = /<span class="hljs-(emphasis|strong)">[\s\S]*?\n\n[\s\S]*?<\/span>/.test(highlighted);
+        highlighted = highlighted.replace(/<span class="hljs-emphasis">([\s\S]*?)<\/span>/g, "$1").replace(/<span class="hljs-strong">([\s\S]*?)<\/span>/g, "$1").replace(/<em class="hljs-emphasis">([\s\S]*?)<\/em>/g, "$1").replace(/<strong class="hljs-strong">([\s\S]*?)<\/strong>/g, "$1");
+        highlighted = highlighted.replace(/<span class="hljs-quote">([\s\S]*?)<\/span>/g, function(match, inner) {
+          return inner.includes("\n\n") ? inner : match;
+        });
+        if (hasRunawayEmphasis) {
+          highlighted = highlighted.replace(/<span class="hljs-code">([\s\S]*?)<\/span>/g, "$1");
+        } else {
+          highlighted = highlighted.replace(/<span class="hljs-code">([\s\S]*?)<\/span>/g, function(match, inner) {
+            return inner.includes("\n") ? inner : match;
+          });
+        }
+        if (lang === "markdown" || lang === "md") {
+          highlighted = highlighted.split("\n").map(function(line) {
+            if (!/<span class="hljs-/.test(line)) {
+              var m = line.match(/^(#{1,6}\s.*)$/);
+              if (m) return '<span class="hljs-section">' + m[1] + "</span>";
+              m = line.match(/^(\s*)([-*+])(\s.*)$/);
+              if (m) return m[1] + '<span class="hljs-bullet">' + m[2] + "</span>" + m[3];
+            }
+            if (/^&gt;\s/.test(line) && !/^<span class="hljs-quote">/.test(line)) {
+              return '<span class="hljs-quote">' + line + "</span>";
+            }
+            return line;
+          }).join("\n");
+        }
+      }
+      _highlightCache.set(cacheKey, highlighted);
+      if (_highlightCache.size > HIGHLIGHT_CACHE_MAX) {
+        _highlightCache.delete(_highlightCache.keys().next().value);
+      }
+      return highlighted;
     }
     function parseMarkdown(markdown) {
       let processedMarkdown = markdown;
@@ -1946,50 +2011,8 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
             return `<span class="${lineClass}" data-line="${i + 1}">${content}${closeTags}</span>`;
           }).join("\n");
         }
-        let highlighted = "";
         const langLabel = lang || "code";
-        if (typeof hljs !== "undefined") {
-          if (lang && hljs.getLanguage(lang)) {
-            try {
-              highlighted = hljs.highlight(code, { language: lang }).value;
-            } catch (e) {
-            }
-          }
-          if (!highlighted) {
-            try {
-              highlighted = hljs.highlightAuto(code).value;
-            } catch (e) {
-            }
-          }
-        }
-        if (highlighted) {
-          const hasRunawayEmphasis = /<span class="hljs-(emphasis|strong)">[\s\S]*?\n\n[\s\S]*?<\/span>/.test(highlighted);
-          highlighted = highlighted.replace(/<span class="hljs-emphasis">([\s\S]*?)<\/span>/g, "$1").replace(/<span class="hljs-strong">([\s\S]*?)<\/span>/g, "$1").replace(/<em class="hljs-emphasis">([\s\S]*?)<\/em>/g, "$1").replace(/<strong class="hljs-strong">([\s\S]*?)<\/strong>/g, "$1");
-          highlighted = highlighted.replace(/<span class="hljs-quote">([\s\S]*?)<\/span>/g, function(match, inner) {
-            return inner.includes("\n\n") ? inner : match;
-          });
-          if (hasRunawayEmphasis) {
-            highlighted = highlighted.replace(/<span class="hljs-code">([\s\S]*?)<\/span>/g, "$1");
-          } else {
-            highlighted = highlighted.replace(/<span class="hljs-code">([\s\S]*?)<\/span>/g, function(match, inner) {
-              return inner.includes("\n") ? inner : match;
-            });
-          }
-          if (lang === "markdown" || lang === "md") {
-            highlighted = highlighted.split("\n").map(function(line) {
-              if (!/<span class="hljs-/.test(line)) {
-                var m = line.match(/^(#{1,6}\s.*)$/);
-                if (m) return '<span class="hljs-section">' + m[1] + "</span>";
-                m = line.match(/^(\s*)([-*+])(\s.*)$/);
-                if (m) return m[1] + '<span class="hljs-bullet">' + m[2] + "</span>" + m[3];
-              }
-              if (/^&gt;\s/.test(line) && !/^<span class="hljs-quote">/.test(line)) {
-                return '<span class="hljs-quote">' + line + "</span>";
-              }
-              return line;
-            }).join("\n");
-          }
-        }
+        const highlighted = getHighlightedCode(lang, code);
         const codeContent = highlighted || escapeHtml(code);
         const hljsClass = highlighted ? ` hljs language-${langLabel}` : "";
         return `<div class="code-block" data-lang="${escapeHtml(lang)}"><div class="code-header"><span class="code-lang">${escapeHtml(langLabel)}</span><button class="code-copy-btn" title="${typeof t === "function" ? t("notification.copy") : "\u{1F4CB} \u590D\u5236"}">${typeof t === "function" ? t("renderer.copy_code") : "\u{1F4CB} \u590D\u5236"}</button></div><pre><code class="${hljsClass}">${wrapLines(codeContent, lang)}</code></pre></div>`;
@@ -2026,6 +2049,13 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         const title = data.title;
         const text = data.text || "";
         const titleAttr = title ? ` title="${escapeHtml(title)}"` : "";
+        if (href && !/^(https?:\/\/|data:|vscode-)/i.test(href)) {
+          try {
+            _collectedImagePaths.add(decodeURIComponent(href));
+          } catch (e) {
+            _collectedImagePaths.add(href);
+          }
+        }
         return `<span class="md-image-container"><img src="${href}" alt="${escapeHtml(text)}"${titleAttr} loading="lazy" class="md-image" />${text ? `<span class="md-image-caption" style="display:none">${escapeHtml(text)}</span>` : ""}</span>`;
       };
       renderer.table = function(data) {
@@ -2281,9 +2311,13 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     }
     const _renderCompleteCallbacks = [];
     function renderBlocks(blocks, annotations) {
+      annotations = annotations || [];
       const container = document.getElementById("documentContent");
       container.innerHTML = "";
       _slugCounts = /* @__PURE__ */ Object.create(null);
+      _blockBaseHtml = [];
+      _blockRaw = [];
+      _collectedImagePaths = /* @__PURE__ */ new Set();
       _mathExpressions = [];
       const fnLabelToGlobalIndex = {};
       if (_footnoteDefs.length > 0) {
@@ -2296,6 +2330,9 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           }
         }
       }
+      const refSuffix = _refLinkDefs.length > 0 ? "\n\n" + _refLinkDefs.join("\n") : "";
+      const fnSuffix = _footnoteDefs.length > 0 ? "\n\n" + _footnoteDefs.join("\n\n") : "";
+      const hasFnMap = Object.keys(fnLabelToGlobalIndex).length > 0;
       blocks.forEach((block, index) => {
         const wrapper = document.createElement("div");
         wrapper.className = "md-block";
@@ -2330,15 +2367,15 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
         let preprocessed = preprocessMarkdown(block);
         preprocessed = preprocessMath(preprocessed);
-        if (_refLinkDefs.length > 0) {
-          preprocessed = preprocessed + "\n\n" + _refLinkDefs.join("\n");
+        if (refSuffix && block.includes("][")) {
+          preprocessed = preprocessed + refSuffix;
         }
-        if (_footnoteDefs.length > 0) {
-          preprocessed = preprocessed + "\n\n" + _footnoteDefs.join("\n\n");
+        if (fnSuffix && block.includes("[^")) {
+          preprocessed = preprocessed + fnSuffix;
         }
         let html = marked.parse(preprocessed);
         html = postprocessHTML(html, block);
-        if (Object.keys(fnLabelToGlobalIndex).length > 0) {
+        if (hasFnMap) {
           html = html.replace(
             /<sup><a\s+id="fn-ref-([^"]+)"\s+href="#fn-([^"]+)"\s+data-fn-ref\s+aria-describedby="fn-label">\d+<\/a><\/sup>/g,
             (match, refLabel, hrefLabel) => {
@@ -2351,20 +2388,9 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           );
         }
         html = rewriteImagePaths(html);
-        const blockAnnotations = annotations.filter((a) => a.blockIndex === index);
-        const crossBlockAnnotations = annotations.filter((a) => {
-          if (a.blockIndex === index) return false;
-          if (a.type === "insert") return false;
-          if (!a.selectedText) return false;
-          if (a.endBlockIndex !== void 0 && a.endBlockIndex !== null) {
-            return index >= a.blockIndex && index <= a.endBlockIndex;
-          }
-          const normSelected = a.selectedText.replace(/\s+/g, " ").trim();
-          const normBlock = block.replace(/\s+/g, " ").trim();
-          if (!normBlock || normBlock.length < 4) return false;
-          return normSelected.includes(normBlock);
-        });
-        const allAnnotations = [...blockAnnotations, ...crossBlockAnnotations];
+        _blockBaseHtml[index] = html;
+        _blockRaw[index] = block;
+        const allAnnotations = collectAnnotationsForBlock(block, index, annotations);
         if (allAnnotations.length > 0) {
           html = applyHighlights(html, block, allAnnotations);
         }
@@ -2392,9 +2418,10 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
       }
       bindImageFallbacks(container);
+      _lastAnnotations = snapshotAnnotations(annotations);
       for (const cb of _renderCompleteCallbacks) {
         try {
-          cb();
+          cb({ incremental: false, roots: null });
         } catch (e) {
           console.warn("[Renderer] onRenderComplete callback error:", e);
         }
@@ -2404,6 +2431,141 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       if (typeof callback === "function") {
         _renderCompleteCallbacks.push(callback);
       }
+    }
+    function snapshotAnnotations(annotations) {
+      return (annotations || []).map((a) => ({ ...a }));
+    }
+    function collectAnnotationsForBlock(block, index, annotations) {
+      const blockAnnotations = annotations.filter((a) => a.blockIndex === index);
+      const crossBlockAnnotations = annotations.filter((a) => {
+        if (a.blockIndex === index) return false;
+        if (a.type === "insert") return false;
+        if (!a.selectedText) return false;
+        if (a.endBlockIndex !== void 0 && a.endBlockIndex !== null) {
+          return index >= a.blockIndex && index <= a.endBlockIndex;
+        }
+        const normSelected = a.selectedText.replace(/\s+/g, " ").trim();
+        const normBlock = block.replace(/\s+/g, " ").trim();
+        if (!normBlock || normBlock.length < 4) return false;
+        return normSelected.includes(normBlock);
+      });
+      return [...blockAnnotations, ...crossBlockAnnotations];
+    }
+    function annotationSignature(ann) {
+      return [
+        ann.type,
+        ann.selectedText,
+        ann.blockIndex,
+        ann.endBlockIndex,
+        ann.startOffset,
+        ann.endOffset,
+        ann.insertContent,
+        ann.insertPosition
+      ].join("");
+    }
+    function computeAffectedBlocks(prev, next) {
+      const prevMap = new Map((prev || []).map((a) => [a.id, a]));
+      const nextMap = new Map((next || []).map((a) => [a.id, a]));
+      const ids = /* @__PURE__ */ new Set([...prevMap.keys(), ...nextMap.keys()]);
+      const affected = /* @__PURE__ */ new Set();
+      for (const id of ids) {
+        const a = prevMap.get(id);
+        const b = nextMap.get(id);
+        if (a && b && annotationSignature(a) === annotationSignature(b)) continue;
+        for (const ann of [a, b]) {
+          if (!ann) continue;
+          if (ann.blockIndex == null || ann.blockIndex < 0) return null;
+          if (ann.endBlockIndex === void 0 || ann.endBlockIndex === null) return null;
+          const start = Math.max(0, Math.min(ann.blockIndex, ann.endBlockIndex));
+          const end = Math.max(ann.blockIndex, ann.endBlockIndex);
+          for (let i = start; i <= end; i++) affected.add(i);
+        }
+      }
+      return affected;
+    }
+    function updateAnnotations(annotations) {
+      const container = document.getElementById("documentContent");
+      if (!container || _blockBaseHtml.length === 0) return false;
+      const next = annotations || [];
+      const affected = computeAffectedBlocks(_lastAnnotations, next);
+      if (affected === null) return false;
+      const wrappers = container.querySelectorAll(":scope > .md-block");
+      const roots = [];
+      for (const idx of affected) {
+        const wrapper = wrappers[idx];
+        const block = _blockRaw[idx];
+        if (!wrapper || block === void 0) continue;
+        let html = _blockBaseHtml[idx];
+        if (block.startsWith("%%FRONTMATTER%%")) {
+          html = html.replace(
+            /class="frontmatter-card[^"]*"/,
+            `class="frontmatter-card${_frontmatterExpanded ? "" : " fm-collapsed"}"`
+          );
+        }
+        const blockAnns = collectAnnotationsForBlock(block, idx, next);
+        if (blockAnns.length > 0) {
+          html = applyHighlights(html, block, blockAnns);
+        }
+        wrapper.innerHTML = html;
+        bindImageFallbacks(wrapper);
+        roots.push(wrapper);
+      }
+      _lastAnnotations = snapshotAnnotations(next);
+      if (roots.length > 0) {
+        for (const cb of _renderCompleteCallbacks) {
+          try {
+            cb({ incremental: true, roots });
+          } catch (e) {
+            console.warn("[Renderer] onRenderComplete callback error:", e);
+          }
+        }
+      }
+      return true;
+    }
+    function takeCollectedImagePaths() {
+      const paths = Array.from(_collectedImagePaths);
+      _collectedImagePaths = /* @__PURE__ */ new Set();
+      return paths;
+    }
+    function collectRelativeImagePathsFromMarkdown(markdown) {
+      const paths = /* @__PURE__ */ new Set();
+      if (!markdown) return [];
+      const mdImg = /!\[[^\]]*\]\(\s*<?([^)\s>]+)>?/g;
+      let m;
+      while ((m = mdImg.exec(markdown)) !== null) {
+        const src = m[1];
+        if (!/^(https?:\/\/|data:|vscode-)/i.test(src)) paths.add(src);
+      }
+      const htmlImg = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi;
+      while ((m = htmlImg.exec(markdown)) !== null) {
+        const src = m[1];
+        if (!/^(https?:\/\/|data:|vscode-)/i.test(src)) paths.add(src);
+      }
+      return Array.from(paths);
+    }
+    function patchImageUris(uriMap) {
+      if (!uriMap) return;
+      const container = document.getElementById("documentContent");
+      if (!container) return;
+      container.querySelectorAll("img").forEach((img) => {
+        const src = img.getAttribute("src");
+        if (!src || /^(https?:\/\/|data:|vscode-)/i.test(src)) return;
+        let decoded = src;
+        try {
+          decoded = decodeURIComponent(src);
+        } catch (e) {
+        }
+        const uri = uriMap[decoded] || uriMap[src];
+        if (!uri) return;
+        img.setAttribute("src", uri);
+        img.style.display = "";
+        img.dataset.fallbackApplied = "false";
+        const parent = img.parentNode;
+        if (parent) {
+          const ph = parent.querySelector(":scope > .img-placeholder");
+          if (ph) ph.remove();
+        }
+      });
     }
     function applyHighlights(html, rawBlock, annotations) {
       const temp = document.createElement("div");
@@ -2759,6 +2921,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         } catch (e) {
           decodedSrc = src;
         }
+        _collectedImagePaths.add(decodedSrc);
         if (_imageUriCache[decodedSrc]) {
           return `<img ${before}src="${_imageUriCache[decodedSrc]}"${after}>`;
         }
@@ -3047,57 +3210,65 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
       });
     }
-    async function renderMermaid() {
+    async function renderMermaid(root) {
       if (typeof mermaid === "undefined") return;
-      document.querySelectorAll('div[id^="dmermaid-"]').forEach((el) => el.remove());
-      document.querySelectorAll('svg[id^="mermaid-"]').forEach((el) => {
-        if (!el.closest(".mermaid-container")) el.remove();
-      });
-      document.querySelectorAll('iframe[id^="imermaid-"]').forEach((el) => el.remove());
+      const scope = root || document;
+      const containers = scope.querySelectorAll(".mermaid-container");
+      if (containers.length === 0) return;
+      if (!root) {
+        document.querySelectorAll('div[id^="dmermaid-"]').forEach((el) => el.remove());
+        document.querySelectorAll('svg[id^="mermaid-"]').forEach((el) => {
+          if (!el.closest(".mermaid-container")) el.remove();
+        });
+        document.querySelectorAll('iframe[id^="imermaid-"]').forEach((el) => el.remove());
+      }
       const isDark = document.body.classList.contains("theme-dark");
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: isDark ? "dark" : "default",
-        // 使用 'loose' 而非 'strict'：
-        // 'strict' 会强制将 htmlLabels 设为 false，导致节点文本中的特殊字符
-        // （如 C++ 中的 +、C# 中的 #）被 Mermaid 解析器误解为语法符号，渲染失败。
-        // VS Code webview 本身已是沙箱环境，安全性由宿主保证，'loose' 不会引入额外风险。
-        securityLevel: "loose",
-        fontFamily: '"Segoe UI", "Microsoft YaHei", sans-serif',
-        flowchart: {
-          useMaxWidth: false,
-          htmlLabels: true,
-          curve: "basis"
-        },
-        sequence: {
-          useMaxWidth: false,
-          diagramMarginX: 8,
-          diagramMarginY: 8
-        },
-        gantt: {
-          useMaxWidth: false
-        },
-        themeVariables: isDark ? {
-          darkMode: true,
-          background: "#1e1e2e",
-          primaryColor: "#4fc3f7",
-          primaryTextColor: "#e0e0e0",
-          primaryBorderColor: "#4a5568",
-          lineColor: "#718096",
-          secondaryColor: "#2d3748",
-          tertiaryColor: "#374151",
-          textColor: "#e2e8f0",
-          mainBkg: "#2d3748",
-          nodeBorder: "#4a5568",
-          clusterBkg: "rgba(30, 41, 59, 0.5)",
-          clusterBorder: "#475569",
-          titleColor: "#e2e8f0",
-          edgeLabelBackground: "#1e293b",
-          nodeTextColor: "#e2e8f0"
-        } : {}
-      });
-      _mermaidInitialized = true;
-      const containers = document.querySelectorAll(".mermaid-container");
+      const themeKey = isDark ? "dark" : "default";
+      if (!_mermaidInitialized || _mermaidTheme !== themeKey) {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: isDark ? "dark" : "default",
+          // 使用 'loose' 而非 'strict'：
+          // 'strict' 会强制将 htmlLabels 设为 false，导致节点文本中的特殊字符
+          // （如 C++ 中的 +、C# 中的 #）被 Mermaid 解析器误解为语法符号，渲染失败。
+          // VS Code webview 本身已是沙箱环境，安全性由宿主保证，'loose' 不会引入额外风险。
+          securityLevel: "loose",
+          fontFamily: '"Segoe UI", "Microsoft YaHei", sans-serif',
+          flowchart: {
+            useMaxWidth: false,
+            htmlLabels: true,
+            curve: "basis"
+          },
+          sequence: {
+            useMaxWidth: false,
+            diagramMarginX: 8,
+            diagramMarginY: 8
+          },
+          gantt: {
+            useMaxWidth: false
+          },
+          themeVariables: isDark ? {
+            darkMode: true,
+            background: "#1e1e2e",
+            primaryColor: "#4fc3f7",
+            primaryTextColor: "#e0e0e0",
+            primaryBorderColor: "#4a5568",
+            lineColor: "#718096",
+            secondaryColor: "#2d3748",
+            tertiaryColor: "#374151",
+            textColor: "#e2e8f0",
+            mainBkg: "#2d3748",
+            nodeBorder: "#4a5568",
+            clusterBkg: "rgba(30, 41, 59, 0.5)",
+            clusterBorder: "#475569",
+            titleColor: "#e2e8f0",
+            edgeLabelBackground: "#1e293b",
+            nodeTextColor: "#e2e8f0"
+          } : {}
+        });
+        _mermaidInitialized = true;
+        _mermaidTheme = themeKey;
+      }
       for (const container of containers) {
         const sourceDataEl = container.querySelector(".mermaid-source-data");
         const sourceEl = container.querySelector(".mermaid-source");
@@ -3247,10 +3418,10 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       });
       _mermaidCounter = 0;
     }
-    function renderMath() {
+    function renderMath(root) {
       if (typeof katex === "undefined") return;
       if (_mathExpressions.length === 0) return;
-      const container = document.getElementById("documentContent");
+      const container = root || document.getElementById("documentContent");
       if (!container) return;
       const walker = document.createTreeWalker(
         container,
@@ -3322,8 +3493,8 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
       return hex;
     }
-    function renderPlantUML() {
-      const containers = document.querySelectorAll(".plantuml-container");
+    function renderPlantUML(root) {
+      const containers = (root || document).querySelectorAll(".plantuml-container");
       if (containers.length === 0) return;
       containers.forEach((container) => {
         if (container.querySelector(".plantuml-rendered")) {
@@ -3369,8 +3540,8 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
       });
     }
-    async function renderGraphviz() {
-      const containers = document.querySelectorAll(".graphviz-container");
+    async function renderGraphviz(root) {
+      const containers = (root || document).querySelectorAll(".graphviz-container");
       if (containers.length === 0) return;
       if (typeof Viz === "undefined") {
         console.warn("[Renderer] Viz.js \u672A\u52A0\u8F7D");
@@ -3472,7 +3643,7 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
         }
       }
     }
-    return { parseMarkdown, renderBlocks, onRenderComplete, getBlockIndex, setImageUriCache, getImageUriCache: () => _imageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, restoreMathPlaceholders, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
+    return { parseMarkdown, renderBlocks, updateAnnotations, onRenderComplete, getBlockIndex, setImageUriCache, getImageUriCache: () => _imageUriCache, collectRelativeImagePaths, collectRelativeImagePathsFromMarkdown, takeCollectedImagePaths, patchImageUris, configureHighlight, renderMermaid, reinitMermaid, renderMath, restoreMathPlaceholders, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
   })();
 
   // webview/js/annotations.js
@@ -4215,7 +4386,18 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
     }
     function refreshView() {
       const data = Store.getData();
-      Renderer.renderBlocks(blocks, data.annotations);
+      let updated = false;
+      if (typeof Renderer.updateAnnotations === "function") {
+        try {
+          updated = Renderer.updateAnnotations(data.annotations);
+        } catch (e) {
+          console.warn("[annotations] \u589E\u91CF\u6E32\u67D3\u5931\u8D25\uFF0C\u56DE\u9000\u5168\u91CF:", e);
+          updated = false;
+        }
+      }
+      if (!updated) {
+        Renderer.renderBlocks(blocks, data.annotations);
+      }
       renderAnnotationsList();
       updateToolbarState();
       if (globalThis.Exporter && Exporter.triggerAutoSave) {
@@ -5380,7 +5562,11 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           break;
         case "imageUris":
           Renderer.setImageUriCache(message.payload);
-          refreshCurrentView();
+          if (typeof Renderer.patchImageUris === "function") {
+            Renderer.patchImageUris(message.payload);
+          } else {
+            refreshCurrentView();
+          }
           break;
         case "settingsData":
           Settings.applySettings(message.payload);
@@ -5437,12 +5623,15 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
           loadDocument(data.name, data.content, true, void 0, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
           requestImageUris(data.content, data.sourceDir);
           Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
-          const newBlocks = Renderer.parseMarkdown(data.content);
-          Renderer.renderBlocks(newBlocks, Store.getAnnotations());
-          Annotations.setBlocks(newBlocks);
-          Annotations.init(newBlocks);
+          const restoredAnnotations = Store.getAnnotations();
+          if (!Renderer.updateAnnotations(restoredAnnotations)) {
+            Renderer.renderBlocks(blocks, restoredAnnotations);
+          }
+          Annotations.setBlocks(blocks);
+          Annotations.init(blocks);
           Annotations.renderAnnotationsList();
           Annotations.updateToolbarState();
+          refreshToc();
           if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
             showNotification(t("notification.restored", { count: matchedRecord.annotations.length }));
           }
@@ -5467,9 +5656,13 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       } catch (e) {
         console.error("[App] \u8BBE\u7F6E/\u6E32\u67D3\u5668\u521D\u59CB\u5316\u5931\u8D25:", e);
       }
-      Renderer.onRenderComplete(() => {
+      Renderer.onRenderComplete((info) => {
         Settings.applyCodeFontToElements();
-        renderMathAndMermaid();
+        if (info && info.incremental && info.roots && info.roots.length) {
+          renderMathAndMermaid(info.roots);
+        } else {
+          renderMathAndMermaid();
+        }
       });
       Settings.onChange((key, value) => {
         if (key === "enableMermaid" || key === "enableMath" || key === "enablePlantUML" || key === "enableGraphviz" || key === "reset") {
@@ -5525,8 +5718,13 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
     }
     function requestImageUris(markdown, sourceDir) {
-      const html = marked.parse(markdown);
-      const paths = Renderer.collectRelativeImagePaths(html);
+      let paths = [];
+      if (typeof Renderer.takeCollectedImagePaths === "function") {
+        paths = Renderer.takeCollectedImagePaths();
+      }
+      if (paths.length === 0 && markdown && typeof Renderer.collectRelativeImagePathsFromMarkdown === "function") {
+        paths = Renderer.collectRelativeImagePathsFromMarkdown(markdown);
+      }
       if (paths.length > 0 && sourceDir) {
         vscode.postMessage({
           type: "resolveImageUris",
@@ -5951,24 +6149,46 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       Annotations.updateToolbarState();
       refreshToc();
     }
-    function renderMathAndMermaid() {
+    function renderMathAndMermaid(roots) {
       const settings = Settings.getSettings();
+      const scoped = Array.isArray(roots) && roots.length > 0;
+      const each = (fn) => {
+        if (scoped) {
+          roots.forEach((root) => {
+            try {
+              fn(root);
+            } catch (e) {
+              console.warn("[App] scoped render error:", e);
+            }
+          });
+        } else {
+          fn();
+        }
+      };
       if (settings.enableMath) {
-        Renderer.renderMath();
+        each((root) => Renderer.renderMath(root));
       }
       if (settings.enableMermaid) {
-        Renderer.renderMermaid();
-        setTimeout(bindMermaidLightbox, 200);
+        each((root) => Renderer.renderMermaid(root));
+        if (!scoped) setTimeout(bindMermaidLightbox, 200);
       }
       if (settings.enablePlantUML) {
-        Renderer.renderPlantUML();
+        each((root) => Renderer.renderPlantUML(root));
       }
       if (settings.enableGraphviz) {
-        Renderer.renderGraphviz().then(() => {
-          bindGraphvizLightbox();
-        });
+        if (scoped) {
+          Promise.all(roots.map((root) => Renderer.renderGraphviz(root))).then(() => bindGraphvizLightbox());
+        } else {
+          Renderer.renderGraphviz().then(() => {
+            bindGraphvizLightbox();
+          });
+        }
       }
-      bindCodeCopyButtons();
+      if (scoped) {
+        roots.forEach((root) => bindCodeCopyButtons(root));
+      } else {
+        bindCodeCopyButtons();
+      }
       bindImageLightbox();
     }
     function bindImageLightbox() {
@@ -6111,8 +6331,9 @@ ${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}
       }
       document.addEventListener("keydown", onKeyDown);
     }
-    function bindCodeCopyButtons() {
-      const copyBtns = document.querySelectorAll(".code-copy-btn");
+    function bindCodeCopyButtons(root) {
+      const scope = root || document;
+      const copyBtns = scope.querySelectorAll ? scope.querySelectorAll(".code-copy-btn") : [];
       copyBtns.forEach((btn) => {
         if (btn.dataset.copyBound) return;
         btn.dataset.copyBound = "true";

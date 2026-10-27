@@ -110,6 +110,54 @@ test.describe('批注刷新后的渲染完整性', () => {
         expect(restored.blockIndex).toBe(2);
         expect(restored.offset).toBe(saved.offset);
     });
+
+    test('BT-perf.6 新增单条批注只重建受影响的块', async ({ page }) => {
+        const result = await page.evaluate(() => {
+            const Renderer = (window as any).Renderer;
+            Renderer.configureHighlight();
+            const N = 1000;
+            const parts: string[] = [];
+            for (let i = 0; i < N; i++) {
+                parts.push('## 章节 ' + i + '\n\n这是第 ' + i + ' 段正文内容，包含 **加粗** 与普通文字。');
+            }
+            const blocks = Renderer.parseMarkdown(parts.join('\n\n'));
+            const anns: any[] = [];
+            for (let i = 0; i < 100; i++) {
+                anns.push({
+                    id: i + 1, type: 'comment', blockIndex: i * 2 + 1, endBlockIndex: i * 2 + 1,
+                    startOffset: 0, endOffset: 3, selectedText: '这是第', comment: 'x',
+                });
+            }
+            Renderer.renderBlocks(blocks, anns);
+
+            const before = document.querySelectorAll('.highlight-comment').length;
+            const wrappers = document.querySelectorAll('#documentContent > .md-block');
+            (wrappers[5] as HTMLElement).dataset.untouched = '1';
+
+            const next = anns.concat([{
+                id: 999, type: 'comment', blockIndex: 9, endBlockIndex: 9,
+                startOffset: 0, endOffset: 3, selectedText: '这是第', comment: '',
+            }]);
+
+            const t0 = performance.now();
+            const updated = Renderer.updateAnnotations(next);
+            const ms = performance.now() - t0;
+
+            const sameNode = (document.querySelectorAll('#documentContent > .md-block')[5] as HTMLElement).dataset.untouched === '1';
+            return {
+                updated, ms,
+                before,
+                after: document.querySelectorAll('.highlight-comment').length,
+                sameNode,
+            };
+        });
+
+        expect(result.updated).toBe(true);
+        expect(result.after).toBe(result.before + 1);
+        // 未受影响的块必须保持同一个 DOM 节点（没有被整篇重建）
+        expect(result.sameNode).toBe(true);
+        expect(result.ms).toBeLessThan(50);
+    });
 });
 
 test.describe('渲染性能基准', () => {

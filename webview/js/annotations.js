@@ -931,7 +931,20 @@ const Annotations = (() => {
 
     function refreshView() {
         const data = Store.getData();
-        Renderer.renderBlocks(blocks, data.annotations);
+        // 优先增量更新：只重建受影响的块，跳过 marked/highlight.js。
+        // 返回 false 时（例如旧批注缺少块范围）回退到全量渲染。
+        let updated = false;
+        if (typeof Renderer.updateAnnotations === 'function') {
+            try {
+                updated = Renderer.updateAnnotations(data.annotations);
+            } catch (e) {
+                console.warn('[annotations] 增量渲染失败，回退全量:', e);
+                updated = false;
+            }
+        }
+        if (!updated) {
+            Renderer.renderBlocks(blocks, data.annotations);
+        }
         renderAnnotationsList();
         updateToolbarState();
         // 批注变更后触发自动保存，确保磁盘上的批阅记录及时更新

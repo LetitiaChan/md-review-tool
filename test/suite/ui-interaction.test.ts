@@ -3657,7 +3657,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             // 确保 triggerAutoSave 在 UI 更新完成后调用
             const refreshViewIdx = annotationsText.indexOf('function refreshView()');
             assert.ok(refreshViewIdx > 0, '应有 refreshView 函数');
-            const funcBody = annotationsText.slice(refreshViewIdx, refreshViewIdx + 500);
+            const funcBody = annotationsText.slice(refreshViewIdx, refreshViewIdx + 2000);
             const renderIdx = funcBody.indexOf('renderAnnotationsList()');
             const triggerIdx = funcBody.indexOf('triggerAutoSave');
             assert.ok(renderIdx > 0 && triggerIdx > 0, '应同时包含 renderAnnotationsList 和 triggerAutoSave');

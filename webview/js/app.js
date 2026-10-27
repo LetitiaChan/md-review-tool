@@ -67,7 +67,12 @@ export function initApp() {
                 break;
             case 'imageUris':
                 Renderer.setImageUriCache(message.payload);
-                refreshCurrentView();
+                // 就地替换 img src，避免整篇重渲染（会丢失滚动位置并重跑 marked）
+                if (typeof Renderer.patchImageUris === 'function') {
+                    Renderer.patchImageUris(message.payload);
+                } else {
+                    refreshCurrentView();
+                }
                 break;
             case 'settingsData':
                 Settings.applySettings(message.payload);
@@ -143,12 +148,17 @@ export function initApp() {
                 loadDocument(data.name, data.content, true, undefined, data.docVersion, data.sourceFilePath, data.sourceDir, data.relPath, data.pathHash);
                 requestImageUris(data.content, data.sourceDir);
                 Store.restoreFromReviewRecord(matchedRecord, data.name, data.content, data.docVersion);
-                const newBlocks = Renderer.parseMarkdown(data.content);
-                Renderer.renderBlocks(newBlocks, Store.getAnnotations());
-                Annotations.setBlocks(newBlocks);
-                Annotations.init(newBlocks);
+                // loadDocument 已经完成一次全量渲染，这里只把恢复出来的批注增量叠加到 DOM 上，
+                // 不再重复 parseMarkdown + renderBlocks（打开路径曾因此渲染 2~3 次）。
+                const restoredAnnotations = Store.getAnnotations();
+                if (!Renderer.updateAnnotations(restoredAnnotations)) {
+                    Renderer.renderBlocks(blocks, restoredAnnotations);
+                }
+                Annotations.setBlocks(blocks);
+                Annotations.init(blocks);
                 Annotations.renderAnnotationsList();
                 Annotations.updateToolbarState();
+                refreshToc();
                 if (matchedRecord.annotations && matchedRecord.annotations.length > 0) {
                     showNotification(t('notification.restored', { count: matchedRecord.annotations.length }));
                 }
@@ -182,9 +192,13 @@ export function initApp() {
         // 注册渲染完成回调：每次 renderBlocks 完成后统一重放
         // 代码字体内联样式 + 数学公式 + 图表 + 代码复制按钮。
         // 放在这里而不是各个调用点，保证任何调用方（含批注刷新）都不会漏掉重渲染。
-        Renderer.onRenderComplete(() => {
+        Renderer.onRenderComplete((info) => {
             Settings.applyCodeFontToElements();
-            renderMathAndMermaid();
+            if (info && info.incremental && info.roots && info.roots.length) {
+                renderMathAndMermaid(info.roots);
+            } else {
+                renderMathAndMermaid();
+            }
         });
 
         // 监听 Mermaid / 数学公式开关变化，触发文档重新渲染
@@ -263,8 +277,15 @@ export function initApp() {
 
     // ===== 请求图片 URI 批量转换 =====
     function requestImageUris(markdown, sourceDir) {
-        const html = marked.parse(markdown);
-        const paths = Renderer.collectRelativeImagePaths(html);
+        // 图片路径在 renderBlocks 过程中已由 renderer.image / rewriteImagePaths 收集，
+        // 不再对全文额外跑一次 marked.parse（该调用在大文档上是 O(n²) 的）。
+        let paths = [];
+        if (typeof Renderer.takeCollectedImagePaths === 'function') {
+            paths = Renderer.takeCollectedImagePaths();
+        }
+        if (paths.length === 0 && markdown && typeof Renderer.collectRelativeImagePathsFromMarkdown === 'function') {
+            paths = Renderer.collectRelativeImagePathsFromMarkdown(markdown);
+        }
         if (paths.length > 0 && sourceDir) {
             vscode.postMessage({
                 type: 'resolveImageUris',
@@ -811,29 +832,47 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
 
     /**
      * 根据设置状态渲染数学公式和 Mermaid 图表，并绑定代码块事件
+     * @param {HTMLElement[]} [roots] 传入时只渲染这些子树（增量渲染）
      */
-    function renderMathAndMermaid() {
+    function renderMathAndMermaid(roots) {
         const settings = Settings.getSettings();
+        const scoped = Array.isArray(roots) && roots.length > 0;
+        const each = (fn) => {
+            if (scoped) {
+                roots.forEach((root) => {
+                    try { fn(root); } catch (e) { console.warn('[App] scoped render error:', e); }
+                });
+            } else {
+                fn();
+            }
+        };
+
         if (settings.enableMath) {
-            Renderer.renderMath();
+            each((root) => Renderer.renderMath(root));
         }
         if (settings.enableMermaid) {
-            Renderer.renderMermaid();
-            // 渲染完成后绑定大图弹窗事件
-            setTimeout(bindMermaidLightbox, 200);
+            each((root) => Renderer.renderMermaid(root));
+            // 渲染完成后绑定大图弹窗事件（全量渲染时）
+            if (!scoped) setTimeout(bindMermaidLightbox, 200);
         }
         if (settings.enablePlantUML) {
-            Renderer.renderPlantUML();
+            each((root) => Renderer.renderPlantUML(root));
         }
         if (settings.enableGraphviz) {
             // renderGraphviz 是 async，等渲染完成后再绑定大图弹窗事件
-            Renderer.renderGraphviz().then(() => {
-                bindGraphvizLightbox();
-            });
+            if (scoped) {
+                Promise.all(roots.map((root) => Renderer.renderGraphviz(root))).then(() => bindGraphvizLightbox());
+            } else {
+                Renderer.renderGraphviz().then(() => { bindGraphvizLightbox(); });
+            }
         }
         // 绑定代码块复制按钮事件
-        bindCodeCopyButtons();
-        // 绑定图片点击放大事件
+        if (scoped) {
+            roots.forEach((root) => bindCodeCopyButtons(root));
+        } else {
+            bindCodeCopyButtons();
+        }
+        // 绑定图片点击放大事件（全局事件委托，只需一次）
         bindImageLightbox();
     }
 
@@ -1018,8 +1057,9 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
     }
 
     // ===== 代码块复制按钮 =====
-    function bindCodeCopyButtons() {
-        const copyBtns = document.querySelectorAll('.code-copy-btn');
+    function bindCodeCopyButtons(root) {
+        const scope = root || document;
+        const copyBtns = scope.querySelectorAll ? scope.querySelectorAll('.code-copy-btn') : [];
         copyBtns.forEach(btn => {
             if (btn.dataset.copyBound) return;
             btn.dataset.copyBound = 'true';

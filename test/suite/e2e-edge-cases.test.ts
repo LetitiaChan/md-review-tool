@@ -1692,7 +1692,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             );
 
             // 应包含 plantumlHexEncode 调用（动态构建 URL）
-            const renderFnMatch = rendererCode.match(/function renderPlantUML\(\)[\s\S]*?^    \}/m);
+            const renderFnMatch = rendererCode.match(/function renderPlantUML\([^)]*\)[\s\S]*?^    \}/m);
             assert.ok(renderFnMatch, '应找到 renderPlantUML 函数体');
 
             const renderFn = renderFnMatch![0];

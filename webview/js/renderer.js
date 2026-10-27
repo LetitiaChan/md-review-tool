@@ -28,11 +28,20 @@ const Renderer = (() => {
     let _mermaidCounter = 0;
     // Mermaid 是否已初始化
     let _mermaidInitialized = false;
+    // 上次初始化使用的主题（避免每次刷新都重复 initialize）
+    let _mermaidTheme = null;
     // 标题 slug 去重计数（每次 renderBlocks 重置）
     let _slugCounts = Object.create(null);
     // YAML Front Matter 卡片是否展开（重渲染后保持；内容变化时重置）
     let _frontmatterExpanded = false;
     let _frontmatterKey = null;
+    // 增量渲染：每块「无批注」HTML 与原始块文本
+    let _blockBaseHtml = [];
+    let _blockRaw = [];
+    // 上次渲染的批注快照（用于计算受影响块）
+    let _lastAnnotations = [];
+    // 渲染过程中收集到的相对图片路径（替代 requestImageUris 里的全文 marked.parse）
+    let _collectedImagePaths = new Set();
 
     // 数学公式占位符机制
     const MATH_PLACEHOLDER_PREFIX = '%%MATH_EXPR_';
@@ -68,6 +77,101 @@ const Renderer = (() => {
         }
         _slugCounts[slug] = true;
         return slug;
+    }
+
+    // ===== 代码高亮（带 LRU 缓存） =====
+    // highlightAuto 会尝试所有已注册语言，对大代码块非常慢；仅对小代码块启用。
+    const _highlightCache = new Map();
+    const HIGHLIGHT_CACHE_MAX = 200;
+    const HIGHLIGHT_AUTO_MAX_LENGTH = 2048;
+
+    function getHighlightedCode(lang, code) {
+        const cacheKey = (lang || '') + '\u0000' + code;
+        const cached = _highlightCache.get(cacheKey);
+        if (cached !== undefined) {
+            // LRU：命中后移到队尾
+            _highlightCache.delete(cacheKey);
+            _highlightCache.set(cacheKey, cached);
+            return cached;
+        }
+
+        let highlighted = '';
+        if (typeof hljs !== 'undefined') {
+            if (lang && hljs.getLanguage(lang)) {
+                try {
+                    highlighted = hljs.highlight(code, { language: lang }).value;
+                } catch (e) { /* fallback */ }
+            }
+            if (!highlighted && code.length <= HIGHLIGHT_AUTO_MAX_LENGTH) {
+                try {
+                    highlighted = hljs.highlightAuto(code).value;
+                } catch (e) { /* fallback */ }
+            }
+        }
+
+        // 修复代码块中下划线变量名被错误渲染的问题：
+        // highlight.js 的 Markdown 语法将 _xxx_ 识别为 emphasis、__xxx__ 识别为 strong，
+        // 导致 {file_count}、{cos_name} 等含下划线的变量名被错误解析（跨行匹配吞掉大量文本）。
+        // highlight.js 输出 <span class="hljs-emphasis">...</span>（部分版本可能用 <em>/<strong>），
+        // 后处理：用正则匹配完整标签对并去掉（保留内容文本），代码块中不应有 Markdown 格式化效果。
+        if (highlighted) {
+            // 检测是否存在"跨段 emphasis/strong"（内部含空行 \n\n）—— 这是一切误识别的根源信号。
+            // 当出现时，同一代码块内其他结构化 hljs span（如 hljs-code 配对）也高概率错误，应一并清理。
+            const hasRunawayEmphasis = /<span class="hljs-(emphasis|strong)">[\s\S]*?\n\n[\s\S]*?<\/span>/.test(highlighted);
+
+            highlighted = highlighted
+                .replace(/<span class="hljs-emphasis">([\s\S]*?)<\/span>/g, '$1')
+                .replace(/<span class="hljs-strong">([\s\S]*?)<\/span>/g, '$1')
+                .replace(/<em class="hljs-emphasis">([\s\S]*?)<\/em>/g, '$1')
+                .replace(/<strong class="hljs-strong">([\s\S]*?)<\/strong>/g, '$1');
+            // 修复 hljs-quote 跨行吞掉后续内容的问题：
+            // 当 > 引用行中含未闭合的 _ 时，emphasis 跨行导致外层 hljs-quote 也跨行，
+            // 去掉 emphasis 后 hljs-quote 仍包裹了后续段落（如 ### 标题）。
+            // 检测 hljs-quote 内容是否跨越空行（\n\n），如果是则去掉 span 保留内容。
+            highlighted = highlighted.replace(/<span class="hljs-quote">([\s\S]*?)<\/span>/g, function(match, inner) {
+                return inner.includes('\n\n') ? inner : match;
+            });
+            // 修复 hljs-code 被 emphasis 错配导致跨越普通文字的问题：
+            // 当 emphasis 跨段吞噬发生时，同代码块的 inline code 反引号配对也会错乱
+            // （例如 `node_modules` 被拆散后，hljs 把下一段 `npm install` 的结尾反引号误认为闭合点，
+            //  导致中间一大段正常文字被染上 hljs-code 颜色）。
+            // 策略：hasRunawayEmphasis 为 true 时清除所有 hljs-code；否则仅清除跨行的 hljs-code。
+            if (hasRunawayEmphasis) {
+                highlighted = highlighted.replace(/<span class="hljs-code">([\s\S]*?)<\/span>/g, '$1');
+            } else {
+                highlighted = highlighted.replace(/<span class="hljs-code">([\s\S]*?)<\/span>/g, function(match, inner) {
+                    return inner.includes('\n') ? inner : match;
+                });
+            }
+            // 修复被 emphasis/quote 吞掉的 markdown 结构失去高亮的问题：
+            // 去掉错误的 span 后，被吞掉的 # 标题 / > 引用 / - 列表等变成了纯文本，
+            // 丢失了本应有的 hljs-section/hljs-quote/hljs-bullet 高亮。
+            // 对 markdown 语言的代码块，逐行重新识别裸的 markdown 结构并补上高亮标签。
+            if (lang === 'markdown' || lang === 'md') {
+                highlighted = highlighted.split('\n').map(function(line) {
+                    // 标题与列表：仅当整行不含任何 hljs span 时才补标（避免包裹已有结构）
+                    if (!/<span class="hljs-/.test(line)) {
+                        var m = line.match(/^(#{1,6}\s.*)$/);
+                        if (m) return '<span class="hljs-section">' + m[1] + '</span>';
+                        m = line.match(/^(\s*)([-*+])(\s.*)$/);
+                        if (m) return m[1] + '<span class="hljs-bullet">' + m[2] + '</span>' + m[3];
+                    }
+                    // 引用：&gt; 开头且尚未被 hljs-quote 包裹，则整行包裹为 quote
+                    // （即使行内已有其他 hljs span，如 hljs-code，仍应补 quote，因为 quote 可嵌套）
+                    if (/^&gt;\s/.test(line) && !/^<span class="hljs-quote">/.test(line)) {
+                        return '<span class="hljs-quote">' + line + '</span>';
+                    }
+                    return line;
+                }).join('\n');
+            }
+        }
+
+        _highlightCache.set(cacheKey, highlighted);
+        if (_highlightCache.size > HIGHLIGHT_CACHE_MAX) {
+            // 删除最早插入的条目
+            _highlightCache.delete(_highlightCache.keys().next().value);
+        }
+        return highlighted;
     }
 
     function parseMarkdown(markdown) {
@@ -649,78 +753,8 @@ const Renderer = (() => {
                 }).join('\n');
             }
 
-            let highlighted = '';
             const langLabel = lang || 'code';
-
-            if (typeof hljs !== 'undefined') {
-                if (lang && hljs.getLanguage(lang)) {
-                    try {
-                        highlighted = hljs.highlight(code, { language: lang }).value;
-                    } catch (e) { /* fallback */ }
-                }
-                if (!highlighted) {
-                    try {
-                        highlighted = hljs.highlightAuto(code).value;
-                    } catch (e) { /* fallback */ }
-                }
-            }
-
-            // 修复代码块中下划线变量名被错误渲染的问题：
-            // highlight.js 的 Markdown 语法将 _xxx_ 识别为 emphasis、__xxx__ 识别为 strong，
-            // 导致 {file_count}、{cos_name} 等含下划线的变量名被错误解析（跨行匹配吞掉大量文本）。
-            // highlight.js 输出 <span class="hljs-emphasis">...</span>（部分版本可能用 <em>/<strong>），
-            // 后处理：用正则匹配完整标签对并去掉（保留内容文本），代码块中不应有 Markdown 格式化效果。
-            if (highlighted) {
-                // 检测是否存在"跨段 emphasis/strong"（内部含空行 \n\n）—— 这是一切误识别的根源信号。
-                // 当出现时，同一代码块内其他结构化 hljs span（如 hljs-code 配对）也高概率错误，应一并清理。
-                const hasRunawayEmphasis = /<span class="hljs-(emphasis|strong)">[\s\S]*?\n\n[\s\S]*?<\/span>/.test(highlighted);
-
-                highlighted = highlighted
-                    .replace(/<span class="hljs-emphasis">([\s\S]*?)<\/span>/g, '$1')
-                    .replace(/<span class="hljs-strong">([\s\S]*?)<\/span>/g, '$1')
-                    .replace(/<em class="hljs-emphasis">([\s\S]*?)<\/em>/g, '$1')
-                    .replace(/<strong class="hljs-strong">([\s\S]*?)<\/strong>/g, '$1');
-                // 修复 hljs-quote 跨行吞掉后续内容的问题：
-                // 当 > 引用行中含未闭合的 _ 时，emphasis 跨行导致外层 hljs-quote 也跨行，
-                // 去掉 emphasis 后 hljs-quote 仍包裹了后续段落（如 ### 标题）。
-                // 检测 hljs-quote 内容是否跨越空行（\n\n），如果是则去掉 span 保留内容。
-                highlighted = highlighted.replace(/<span class="hljs-quote">([\s\S]*?)<\/span>/g, function(match, inner) {
-                    return inner.includes('\n\n') ? inner : match;
-                });
-                // 修复 hljs-code 被 emphasis 错配导致跨越普通文字的问题：
-                // 当 emphasis 跨段吞噬发生时，同代码块的 inline code 反引号配对也会错乱
-                // （例如 `node_modules` 被拆散后，hljs 把下一段 `npm install` 的结尾反引号误认为闭合点，
-                //  导致中间一大段正常文字被染上 hljs-code 颜色）。
-                // 策略：hasRunawayEmphasis 为 true 时清除所有 hljs-code；否则仅清除跨行的 hljs-code。
-                if (hasRunawayEmphasis) {
-                    highlighted = highlighted.replace(/<span class="hljs-code">([\s\S]*?)<\/span>/g, '$1');
-                } else {
-                    highlighted = highlighted.replace(/<span class="hljs-code">([\s\S]*?)<\/span>/g, function(match, inner) {
-                        return inner.includes('\n') ? inner : match;
-                    });
-                }
-                // 修复被 emphasis/quote 吞掉的 markdown 结构失去高亮的问题：
-                // 去掉错误的 span 后，被吞掉的 # 标题 / > 引用 / - 列表等变成了纯文本，
-                // 丢失了本应有的 hljs-section/hljs-quote/hljs-bullet 高亮。
-                // 对 markdown 语言的代码块，逐行重新识别裸的 markdown 结构并补上高亮标签。
-                if (lang === 'markdown' || lang === 'md') {
-                    highlighted = highlighted.split('\n').map(function(line) {
-                        // 标题与列表：仅当整行不含任何 hljs span 时才补标（避免包裹已有结构）
-                        if (!/<span class="hljs-/.test(line)) {
-                            var m = line.match(/^(#{1,6}\s.*)$/);
-                            if (m) return '<span class="hljs-section">' + m[1] + '</span>';
-                            m = line.match(/^(\s*)([-*+])(\s.*)$/);
-                            if (m) return m[1] + '<span class="hljs-bullet">' + m[2] + '</span>' + m[3];
-                        }
-                        // 引用：&gt; 开头且尚未被 hljs-quote 包裹，则整行包裹为 quote
-                        // （即使行内已有其他 hljs span，如 hljs-code，仍应补 quote，因为 quote 可嵌套）
-                        if (/^&gt;\s/.test(line) && !/^<span class="hljs-quote">/.test(line)) {
-                            return '<span class="hljs-quote">' + line + '</span>';
-                        }
-                        return line;
-                    }).join('\n');
-                }
-            }
+            const highlighted = getHighlightedCode(lang, code);
 
             const codeContent = highlighted || escapeHtml(code);
             const hljsClass = highlighted ? ` hljs language-${langLabel}` : '';
@@ -780,6 +814,9 @@ const Renderer = (() => {
             const title = data.title;
             const text = data.text || '';
             const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
+            if (href && !/^(https?:\/\/|data:|vscode-)/i.test(href)) {
+                try { _collectedImagePaths.add(decodeURIComponent(href)); } catch (e) { _collectedImagePaths.add(href); }
+            }
             return `<span class="md-image-container"><img src="${href}" alt="${escapeHtml(text)}"${titleAttr} loading="lazy" class="md-image" />${text ? `<span class="md-image-caption" style="display:none">${escapeHtml(text)}</span>` : ''}</span>`;
         };
 
@@ -1069,11 +1106,16 @@ const Renderer = (() => {
     const _renderCompleteCallbacks = [];
 
     function renderBlocks(blocks, annotations) {
+        annotations = annotations || [];
         const container = document.getElementById('documentContent');
         container.innerHTML = '';
 
         // 每次整篇重渲染都重新计数标题 slug，保证 id 唯一且稳定
         _slugCounts = Object.create(null);
+        // 重置增量渲染缓存与图片路径收集
+        _blockBaseHtml = [];
+        _blockRaw = [];
+        _collectedImagePaths = new Set();
 
         // 统一清空数学公式缓存，后续逐块 preprocessMath 会累积填充
         _mathExpressions = [];
@@ -1090,6 +1132,11 @@ const Renderer = (() => {
                 }
             }
         }
+
+        // 循环外预计算注入片段，避免每个块重复 join（O(块数 × 定义数)）
+        const refSuffix = _refLinkDefs.length > 0 ? '\n\n' + _refLinkDefs.join('\n') : '';
+        const fnSuffix = _footnoteDefs.length > 0 ? '\n\n' + _footnoteDefs.join('\n\n') : '';
+        const hasFnMap = Object.keys(fnLabelToGlobalIndex).length > 0;
 
         blocks.forEach((block, index) => {
             const wrapper = document.createElement('div');
@@ -1133,17 +1180,17 @@ const Renderer = (() => {
             let preprocessed = preprocessMarkdown(block);
             preprocessed = preprocessMath(preprocessed);
             // 注入引用式链接定义，使 marked 能跨块解析 [text][ref] 语法
-            if (_refLinkDefs.length > 0) {
-                preprocessed = preprocessed + '\n\n' + _refLinkDefs.join('\n');
+            if (refSuffix && block.includes('][')) {
+                preprocessed = preprocessed + refSuffix;
             }
             // 注入脚注定义，使 marked-footnote 能跨块解析 [^id] 引用
-            if (_footnoteDefs.length > 0) {
-                preprocessed = preprocessed + '\n\n' + _footnoteDefs.join('\n\n');
+            if (fnSuffix && block.includes('[^')) {
+                preprocessed = preprocessed + fnSuffix;
             }
             let html = marked.parse(preprocessed);
             html = postprocessHTML(html, block);
             // 修正脚注引用的上标序号为全局序号
-            if (Object.keys(fnLabelToGlobalIndex).length > 0) {
+            if (hasFnMap) {
                 html = html.replace(
                     /<sup><a\s+id="fn-ref-([^"]+)"\s+href="#fn-([^"]+)"\s+data-fn-ref\s+aria-describedby="fn-label">\d+<\/a><\/sup>/g,
                     (match, refLabel, hrefLabel) => {
@@ -1157,23 +1204,11 @@ const Renderer = (() => {
             }
             html = rewriteImagePaths(html);
 
-            const blockAnnotations = annotations.filter(a => a.blockIndex === index);
-            const crossBlockAnnotations = annotations.filter(a => {
-                if (a.blockIndex === index) return false;
-                if (a.type === 'insert') return false;
-                if (!a.selectedText) return false;
+            // 缓存「无批注」HTML：增量渲染时直接复用，跳过 marked + highlight.js
+            _blockBaseHtml[index] = html;
+            _blockRaw[index] = block;
 
-                if (a.endBlockIndex !== undefined && a.endBlockIndex !== null) {
-                    return index >= a.blockIndex && index <= a.endBlockIndex;
-                }
-
-                const normSelected = a.selectedText.replace(/\s+/g, ' ').trim();
-                const normBlock = block.replace(/\s+/g, ' ').trim();
-                if (!normBlock || normBlock.length < 4) return false;
-                return normSelected.includes(normBlock);
-            });
-
-            const allAnnotations = [...blockAnnotations, ...crossBlockAnnotations];
+            const allAnnotations = collectAnnotationsForBlock(block, index, annotations);
             if (allAnnotations.length > 0) {
                 html = applyHighlights(html, block, allAnnotations);
             }
@@ -1211,9 +1246,12 @@ const Renderer = (() => {
         // 图片加载失败兜底（CSP 禁止内联 onerror，必须在 DOM 就绪后绑定）
         bindImageFallbacks(container);
 
+        // 记录本次批注快照，供 updateAnnotations 计算受影响块
+        _lastAnnotations = snapshotAnnotations(annotations);
+
         // 渲染完成后调用所有注册的回调（如重新应用代码字体内联样式）
         for (const cb of _renderCompleteCallbacks) {
-            try { cb(); } catch (e) { console.warn('[Renderer] onRenderComplete callback error:', e); }
+            try { cb({ incremental: false, roots: null }); } catch (e) { console.warn('[Renderer] onRenderComplete callback error:', e); }
         }
     }
 
@@ -1225,6 +1263,180 @@ const Renderer = (() => {
         if (typeof callback === 'function') {
             _renderCompleteCallbacks.push(callback);
         }
+    }
+
+    /**
+     * 复制批注数组（浅拷贝），用于保存上次渲染快照。
+     */
+    function snapshotAnnotations(annotations) {
+        return (annotations || []).map(a => ({ ...a }));
+    }
+
+    /**
+     * 收集某个块需要应用的全部批注：
+     * 起止块包含当前块，或（旧格式）选中文本包含整块内容。
+     */
+    function collectAnnotationsForBlock(block, index, annotations) {
+        const blockAnnotations = annotations.filter(a => a.blockIndex === index);
+        const crossBlockAnnotations = annotations.filter(a => {
+            if (a.blockIndex === index) return false;
+            if (a.type === 'insert') return false;
+            if (!a.selectedText) return false;
+
+            if (a.endBlockIndex !== undefined && a.endBlockIndex !== null) {
+                return index >= a.blockIndex && index <= a.endBlockIndex;
+            }
+
+            const normSelected = a.selectedText.replace(/\s+/g, ' ').trim();
+            const normBlock = block.replace(/\s+/g, ' ').trim();
+            if (!normBlock || normBlock.length < 4) return false;
+            return normSelected.includes(normBlock);
+        });
+        return [...blockAnnotations, ...crossBlockAnnotations];
+    }
+
+    /**
+     * 批注中影响正文高亮的字段签名。只改 comment/images 不应触发正文重渲染。
+     */
+    function annotationSignature(ann) {
+        return [
+            ann.type, ann.selectedText, ann.blockIndex, ann.endBlockIndex,
+            ann.startOffset, ann.endOffset, ann.insertContent, ann.insertPosition,
+        ].join('\u0001');
+    }
+
+    /**
+     * 计算批注变化影响到的块集合。
+     * 返回 null 表示无法安全增量（旧批注缺少 endBlockIndex），调用方应回退全量渲染。
+     */
+    function computeAffectedBlocks(prev, next) {
+        const prevMap = new Map((prev || []).map(a => [a.id, a]));
+        const nextMap = new Map((next || []).map(a => [a.id, a]));
+        const ids = new Set([...prevMap.keys(), ...nextMap.keys()]);
+        const affected = new Set();
+
+        for (const id of ids) {
+            const a = prevMap.get(id);
+            const b = nextMap.get(id);
+            if (a && b && annotationSignature(a) === annotationSignature(b)) continue;
+
+            for (const ann of [a, b]) {
+                if (!ann) continue;
+                if (ann.blockIndex == null || ann.blockIndex < 0) return null;
+                if (ann.endBlockIndex === undefined || ann.endBlockIndex === null) return null;
+                const start = Math.max(0, Math.min(ann.blockIndex, ann.endBlockIndex));
+                const end = Math.max(ann.blockIndex, ann.endBlockIndex);
+                for (let i = start; i <= end; i++) affected.add(i);
+            }
+        }
+        return affected;
+    }
+
+    /**
+     * 增量更新批注：只重建受影响的块，跳过 marked / highlight.js。
+     * @returns {boolean} false 表示调用方应回退到 renderBlocks 全量渲染
+     */
+    function updateAnnotations(annotations) {
+        const container = document.getElementById('documentContent');
+        if (!container || _blockBaseHtml.length === 0) return false;
+
+        const next = annotations || [];
+        const affected = computeAffectedBlocks(_lastAnnotations, next);
+        if (affected === null) return false;
+
+        const wrappers = container.querySelectorAll(':scope > .md-block');
+        const roots = [];
+
+        for (const idx of affected) {
+            const wrapper = wrappers[idx];
+            const block = _blockRaw[idx];
+            if (!wrapper || block === undefined) continue;
+
+            let html = _blockBaseHtml[idx];
+            // frontmatter 卡片的展开状态不属于基础 HTML，按当前状态恢复
+            if (block.startsWith('%%FRONTMATTER%%')) {
+                html = html.replace(
+                    /class="frontmatter-card[^"]*"/,
+                    `class="frontmatter-card${_frontmatterExpanded ? '' : ' fm-collapsed'}"`
+                );
+            }
+
+            const blockAnns = collectAnnotationsForBlock(block, idx, next);
+            if (blockAnns.length > 0) {
+                html = applyHighlights(html, block, blockAnns);
+            }
+            wrapper.innerHTML = html;
+            bindImageFallbacks(wrapper);
+            roots.push(wrapper);
+        }
+
+        _lastAnnotations = snapshotAnnotations(next);
+
+        // 只对受影响块补跑公式/图表/按钮绑定
+        if (roots.length > 0) {
+            for (const cb of _renderCompleteCallbacks) {
+                try { cb({ incremental: true, roots }); } catch (e) {
+                    console.warn('[Renderer] onRenderComplete callback error:', e);
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 取出本轮渲染收集到的相对图片路径（并清空集合）
+     */
+    function takeCollectedImagePaths() {
+        const paths = Array.from(_collectedImagePaths);
+        _collectedImagePaths = new Set();
+        return paths;
+    }
+
+    /**
+     * 从 Markdown 源文本粗略收集相对图片路径（兜底用，线性复杂度）
+     */
+    function collectRelativeImagePathsFromMarkdown(markdown) {
+        const paths = new Set();
+        if (!markdown) return [];
+        const mdImg = /!\[[^\]]*\]\(\s*<?([^)\s>]+)>?/g;
+        let m;
+        while ((m = mdImg.exec(markdown)) !== null) {
+            const src = m[1];
+            if (!/^(https?:\/\/|data:|vscode-)/i.test(src)) paths.add(src);
+        }
+        const htmlImg = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi;
+        while ((m = htmlImg.exec(markdown)) !== null) {
+            const src = m[1];
+            if (!/^(https?:\/\/|data:|vscode-)/i.test(src)) paths.add(src);
+        }
+        return Array.from(paths);
+    }
+
+    /**
+     * 图片 URI 回包后就地替换 src，避免整篇重渲染
+     */
+    function patchImageUris(uriMap) {
+        if (!uriMap) return;
+        const container = document.getElementById('documentContent');
+        if (!container) return;
+
+        container.querySelectorAll('img').forEach(img => {
+            const src = img.getAttribute('src');
+            if (!src || /^(https?:\/\/|data:|vscode-)/i.test(src)) return;
+            let decoded = src;
+            try { decoded = decodeURIComponent(src); } catch (e) { /* keep */ }
+            const uri = uriMap[decoded] || uriMap[src];
+            if (!uri) return;
+
+            img.setAttribute('src', uri);
+            img.style.display = '';
+            img.dataset.fallbackApplied = 'false';
+            const parent = img.parentNode;
+            if (parent) {
+                const ph = parent.querySelector(':scope > .img-placeholder');
+                if (ph) ph.remove();
+            }
+        });
     }
 
     function applyHighlights(html, rawBlock, annotations) {
@@ -1637,6 +1849,9 @@ const Renderer = (() => {
             let decodedSrc;
             try { decodedSrc = decodeURIComponent(src); } catch (e) { decodedSrc = src; }
 
+            // 收集相对图片路径，供 requestImageUris 批量解析（避免再对全文跑 marked.parse）
+            _collectedImagePaths.add(decodedSrc);
+
             // Check cache
             if (_imageUriCache[decodedSrc]) {
                 return `<img ${before}src="${_imageUriCache[decodedSrc]}"${after}>`;
@@ -2048,26 +2263,34 @@ const Renderer = (() => {
 
     /**
      * 渲染所有 Mermaid 图表占位容器
-     * 在 renderBlocks 之后调用
+     * 在 renderBlocks 之后调用；传入 root 时只渲染该子树（增量渲染）
      */
-    async function renderMermaid() {
+    async function renderMermaid(root) {
         if (typeof mermaid === 'undefined') return;
 
-        // 清理 mermaid 在 DOM 中残留的临时渲染容器
+        const scope = root || document;
+        const containers = scope.querySelectorAll('.mermaid-container');
+        if (containers.length === 0) return;
+
+        // 清理 mermaid 在 DOM 中残留的临时渲染容器（仅全量渲染时）
         // mermaid v10 的 render() 会在 body 中创建临时 <div id="d${id}"> 和 <svg id="${id}">，
         // 如果未被正确清理，再次渲染时可能导致 D3 选择器选中旧元素，产生错误的渲染结果
         // 注意：必须清理所有 mermaid 相关的临时元素，不仅是 "dmermaid-" 前缀的
-        document.querySelectorAll('div[id^="dmermaid-"]').forEach(el => el.remove());
-        document.querySelectorAll('svg[id^="mermaid-"]').forEach(el => {
-            // 只清理不在 .mermaid-container 内的（即 mermaid 渲染时创建的临时 SVG）
-            if (!el.closest('.mermaid-container')) el.remove();
-        });
-        // 清理 mermaid 可能残留的 iframe 沙箱容器
-        document.querySelectorAll('iframe[id^="imermaid-"]').forEach(el => el.remove());
+        if (!root) {
+            document.querySelectorAll('div[id^="dmermaid-"]').forEach(el => el.remove());
+            document.querySelectorAll('svg[id^="mermaid-"]').forEach(el => {
+                // 只清理不在 .mermaid-container 内的（即 mermaid 渲染时创建的临时 SVG）
+                if (!el.closest('.mermaid-container')) el.remove();
+            });
+            // 清理 mermaid 可能残留的 iframe 沙箱容器
+            document.querySelectorAll('iframe[id^="imermaid-"]').forEach(el => el.remove());
+        }
 
-        // 每次渲染都重新 initialize，确保主题切换后使用正确的主题配置
+        // 主题未变化时无需重复 initialize
         const isDark = document.body.classList.contains('theme-dark');
-        mermaid.initialize({
+        const themeKey = isDark ? 'dark' : 'default';
+        if (!_mermaidInitialized || _mermaidTheme !== themeKey) {
+            mermaid.initialize({
             startOnLoad: false,
             theme: isDark ? 'dark' : 'default',
             // 使用 'loose' 而非 'strict'：
@@ -2108,9 +2331,10 @@ const Renderer = (() => {
                 nodeTextColor: '#e2e8f0',
             } : {},
         });
-        _mermaidInitialized = true;
+            _mermaidInitialized = true;
+            _mermaidTheme = themeKey;
+        }
 
-        const containers = document.querySelectorAll('.mermaid-container');
         for (const container of containers) {
             // 优先使用 base64 编码的源码（避免 HTML 转义问题）
             const sourceDataEl = container.querySelector('.mermaid-source-data');
@@ -2318,11 +2542,11 @@ const Renderer = (() => {
      * 渲染数学公式（KaTeX）
      * 使用 TreeWalker 遍历 DOM，将占位符替换为 KaTeX 渲染结果
      */
-    function renderMath() {
+    function renderMath(root) {
         if (typeof katex === 'undefined') return;
         if (_mathExpressions.length === 0) return;
 
-        const container = document.getElementById('documentContent');
+        const container = root || document.getElementById('documentContent');
         if (!container) return;
 
         // 使用 TreeWalker 遍历所有文本节点，查找占位符
@@ -2422,8 +2646,8 @@ const Renderer = (() => {
      * 从 data-source 中解码源码，动态构建 <img> 标签
      * 只在 enablePlantUML 开关打开时由 app.js 调用
      */
-    function renderPlantUML() {
-        const containers = document.querySelectorAll('.plantuml-container');
+    function renderPlantUML(root) {
+        const containers = (root || document).querySelectorAll('.plantuml-container');
         if (containers.length === 0) return;
 
         containers.forEach(container => {
@@ -2484,8 +2708,8 @@ const Renderer = (() => {
     /**
      * 渲染 Graphviz DOT 图表（使用 Viz.js）
      */
-    async function renderGraphviz() {
-        const containers = document.querySelectorAll('.graphviz-container');
+    async function renderGraphviz(root) {
+        const containers = (root || document).querySelectorAll('.graphviz-container');
         if (containers.length === 0) return;
         if (typeof Viz === 'undefined') {
             console.warn('[Renderer] Viz.js 未加载');
@@ -2610,7 +2834,7 @@ const Renderer = (() => {
         }
     }
 
-    return { parseMarkdown, renderBlocks, onRenderComplete, getBlockIndex, setImageUriCache, getImageUriCache: () => _imageUriCache, collectRelativeImagePaths, configureHighlight, renderMermaid, reinitMermaid, renderMath, restoreMathPlaceholders, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
+    return { parseMarkdown, renderBlocks, updateAnnotations, onRenderComplete, getBlockIndex, setImageUriCache, getImageUriCache: () => _imageUriCache, collectRelativeImagePaths, collectRelativeImagePathsFromMarkdown, takeCollectedImagePaths, patchImageUris, configureHighlight, renderMermaid, reinitMermaid, renderMath, restoreMathPlaceholders, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
 })();
 
 // ===== ESM export (for webview bundler) =====
