@@ -1,3 +1,4 @@
+import { readPmSource } from './helpers/module-source';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -81,7 +82,7 @@ suite('Table Grid Selector Test Suite', () => {
 
     test('BT-TableGridSelector.2 Tier3 — pm.entry.js insertTable 命令签名含 attrs 参数', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmJs = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmJs = readPmSource(extPath);
         // 命令签名应包含 attrs 参数
         assert.ok(
             /insertTable\s*:\s*\(state\s*,\s*dispatch\s*,\s*view\s*,\s*attrs\)/.test(pmJs),
@@ -94,7 +95,7 @@ suite('Table Grid Selector Test Suite', () => {
 
     test('BT-TableGridSelector.3 Tier3 — pm.entry.js insertTable 无 attrs 时回退到 3×3 默认值', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmJs = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmJs = readPmSource(extPath);
         // 应包含回退到默认值 3 的逻辑
         assert.ok(
             /rows.*\?\s*attrs\.rows\s*:\s*3/.test(pmJs) || pmJs.includes(': 3'),

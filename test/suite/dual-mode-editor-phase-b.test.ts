@@ -1,3 +1,4 @@
+import { readPmSource } from './helpers/module-source';
 /**
  * dual-mode-editor-phase-b.test.ts
  *
@@ -38,7 +39,7 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
         test('T10.2 pm.entry.js 应存在且导出 createRichEditor + 挂 globalThis.PM', () => {
             const entryPath = path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js');
             assert.ok(fs.existsSync(entryPath), 'webview/src/entries/pm.entry.js 应存在');
-            const content = fs.readFileSync(entryPath, 'utf-8');
+            const content = readPmSource(extPath);
             assert.ok(/function\s+createRichEditor\s*\(/.test(content) || /const\s+createRichEditor\s*=/.test(content),
                 'pm.entry.js 应定义 createRichEditor 函数');
             assert.ok(/globalThis\.PM\s*=/.test(content),
@@ -176,7 +177,7 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
         });
 
         test('T11.8 pm.entry.js 的 keymap 应含 G1 让路键', () => {
-            const content = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const content = readPmSource(extPath);
             assert.ok(/['"]Ctrl-f['"]|['"]Mod-f['"]/.test(content), 'pm.entry.js keymap 应含 Ctrl-f 让路键');
             assert.ok(/['"]Ctrl-e['"]|['"]Mod-e['"]/.test(content), 'pm.entry.js keymap 应含 Ctrl-e 让路键');
             assert.ok(/['"]Alt-z['"]/.test(content), 'pm.entry.js keymap 应含 Alt-z 让路键');
@@ -220,7 +221,7 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
         });
 
         test('BT-DualModePhaseB.4 pm.entry.js 应含 DiagramNodeView 类', () => {
-            const content = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const content = readPmSource(extPath);
             assert.ok(/class\s+DiagramNodeView/.test(content),
                 'pm.entry.js 应定义 DiagramNodeView 类');
             assert.ok(/renderPreview/.test(content),
@@ -230,7 +231,7 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
         });
 
         test('BT-DualModePhaseB.5 pm.entry.js 应含批注 decoration plugin', () => {
-            const content = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const content = readPmSource(extPath);
             assert.ok(/annotationPlugin|buildAnnotationPlugin|annotations-changed/.test(content),
                 'pm.entry.js 应含批注 decoration plugin');
             assert.ok(/DecorationSet|Decoration\.inline/.test(content),
@@ -419,7 +420,7 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
         test('BT-EditorToolbar.5 Tier1 — pm.entry.js 应包含 execCommand 方法和命令映射表', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-            const pm = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const pm = readPmSource(extPath);
             assert.ok(pm.includes('commandMap'), 'pm.entry.js 应包含 commandMap 命令映射表');
             assert.ok(pm.includes('execCommand'), 'pm.entry.js 应包含 execCommand 方法');
         });
@@ -477,7 +478,7 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
         test('BT-EditorToolbar.11 Tier3 — pm.entry.js commandMap 应覆盖所有 12 个命令', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-            const pm = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const pm = readPmSource(extPath);
             const cmds = ['bold', 'italic', 'strikethrough', 'h1', 'h2', 'h3', 'ul', 'ol', 'blockquote', 'hr', 'undo', 'redo'];
             for (const cmd of cmds) {
                 assert.ok(new RegExp(`['"]?${cmd}['"]?\\s*:`).test(pm), `commandMap 应包含 ${cmd} 命令`);
@@ -487,7 +488,7 @@ suite('Dual-Mode Editor Phase B — ProseMirror Rich Mode Test Suite', () => {
         test('BT-EditorToolbar.12 Tier3 — pm.entry.js onSelectionChange Plugin 应收集 activeMarks 和 blockType', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-            const pm = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const pm = readPmSource(extPath);
             assert.ok(pm.includes('onSelectionChange'), 'pm.entry.js 应接受 onSelectionChange 参数');
             assert.ok(pm.includes('activeMarks'), 'onSelectionChange Plugin 应收集 activeMarks');
             assert.ok(pm.includes('blockType'), 'onSelectionChange Plugin 应收集 blockType');

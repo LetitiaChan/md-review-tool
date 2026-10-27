@@ -1,3 +1,4 @@
+import { readPmSource } from './helpers/module-source';
 
 import * as assert from 'assert';
 import * as fs from 'fs';
@@ -57,7 +58,7 @@ suite('Link Bubble Menu Test Suite', () => {
 
     test('BT-LinkBubble.T1.4 Tier1 — pm.entry.js click handler 应派发 pm-link-click 事件', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('pm-link-click'), 'pm.entry.js 应包含 pm-link-click 事件派发');
         assert.ok(src.includes('getBoundingClientRect'), 'pm.entry.js 应获取链接 DOM 坐标');
     });
@@ -96,7 +97,7 @@ suite('Link Bubble Menu Test Suite', () => {
 
     test('BT-LinkBubble.4 Tier3 — pm.entry.js 点击非链接区域时派发 detail: null 关闭菜单', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('detail: null'), 'pm.entry.js 应在非链接点击时派发 detail: null');
     });
 

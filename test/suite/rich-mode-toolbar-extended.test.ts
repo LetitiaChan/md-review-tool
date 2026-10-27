@@ -1,3 +1,4 @@
+import { readPmSource } from './helpers/module-source';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,7 +16,7 @@ suite('Rich Mode Toolbar Extended Test Suite', () => {
 
     test('BT-ToolbarExt.1 Tier1 — pm.entry.js 应包含所有 13 个新命令', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         const commands = ['code:', 'highlight:', 'textColor:', 'taskList:', 'link:', 'insertImage:', 'alertBlock:', 'codeBlock:', 'insertTable:', 'insertMermaid:', 'insertEmoji:', 'insertPlantuml:', 'insertGraphviz:'];
         for (const cmd of commands) {
             assert.ok(src.includes(cmd), `pm.entry.js 应包含命令 ${cmd}`);
@@ -118,14 +119,14 @@ suite('Rich Mode Toolbar Extended Test Suite', () => {
 
     test('BT-ToolbarExt.12 Tier3 — textColor 命令应接收 color 属性并应用 colored_text mark', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('colored_text'), 'textColor 命令应引用 colored_text mark');
         assert.ok(src.includes('attrs.color'), 'textColor 命令应读取 attrs.color');
     });
 
     test('BT-ToolbarExt.13 Tier3 — insertTable 命令应创建 3×3 表格（header + 2 body rows）', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('table_header'), 'insertTable 应使用 table_header 节点');
         assert.ok(src.includes('table_cell'), 'insertTable 应使用 table_cell 节点');
         assert.ok(src.includes('table_row'), 'insertTable 应使用 table_row 节点');
@@ -133,7 +134,7 @@ suite('Rich Mode Toolbar Extended Test Suite', () => {
 
     test('BT-ToolbarExt.14 Tier3 — diagram 插入命令应包含默认模板', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes("graph TD"), 'insertMermaid 应包含默认 mermaid 模板');
         assert.ok(src.includes("@startuml"), 'insertPlantuml 应包含默认 plantuml 模板');
         assert.ok(src.includes("digraph G"), 'insertGraphviz 应包含默认 graphviz 模板');
@@ -141,7 +142,7 @@ suite('Rich Mode Toolbar Extended Test Suite', () => {
 
     test('BT-ToolbarExt.15 Tier3 — taskList 命令应设置 list_item checked=false', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('checked: false'), 'taskList 命令应设置 checked: false');
     });
 

@@ -1,3 +1,4 @@
+import { readPmSource } from './helpers/module-source';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -37,14 +38,14 @@ suite('InputRules & Slash Command Test Suite', () => {
 
     test('BT-SlashCmd.T1.3 Tier1 — pm.entry.js 导入 slash-command-plugin', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmEntry = readPmSource(extPath);
         assert.ok(pmEntry.includes('createSlashCommandPlugin'), 'pm.entry.js 应导入 createSlashCommandPlugin');
         assert.ok(pmEntry.includes('slashCommandPlugin'), 'pm.entry.js 应注册 slashCommandPlugin');
     });
 
     test('BT-SlashCmd.T1.4 Tier1 — pm.entry.js 包含 task list InputRule（- [ ] 和 - [x]）', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmEntry = readPmSource(extPath);
         assert.ok(pmEntry.includes('task list item (unchecked)'), 'pm.entry.js 应包含 unchecked task list InputRule 注释');
         assert.ok(pmEntry.includes('task list item (checked)'), 'pm.entry.js 应包含 checked task list InputRule 注释');
         assert.ok(pmEntry.includes('checked: false'), 'InputRule 应创建 checked=false 节点');
@@ -134,21 +135,21 @@ suite('InputRules & Slash Command Test Suite', () => {
 
     test('BT-SlashCmd.1 Tier3 — InputRule: task list unchecked 使用正确的正则模式', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmEntry = readPmSource(extPath);
         // 验证正则匹配 "- [ ] " 模式
         assert.ok(pmEntry.includes('\\[\\s?\\]\\s$'), 'InputRule 应使用 \\[\\s?\\]\\s$ 正则匹配 "- [ ] "');
     });
 
     test('BT-SlashCmd.2 Tier3 — InputRule: task list checked 使用正确的正则模式', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmEntry = readPmSource(extPath);
         // 验证正则匹配 "- [x] " 或 "- [X] " 模式
         assert.ok(pmEntry.includes('[xX]'), 'InputRule 应使用 [xX] 匹配大小写 x');
     });
 
     test('BT-SlashCmd.3 Tier3 — Slash Command: commandMapRef 延迟引用模式', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmEntry = readPmSource(extPath);
         assert.ok(pmEntry.includes('commandMapRef'), 'pm.entry.js 应使用 commandMapRef 延迟引用');
         assert.ok(pmEntry.includes('Object.assign(commandMapRef, commandMap)'), '应在 commandMap 定义后 Object.assign 到 commandMapRef');
     });

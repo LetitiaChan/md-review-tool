@@ -1,3 +1,4 @@
+import { readPmSource } from './helpers/module-source';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -39,7 +40,7 @@ suite('Rich Mode Editor Bugfix Test Suite', () => {
 
     test('BT-RichModeBugfix.T1.3 Tier1 — pm.entry.js 应 import deleteTable from prosemirror-tables', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         // 允许在同一个 import 行内；断言 deleteTable 标识符出现在 import 段
         const importLine = src.split('\n').find(l => l.includes('prosemirror-tables') && l.includes('import'));
         assert.ok(importLine, '应存在 prosemirror-tables 的 import 行');
@@ -48,14 +49,14 @@ suite('Rich Mode Editor Bugfix Test Suite', () => {
 
     test('BT-RichModeBugfix.T1.4 Tier1 — pm.entry.js commandMap 包含 tableDelete 命令', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('tableDelete:'), 'commandMap 应包含 tableDelete 命令');
         assert.ok(src.includes('deleteTable(state, dispatch)'), 'tableDelete 命令应调用 deleteTable(state, dispatch)');
     });
 
     test('BT-RichModeBugfix.T1.5 Tier1 — pm.entry.js 暴露 getLinkAttrsAtSelection', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('function getLinkAttrsAtSelection'), '应定义 getLinkAttrsAtSelection 函数');
         assert.ok(src.includes('getLinkAttrsAtSelection,') || src.includes('getLinkAttrsAtSelection:'),
             '返回对象应暴露 getLinkAttrsAtSelection');
@@ -113,7 +114,7 @@ suite('Rich Mode Editor Bugfix Test Suite', () => {
 
     test('BT-RichModeBugfix.T2.3 Tier2 — pm.entry.js link 命令实现为 removeMark + addMark（不使用 toggleMark）', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         // 提取 link 命令的实现片段（定位 link: 到下一个逗号+换行+下一个命令）
         const linkMatch = src.match(/\blink:\s*\(state, dispatch, view, attrs\)[\s\S]*?tableDelete:/);
         assert.ok(linkMatch, '应能定位到 link 命令实现');
@@ -124,7 +125,7 @@ suite('Rich Mode Editor Bugfix Test Suite', () => {
 
     test('BT-RichModeBugfix.T2.4 Tier2 — pm.entry.js taskList 命令应遍历 bullet_list 并设置 checked=false', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         // 匹配 taskList 命令实现片段
         const tlMatch = src.match(/\btaskList:\s*\(state, dispatch\)[\s\S]*?\n\s{8}link:/);
         assert.ok(tlMatch, '应能定位到 taskList 命令实现');
@@ -174,7 +175,7 @@ suite('Rich Mode Editor Bugfix Test Suite', () => {
 
     test('BT-RichModeBugfix.2 Tier3 — Bug2 taskList 包装后的 list_item 被设为 checked=false', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         const tlMatch = src.match(/\btaskList:\s*\(state, dispatch\)[\s\S]*?\n\s{8}link:/);
         assert.ok(tlMatch, '应能定位到 taskList 命令实现');
         const tlImpl = tlMatch ? tlMatch[0] : '';
@@ -188,7 +189,7 @@ suite('Rich Mode Editor Bugfix Test Suite', () => {
 
     test('BT-RichModeBugfix.3 Tier3 — Bug3 link 命令替换语义 + 空 href 移除链接', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         const linkMatch = src.match(/\blink:\s*\(state, dispatch, view, attrs\)[\s\S]*?tableDelete:/);
         assert.ok(linkMatch, '应能定位到 link 命令');
         const linkImpl = linkMatch ? linkMatch[0] : '';
@@ -202,7 +203,7 @@ suite('Rich Mode Editor Bugfix Test Suite', () => {
 
     test('BT-RichModeBugfix.4 Tier3 — Bug4 tableDelete 命令 + 菜单项 + i18n 三者齐备', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pm = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pm = readPmSource(extPath);
         const app = fs.readFileSync(path.join(extPath, 'webview', 'js', 'app.js'), 'utf-8');
         const html = fs.readFileSync(path.join(extPath, 'webview', 'index.html'), 'utf-8');
         assert.ok(pm.includes('tableDelete:') && pm.includes('deleteTable('),

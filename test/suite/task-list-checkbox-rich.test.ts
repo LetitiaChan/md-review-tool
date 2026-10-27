@@ -1,3 +1,4 @@
+import { readPmSource } from './helpers/module-source';
 /**
  * 回归测试：Task List Checkbox — Rich Mode 编辑器中任务列表 checkbox 渲染与交互
  *
@@ -21,7 +22,7 @@ suite('Hotfix — Task List Checkbox Rich Mode 渲染', () => {
     });
 
     test('BT-TaskListCheckbox.T1.2 Tier1 — pm.entry.js 应包含 list_item NodeView', () => {
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('list_item(node, view, getPos)'), 'pm.entry.js 应定义 list_item NodeView');
     });
 
@@ -40,7 +41,7 @@ suite('Hotfix — Task List Checkbox Rich Mode 渲染', () => {
     // ===== Tier 3 — 任务特定断言 =====
 
     test('BT-TaskListCheckbox.1 Tier3 — NodeView 在 checked=null 时应返回 undefined（不使用自定义渲染）', () => {
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         // NodeView 应检查 checked === null 并返回 undefined
         const nodeViewIdx = src.indexOf('list_item(node, view, getPos)');
         const nodeViewSection = src.substring(nodeViewIdx, nodeViewIdx + 200);
@@ -49,7 +50,7 @@ suite('Hotfix — Task List Checkbox Rich Mode 渲染', () => {
     });
 
     test('BT-TaskListCheckbox.2 Tier3 — NodeView 应通过 setNodeMarkup 切换 checked 状态', () => {
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         const nodeViewIdx = src.indexOf('list_item(node, view, getPos)');
         const nodeViewSection = src.substring(nodeViewIdx, nodeViewIdx + 2500);
         assert.ok(nodeViewSection.includes('setNodeMarkup'), 'NodeView 应使用 setNodeMarkup 更新 checked');
@@ -57,7 +58,7 @@ suite('Hotfix — Task List Checkbox Rich Mode 渲染', () => {
     });
 
     test('BT-TaskListCheckbox.3 Tier3 — NodeView update 方法应同步 checkbox 状态和 DOM class', () => {
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         const nodeViewIdx = src.indexOf('list_item(node, view, getPos)');
         const nodeViewSection = src.substring(nodeViewIdx, nodeViewIdx + 2500);
         assert.ok(nodeViewSection.includes('update(updatedNode)'), 'NodeView 应实现 update 方法');
@@ -66,7 +67,7 @@ suite('Hotfix — Task List Checkbox Rich Mode 渲染', () => {
     });
 
     test('BT-TaskListCheckbox.4 Tier3 — NodeView 应使用 span.task-checkbox 而非原生 input（避免 webview 样式泄露）', () => {
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         const nodeViewIdx = src.indexOf('list_item(node, view, getPos)');
         const nodeViewSection = src.substring(nodeViewIdx, nodeViewIdx + 2500);
         assert.ok(nodeViewSection.includes("createElement('span')"), 'NodeView 应使用 span 元素作为 checkbox');
@@ -81,7 +82,7 @@ suite('Hotfix — Task List Checkbox Rich Mode 渲染', () => {
     });
 
     test('BT-TaskListCheckbox.6 Tier3 — contentDOM 应使用 div（block 元素）而非 span', () => {
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         const nodeViewIdx = src.indexOf('list_item(node, view, getPos)');
         const nodeViewSection = src.substring(nodeViewIdx, nodeViewIdx + 2500);
         // contentDOM 使用 div

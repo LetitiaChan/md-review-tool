@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { readPmSource } from './helpers/module-source';
 
 /**
  * review-fixes-regression — 2026-10 全库代码评审修复项回归测试
@@ -136,7 +137,7 @@ suite('Review Fixes Regression Test Suite', () => {
         });
 
         test('BT-ReviewFixes.T1.8 斜杠命令插件必须排在 baseKeymap 之前', () => {
-            const source = readSource('webview', 'src', 'entries', 'pm.entry.js');
+            const source = readPmSource(extPath);
             if (!source) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const slashIdx = source.indexOf('slashCommandPlugin,');
             const baseKeymapIdx = source.indexOf('keymap(baseKeymap)');
@@ -146,7 +147,7 @@ suite('Review Fixes Regression Test Suite', () => {
         });
 
         test('BT-ReviewFixes.T1.9 blockIndexToPos 只统计顶层块', () => {
-            const source = readSource('webview', 'src', 'entries', 'pm.entry.js');
+            const source = readPmSource(extPath);
             if (!source) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const body = extractFunctionBody(source, 'blockIndexToPos');
             assert.ok(body, '应存在 blockIndexToPos 函数');
@@ -211,7 +212,7 @@ suite('Review Fixes Regression Test Suite', () => {
     suite('Tier 3 — 任务特定断言', () => {
 
         test('BT-ReviewFixes.T3.1 批注定位：列表之后的块索引不再被嵌套块污染', () => {
-            const source = readSource('webview', 'src', 'entries', 'pm.entry.js');
+            const source = readPmSource(extPath);
             if (!source) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const body = extractFunctionBody(source, 'blockIndexToPos');
             assert.ok(body.includes('idx.starts[blockIndex]'),
@@ -245,7 +246,7 @@ suite('Review Fixes Regression Test Suite', () => {
 
         test('BT-ReviewFixes.T3.4 每个斜杠命令 id 都必须在 commandMap 中有实现', () => {
             const slashSource = readSource('webview', 'src', 'slash-command', 'slash-commands.js');
-            const pmSource = readSource('webview', 'src', 'entries', 'pm.entry.js');
+            const pmSource = readPmSource(extPath);
             if (!slashSource || !pmSource) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
 
             // 解析命令集里的 id

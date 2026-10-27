@@ -1,3 +1,4 @@
+import { readPmSource } from './helpers/module-source';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -74,7 +75,7 @@ suite('Custom CSS / Image Paste / Cursor Restore Test Suite', () => {
 
     test('BT-CssImgCursor.T2.1 Tier2 — pm.entry.js handlePaste 检测 clipboardData.files 中的图片', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('clipboardData.files'), 'handlePaste 应检查 clipboardData.files');
         assert.ok(src.includes("startsWith('image/')"), 'handlePaste 应检测 image/* MIME 类型');
         assert.ok(src.includes('5 * 1024 * 1024'), 'handlePaste 应包含 5MB 大小限制');
@@ -82,14 +83,14 @@ suite('Custom CSS / Image Paste / Cursor Restore Test Suite', () => {
 
     test('BT-CssImgCursor.T2.2 Tier2 — pm.entry.js 包含 drop 事件监听', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes("addEventListener('drop'"), 'pm.entry.js 应监听 drop 事件');
         assert.ok(src.includes('dataTransfer'), 'drop 处理应访问 dataTransfer');
     });
 
     test('BT-CssImgCursor.T2.3 Tier2 — pm.entry.js 包含 imageSaved 消息监听和图片节点插入', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('handleImageSaved'), 'pm.entry.js 应定义 handleImageSaved 函数');
         assert.ok(src.includes("msg.type === 'imageSaved'"), '应检测 imageSaved 消息类型');
         assert.ok(src.includes('schema.nodes.image.create'), '应创建 image 节点');
@@ -108,7 +109,7 @@ suite('Custom CSS / Image Paste / Cursor Restore Test Suite', () => {
 
     test('BT-CssImgCursor.T2.5 Tier2 — pm.entry.js createRichEditor 接收 initialCursorLine 并恢复光标', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('initialCursorLine'), 'createRichEditor 应接收 initialCursorLine 参数');
         assert.ok(src.includes('scrollIntoView'), '恢复光标后应 scrollIntoView');
     });
@@ -123,7 +124,7 @@ suite('Custom CSS / Image Paste / Cursor Restore Test Suite', () => {
 
     test('BT-CssImgCursor.2 Tier3 — Image: 文件名格式为 image-{timestamp}-{random}.{ext}', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('`image-${timestamp}-${random}.${ext}`'), '文件名应使用 image-timestamp-random.ext 格式');
     });
 
@@ -142,13 +143,13 @@ suite('Custom CSS / Image Paste / Cursor Restore Test Suite', () => {
 
     test('BT-CssImgCursor.5 Tier3 — Cursor: getCursorLine 方法暴露在返回对象中', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('getCursorLine()'), 'createRichEditor 返回对象应包含 getCursorLine 方法');
     });
 
     test('BT-CssImgCursor.6 Tier3 — Cursor: destroy 时清理 imageSaved 消息监听', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes("removeEventListener('message', handleImageSaved)"), 'destroy 应清理 imageSaved 消息监听');
     });
 
@@ -164,14 +165,14 @@ suite('Custom CSS / Image Paste / Cursor Restore Test Suite', () => {
 
     test('BT-CssImgCursor.T1.8 Tier1 — pm.entry.js handleImageSaved 包含 URI 缓存更新逻辑', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('msg.payload.webviewUri'), 'handleImageSaved 应读取 webviewUri');
         assert.ok(src.includes('getImageUriCache'), 'handleImageSaved 应访问 Renderer.getImageUriCache');
     });
 
     test('BT-CssImgCursor.7 Tier3 — handleImageSaved 先更新缓存再插入节点（顺序正确）', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         // 确保缓存更新在节点插入之前
         const cacheUpdateIdx = src.indexOf('cache[msg.payload.relativePath] = msg.payload.webviewUri');
         const nodeCreateIdx = src.indexOf('schema.nodes.image.create', cacheUpdateIdx > 0 ? cacheUpdateIdx : 0);
@@ -181,7 +182,7 @@ suite('Custom CSS / Image Paste / Cursor Restore Test Suite', () => {
 
     test('BT-CssImgCursor.8 Tier3 — handleImageSaved 同时缓存 decoded 版本的路径', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         // toDOM 中会尝试 decodeURIComponent(src)，所以缓存也需要 decoded 版本
         assert.ok(src.includes('decodeURIComponent(msg.payload.relativePath)'), 'handleImageSaved 应缓存 decoded 版本的路径');
     });

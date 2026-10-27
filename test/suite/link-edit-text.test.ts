@@ -1,3 +1,4 @@
+import { readPmSource } from './helpers/module-source';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -42,7 +43,7 @@ suite('Link Edit Text Test Suite', () => {
 
     test('BT-LinkEditText.T1.3 Tier1 — pm.entry.js getLinkAttrsAtSelection 应返回 text 字段', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('textBetween'), 'getLinkAttrsAtSelection 应使用 textBetween 获取链接文本');
         // 确认返回对象包含 text 字段
         const returnMatch = src.match(/return\s*\{[^}]*text\s*:/);
@@ -51,7 +52,7 @@ suite('Link Edit Text Test Suite', () => {
 
     test('BT-LinkEditText.T1.4 Tier1 — pm.entry.js EditorView 应配置 handleDoubleClick', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('handleDoubleClick'), 'EditorView 应配置 handleDoubleClick prop');
         assert.ok(src.includes('pm-link-dblclick'), '双击链接应 dispatch pm-link-dblclick 事件');
     });
@@ -60,7 +61,7 @@ suite('Link Edit Text Test Suite', () => {
 
     test('BT-LinkEditText.1 Tier3 — link 命令应支持 attrs.text 参数替换显示文本', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         // 找到 link 命令定义区域
         const linkCmdIdx = src.indexOf("link:");
         assert.ok(linkCmdIdx > -1, 'pm.entry.js 应包含 link 命令定义');
@@ -95,7 +96,7 @@ suite('Link Edit Text Test Suite', () => {
 
     test('BT-LinkEditText.5 Tier3 — link 命令文本不变时应只操作 mark 不替换文本', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         const linkCmdIdx = src.indexOf("link:");
         const linkCmdSection = src.substring(linkCmdIdx, linkCmdIdx + 1500);
         // 验证有"文本不变只操作 mark"的分支
@@ -108,14 +109,14 @@ suite('Link Edit Text Test Suite', () => {
 
     test('BT-LinkEditText.T1.5 Tier1 — pm.entry.js EditorView 应配置 handleDOMEvents.click', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('handleDOMEvents'), 'EditorView 应配置 handleDOMEvents prop');
         assert.ok(src.includes('preventDefault'), 'click handler 应调用 preventDefault 阻止链接跳转');
     });
 
     test('BT-LinkEditText.6 Tier3 — click handler 应检测 <a> 标签并阻止默认行为', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         // 验证 click handler 检测 <a> 标签
         assert.ok(src.includes("tagName === 'A'") || src.includes('tagName === "A"'), 'click handler 应检测 tagName === A');
         assert.ok(src.includes("closest('a')") || src.includes('closest("a")'), 'click handler 应使用 closest 查找父级 <a>');
@@ -146,13 +147,13 @@ suite('Link Edit Text Test Suite', () => {
 
     test('BT-LinkEditText.8 Tier3 — click handler 应调用 stopPropagation 防止事件冒泡到 webview', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes('stopPropagation'), 'click handler 应调用 stopPropagation 阻止事件冒泡');
     });
 
     test('BT-LinkEditText.9 Tier3 — click handler 应从 data-href 读取链接地址', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(src.includes("getAttribute('data-href')"), 'click handler 应从 data-href 读取链接地址');
     });
 

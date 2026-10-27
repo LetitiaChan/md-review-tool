@@ -1,3 +1,4 @@
+import { readPmSource } from './helpers/module-source';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -70,7 +71,7 @@ suite('Alert / Code-Lang Type Selector Test Suite', () => {
 
     test('BT-AlertCodeSelector.T1.6 Tier1 — pm.entry.js 的 alertBlock/codeBlock 命令签名含 attrs 参数', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         assert.ok(/alertBlock:\s*\(state,\s*dispatch,\s*view,\s*attrs\)/.test(src),
             'alertBlock 命令签名应含 attrs 参数');
         assert.ok(/codeBlock:\s*\(state,\s*dispatch,\s*view,\s*attrs\)/.test(src),
@@ -94,7 +95,7 @@ suite('Alert / Code-Lang Type Selector Test Suite', () => {
 
     test('BT-AlertCodeSelector.T2.3 Tier2 — pm.entry.js 的 alertBlock 实现含 setNodeMarkup 与 wrapIn 两条路径', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         const abMatch = src.match(/alertBlock:\s*\(state, dispatch, view, attrs\)[\s\S]*?\n        codeBlock:/);
         assert.ok(abMatch, '应能定位 alertBlock 实现');
         const impl = abMatch ? abMatch[0] : '';
@@ -104,7 +105,7 @@ suite('Alert / Code-Lang Type Selector Test Suite', () => {
 
     test('BT-AlertCodeSelector.T2.4 Tier2 — pm.entry.js 的 codeBlock 实现含 setNodeMarkup 与 replaceSelectionWith 两条路径', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         const cbMatch = src.match(/codeBlock:\s*\(state, dispatch, view, attrs\)[\s\S]*?\n        insertTable:/);
         assert.ok(cbMatch, '应能定位 codeBlock 实现');
         const impl = cbMatch ? cbMatch[0] : '';
@@ -137,7 +138,7 @@ suite('Alert / Code-Lang Type Selector Test Suite', () => {
 
     test('BT-AlertCodeSelector.3 Tier3 — alertBlock 未传 attrs 时回退到 NOTE 默认值', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         const abMatch = src.match(/alertBlock:\s*\(state, dispatch, view, attrs\)[\s\S]*?\n        codeBlock:/);
         assert.ok(abMatch, '应能定位 alertBlock 实现');
         const impl = abMatch ? abMatch[0] : '';
@@ -148,7 +149,7 @@ suite('Alert / Code-Lang Type Selector Test Suite', () => {
 
     test('BT-AlertCodeSelector.4 Tier3 — codeBlock 对 language 做 trim().toLowerCase() 归一化', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const src = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const src = readPmSource(extPath);
         const cbMatch = src.match(/codeBlock:\s*\(state, dispatch, view, attrs\)[\s\S]*?\n        insertTable:/);
         assert.ok(cbMatch, '应能定位 codeBlock 实现');
         const impl = cbMatch ? cbMatch[0] : '';

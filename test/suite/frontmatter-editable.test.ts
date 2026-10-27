@@ -1,3 +1,4 @@
+import { readPmSource } from './helpers/module-source';
 import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,13 +27,13 @@ suite('Frontmatter Editable Test Suite', () => {
 
     test('BT-FrontmatterEdit.T1.1 Tier1 — pm.entry.js 包含 FrontmatterNodeView 类定义', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmEntry = readPmSource(extPath);
         assert.ok(pmEntry.includes('class FrontmatterNodeView'), 'pm.entry.js 应包含 FrontmatterNodeView 类定义');
     });
 
     test('BT-FrontmatterEdit.T1.2 Tier1 — pm.entry.js nodeViews 中注册了 frontmatter', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmEntry = readPmSource(extPath);
         assert.ok(pmEntry.includes('frontmatter(node, view, getPos)'), 'nodeViews 应注册 frontmatter');
         assert.ok(pmEntry.includes('new FrontmatterNodeView(node, view, getPos)'), '应实例化 FrontmatterNodeView');
     });
@@ -63,21 +64,21 @@ suite('Frontmatter Editable Test Suite', () => {
 
     test('BT-FrontmatterEdit.1 Tier3 — FrontmatterNodeView 包含双击编辑入口', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmEntry = readPmSource(extPath);
         assert.ok(pmEntry.includes('dblclick'), 'FrontmatterNodeView 应监听 dblclick 事件');
         assert.ok(pmEntry.includes('enterEdit'), 'FrontmatterNodeView 应包含 enterEdit 方法');
     });
 
     test('BT-FrontmatterEdit.2 Tier3 — FrontmatterNodeView 包含 textarea 编辑和 Ctrl+Enter 完成', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmEntry = readPmSource(extPath);
         assert.ok(pmEntry.includes('frontmatter-edit-textarea'), '应创建 frontmatter-edit-textarea 元素');
         assert.ok(pmEntry.includes('finishEdit'), '应包含 finishEdit 方法');
     });
 
     test('BT-FrontmatterEdit.3 Tier3 — FrontmatterNodeView 通过 setNodeMarkup 更新 content 属性', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmEntry = readPmSource(extPath);
         // 提取 FrontmatterNodeView 类的 finishEdit 方法区域
         const classStart = pmEntry.indexOf('class FrontmatterNodeView');
         const classEnd = pmEntry.indexOf('// ===== 智能粘贴 =====');
@@ -88,7 +89,7 @@ suite('Frontmatter Editable Test Suite', () => {
 
     test('BT-FrontmatterEdit.4 Tier3 — FrontmatterNodeView 预览态显示 YAML Front Matter 标题', () => {
         if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-        const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+        const pmEntry = readPmSource(extPath);
         const classStart = pmEntry.indexOf('class FrontmatterNodeView');
         const classEnd = pmEntry.indexOf('// ===== 智能粘贴 =====');
         const classBody = pmEntry.slice(classStart, classEnd);

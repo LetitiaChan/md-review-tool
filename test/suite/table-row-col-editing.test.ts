@@ -1,3 +1,4 @@
+import { readPmSource } from './helpers/module-source';
 /**
  * table-row-col-editing.test.ts
  *
@@ -21,7 +22,7 @@ suite('Table Row/Col Editing — Rich Mode prosemirror-tables Commands', () => {
     suite('Tier 1 — 存在性断言', () => {
 
         test('BT-TableEdit.1 Tier1 — pm.entry.js 应导入 prosemirror-tables 行列命令', () => {
-            const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const pmEntry = readPmSource(extPath);
             assert.ok(pmEntry.includes('addRowBefore'), 'pm.entry.js 应导入 addRowBefore');
             assert.ok(pmEntry.includes('addRowAfter'), 'pm.entry.js 应导入 addRowAfter');
             assert.ok(pmEntry.includes('addColumnBefore'), 'pm.entry.js 应导入 addColumnBefore');
@@ -31,7 +32,7 @@ suite('Table Row/Col Editing — Rich Mode prosemirror-tables Commands', () => {
         });
 
         test('BT-TableEdit.2 Tier1 — pm.entry.js commandMap 应包含 6 个表格命令', () => {
-            const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const pmEntry = readPmSource(extPath);
             const tableCommands = [
                 'tableInsertRowAbove', 'tableInsertRowBelow',
                 'tableInsertColLeft', 'tableInsertColRight',
@@ -43,12 +44,12 @@ suite('Table Row/Col Editing — Rich Mode prosemirror-tables Commands', () => {
         });
 
         test('BT-TableEdit.3 Tier1 — pm.entry.js 应导入 Selection 用于选区设置', () => {
-            const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const pmEntry = readPmSource(extPath);
             assert.ok(pmEntry.includes('Selection'), 'pm.entry.js 应导入 Selection');
         });
 
         test('BT-TableEdit.4 Tier1 — pm.entry.js 应包含 setCellSelection 辅助函数', () => {
-            const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const pmEntry = readPmSource(extPath);
             assert.ok(pmEntry.includes('setCellSelection'), 'pm.entry.js 应包含 setCellSelection');
         });
 
@@ -101,14 +102,14 @@ suite('Table Row/Col Editing — Rich Mode prosemirror-tables Commands', () => {
         });
 
         test('BT-TableEdit.10 Tier2 — pm.entry.js 表格命令应支持 coords 参数设置选区', () => {
-            const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const pmEntry = readPmSource(extPath);
             // 每个表格命令应检查 attrs.coords 并调用 setCellSelection
             assert.ok(pmEntry.includes('attrs && attrs.coords'), '表格命令应检查 attrs.coords');
             assert.ok(pmEntry.includes('setCellSelection(view, attrs.coords)'), '表格命令应调用 setCellSelection');
         });
 
         test('BT-TableEdit.11 Tier2 — pm.entry.js setCellSelection 应使用 posAtCoords', () => {
-            const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const pmEntry = readPmSource(extPath);
             assert.ok(pmEntry.includes('view.posAtCoords'), 'setCellSelection 应使用 posAtCoords');
             assert.ok(pmEntry.includes('table_cell'), 'setCellSelection 应查找 table_cell 节点');
             assert.ok(pmEntry.includes('table_header'), 'setCellSelection 应查找 table_header 节点');
@@ -140,7 +141,7 @@ suite('Table Row/Col Editing — Rich Mode prosemirror-tables Commands', () => {
         });
 
         test('BT-TableEdit.14 Tier3 — pm.entry.js 表格命令应在 coords 缺失时仍可工作', () => {
-            const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const pmEntry = readPmSource(extPath);
             // 命令应在 attrs.coords 不存在时直接调用 prosemirror-tables 命令（使用当前选区）
             // 验证条件判断模式：if (attrs && attrs.coords) 意味着 coords 缺失时跳过选区设置
             const pattern = /if\s*\(attrs\s*&&\s*attrs\.coords\)/;
@@ -155,7 +156,7 @@ suite('Table Row/Col Editing — Rich Mode prosemirror-tables Commands', () => {
         });
 
         test('BT-TableEdit.16 Tier3 — pm.entry.js commandMap 应覆盖所有 18 个命令（12 原有 + 6 表格）', () => {
-            const pmEntry = fs.readFileSync(path.join(extPath, 'webview', 'src', 'entries', 'pm.entry.js'), 'utf-8');
+            const pmEntry = readPmSource(extPath);
             const allCommands = [
                 'bold', 'italic', 'strikethrough',
                 'h1', 'h2', 'h3',
