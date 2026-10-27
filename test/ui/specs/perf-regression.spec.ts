@@ -94,11 +94,13 @@ test.describe('批注刷新后的渲染完整性', () => {
         const markdown = '# 标题\n\n- a\n- b\n\n第三段内容';
         await createRichEditor(page, markdown);
 
-        // 点击最后一个段落（顶层块索引 2：heading / list / paragraph）
-        await page.locator('.ProseMirror p').last().click();
+        // 直接按块索引设置光标，避免点击坐标受布局/并发影响
+        const set = await page.evaluate(() => (window as any).__editor.setCursorPosition({ blockIndex: 2, offset: 2 }));
+        expect(set).toBe(true);
+
         const saved = await page.evaluate(() => (window as any).__editor.getCursorPosition());
         expect(saved.blockIndex).toBe(2);
-        expect(saved.offset).toBeGreaterThanOrEqual(0);
+        expect(saved.offset).toBe(2);
 
         // 用记录的位置重新创建编辑器，光标应落在同一块
         const restored = await page.evaluate((pos) => {

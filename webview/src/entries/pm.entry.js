@@ -699,6 +699,16 @@ function createRichEditor({ parent, markdown, onChange, onSave, annotations, onS
             view.dispatch(view.state.tr.setSelection(sel));
             return true;
         },
+        // 按 { blockIndex, offset } 设置光标（测试与外部恢复入口）
+        setCursorPosition(position) {
+            if (!position || typeof position.blockIndex !== 'number') return false;
+            const target = blockIndexToPos(view.state.doc, position.blockIndex, position.offset || 0);
+            if (target == null) return false;
+            const safe = Math.max(0, Math.min(target, view.state.doc.content.size));
+            const sel = TextSelection.create(view.state.doc, safe);
+            view.dispatch(view.state.tr.setSelection(sel));
+            return true;
+        },
         // 光标位置查询：返回与预览块索引一致的 { blockIndex, offset }。
         // 之前的 getCursorLine 返回 markdown 行号，却被 enterRich 当成块索引用，
         // 导致重新进入富文本时光标跳到错误块。
