@@ -575,10 +575,12 @@ const serializer = new ChunkedMarkdownSerializer(
         ordered_list(state, node) {
             const start = node.attrs.start || 1;
             const maxW = String(start + node.childCount - 1).length;
-            const space = '  ';
+            // 与 prosemirror-markdown 默认实现一致：续行缩进 = maxW + 2，
+            // 序号右对齐。固定两空格会让嵌套有序列表在二次解析时被压平。
+            const space = ' '.repeat(maxW + 2);
             state.renderList(node, space, (i) => {
                 const nStr = String(start + i);
-                return nStr + '. ';
+                return ' '.repeat(maxW - nStr.length) + nStr + '. ';
             });
         },
         list_item(state, node) {

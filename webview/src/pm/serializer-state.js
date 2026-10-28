@@ -28,7 +28,9 @@ class ChunkedMarkdownSerializerState extends MarkdownSerializerState {
         for (let i = this._chunks.length - 1; i >= 0 && s.length < count; i--) {
             s = this._chunks[i] + s;
         }
-        return s;
+        // 上面的循环会带上整个尾块，必须再裁剪，否则 atBlank 判断会失效
+        // （例如 write('```python\n') 之后尾块是整个字符串而不是 '\n'）
+        return s.slice(-count);
     }
 
     _append(str) {

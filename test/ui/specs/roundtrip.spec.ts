@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
 import { pmContainerUrl, roundTrip } from '../helpers/pm-test-utils';
 
 /**
@@ -133,5 +135,43 @@ test.describe('Rich Mode 往返保真', () => {
         expect(result.equal).toBe(true);
         // 修复前约 1~3 秒；分块实现目标 < 100ms（阈值留余量）
         expect(result.chunkedMs).toBeLessThan(150);
+    });
+
+    test('BT-roundtrip.8 嵌套有序列表与列表内代码块二次往返稳定', async ({ page }) => {
+        const markdown = [
+            '1. 第一步',
+            '2. 第二步',
+            '   1. 子步骤 A',
+            '   2. 子步骤 B',
+            '3. 第三步',
+            '',
+            '- 包含代码块的列表项',
+            '',
+            '  ```python',
+            '  print(1)',
+            '  ```',
+        ].join('\n');
+
+        const once = await page.evaluate((md) => (window as any).PM.serializeMarkdown(md, false), markdown);
+        const twice = await page.evaluate((md) => (window as any).PM.serializeMarkdown(md, false), once);
+
+        // 列表内代码块正文必须带列表缩进，否则二次解析会改变结构
+        expect(once).toContain('  print(1)');
+        // 嵌套有序列表的缩进必须覆盖 "N. " 宽度
+        expect(once).toMatch(/\n {3}1\. 子步骤 A/);
+        expect(twice).toBe(once);
+    });
+
+    test('BT-roundtrip.9 完整语法文档二次往返幂等', async ({ page }) => {
+        const fixturePath = path.resolve(__dirname, '..', 'fixtures', 'full-syntax.md');
+        const markdown = fs.readFileSync(fixturePath, 'utf-8');
+
+        const once = await page.evaluate((md) => {
+            const PM = (window as any).PM;
+            return PM.serializeMarkdown(md, false);
+        }, markdown);
+        const twice = await page.evaluate((md) => (window as any).PM.serializeMarkdown(md, false), once);
+
+        expect(twice).toBe(once);
     });
 });

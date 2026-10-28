@@ -1,0 +1,62 @@
+---
+# Please note: Do not modify the header of this document. If modified, CodeBuddy (Internal Edition) will apply the default logic settings.
+alwaysApply: true
+---
+
+# md代码
+
+1. xx
+
+- [x] abc
+- [x] 123
+
+```markdown
+rules_PT
+
+# 标题
+
+> [!WARNING]
+> 这是一条**警告信息**。用于提醒可能导致问题的操作。
+> 直接修改 `node_modules` 中的文件不会被版本控制跟踪，`npm install` 后修改将丢失
+```
+
+```markdown
+
+| 项目 | 详情 |
+|------|------|
+| 📁 文件数量 | {file_count} |
+| 📦 输出位置 | `{zip_path}` |
+| 📏 包大小 | {zip_size_kb} KB |
+| ⚙️ 个人配置 | {user_config 逗号拼接，无则省略此行} |
+
+**包含文件：**
+- `{files[0]}`
+- ...
+
+> 测试同学可通过 GM - 替换Content脚本，输入文件名 {cos_name} 从 COS 下载。
+```
+
+```markdown
+### SetFOV — 设置相机视场角
+
+**签名**：`SetFOV(fov: float, interpSpeed: float) -> CameraResult`
+
+**参数**：
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| fov | float | 目标视场角，范围 30.0~120.0 |
+| interpSpeed | float | 插值速度，0 表示立即生效 |
+
+**返回值**：
+- 成功：`CameraResult { success: true, currentFOV: float }`
+- 失败：`CameraResult { success: false, errorCode: int }`
+
+**错误码**：
+| 错误码 | 含义 |
+|--------|------|
+| 2001 | FOV 超出有效范围 |
+| 2002 | 当前相机模式不支持 FOV 调整 |
+| 2003 | 相机处于过渡动画中  无法修改 |
+```
+
+# md代码嵌套code
