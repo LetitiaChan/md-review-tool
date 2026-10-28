@@ -492,12 +492,22 @@ const Annotations = (() => {
             }
             document.getElementById('selectedTextPreview').textContent = ann.selectedText;
             document.getElementById('commentText').value = ann.comment || '';
+            const footnoteCheckbox = document.getElementById('commentAsFootnote');
+            if (footnoteCheckbox) {
+                footnoteCheckbox.checked = false;
+                footnoteCheckbox.disabled = true;
+            }
             document.getElementById('commentModalTitle').textContent = t('modal.comment.edit_title');
         } else {
             if (!currentSelection) return;
             pendingImages = [];
             document.getElementById('selectedTextPreview').textContent = currentSelection.text;
             document.getElementById('commentText').value = '';
+            const footnoteCheckbox = document.getElementById('commentAsFootnote');
+            if (footnoteCheckbox) {
+                footnoteCheckbox.checked = false;
+                footnoteCheckbox.disabled = false;
+            }
             document.getElementById('commentModalTitle').textContent = t('modal.comment.title');
         }
 
@@ -514,7 +524,7 @@ const Annotations = (() => {
         editingAnnotationId = null;
     }
 
-    function submitComment() {
+    async function submitComment() {
         const comment = document.getElementById('commentText').value.trim();
         if (!comment && pendingImages.length === 0) {
             document.getElementById('commentText').focus();
@@ -528,6 +538,35 @@ const Annotations = (() => {
             });
         } else {
             if (!currentSelection) return;
+            let footnoteId = '';
+            const asFootnote = document.getElementById('commentAsFootnote')?.checked;
+            if (asFootnote) {
+                try {
+                    const data = Store.getData();
+                    const sourceFile = data.sourceFilePath || data.fileName;
+                    const result = await _callHost('addFootnoteComment', {
+                        sourceFile,
+                        annotation: {
+                            selectedText: currentSelection.text,
+                            comment,
+                            blockIndex: currentSelection.blockIndex,
+                            startOffset: currentSelection.startOffset,
+                            endOffset: currentSelection.endOffset
+                        }
+                    });
+                    if (!result || !result.success) {
+                        console.warn('[annotations] 脚注评论写入失败:', result && result.error);
+                        return;
+                    }
+                    footnoteId = result.footnoteId || '';
+                    if (typeof result.content === 'string') {
+                        Store.setRawMarkdown(result.content);
+                    }
+                } catch (e) {
+                    console.warn('[annotations] 脚注评论写入异常:', e);
+                    return;
+                }
+            }
             Store.addAnnotation({
                 type: 'comment',
                 blockText: getAnnotationBlockText(currentSelection.blockIndex),
@@ -537,6 +576,8 @@ const Annotations = (() => {
                 startOffset: currentSelection.startOffset,
                 endOffset: currentSelection.endOffset,
                 comment: comment,
+                footnoteId,
+                source: footnoteId ? 'footnote' : '',
                 images: [...pendingImages]
             });
         }
@@ -829,16 +870,19 @@ const Annotations = (() => {
             const insertHtml = (ann.type === 'insert' && ann.insertContent)
                 ? `<div class="annotation-insert-content">📝 ${escapeHtml(ann.insertContent)}</div>`
                 : '';
+            const locationLabel = ann.orphaned
+                ? t('annotation.unresolved')
+                : t('annotation.block_index', { index: ann.blockIndex + 1 });
             const locale = (window.I18n && window.I18n.getLocale() === 'en') ? 'en-US' : 'zh-CN';
             const time = new Date(ann.timestamp).toLocaleString(locale, {
                 month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
             });
 
             return `
-                <div class="annotation-card type-${ann.type}" data-id="${ann.id}">
+                <div class="annotation-card type-${ann.type}${ann.orphaned ? ' orphaned' : ''}" data-id="${ann.id}">
                     <div class="annotation-card-header">
                         <span class="annotation-type ${ann.type}">#${ann.id} ${typeLabel}</span>
-                        <span class="annotation-index">${t('annotation.block_index', { index: ann.blockIndex + 1 })}</span>
+                        <span class="annotation-index">${locationLabel}</span>
                     </div>
                     <div class="annotation-selected-text">${ann.type === 'insert' ? (ann.insertPosition === 'before' ? t('annotation.insert_before_label') : t('annotation.insert_after_label')) : ''}${escapeHtml(ann.selectedText)}</div>
                     ${commentHtml}
@@ -949,6 +993,7 @@ const Annotations = (() => {
         const data = Store.getData();
         // 优先增量更新：只重建受影响的块，跳过 marked/highlight.js。
         // 返回 false 时（例如旧批注缺少块范围）回退到全量渲染。
+        // 图表/公式/代码块事件由 Renderer.onRenderComplete 统一补跑，无需在此重复调用。
         let updated = false;
         if (typeof Renderer.updateAnnotations === 'function') {
             try {

@@ -105,6 +105,16 @@
     border-left: 3px solid var(--insert-color);
 }
 
+.annotation-card.orphaned {
+    border-style: dashed;
+    opacity: 0.85;
+}
+
+.annotation-card.orphaned .annotation-index {
+    color: var(--danger);
+    font-weight: 600;
+}
+
 .annotation-card-header {
     display: flex;
     align-items: center;
@@ -133,6 +143,20 @@
 .annotation-type.insert {
     color: var(--insert-color);
     background: var(--insert-light);
+}
+
+.checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 14px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.checkbox-option input {
+    margin: 0;
 }
 
 .annotation-index {

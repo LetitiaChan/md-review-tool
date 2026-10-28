@@ -60,8 +60,6 @@ suite('Store Logic Test Suite — 数据模型纯逻辑', () => {
                 data.docVersion = docVersion || '';
                 data.sourceFilePath = sourceFilePath || data.sourceFilePath || '';
                 data.sourceDir = sourceDir || data.sourceDir || '';
-                data.annotations = [];
-                data.nextId = 1;
                 data.reviewVersion = (data.reviewVersion || 1) + 1;
                 data.createdAt = new Date().toISOString();
             } else if (data.fileName !== name) {
@@ -410,14 +408,14 @@ suite('Store Logic Test Suite — 数据模型纯逻辑', () => {
             assert.strictEqual(store.getData().reviewVersion, 1);
         });
 
-        test('同文件 hash 变更 → 清空批注并增加 reviewVersion', () => {
+        test('同文件 hash 变更 → 保留批注并增加 reviewVersion', () => {
             const store = createMockStore();
             store.setFile('test.md', '# V1', 'hash1', 'v1', '/path/test.md', '/path');
             store.addAnnotation({ type: 'comment', selectedText: 'x', comment: 'y', blockIndex: 0, startOffset: 0 });
 
             store.setFile('test.md', '# V2', 'hash2', 'v2', '/path/test.md', '/path');
 
-            assert.strictEqual(store.getAnnotations().length, 0);
+            assert.strictEqual(store.getAnnotations().length, 1);
             assert.strictEqual(store.getData().reviewVersion, 2);
         });
 
@@ -432,14 +430,14 @@ suite('Store Logic Test Suite — 数据模型纯逻辑', () => {
             assert.strictEqual(store.getData().rawMarkdown, '# Content Updated');
         });
 
-        test('同文件无 hash 但内容变更 → 清空批注', () => {
+        test('同文件无 hash 但内容变更 → 保留批注', () => {
             const store = createMockStore();
             store.setFile('test.md', '# Original', '', 'v1', '/path/test.md', '/path');
             store.addAnnotation({ type: 'comment', selectedText: 'x', comment: 'y', blockIndex: 0, startOffset: 0 });
 
             store.setFile('test.md', '# Modified', '', 'v2', '/path/test.md', '/path');
 
-            assert.strictEqual(store.getAnnotations().length, 0);
+            assert.strictEqual(store.getAnnotations().length, 1);
         });
     });
 

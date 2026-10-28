@@ -110,13 +110,23 @@ const Store = (() => {
     }
 
     function setFile(name, markdown, fileHash, docVersion, sourceFilePath, sourceDir, relPath, pathHash) {
-        const sameFile = data.fileName === name;
+        // 文件名不足以标识文件（不同目录下经常都有 README.md）。两端都具备
+        // 更强标识时优先比较它；旧记录缺少路径元数据时才退回文件名。
+        const sameFile = pathHash && data.pathHash
+            ? pathHash === data.pathHash
+            : sourceFilePath && data.sourceFilePath
+                ? sourceFilePath === data.sourceFilePath
+                : relPath && data.relPath
+                    ? relPath === data.relPath
+                    : data.fileName === name;
         const hashChanged = sameFile && data.fileHash && fileHash && data.fileHash !== fileHash;
         const contentChanged = sameFile && !fileHash && data.rawMarkdown && markdown
             && data.rawMarkdown.trim() !== markdown.trim();
 
         if (hashChanged || contentChanged) {
             archiveCurrentRecord();
+            // 源文件更新不等于批注已处理。保留批注，待新文档分块完成后按
+            // selectedText 重新定位；定位失败的批注也会留在列表中供人工处理。
             data.rawMarkdown = markdown;
             data.fileHash = fileHash || '';
             data.docVersion = docVersion || '';
@@ -124,11 +134,9 @@ const Store = (() => {
             data.sourceDir = sourceDir || data.sourceDir || '';
             data.relPath = relPath || data.relPath || '';
             data.pathHash = pathHash || data.pathHash || '';
-            data.annotations = [];
-            data.nextId = 1;
             data.reviewVersion = (data.reviewVersion || 1) + 1;
             data.createdAt = new Date().toISOString();
-        } else if (data.fileName !== name) {
+        } else if (!sameFile) {
             data.fileName = name;
             data.rawMarkdown = markdown;
             data.fileHash = fileHash || '';
@@ -225,24 +233,148 @@ const Store = (() => {
         console.log('[Store] 从 .review 恢复批阅记录:', fileName, '评审版本:', data.reviewVersion, '批注数:', data.annotations.length);
     }
 
+    function restoreFootnoteComments(footnoteComments) {
+        if (!Array.isArray(footnoteComments) || footnoteComments.length === 0) {
+            return false;
+        }
+        const existing = new Set(data.annotations
+            .map(a => a.footnoteId)
+            .filter(Boolean));
+        let changed = false;
+        footnoteComments.forEach(comment => {
+            if (!comment || !comment.footnoteId || existing.has(comment.footnoteId)) {
+                return;
+            }
+            data.annotations.push({
+                ...comment,
+                id: data.nextId++,
+                timestamp: new Date().toISOString(),
+                images: Array.isArray(comment.images) ? comment.images : []
+            });
+            existing.add(comment.footnoteId);
+            changed = true;
+        });
+        if (changed) {
+            data.annotations.sort((a, b) => {
+                if (a.blockIndex !== b.blockIndex) return a.blockIndex - b.blockIndex;
+                return (a.startOffset || 0) - (b.startOffset || 0);
+            });
+            save();
+        }
+        return changed;
+    }
+
+    function normalizeAnchorText(text) {
+        return String(text || '')
+            .replace(/^%%FRONTMATTER%%\n/, '')
+            .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+            .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/^\s{0,3}(?:#{1,6}\s+|>\s*|[-*+]\s+|\d+[.)]\s+)/gm, '')
+            .replace(/[*_~`]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    /**
+     * 在更新后的 Markdown 分块中重新定位现有批注。
+     * 仅唯一匹配或原块号与偏移仍精确匹配时更新位置；否则标记 orphaned，
+     * 避免在重复文本之间猜测。
+     */
+    function reanchorAnnotations(newBlocks) {
+        if (!Array.isArray(newBlocks)) {
+            return { resolved: 0, unresolved: data.annotations.length };
+        }
+
+        const searchableBlocks = newBlocks.map(normalizeAnchorText);
+        const blockRanges = [];
+        let searchableDocument = '';
+        searchableBlocks.forEach((blockText, blockIndex) => {
+            if (blockIndex > 0) searchableDocument += ' ';
+            const start = searchableDocument.length;
+            searchableDocument += blockText;
+            blockRanges.push({ start, end: searchableDocument.length });
+        });
+        let resolved = 0;
+        let unresolved = 0;
+
+        data.annotations.forEach(annotation => {
+            const anchor = normalizeAnchorText(annotation.selectedText);
+            if (!anchor) {
+                annotation.orphaned = true;
+                unresolved++;
+                return;
+            }
+
+            const candidates = [];
+            let matchAt = searchableDocument.indexOf(anchor);
+            while (matchAt >= 0) {
+                const matchEnd = matchAt + anchor.length;
+                const blockIndex = blockRanges.findIndex(range => matchAt >= range.start && matchAt < range.end);
+                const endBlockIndex = blockRanges.findIndex(range => matchEnd - 1 >= range.start && matchEnd - 1 < range.end);
+                if (blockIndex >= 0 && endBlockIndex >= blockIndex) {
+                    candidates.push({
+                        blockIndex,
+                        endBlockIndex,
+                        offset: matchAt - blockRanges[blockIndex].start,
+                        endOffset: matchEnd - blockRanges[endBlockIndex].start
+                    });
+                }
+                matchAt = searchableDocument.indexOf(anchor, matchAt + 1);
+            }
+
+            if (candidates.length === 0) {
+                annotation.orphaned = true;
+                unresolved++;
+                return;
+            }
+
+            const oldBlockIndex = Number.isInteger(annotation.blockIndex) ? annotation.blockIndex : 0;
+            const oldStartOffset = Number.isInteger(annotation.startOffset) ? annotation.startOffset : 0;
+            const oldPositionCandidate = candidates.find(candidate =>
+                candidate.blockIndex === oldBlockIndex && candidate.offset === oldStartOffset
+            );
+            const best = oldPositionCandidate || (candidates.length === 1 ? candidates[0] : null);
+            if (!best) {
+                annotation.orphaned = true;
+                unresolved++;
+                return;
+            }
+            annotation.blockIndex = best.blockIndex;
+            annotation.endBlockIndex = best.endBlockIndex;
+            annotation.startOffset = best.offset;
+            if (annotation.type !== 'insert') {
+                annotation.endOffset = best.endOffset;
+            }
+            annotation.orphaned = false;
+            resolved++;
+        });
+
+        save();
+        return { resolved, unresolved };
+    }
+
     /**
      * 强制升级版本号（用于"关闭期间源文件被修改"场景）
      * 场景：webview 关闭时磁盘上 md 文件被外部修改，重新打开时 webview 检测到
-     *       记录里的 rawMarkdown 与当前源文件内容不一致，须视为新的批阅版本，
-     *       而不是恢复旧批注（否则旧批注的锚点在新文件上可能已失效）。
+     *       记录里的 rawMarkdown 与当前源文件内容不一致，须视为新的批阅版本；
+     *       旧批注仍保留，随后由 reanchorAnnotations 更新锚点。
      * @param {number} fromVersion 磁盘记录里的 reviewVersion（升级基准）
      * @param {string} markdown 当前源文件内容
      * @param {string} docVersion 当前源文件的 docVersion（可选）
+     * @param {Array} annotations 要带入新版本的批注（可选）
      */
-    function forceBumpVersion(fromVersion, markdown, docVersion) {
+    function forceBumpVersion(fromVersion, markdown, docVersion, annotations) {
         data.reviewVersion = (fromVersion || 1) + 1;
         data.rawMarkdown = markdown;
         if (docVersion) data.docVersion = docVersion;
-        data.annotations = [];
-        data.nextId = 1;
+        data.annotations = Array.isArray(annotations) ? annotations.map(annotation => ({ ...annotation })) : data.annotations;
+        data.nextId = data.annotations.length > 0
+            ? Math.max(...data.annotations.map(annotation => annotation.id || 0)) + 1
+            : 1;
         data.createdAt = new Date().toISOString();
         save();
-        console.log('[Store] 关闭期间源文件变化，强制升级到 v' + data.reviewVersion);
+        console.log('[Store] 关闭期间源文件变化，保留批注并升级到 v' + data.reviewVersion);
     }
 
     /**
@@ -265,6 +397,7 @@ const Store = (() => {
         getFileHash, setFileHash, getDocVersion, setDocVersion,
         getSourceFilePath, getSourceDir, getRelPath,
         archiveCurrentRecord, getArchivedRecords, restoreFromReviewRecord,
+        restoreFootnoteComments, reanchorAnnotations,
         forceBumpVersion,
         setRawMarkdown
     };
