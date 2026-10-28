@@ -164,7 +164,7 @@ test.describe('Rich Mode 往返保真', () => {
 
     test('BT-roundtrip.9 完整语法文档二次往返幂等', async ({ page }) => {
         const fixturePath = path.resolve(__dirname, '..', 'fixtures', 'full-syntax.md');
-        const markdown = fs.readFileSync(fixturePath, 'utf-8');
+        const markdown = fs.readFileSync(fixturePath, 'utf-8').replace(/\r\n/g, '\n');
 
         const once = await page.evaluate((md) => {
             const PM = (window as any).PM;

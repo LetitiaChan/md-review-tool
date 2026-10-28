@@ -45,7 +45,9 @@ export async function openContainer(page: Page): Promise<void> {
  */
 export function readFixture(filename: string): string {
     const filePath = path.join(FIXTURES_DIR, filename);
-    return fs.readFileSync(filePath, 'utf-8');
+    // .gitattributes 强制 CRLF，Linux 检出后长度会多出每行一个 \r；
+    // 统一成 LF，避免依赖换行符的断言（如长度比例）在 CI 上失败
+    return fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n');
 }
 
 /**

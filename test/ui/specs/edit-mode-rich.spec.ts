@@ -12,7 +12,8 @@ import { createRichEditor } from '../helpers/pm-test-utils';
 const FIXTURES_DIR = path.resolve(__dirname, '..', 'fixtures');
 
 function readFixture(name: string): string {
-    return fs.readFileSync(path.join(FIXTURES_DIR, name), 'utf-8');
+    // 统一换行符：.gitattributes 强制 CRLF，Linux CI 检出后会多出 \r
+    return fs.readFileSync(path.join(FIXTURES_DIR, name), 'utf-8').replace(/\r\n/g, '\n');
 }
 
 async function getMarkdown(page: import('@playwright/test').Page): Promise<string> {
