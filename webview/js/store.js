@@ -18,7 +18,9 @@ const Store = (() => {
         annotations: [],
         nextId: 1,
         reviewVersion: 1,
-        createdAt: ''
+        createdAt: '',
+        // 是否已经落盘过批阅记录。首次打开且无批注时不必生成空记录（issue #3）
+        hasReviewRecord: false
     };
 
     function save() {
@@ -31,7 +33,13 @@ const Store = (() => {
             console.warn('[Store] 存储失败:', e);
         }
         if (typeof Exporter !== 'undefined' && Exporter.triggerAutoSave) {
-            Exporter.triggerAutoSave();
+            // issue #3：首次打开文件时不生成「没有任何改动」的空记录。
+            // 只有已经存在记录、有批注，或内容变化导致版本自增时才需要落盘。
+            const hasAnnotations = data.annotations.length > 0;
+            const versionBumped = (data.reviewVersion || 1) > 1;
+            if (hasAnnotations || versionBumped || data.hasReviewRecord) {
+                Exporter.triggerAutoSave();
+            }
         }
     }
 
@@ -104,7 +112,8 @@ const Store = (() => {
             annotations: [],
             nextId: 1,
             reviewVersion: 1,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            hasReviewRecord: false
         };
         save();
     }
@@ -149,6 +158,7 @@ const Store = (() => {
             data.nextId = 1;
             data.reviewVersion = 1;
             data.createdAt = new Date().toISOString();
+            data.hasReviewRecord = false;
         } else {
             data.rawMarkdown = markdown;
             if (fileHash) data.fileHash = fileHash;
@@ -204,6 +214,8 @@ const Store = (() => {
     function clearAll() {
         data.annotations = [];
         data.nextId = 1;
+        // 记录文件已被用户显式删除，后续不再生成空占位记录
+        data.hasReviewRecord = false;
         save();
     }
 
@@ -221,6 +233,7 @@ const Store = (() => {
         data.docVersion = docVersion || '';
         data.reviewVersion = record.reviewVersion || 1;
         data.createdAt = record.createdAt || new Date().toISOString();
+        data.hasReviewRecord = true;
 
         if (record.annotations && record.annotations.length > 0) {
             data.annotations = record.annotations;
@@ -390,6 +403,10 @@ const Store = (() => {
         data.rawMarkdown = markdown;
     }
 
+    function setHasReviewRecord(value) {
+        data.hasReviewRecord = !!value;
+    }
+
     return {
         save, load, loadFromHost, reset, setFile,
         addAnnotation, removeAnnotation, updateAnnotation,
@@ -399,7 +416,7 @@ const Store = (() => {
         archiveCurrentRecord, getArchivedRecords, restoreFromReviewRecord,
         restoreFootnoteComments, reanchorAnnotations,
         forceBumpVersion,
-        setRawMarkdown
+        setRawMarkdown, setHasReviewRecord
     };
 })();
 

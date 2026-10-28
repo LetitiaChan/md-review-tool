@@ -26,7 +26,18 @@ function loadExporter(): any {
         .replace(/\r?\n\/\/[^\n]*\r?\n\s*export\s*\{[^}]+\}\s*;?\s*$/, '');
     const sandbox: any = {
         console,
-        t: (key: string) => key,
+        // 只映射本套件断言用到的键，其余回退为 key（引导测试关注结构而非文案）
+        t: (key: string, params?: Record<string, unknown>) => {
+            const dict: Record<string, string> = {
+                'export.field_locate_status': '定位状态',
+                'export.orphaned_note': '未定位（源文件变化后无法唯一匹配，请人工确认）',
+                'export.field_separator': '：',
+                'export.field_block_value': '第 {n} 块',
+                'export.field_offset_value': '第 {n} 个字符处（startOffset={n}）',
+            };
+            const template = dict[key] ?? key;
+            return params ? template.replace(/\{(\w+)\}/g, (m, k) => (params[k] !== undefined ? String(params[k]) : m)) : template;
+        },
         document: {},
         vscode: { postMessage: () => undefined },
         setTimeout,

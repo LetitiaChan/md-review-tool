@@ -727,6 +727,38 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
 
         // 快捷键
         document.addEventListener('keydown', async (e) => {
+            // ===== 批注快捷键（issue #6）=====
+            if (globalThis.Annotations && typeof Annotations.isModalOpen === 'function') {
+                const mod = e.ctrlKey || e.metaKey;
+                if (Annotations.isModalOpen()) {
+                    // 弹窗内：Ctrl/Cmd+Enter 提交；其余按键（含 ESC）交给下面的通用逻辑
+                    if (mod && e.key === 'Enter') {
+                        e.preventDefault();
+                        Annotations.submitActiveModal();
+                        return;
+                    }
+                } else {
+                    const target = e.target;
+                    const isEditable = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+                    const richActive = globalThis.EditMode && EditMode.isRichActive();
+                    if (!isEditable && !richActive && mod) {
+                        const key = (e.key || '').toLowerCase();
+                        let handled = false;
+                        if (e.shiftKey && key === 'd') handled = Annotations.markDeleteForSelection();
+                        else if (e.shiftKey && key === 'b') handled = Annotations.openInsertForSelection('before');
+                        else if (e.shiftKey && key === 'a') handled = Annotations.openInsertForSelection('after');
+                        else if (!e.shiftKey && e.key === 'Enter') handled = Annotations.openCommentForSelection();
+                        else if (e.shiftKey && key === 'j') handled = Annotations.navigateAnnotation(1);
+                        else if (e.shiftKey && key === 'k') handled = Annotations.navigateAnnotation(-1);
+                        else if (e.shiftKey && key === 't') { toggleTocPanel(tocCollapsed); handled = true; }
+                        if (handled) {
+                            e.preventDefault();
+                            return;
+                        }
+                    }
+                }
+            }
+
             if (e.key === 'Escape') {
                 // ESC 优先关闭搜索栏
                 if (document.getElementById('searchBar').style.display !== 'none') {
@@ -745,7 +777,7 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
                 document.getElementById('applyResultModal').style.display = 'none';
                 document.getElementById('helpModal').style.display = 'none';
             }
-            if (e.ctrlKey && (e.key === 'f' || e.key === 'F') && !e.shiftKey && !e.altKey) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F') && !e.shiftKey && !e.altKey) {
                 e.preventDefault();
                 openContentSearch();
             }
@@ -753,7 +785,7 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
                 e.preventDefault();
                 toggleZenMode();
             }
-            if (e.ctrlKey && e.key === 'e') {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
                 e.preventDefault();
                 if (Store.getAnnotations().length > 0) {
                     if (globalThis.EditMode && EditMode.isRichActive() && typeof EditMode.flushMarkdown === 'function') {
@@ -762,14 +794,14 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
                     Exporter.exportReviewDocument();
                 }
             }
-            if (e.ctrlKey && e.key === 's') {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();
                 if (currentMode === 'rich' && editorDirty) {
                     clearAutoSaveTimer();
                     handleSaveMd();
                 }
             }
-            if (e.ctrlKey && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
                 e.preventDefault();
                 const data = Store.getData();
                 if (data.rawMarkdown) {
@@ -809,13 +841,8 @@ const popoverWrapperIds = ['btnTextColor', 'btnLink', 'btnImage', 'btnEmoji', 'b
     function loadDocument(fileName, markdown, isNew, fileHash, docVersion, sourceFilePath, sourceDir, relPath, pathHash) {
         if (isNew) {
             Store.setFile(fileName, markdown, fileHash, docVersion, sourceFilePath, sourceDir, relPath, pathHash);
-            // 文件内容变化场景（刷新 / AI修复后重新加载）：setFile 会将 reviewVersion 自增。
-            // 此时批注可能为空，但新版本号必须落盘一条占位记录，
-            // 否则下次打开文件时 getReviewRecords 返回的最新版本仍是旧 v{N-1}，
-            // 会把已处理过的旧批注错误地恢复（Bug: AI 修复后重开仍见旧批注）。
-            if (Exporter && Exporter.isAutoSaveEnabled && Exporter.isAutoSaveEnabled()) {
-                Exporter.triggerAutoSave();
-            }
+            // 文件内容变化场景（刷新 / AI修复后重新加载）：setFile 会将 reviewVersion 自增，
+            // Store.save() 会据此落盘一条占位记录；首次打开且无批注时不写记录（issue #3）。
         }
 
         document.getElementById('welcomeScreen').style.display = 'none';
@@ -1984,6 +2011,10 @@ this.innerHTML = t('modal.ai_result.copied');
                     editorDirty = false;
                     updateEditStatus('saved', t('notification.saved'));
                     setTimeout(() => updateEditStatus('', ''), 1500);
+                    // 同步 .review 的 rawMarkdown 快照，避免下次打开被误判为外部修改（issue #4）
+                    if (Exporter && typeof Exporter.doAutoSaveNow === 'function') {
+                        Exporter.doAutoSaveNow();
+                    }
                 } else {
                     console.error('[rich-mode] save failed:', result && result.error);
                     updateEditStatus('error', t('notification.save_failed') || 'Save failed');

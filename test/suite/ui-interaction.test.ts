@@ -2350,7 +2350,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
             );
         });
 
-        test('BT-versionBump.2 Tier1 — loadDocument 在 isNew=true 时应触发 autosave 落盘新版本', () => {
+        test('BT-versionBump.2 Tier1 — loadDocument 在 isNew=true 时应调用 setFile 并交给 Store.save 落盘', () => {
             // 正则提取 loadDocument 函数体
             const body = extractFunctionBody20(appJsText20, /function\s+loadDocument\s*\(/);
             const isNewIdx = body.indexOf('if (isNew)');
@@ -2363,8 +2363,8 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
                 'isNew 分支应调用 Store.setFile'
             );
             assert.ok(
-                /triggerAutoSave\(/.test(isNewBranch),
-                'isNew 分支应调用 Exporter.triggerAutoSave 使新版本号立刻落盘'
+                !/Exporter\.triggerAutoSave\(/.test(isNewBranch),
+                'isNew 分支不应无条件触发自动保存（首次打开无批注时会产生空记录，issue #3）'
             );
         });
 

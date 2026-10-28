@@ -205,6 +205,42 @@ const Annotations = (() => {
         return null;
     }
 
+    /**
+     * 从当前 DOM 选区构建批注选区对象（mouseup 与键盘快捷键共用）。
+     * 返回 null 表示没有有效选区。
+     */
+    function captureSelectionFromDOM() {
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed) return null;
+        // 允许选中空行/空列表项：原始文本不 trim，只检查长度
+        const rawText = selection.toString();
+        if (rawText.length === 0) return null;
+
+        const text = rawText.trim() || rawText;
+        const range = selection.getRangeAt(0);
+        const blockIndex = Renderer.getBlockIndex(range.startContainer);
+        const endBlockIndex = Renderer.getBlockIndex(range.endContainer);
+        if (blockIndex < 0) return null;
+
+        const startBlock = findBlockContainer(range.startContainer);
+        const endBlock = findBlockContainer(range.endContainer);
+        const globalStartOffset = startBlock
+            ? computeGlobalOffset(startBlock, range.startContainer, range.startOffset)
+            : range.startOffset;
+        const globalEndOffset = endBlock
+            ? computeGlobalOffset(endBlock, range.endContainer, range.endOffset)
+            : range.endOffset;
+
+        return {
+            text,
+            blockIndex,
+            endBlockIndex: endBlockIndex >= 0 ? endBlockIndex : blockIndex,
+            startOffset: globalStartOffset,
+            endOffset: globalEndOffset,
+            range: range.cloneRange()
+        };
+    }
+
     // ===== 文本选择 =====
     function setupTextSelection() {
         const content = document.getElementById('documentContent');
@@ -220,47 +256,12 @@ const Annotations = (() => {
             }
 
             setTimeout(() => {
-                const selection = window.getSelection();
-                if (!selection || selection.isCollapsed) {
+                const selection = captureSelectionFromDOM();
+                if (!selection) {
                     hideSelectionTooltip();
                     return;
                 }
-                // 允许选中空行/空列表项：原始文本不 trim，只检查 isCollapsed
-                const rawText = selection.toString();
-                // 完全无内容（长度为0）才跳过
-                if (rawText.length === 0) {
-                    hideSelectionTooltip();
-                    return;
-                }
-                const text = rawText.trim() || rawText; // trim 后为空则保留原始文本（含空白）
-                const range = selection.getRangeAt(0);
-                const blockIndex = Renderer.getBlockIndex(range.startContainer);
-                const endBlockIndex = Renderer.getBlockIndex(range.endContainer);
-
-                if (blockIndex < 0) {
-                    hideSelectionTooltip();
-                    return;
-                }
-
-                // 计算块内全局偏移量（而非仅文本节点内偏移）
-                const startBlock = findBlockContainer(range.startContainer);
-                const endBlock = findBlockContainer(range.endContainer);
-                const globalStartOffset = startBlock
-                    ? computeGlobalOffset(startBlock, range.startContainer, range.startOffset)
-                    : range.startOffset;
-                const globalEndOffset = endBlock
-                    ? computeGlobalOffset(endBlock, range.endContainer, range.endOffset)
-                    : range.endOffset;
-
-                currentSelection = {
-                    text,
-                    blockIndex,
-                    endBlockIndex: endBlockIndex >= 0 ? endBlockIndex : blockIndex,
-                    startOffset: globalStartOffset,
-                    endOffset: globalEndOffset,
-                    range: range.cloneRange()
-                };
-
+                currentSelection = selection;
                 showSelectionTooltip(e.clientX, e.clientY);
             }, 10);
         });
@@ -1026,8 +1027,80 @@ const Annotations = (() => {
         if (applyBtn) applyBtn.disabled = !hasAnnotations;
     }
 
+    // ===== 快捷键动作（issue #6） =====
+
+    /**
+     * 键盘触发时要求存在实时的 DOM 选区；不沿用可能已过期的鼠标选区。
+     */
+    function captureKeyboardSelection() {
+        currentSelection = captureSelectionFromDOM();
+        return !!currentSelection;
+    }
+
+    function openCommentForSelection() {
+        if (!captureKeyboardSelection()) return false;
+        openCommentModal();
+        return true;
+    }
+
+    function markDeleteForSelection() {
+        if (!captureKeyboardSelection()) return false;
+        markDelete();
+        return true;
+    }
+
+    function openInsertForSelection(position) {
+        if (!captureKeyboardSelection()) return false;
+        openInsertModal(position || 'after');
+        return true;
+    }
+
+    function isModalOpen() {
+        return ['commentModal', 'insertModal'].some((id) => {
+            const el = document.getElementById(id);
+            return !!el && el.style.display && el.style.display !== 'none';
+        });
+    }
+
+    function submitActiveModal() {
+        const commentModal = document.getElementById('commentModal');
+        if (commentModal && commentModal.style.display !== 'none') {
+            submitComment();
+            return true;
+        }
+        const insertModal = document.getElementById('insertModal');
+        if (insertModal && insertModal.style.display !== 'none') {
+            submitInsert();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 在批注列表中前后跳转（Ctrl+Shift+J / K）
+     */
+    function navigateAnnotation(delta) {
+        const sorted = [...Store.getAnnotations()].sort((a, b) =>
+            (a.blockIndex - b.blockIndex) || ((a.startOffset || 0) - (b.startOffset || 0)));
+        if (sorted.length === 0) return false;
+
+        const cards = Array.from(document.querySelectorAll('#annotationsList .annotation-card'));
+        let current = cards.findIndex((c) => c.classList.contains('active'));
+        if (current === -1 && currentSelection) {
+            current = sorted.findIndex((a) =>
+                a.blockIndex === currentSelection.blockIndex && a.startOffset === currentSelection.startOffset);
+        }
+        let next = current + delta;
+        if (next < 0) next = sorted.length - 1;
+        if (next >= sorted.length) next = 0;
+        scrollToAnnotationCard(sorted[next].id);
+        return true;
+    }
+
     return {
-        init, renderAnnotationsList, refreshView, setBlocks, updateToolbarState
+        init, renderAnnotationsList, refreshView, setBlocks, updateToolbarState,
+        openCommentForSelection, markDeleteForSelection, openInsertForSelection,
+        isModalOpen, submitActiveModal, navigateAnnotation
     };
 })();
 

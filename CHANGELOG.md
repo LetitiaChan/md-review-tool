@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### 🐛 Bug Fixes
+- Opening a Markdown file no longer creates an empty `.review/` record when nothing was annotated (#3)
+- Manual save (`Ctrl+S`) in Rich Mode now refreshes the review snapshot, so annotations are no longer archived on the next open (#4)
+- Review export now routes every field through i18n; the English UI no longer produces a mixed-language instruction body (#5)
+
+### ✨ Features
+- Keyboard shortcuts for annotation actions: `Ctrl+Enter` comment, `Ctrl+Shift+D` delete, `Ctrl+Shift+A/B` insert after/before, `Ctrl+Shift+J/K` navigate annotations, `Ctrl+Shift+T` toggle TOC, and `Ctrl+Enter` submits modals (#6)
+
 ## [1.5.7] - 2026-09-09
 
 ### ✨ Features

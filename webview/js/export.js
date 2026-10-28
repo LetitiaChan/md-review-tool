@@ -57,7 +57,7 @@ const Exporter = (() => {
         // 通过 Extension Host 保存
         const saved = await saveViaHost(mdFileName, doc);
         if (saved) {
-showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
+            showExportSuccess(t('notification.export_saved', { name: mdFileName }));
             // 只有包含 Base64 图片时才需要额外导出 JSON（路径引用的图片已在文件系统中）
             if (_hasBase64Images(data.annotations)) {
                 const jsonFileName = `${rbaseName}_v${version}_data.json`;
@@ -72,7 +72,7 @@ showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
             return;
         }
 
-        showExportSuccess('导出失败，请检查工作区设置');
+        showExportSuccess(t('notification.export_failed'));
     }
 
     function showExportSuccess(msg) {
@@ -89,23 +89,24 @@ showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
     }
 
     function generateReviewDoc(data, blocks) {
+        const sep = t('export.field_separator');
         const lines = [];
         const docVersion = data.docVersion || t('export.unknown');
 
         lines.push(`# ${t('export.title')}`);
         lines.push(``);
-        lines.push(`- **${t('export.source_file')}**：${data.fileName}`);
+        lines.push(`- **${t('export.source_file')}**${sep}${data.fileName}`);
         if (data.sourceFilePath) {
-            lines.push(`- **${t('export.source_path')}**：${data.sourceFilePath}`);
+            lines.push(`- **${t('export.source_path')}**${sep}${data.sourceFilePath}`);
         }
-        lines.push(`- **${t('export.source_version')}**：${docVersion}`);
-        lines.push(`- **${t('export.review_time')}**：${formatDate()}`);
-        lines.push(`- **${t('export.review_version')}**：v${data.reviewVersion || 1}`);
-        lines.push(`- **${t('export.annotation_count')}**：${data.annotations.length}`);
-        lines.push(`  - ${t('export.type_comment')}：${data.annotations.filter(a => a.type === 'comment').length}`);
-        lines.push(`  - ${t('export.type_delete')}：${data.annotations.filter(a => a.type === 'delete').length}`);
-        lines.push(`  - ${t('export.type_insert_after')}：${data.annotations.filter(a => a.type === 'insert' && a.insertPosition !== 'before').length}`);
-        lines.push(`  - ${t('export.type_insert_before')}：${data.annotations.filter(a => a.type === 'insert' && a.insertPosition === 'before').length}`);
+        lines.push(`- **${t('export.source_version')}**${sep}${docVersion}`);
+        lines.push(`- **${t('export.review_time')}**${sep}${formatDate()}`);
+        lines.push(`- **${t('export.review_version')}**${sep}v${data.reviewVersion || 1}`);
+        lines.push(`- **${t('export.annotation_count')}**${sep}${data.annotations.length}`);
+        lines.push(`  - ${t('export.type_comment')}${sep}${data.annotations.filter(a => a.type === 'comment').length}`);
+        lines.push(`  - ${t('export.type_delete')}${sep}${data.annotations.filter(a => a.type === 'delete').length}`);
+        lines.push(`  - ${t('export.type_insert_after')}${sep}${data.annotations.filter(a => a.type === 'insert' && a.insertPosition !== 'before').length}`);
+        lines.push(`  - ${t('export.type_insert_before')}${sep}${data.annotations.filter(a => a.type === 'insert' && a.insertPosition === 'before').length}`);
         lines.push(``);
         lines.push(`---`);
         lines.push(``);
@@ -127,68 +128,73 @@ showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
             const blockContent = blocks[ann.blockIndex] || '';
             const blockFingerprint = blockContent.substring(0, 80).replace(/\n/g, ' ');
 
-            const insertLabel = ann.type === 'insert' ? (ann.insertPosition === 'before' ? '（前插）' : '（后插）') : '';
-            lines.push(`### 指令 ${num}${ann.type === 'comment' ? '（修改）' : ann.type === 'delete' ? '（删除）' : insertLabel}`);
+            const insertLabel = ann.type === 'insert'
+                ? (ann.insertPosition === 'before' ? t('export.label_insert_before') : t('export.label_insert_after'))
+                : '';
+            const typeLabel = ann.type === 'comment' ? t('export.label_modify')
+                : ann.type === 'delete' ? t('export.label_delete')
+                    : insertLabel;
+            lines.push(`### ${t('export.instruction_num', { num })}${typeLabel}`);
             lines.push(``);
 
             if (ann.orphaned) {
-                lines.push(`- **定位状态**：未定位（源文件变化后无法唯一匹配，请人工确认）`);
+                lines.push(`- **${t('export.field_locate_status')}**${sep}${t('export.orphaned_note')}`);
             }
 
             if (ann.type === 'comment') {
-                lines.push(`- **操作**：根据评论修改内容`);
-                if (!ann.orphaned) lines.push(`- **定位块**：第 ${ann.blockIndex + 1} 块`);
+                lines.push(`- **${t('export.field_operation')}**${sep}${t('export.op_modify')}`);
+                if (!ann.orphaned) lines.push(`- **${t('export.field_block')}**${sep}${t('export.field_block_value', { n: ann.blockIndex + 1 })}`);
                 if (!ann.orphaned && blockFingerprint) {
-                    lines.push(`- **文本锚点**：\`${blockFingerprint}\``);
+                    lines.push(`- **${t('export.field_anchor')}**${sep}\`${blockFingerprint}\``);
                 }
                 if (!ann.orphaned && ann.startOffset != null) {
-                    lines.push(`- **块内偏移**：第 ${ann.startOffset} 个字符处（startOffset=${ann.startOffset}）`);
+                    lines.push(`- **${t('export.field_offset')}**${sep}${t('export.field_offset_value', { n: ann.startOffset })}`);
                 }
-                lines.push(`- **目标文本**：`);
+                lines.push(`- **${t('export.field_target_text')}**${sep}`);
                 lines.push(`\`\`\``);
                 lines.push(ann.selectedText);
                 lines.push(`\`\`\``);
-                lines.push(`- **评论内容**：${ann.comment}`);
+                lines.push(`- **${t('export.field_comment')}**${sep}${ann.comment}`);
                 if (ann.images && ann.images.length > 0) {
-                    lines.push(`- **附图**：共 ${ann.images.length} 张`);
+                    lines.push(`- **${t('export.field_images')}**${sep}${t('export.field_images_count', { count: ann.images.length })}`);
                     ann.images.forEach((img, j) => {
-                        lines.push(`  - 图片${j + 1}：`);
-                        lines.push(`  ![附图${j + 1}](${img})`);
+                        lines.push(`  - ${t('export.field_image_n', { n: j + 1 })}`);
+                        lines.push(`  ![${t('export.image_alt', { n: j + 1 })}](${img})`);
                     });
                 }
             } else if (ann.type === 'delete') {
-                lines.push(`- **操作**：删除以下文本`);
-                if (!ann.orphaned) lines.push(`- **定位块**：第 ${ann.blockIndex + 1} 块`);
+                lines.push(`- **${t('export.field_operation')}**${sep}${t('export.op_delete')}`);
+                if (!ann.orphaned) lines.push(`- **${t('export.field_block')}**${sep}${t('export.field_block_value', { n: ann.blockIndex + 1 })}`);
                 if (!ann.orphaned && blockFingerprint) {
-                    lines.push(`- **文本锚点**：\`${blockFingerprint}\``);
+                    lines.push(`- **${t('export.field_anchor')}**${sep}\`${blockFingerprint}\``);
                 }
                 if (!ann.orphaned && ann.startOffset != null) {
-                    lines.push(`- **块内偏移**：第 ${ann.startOffset} 个字符处（startOffset=${ann.startOffset}）`);
+                    lines.push(`- **${t('export.field_offset')}**${sep}${t('export.field_offset_value', { n: ann.startOffset })}`);
                 }
-                lines.push(`- **要删除的文本**：`);
+                lines.push(`- **${t('export.field_delete_text')}**${sep}`);
                 lines.push(`\`\`\``);
                 lines.push(ann.selectedText);
                 lines.push(`\`\`\``);
             } else if (ann.type === 'insert') {
                 const isBefore = ann.insertPosition === 'before';
-                lines.push(`- **操作**：在指定位置${isBefore ? '前' : '后'}插入新内容`);
-                if (!ann.orphaned) lines.push(`- **定位块**：第 ${ann.blockIndex + 1} 块`);
+                lines.push(`- **${t('export.field_operation')}**${sep}${isBefore ? t('export.op_insert_before') : t('export.op_insert_after')}`);
+                if (!ann.orphaned) lines.push(`- **${t('export.field_block')}**${sep}${t('export.field_block_value', { n: ann.blockIndex + 1 })}`);
                 if (!ann.orphaned && blockFingerprint) {
-                    lines.push(`- **文本锚点**：\`${blockFingerprint}\``);
+                    lines.push(`- **${t('export.field_anchor')}**${sep}\`${blockFingerprint}\``);
                 }
                 if (!ann.orphaned && ann.startOffset != null) {
-                    lines.push(`- **块内偏移**：第 ${ann.startOffset} 个字符处（startOffset=${ann.startOffset}）`);
+                    lines.push(`- **${t('export.field_offset')}**${sep}${t('export.field_offset_value', { n: ann.startOffset })}`);
                 }
-                lines.push(`- **插入位置（在此文本之${isBefore ? '前' : '后'}）**：`);
+                lines.push(`- **${isBefore ? t('export.field_insert_position_before') : t('export.field_insert_position_after')}**${sep}`);
                 lines.push(`\`\`\``);
                 lines.push(ann.selectedText);
                 lines.push(`\`\`\``);
-                lines.push(`- **要插入的内容**：`);
+                lines.push(`- **${t('export.field_insert_content')}**${sep}`);
                 lines.push(`\`\`\``);
                 lines.push(ann.insertContent);
                 lines.push(`\`\`\``);
                 if (ann.comment) {
-                    lines.push(`- **插入说明**：${ann.comment}`);
+                    lines.push(`- **${t('export.field_insert_reason')}**${sep}${ann.comment}`);
                 }
             }
             lines.push(``);
@@ -196,16 +202,16 @@ showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
 
         lines.push(`---`);
         lines.push(``);
-        lines.push(`## 原始数据（JSON）`);
+        lines.push(`## ${t('export.section_json')}`);
         lines.push(``);
-        lines.push(`> 如需精确操作，可使用以下 JSON 数据。其中 \`blockIndex\` 是基于空行分割的块索引（从0开始），\`startOffset\` 是目标文本在块内的字符偏移量（从0开始），可用于区分同一块内的重复文本。`);
+        lines.push(`> ${t('export.json_hint')}`);
         lines.push(``);
         lines.push(`\`\`\`json`);
 
         const exportAnnotations = data.annotations.map(a => ({ ...a }));
         lines.push(JSON.stringify({
             fileName: data.fileName,
-            docVersion: data.docVersion || '未知',
+            docVersion: data.docVersion || t('export.unknown'),
             reviewVersion: data.reviewVersion || 1,
             annotationCount: data.annotations.length,
             rawMarkdown: data.rawMarkdown || '',
@@ -218,10 +224,10 @@ showExportSuccess(`已保存到 .review 目录：${mdFileName}`);
             const hasPathImages = data.annotations.some(a => a.images && a.images.some(img => !_isBase64Image(img)));
             lines.push(``);
             if (hasPathImages) {
-lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .review 目录的 images 子目录中。`);
+                lines.push(`> ${t('export.image_note')}`);
             }
             if (hasBase64) {
-                lines.push(`> **注意**：部分批注包含 Base64 图片数据，完整图片数据已同时导出为 JSON 文件，请一并发送给 AI。`);
+                lines.push(`> ${t('export.base64_note')}`);
             }
         }
 
@@ -289,6 +295,21 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
         }
     }
 
+    /**
+     * 立即执行一次自动保存（绕过 AUTO_SAVE_DELAY 防抖）。
+     *
+     * 用于手动保存（Ctrl+S）之后：.md 文件已更新，但 .review 里的
+     * rawMarkdown 快照还是旧的，下次打开会被 _isRecordStaleOnOpen 误判为
+     * 外部修改并错误地升版、把批注归档（issue #4）。
+     */
+    function doAutoSaveNow() {
+        if (autoSaveTimer) {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = null;
+        }
+        return doAutoSave();
+    }
+
     async function doAutoSave() {
         const data = Store.getData();
         if (!data.fileName) return;
@@ -317,6 +338,7 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
                 const mdFileName = `${rbaseName}_v${version}_record.md`;
                 const saved = await saveViaHost(mdFileName, doc);
                 updateAutoSaveStatus(saved ? 'saved' : 'error');
+                if (saved && Store.setHasReviewRecord) Store.setHasReviewRecord(true);
             } catch (e) {
                 console.error('[AutoSave] 空版本占位记录保存失败:', e);
                 updateAutoSaveStatus('error');
@@ -334,6 +356,7 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
             const saved = await saveViaHost(mdFileName, doc);
             if (saved) {
                 updateAutoSaveStatus('saved');
+                if (Store.setHasReviewRecord) Store.setHasReviewRecord(true);
                 // 只有包含 Base64 图片时才需要额外保存 JSON（路径引用的图片已在文件系统中）
                 if (_hasBase64Images(data.annotations)) {
                     const jsonFileName = `${rbaseName}_v${version}_data.json`;
@@ -358,14 +381,14 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
         const indicator = document.getElementById('autoSaveStatus');
         if (!indicator) return;
         if (status === 'saved') {
-            indicator.textContent = '✓ 已自动保存';
+            indicator.textContent = t('notification.auto_saved');
             indicator.className = 'auto-save-status saved';
         } else if (status === 'error') {
             indicator.textContent = t('notification.auto_save_failed');
             indicator.className = 'auto-save-status error';
         }
         setTimeout(() => {
-            if (indicator.textContent !== '✗ 保存失败') {
+            if (indicator.textContent !== t('notification.auto_save_failed')) {
                 indicator.className = 'auto-save-status';
             }
         }, 5000);
@@ -377,7 +400,8 @@ lines.push(`> **注意**：批注中包含图片附件，图片文件存储在 .
 
     return {
         exportReviewDocument, generateReviewDoc,
-        enableAutoSave, disableAutoSave, triggerAutoSave, isAutoSaveEnabled, setAutoSaveDelay
+        enableAutoSave, disableAutoSave, triggerAutoSave, isAutoSaveEnabled, setAutoSaveDelay,
+        doAutoSaveNow
     };
 })();
 

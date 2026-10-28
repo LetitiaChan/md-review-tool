@@ -298,6 +298,13 @@ window.I18n = (() => {
             'help.shortcut_save': '保存编辑内容到源文件',
             'help.shortcut_mode': '切换预览/编辑模式',
             'help.shortcut_esc': '关闭弹窗 / 退出禅模式 / 关闭搜索栏',
+            'help.shortcut_comment': '为选中文本添加评论',
+            'help.shortcut_delete': '标记选中文本为删除',
+            'help.shortcut_insert_after': '在选中文本后插入内容',
+            'help.shortcut_insert_before': '在选中文本前插入内容',
+            'help.shortcut_next_annotation': '跳转到下一条批注',
+            'help.shortcut_prev_annotation': '跳转到上一条批注',
+            'help.shortcut_toggle_toc': '显示 / 隐藏目录',
             'help.feedback': 'Bug 反馈 & 优化建议',
 
             // ===== 设置面板 =====
@@ -530,6 +537,10 @@ window.I18n = (() => {
             'export.section_json': '原始数据（JSON）',
             'export.json_hint': '如需精确操作，可使用以下 JSON 数据。其中 `blockIndex` 是基于空行分割的块索引（从0开始），`startOffset` 是目标文本在块内的字符偏移量（从0开始），可用于区分同一块内的重复文本。',
             'export.unknown': '未知',
+            'export.field_separator': '：',
+            'export.image_alt': '附图{n}',
+            'export.field_locate_status': '定位状态',
+            'export.orphaned_note': '未定位（源文件变化后无法唯一匹配，请人工确认）',
             'export.unit_count': '{n} 条',
             'export.image_note': '**注意**：批注中包含图片附件，图片文件存储在 .review 目录的 images 子目录中。',
             'export.base64_note': '**注意**：部分批注包含 Base64 图片数据，完整图片数据已同时导出为 JSON 文件，请一并发送给 AI。',
@@ -838,6 +849,13 @@ window.I18n = (() => {
             'help.shortcut_save': 'Save edits to source file',
             'help.shortcut_mode': 'Toggle preview/edit mode',
             'help.shortcut_esc': 'Close popup / Exit Zen mode / Close search bar',
+            'help.shortcut_comment': 'Comment on the selected text',
+            'help.shortcut_delete': 'Mark the selected text for deletion',
+            'help.shortcut_insert_after': 'Insert content after the selection',
+            'help.shortcut_insert_before': 'Insert content before the selection',
+            'help.shortcut_next_annotation': 'Next annotation',
+            'help.shortcut_prev_annotation': 'Previous annotation',
+            'help.shortcut_toggle_toc': 'Show / hide table of contents',
             'help.feedback': 'Bug Reports & Suggestions',
 
             // ===== Settings Panel =====
@@ -1070,6 +1088,10 @@ window.I18n = (() => {
             'export.section_json': 'Raw Data (JSON)',
             'export.json_hint': 'For precise operations, use the JSON data below. `blockIndex` is the blank-line-delimited block index (0-based), and `startOffset` is the character offset within the block (0-based), useful for distinguishing duplicate text in the same block.',
             'export.unknown': 'Unknown',
+            'export.field_separator': ': ',
+            'export.image_alt': 'Image {n}',
+            'export.field_locate_status': 'Location',
+            'export.orphaned_note': 'Not located (source changed and no unique match; please confirm manually)',
             'export.unit_count': '{n}',
             'export.image_note': '**Note**: Annotations contain image attachments. Image files are stored in the images subdirectory of the .review directory.',
             'export.base64_note': '**Note**: Some annotations contain Base64 image data. Complete image data has been exported as a JSON file as well.',
@@ -1279,6 +1301,12 @@ window.I18n = (() => {
         <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_save')}</td></tr>
         <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_mode')}</td></tr>
         <tr><td style="padding:4px 8px;"><kbd>ESC</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_esc')}</td></tr>
+        <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_comment')}</td></tr>
+        <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_delete')}</td></tr>
+        <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_insert_after')}</td></tr>
+        <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_insert_before')}</td></tr>
+        <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd>/<kbd>K</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_next_annotation')} / ${_t('help.shortcut_prev_annotation')}</td></tr>
+        <tr><td style="padding:4px 8px;"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd></td><td style="padding:4px 8px;">${_t('help.shortcut_toggle_toc')}</td></tr>
     </table>
 </section>
 <section class="help-section help-links">

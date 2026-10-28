@@ -48,7 +48,14 @@
 | `Ctrl+Shift+E` | Toggle preview / edit mode |
 | `Alt+Z` | Zen mode |
 | `Ctrl+Enter` | Open review panel from Explorer |
+| `Ctrl+Enter` (in panel) | Comment on the selected text |
+| `Ctrl+Shift+D` | Mark the selection for deletion |
+| `Ctrl+Shift+A` / `B` | Insert content after / before the selection |
+| `Ctrl+Shift+J` / `K` | Next / previous annotation |
+| `Ctrl+Shift+T` | Show / hide the table of contents |
 | `ESC` | Close modal / exit Zen mode / close search |
+
+> On macOS use `Cmd` instead of `Ctrl`.
 
 ## 🚀 Quick Start
 
@@ -143,7 +150,14 @@ MIT
 | `Ctrl+Shift+E` | 切换预览 / 编辑模式 |
 | `Alt+Z` | 禅模式 |
 | `Ctrl+Enter` | 在资源管理器中打开批阅面板 |
+| `Ctrl+Enter`（面板内） | 为选中文本添加评论 |
+| `Ctrl+Shift+D` | 标记选中文本为删除 |
+| `Ctrl+Shift+A` / `B` | 在选中文本后 / 前插入内容 |
+| `Ctrl+Shift+J` / `K` | 下一条 / 上一条批注 |
+| `Ctrl+Shift+T` | 显示 / 隐藏目录 |
 | `ESC` | 关闭弹窗 / 退出禅模式 / 关闭搜索 |
+
+> macOS 上使用 `Cmd` 代替 `Ctrl`。
 
 ## 🚀 快速开始
 
