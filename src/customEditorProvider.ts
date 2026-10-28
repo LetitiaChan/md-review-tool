@@ -33,6 +33,19 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
             provider,
             {
                 webviewOptions: {
+                    // 保留隐藏标签页的 Webview 上下文。
+                    //
+                    // 评估结论（2026-10）：暂时保持 true。关闭后 Webview 会被销毁，
+                    // 而当前只持久化了文档与批注（vscode.setState + workspaceState），
+                    // 没有持久化滚动位置、预览/富文本模式与光标；并且富文本输入依赖
+                    // 250ms 序列化 + 1.5s 自动保存，销毁时不会执行 exitRich，
+                    // 最后一段输入可能永久丢失。
+                    //
+                    // 内存实测（单 Webview，JS 堆增量）：100 块 +0.8MB、
+                    // 1000 块 +1.3MB、4000 块 +2.7MB（不含 DOM/SVG）。
+                    //
+                    // 若要改为 false，需先补齐上述状态的持久化，并在
+                    // onDidChangeViewState(visible=false) 时 flush 编辑内容。
                     retainContextWhenHidden: true,
                 },
                 supportsMultipleEditorsPerDocument: false,
