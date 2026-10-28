@@ -20,44 +20,15 @@
  *   - Mermaid / KaTeX
  *   - GitHub 风格 Emoji (:emoji_name:)
  */
+import { RenderContext as ctx } from './renderer/context.js';
+
 const Renderer = (() => {
 
-    // 缓存图片 URI 映射
-    let _imageUriCache = {};
-    // Mermaid 图表唯一 ID 计数器
-    let _mermaidCounter = 0;
-    // Mermaid 是否已初始化
-    let _mermaidInitialized = false;
-    // 上次初始化使用的主题（避免每次刷新都重复 initialize）
-    let _mermaidTheme = null;
-    // 标题 slug 去重计数（每次 renderBlocks 重置）
-    let _slugCounts = Object.create(null);
-    // YAML Front Matter 卡片是否展开（重渲染后保持；内容变化时重置）
-    let _frontmatterExpanded = false;
-    let _frontmatterKey = null;
-    // 增量渲染：每块「无批注」HTML 与原始块文本
-    let _blockBaseHtml = [];
-    let _blockRaw = [];
-    // 上次渲染的批注快照（用于计算受影响块）
-    let _lastAnnotations = [];
-    // 渲染过程中收集到的相对图片路径（替代 requestImageUris 里的全文 marked.parse）
-    let _collectedImagePaths = new Set();
-
-    // 数学公式占位符机制
+    // 数学公式占位符
     const MATH_PLACEHOLDER_PREFIX = '%%MATH_EXPR_';
     const MATH_PLACEHOLDER_SUFFIX = '%%';
-    let _mathExpressions = [];
 
-    // 引用式链接定义收集（跨块共享）
-    let _refLinkDefs = [];
-    // 脚注定义原始行收集（跨块共享，注入每个块以支持 marked-footnote 跨块解析）
-    let _footnoteDefs = [];
-    // 编辑模式快照用：保存脚注/引用式链接提取前的原始 blocks（含脚注定义行）
-    let _rawBlocksBeforeExtract = [];
-    // 编辑模式快照用：保存被过滤掉的空块（全是脚注/引用式链接定义）的位置和原始内容
-    let _orphanedDefBlocks = []; // {insertBeforeIndex: number, rawText: string}
-    // 编辑模式快照用：每个非空 block 中被提取的定义行（引用式链接/脚注）
-    let _inlineExtractedDefs = []; // 每个元素是字符串数组，对应 finalBlocks[i] 中被提取的定义行
+    // 共享状态统一由 ./renderer/context.js 管理（ctx）
 
     // ===== HTML 转义辅助 =====
     function escapeHtml(str) {
@@ -72,26 +43,25 @@ const Renderer = (() => {
         const root = base || 'section';
         let slug = root;
         let n = 1;
-        while (Object.prototype.hasOwnProperty.call(_slugCounts, slug)) {
+        while (Object.prototype.hasOwnProperty.call(ctx.slugCounts, slug)) {
             slug = root + '-' + n++;
         }
-        _slugCounts[slug] = true;
+        ctx.slugCounts[slug] = true;
         return slug;
     }
 
     // ===== 代码高亮（带 LRU 缓存） =====
     // highlightAuto 会尝试所有已注册语言，对大代码块非常慢；仅对小代码块启用。
-    const _highlightCache = new Map();
     const HIGHLIGHT_CACHE_MAX = 200;
     const HIGHLIGHT_AUTO_MAX_LENGTH = 2048;
 
     function getHighlightedCode(lang, code) {
         const cacheKey = (lang || '') + '\u0000' + code;
-        const cached = _highlightCache.get(cacheKey);
+        const cached = ctx.highlightCache.get(cacheKey);
         if (cached !== undefined) {
             // LRU：命中后移到队尾
-            _highlightCache.delete(cacheKey);
-            _highlightCache.set(cacheKey, cached);
+            ctx.highlightCache.delete(cacheKey);
+            ctx.highlightCache.set(cacheKey, cached);
             return cached;
         }
 
@@ -166,10 +136,10 @@ const Renderer = (() => {
             }
         }
 
-        _highlightCache.set(cacheKey, highlighted);
-        if (_highlightCache.size > HIGHLIGHT_CACHE_MAX) {
+        ctx.highlightCache.set(cacheKey, highlighted);
+        if (ctx.highlightCache.size > HIGHLIGHT_CACHE_MAX) {
             // 删除最早插入的条目
-            _highlightCache.delete(_highlightCache.keys().next().value);
+            ctx.highlightCache.delete(ctx.highlightCache.keys().next().value);
         }
         return highlighted;
     }
@@ -475,8 +445,8 @@ const Renderer = (() => {
         // 同时收集脚注定义 [^id]: content（包括后续 4-space 缩进行），交给 marked-footnote 处理
         const refLinkDefRegex = /^\s{0,3}\[([^\]]+)\]:\s+(.+?)(?:\s+(?:"([^"]*)"|'([^']*)'|\(([^)]*)\)))?\s*$/;
         const footnoteDefStartRegex = /^\s{0,3}\[\^([^\]\n]+)\]:\s*/;
-        _refLinkDefs = [];
-        _footnoteDefs = [];
+        ctx.refLinkDefs = [];
+        ctx.footnoteDefs = [];
         // 保存脚注/引用式链接提取前的原始 blocks（编辑模式快照用）
         const rawBlocksCopy = blocks.map(b => b);
         for (let b = 0; b < blocks.length; b++) {
@@ -516,11 +486,11 @@ const Renderer = (() => {
                             break;
                         }
                     }
-                    _footnoteDefs.push(fnLines.join('\n'));
+                    ctx.footnoteDefs.push(fnLines.join('\n'));
                 } else {
                     const m = refLinkDefRegex.exec(line);
                     if (m) {
-                        _refLinkDefs.push(line.trim());
+                        ctx.refLinkDefs.push(line.trim());
                     } else {
                         remaining.push(line);
                     }
@@ -534,27 +504,27 @@ const Renderer = (() => {
         // 移除空块，同时保存对应的原始 block（含脚注/引用式链接定义，编辑模式快照用）
         // 空块（全是脚注/引用式链接定义）单独记录位置和内容，不合并到相邻块
         const finalBlocks = [];
-        _rawBlocksBeforeExtract = [];
-        _orphanedDefBlocks = []; // {insertBeforeIndex: number, rawText: string}
-        _inlineExtractedDefs = []; // 每个元素对应 finalBlocks[i] 中被提取的定义行
+        ctx.rawBlocksBeforeExtract = [];
+        ctx.orphanedDefBlocks = []; // {insertBeforeIndex: number, rawText: string}
+        ctx.inlineExtractedDefs = []; // 每个元素对应 finalBlocks[i] 中被提取的定义行
         let pendingOrphans = []; // 暂存被过滤掉的空块原始内容
         for (let b = 0; b < blocks.length; b++) {
             if (blocks[b].length > 0) {
                 // 将之前暂存的空块记录为"插入到当前 finalBlock 索引之前"
                 const currentFinalIndex = finalBlocks.length;
                 for (const orphan of pendingOrphans) {
-                    _orphanedDefBlocks.push({ insertBeforeIndex: currentFinalIndex, rawText: orphan });
+                    ctx.orphanedDefBlocks.push({ insertBeforeIndex: currentFinalIndex, rawText: orphan });
                 }
                 pendingOrphans = [];
                 finalBlocks.push(blocks[b]);
-                _rawBlocksBeforeExtract.push(rawBlocksCopy[b]);
+                ctx.rawBlocksBeforeExtract.push(rawBlocksCopy[b]);
                 // 计算该非空块中被提取的定义行（rawBlocksCopy[b] 和 blocks[b] 的差异）
                 // 注意：blocks[b] 经过 .trim() 处理，首尾行的空白可能被去掉，
                 // 所以用 trimmed 行进行比较，避免因空白差异导致非定义行被错误提取
                 const rawLines = rawBlocksCopy[b].split('\n');
                 const cleanedLines = new Set(blocks[b].split('\n').map(l => l.trimEnd()));
                 const extractedLines = rawLines.filter(line => !cleanedLines.has(line.trimEnd()));
-                _inlineExtractedDefs.push(extractedLines);
+                ctx.inlineExtractedDefs.push(extractedLines);
             } else {
                 // 空块（全是脚注/引用式链接定义），暂存其原始内容
                 pendingOrphans.push(rawBlocksCopy[b]);
@@ -562,7 +532,7 @@ const Renderer = (() => {
         }
         // 如果末尾还有暂存的空块，记录为"插入到最后一个 finalBlock 之后"
         for (const orphan of pendingOrphans) {
-            _orphanedDefBlocks.push({ insertBeforeIndex: finalBlocks.length, rawText: orphan });
+            ctx.orphanedDefBlocks.push({ insertBeforeIndex: finalBlocks.length, rawText: orphan });
         }
 
         return finalBlocks;
@@ -573,9 +543,9 @@ const Renderer = (() => {
      * 避免 marked 将公式中的 _、*、\ 等特殊字符错误解析
      */
     function preprocessMath(md) {
-        // 注意：不再在此处清空 _mathExpressions
+        // 注意：不再在此处清空 ctx.mathExpressions
         // 因为 renderBlocks 逐块调用 preprocessMath，清空会导致前面块的公式丢失
-        // _mathExpressions 的清空已移至 renderBlocks 开头统一执行
+        // ctx.mathExpressions 的清空已移至 renderBlocks 开头统一执行
         let result = md;
 
         // 1. 先保护代码块（代码中的 $ 不应被当作公式）
@@ -588,8 +558,8 @@ const Renderer = (() => {
 
         // 2. 处理块级公式 $$...$$（可跨行）
         result = result.replace(/\$\$([\s\S]+?)\$\$/g, (match, formula) => {
-            const index = _mathExpressions.length;
-            _mathExpressions.push({ formula: formula.trim(), displayMode: true });
+            const index = ctx.mathExpressions.length;
+            ctx.mathExpressions.push({ formula: formula.trim(), displayMode: true });
             return `\n\n${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}\n\n`;
         });
 
@@ -599,8 +569,8 @@ const Renderer = (() => {
             if (/^\d/.test(formula.trim()) && /\d$/.test(formula.trim()) && !/[\\{}^_]/.test(formula)) {
                 return match;
             }
-            const index = _mathExpressions.length;
-            _mathExpressions.push({ formula: formula.trim(), displayMode: false });
+            const index = ctx.mathExpressions.length;
+            ctx.mathExpressions.push({ formula: formula.trim(), displayMode: false });
             return `${MATH_PLACEHOLDER_PREFIX}${index}${MATH_PLACEHOLDER_SUFFIX}`;
         });
 
@@ -673,12 +643,11 @@ const Renderer = (() => {
      */
     // marked 配置是否已完成（configureHighlight 幂等：重复调用会重复注册扩展，
     // 实测 4000 块文档解析耗时从 70ms 涨到 376ms）
-    let _highlightConfigured = false;
 
     function configureHighlight() {
         if (typeof marked === 'undefined') return;
-        if (_highlightConfigured) return;
-        _highlightConfigured = true;
+        if (ctx.highlightConfigured) return;
+        ctx.highlightConfigured = true;
 
         const renderer = new marked.Renderer();
 
@@ -691,7 +660,7 @@ const Renderer = (() => {
 
             // Mermaid 图表：使用 base64 编码存储源码，避免 HTML 转义破坏 mermaid 语法
             if (lang === 'mermaid') {
-                const id = 'mermaid-' + (++_mermaidCounter);
+                const id = 'mermaid-' + (++ctx.mermaidCounter);
                 const base64Code = btoa(unescape(encodeURIComponent(code)));
                 return `<div class="mermaid-container" data-mermaid-id="${id}"><div class="mermaid-source-data" data-source="${base64Code}" style="display:none"></div><pre class="mermaid-source">${escapeHtml(code)}</pre></div>`;
             }
@@ -815,7 +784,7 @@ const Renderer = (() => {
             const text = data.text || '';
             const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
             if (href && !/^(https?:\/\/|data:|vscode-)/i.test(href)) {
-                try { _collectedImagePaths.add(decodeURIComponent(href)); } catch (e) { _collectedImagePaths.add(href); }
+                try { ctx.collectedImagePaths.add(decodeURIComponent(href)); } catch (e) { ctx.collectedImagePaths.add(href); }
             }
             return `<span class="md-image-container"><img src="${href}" alt="${escapeHtml(text)}"${titleAttr} loading="lazy" class="md-image" />${text ? `<span class="md-image-caption" style="display:none">${escapeHtml(text)}</span>` : ''}</span>`;
         };
@@ -1103,7 +1072,6 @@ const Renderer = (() => {
     }
 
     // 渲染完成回调列表
-    const _renderCompleteCallbacks = [];
 
     function renderBlocks(blocks, annotations) {
         annotations = annotations || [];
@@ -1111,21 +1079,21 @@ const Renderer = (() => {
         container.innerHTML = '';
 
         // 每次整篇重渲染都重新计数标题 slug，保证 id 唯一且稳定
-        _slugCounts = Object.create(null);
+        ctx.slugCounts = Object.create(null);
         // 重置增量渲染缓存与图片路径收集
-        _blockBaseHtml = [];
-        _blockRaw = [];
-        _collectedImagePaths = new Set();
+        ctx.blockBaseHtml = [];
+        ctx.blockRaw = [];
+        ctx.collectedImagePaths = new Set();
 
         // 统一清空数学公式缓存，后续逐块 preprocessMath 会累积填充
-        _mathExpressions = [];
+        ctx.mathExpressions = [];
 
         // 建立脚注标签 → 全局序号的映射（按定义顺序编号 1, 2, 3, ...）
         const fnLabelToGlobalIndex = {};
-        if (_footnoteDefs.length > 0) {
+        if (ctx.footnoteDefs.length > 0) {
             const fnLabelRegex = /^\s{0,3}\[\^([^\]\n]+)\]:/;
             let globalIdx = 1;
-            for (const def of _footnoteDefs) {
+            for (const def of ctx.footnoteDefs) {
                 const m = fnLabelRegex.exec(def);
                 if (m) {
                     fnLabelToGlobalIndex[encodeURIComponent(m[1])] = globalIdx++;
@@ -1134,8 +1102,8 @@ const Renderer = (() => {
         }
 
         // 循环外预计算注入片段，避免每个块重复 join（O(块数 × 定义数)）
-        const refSuffix = _refLinkDefs.length > 0 ? '\n\n' + _refLinkDefs.join('\n') : '';
-        const fnSuffix = _footnoteDefs.length > 0 ? '\n\n' + _footnoteDefs.join('\n\n') : '';
+        const refSuffix = ctx.refLinkDefs.length > 0 ? '\n\n' + ctx.refLinkDefs.join('\n') : '';
+        const fnSuffix = ctx.footnoteDefs.length > 0 ? '\n\n' + ctx.footnoteDefs.join('\n\n') : '';
         const hasFnMap = Object.keys(fnLabelToGlobalIndex).length > 0;
 
         blocks.forEach((block, index) => {
@@ -1160,17 +1128,17 @@ const Renderer = (() => {
                     }
                 }
                 // 同一篇文档重渲染时保持展开状态；文档内容变了则回到折叠
-                if (fmRaw !== _frontmatterKey) {
-                    _frontmatterKey = fmRaw;
-                    _frontmatterExpanded = false;
+                if (fmRaw !== ctx.frontmatterKey) {
+                    ctx.frontmatterKey = fmRaw;
+                    ctx.frontmatterExpanded = false;
                 }
-                const collapsedClass = _frontmatterExpanded ? '' : ' fm-collapsed';
+                const collapsedClass = ctx.frontmatterExpanded ? '' : ' fm-collapsed';
                 wrapper.innerHTML = `<div class="frontmatter-card${collapsedClass}"><div class="fm-header"><span class="fm-toggle-arrow">▶</span><span class="fm-icon">⚙️</span><span class="fm-title">YAML Front Matter</span></div><div class="fm-body">${propsHtml}</div></div>`;
                 const fmCard = wrapper.querySelector('.frontmatter-card');
                 const fmHeader = wrapper.querySelector('.fm-header');
                 fmHeader.addEventListener('click', () => {
                     // classList.toggle 返回 true 表示现在带上了 fm-collapsed（即折叠）
-                    _frontmatterExpanded = !fmCard.classList.toggle('fm-collapsed');
+                    ctx.frontmatterExpanded = !fmCard.classList.toggle('fm-collapsed');
                 });
                 container.appendChild(wrapper);
                 return; // 跳过后续 marked 解析流程
@@ -1205,8 +1173,8 @@ const Renderer = (() => {
             html = rewriteImagePaths(html);
 
             // 缓存「无批注」HTML：增量渲染时直接复用，跳过 marked + highlight.js
-            _blockBaseHtml[index] = html;
-            _blockRaw[index] = block;
+            ctx.blockBaseHtml[index] = html;
+            ctx.blockRaw[index] = block;
 
             const allAnnotations = collectAnnotationsForBlock(block, index, annotations);
             if (allAnnotations.length > 0) {
@@ -1219,18 +1187,18 @@ const Renderer = (() => {
 
         // 所有块渲染完成后，统一在文档末尾渲染脚注区域
         // 用 marked-footnote 对所有脚注引用+定义做一次完整解析
-        if (_footnoteDefs.length > 0) {
+        if (ctx.footnoteDefs.length > 0) {
             // 构造包含虚拟引用和所有脚注定义的 Markdown，让 marked-footnote 生成完整脚注 section
             // 提取所有脚注标签
             const fnLabels = [];
             const fnLabelRegex = /^\s{0,3}\[\^([^\]\n]+)\]:/;
-            for (const def of _footnoteDefs) {
+            for (const def of ctx.footnoteDefs) {
                 const m = fnLabelRegex.exec(def);
                 if (m) fnLabels.push(m[1]);
             }
             if (fnLabels.length > 0) {
                 const dummyRefs = fnLabels.map(id => `[^${id}]`).join(' ');
-                const fullFootnoteMd = dummyRefs + '\n\n' + _footnoteDefs.join('\n\n');
+                const fullFootnoteMd = dummyRefs + '\n\n' + ctx.footnoteDefs.join('\n\n');
                 let fnHtml = marked.parse(fullFootnoteMd);
                 // 提取 <section class="footnotes" ...>...</section>
                 const sectionMatch = fnHtml.match(/<section class="footnotes"[\s\S]*?<\/section>/);
@@ -1247,10 +1215,10 @@ const Renderer = (() => {
         bindImageFallbacks(container);
 
         // 记录本次批注快照，供 updateAnnotations 计算受影响块
-        _lastAnnotations = snapshotAnnotations(annotations);
+        ctx.lastAnnotations = snapshotAnnotations(annotations);
 
         // 渲染完成后调用所有注册的回调（如重新应用代码字体内联样式）
-        for (const cb of _renderCompleteCallbacks) {
+        for (const cb of ctx.renderCompleteCallbacks) {
             try { cb({ incremental: false, roots: null }); } catch (e) { console.warn('[Renderer] onRenderComplete callback error:', e); }
         }
     }
@@ -1261,7 +1229,7 @@ const Renderer = (() => {
      */
     function onRenderComplete(callback) {
         if (typeof callback === 'function') {
-            _renderCompleteCallbacks.push(callback);
+            ctx.renderCompleteCallbacks.push(callback);
         }
     }
 
@@ -1338,10 +1306,10 @@ const Renderer = (() => {
      */
     function updateAnnotations(annotations) {
         const container = document.getElementById('documentContent');
-        if (!container || _blockBaseHtml.length === 0) return false;
+        if (!container || ctx.blockBaseHtml.length === 0) return false;
 
         const next = annotations || [];
-        const affected = computeAffectedBlocks(_lastAnnotations, next);
+        const affected = computeAffectedBlocks(ctx.lastAnnotations, next);
         if (affected === null) return false;
 
         const wrappers = container.querySelectorAll(':scope > .md-block');
@@ -1349,15 +1317,15 @@ const Renderer = (() => {
 
         for (const idx of affected) {
             const wrapper = wrappers[idx];
-            const block = _blockRaw[idx];
+            const block = ctx.blockRaw[idx];
             if (!wrapper || block === undefined) continue;
 
-            let html = _blockBaseHtml[idx];
+            let html = ctx.blockBaseHtml[idx];
             // frontmatter 卡片的展开状态不属于基础 HTML，按当前状态恢复
             if (block.startsWith('%%FRONTMATTER%%')) {
                 html = html.replace(
                     /class="frontmatter-card[^"]*"/,
-                    `class="frontmatter-card${_frontmatterExpanded ? '' : ' fm-collapsed'}"`
+                    `class="frontmatter-card${ctx.frontmatterExpanded ? '' : ' fm-collapsed'}"`
                 );
             }
 
@@ -1370,11 +1338,11 @@ const Renderer = (() => {
             roots.push(wrapper);
         }
 
-        _lastAnnotations = snapshotAnnotations(next);
+        ctx.lastAnnotations = snapshotAnnotations(next);
 
         // 只对受影响块补跑公式/图表/按钮绑定
         if (roots.length > 0) {
-            for (const cb of _renderCompleteCallbacks) {
+            for (const cb of ctx.renderCompleteCallbacks) {
                 try { cb({ incremental: true, roots }); } catch (e) {
                     console.warn('[Renderer] onRenderComplete callback error:', e);
                 }
@@ -1387,8 +1355,8 @@ const Renderer = (() => {
      * 取出本轮渲染收集到的相对图片路径（并清空集合）
      */
     function takeCollectedImagePaths() {
-        const paths = Array.from(_collectedImagePaths);
-        _collectedImagePaths = new Set();
+        const paths = Array.from(ctx.collectedImagePaths);
+        ctx.collectedImagePaths = new Set();
         return paths;
     }
 
@@ -1850,11 +1818,11 @@ const Renderer = (() => {
             try { decodedSrc = decodeURIComponent(src); } catch (e) { decodedSrc = src; }
 
             // 收集相对图片路径，供 requestImageUris 批量解析（避免再对全文跑 marked.parse）
-            _collectedImagePaths.add(decodedSrc);
+            ctx.collectedImagePaths.add(decodedSrc);
 
             // Check cache
-            if (_imageUriCache[decodedSrc]) {
-                return `<img ${before}src="${_imageUriCache[decodedSrc]}"${after}>`;
+            if (ctx.imageUriCache[decodedSrc]) {
+                return `<img ${before}src="${ctx.imageUriCache[decodedSrc]}"${after}>`;
             }
 
             // 占位提示：加载失败时由 bindImageFallbacks() 读取 data-loading-hint 展示
@@ -1868,7 +1836,7 @@ const Renderer = (() => {
      * 设置图片 URI 缓存（从 Extension Host 批量获取后调用）
      */
     function setImageUriCache(uriMap) {
-        _imageUriCache = { ..._imageUriCache, ...uriMap };
+        ctx.imageUriCache = { ...ctx.imageUriCache, ...uriMap };
     }
 
     /**
@@ -2296,7 +2264,7 @@ const Renderer = (() => {
         // 主题未变化时无需重复 initialize
         const isDark = document.body.classList.contains('theme-dark');
         const themeKey = isDark ? 'dark' : 'default';
-        if (!_mermaidInitialized || _mermaidTheme !== themeKey) {
+        if (!ctx.mermaidInitialized || ctx.mermaidTheme !== themeKey) {
             mermaid.initialize({
             startOnLoad: false,
             theme: isDark ? 'dark' : 'default',
@@ -2338,8 +2306,8 @@ const Renderer = (() => {
                 nodeTextColor: '#e2e8f0',
             } : {},
         });
-            _mermaidInitialized = true;
-            _mermaidTheme = themeKey;
+            ctx.mermaidInitialized = true;
+            ctx.mermaidTheme = themeKey;
         }
 
         for (const container of containers) {
@@ -2361,7 +2329,7 @@ const Renderer = (() => {
             // 使用唯一 ID（加入时间戳），避免 mermaid 内部 D3 缓存导致的渲染错误
             // mermaid v10 在同一页面中多次渲染时，如果复用了之前的 ID，
             // 内部的 D3.js 选择器可能选中旧的 DOM 元素，导致 SVG 内容不正确
-            const id = 'mermaid-' + Date.now() + '-' + (++_mermaidCounter);
+            const id = 'mermaid-' + Date.now() + '-' + (++ctx.mermaidCounter);
 
             // 注意：不在循环内做全局 querySelectorAll 清理（O(n²) 性能问题）
             // 每次渲染后通过精确的 getElementById 清理当前临时元素（O(1)），
@@ -2448,7 +2416,7 @@ const Renderer = (() => {
                         delete container.dataset.mermaidRetry;
                         if (!code || !container.isConnected) continue;
 
-                        const retryId = 'mermaid-' + Date.now() + '-' + (++_mermaidCounter);
+                        const retryId = 'mermaid-' + Date.now() + '-' + (++ctx.mermaidCounter);
                         try {
                             const { svg } = await mermaid.render(retryId, code, container);
                             // 清理临时元素
@@ -2523,7 +2491,7 @@ const Renderer = (() => {
      * 将已渲染的图表恢复为源码状态，强制重新渲染
      */
     function reinitMermaid() {
-        _mermaidInitialized = false;
+        ctx.mermaidInitialized = false;
         // 将已渲染的图表恢复为源码占位容器，以便重新渲染
         document.querySelectorAll('.mermaid-container').forEach(container => {
             container.removeAttribute('data-mermaid-id');
@@ -2542,7 +2510,7 @@ const Renderer = (() => {
             }
         });
         // 重置计数器
-        _mermaidCounter = 0;
+        ctx.mermaidCounter = 0;
     }
 
     /**
@@ -2558,7 +2526,7 @@ const Renderer = (() => {
             }
             return;
         }
-        if (_mathExpressions.length === 0) return;
+        if (ctx.mathExpressions.length === 0) return;
 
         const container = root || document.getElementById('documentContent');
         if (!container) return;
@@ -2600,7 +2568,7 @@ const Renderer = (() => {
                 }
 
                 const exprIndex = parseInt(match[1]);
-                const expr = _mathExpressions[exprIndex];
+                const expr = ctx.mathExpressions[exprIndex];
 
                 if (expr) {
                     try {
@@ -2814,7 +2782,7 @@ const Renderer = (() => {
      * 在编辑模式下，用户需要看到并编辑原始的 $...$ / $$...$$ 文本，而非占位符
      */
     function restoreMathPlaceholders() {
-        if (_mathExpressions.length === 0) return;
+        if (ctx.mathExpressions.length === 0) return;
 
         const container = document.getElementById('documentContent');
         if (!container) return;
@@ -2845,7 +2813,7 @@ const Renderer = (() => {
             const text = textNode.textContent;
             const restored = text.replace(placeholderRegex, (match, indexStr) => {
                 const exprIndex = parseInt(indexStr);
-                const expr = _mathExpressions[exprIndex];
+                const expr = ctx.mathExpressions[exprIndex];
                 if (expr) {
                     return expr.displayMode ? `$$${expr.formula}$$` : `$${expr.formula}$`;
                 }
@@ -2857,7 +2825,7 @@ const Renderer = (() => {
         }
     }
 
-    return { parseMarkdown, renderBlocks, updateAnnotations, onRenderComplete, getBlockIndex, setImageUriCache, getImageUriCache: () => _imageUriCache, collectRelativeImagePaths, collectRelativeImagePathsFromMarkdown, takeCollectedImagePaths, patchImageUris, configureHighlight, renderMermaid, reinitMermaid, renderMath, restoreMathPlaceholders, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => _rawBlocksBeforeExtract, getOrphanedDefBlocks: () => _orphanedDefBlocks, getInlineExtractedDefs: () => _inlineExtractedDefs };
+    return { parseMarkdown, renderBlocks, updateAnnotations, onRenderComplete, getBlockIndex, setImageUriCache, getImageUriCache: () => ctx.imageUriCache, collectRelativeImagePaths, collectRelativeImagePathsFromMarkdown, takeCollectedImagePaths, patchImageUris, configureHighlight, renderMermaid, reinitMermaid, renderMath, restoreMathPlaceholders, renderPlantUML, renderGraphviz, reinitGraphviz, postprocessHTML, preprocessMath, getRawBlocksBeforeExtract: () => ctx.rawBlocksBeforeExtract, getOrphanedDefBlocks: () => ctx.orphanedDefBlocks, getInlineExtractedDefs: () => ctx.inlineExtractedDefs };
 })();
 
 // ===== ESM export (for webview bundler) =====

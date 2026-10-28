@@ -88,8 +88,8 @@ suite('Review Fixes Regression Test Suite', () => {
                 'renderer.js 应提供 uniqueHeadingSlug 去重函数');
             assert.ok(source.includes('uniqueHeadingSlug(baseSlug)'),
                 '标题渲染应调用 uniqueHeadingSlug');
-            assert.ok(/_slugCounts\s*=\s*Object\.create\(null\)/.test(source),
-                'renderBlocks 开头应重置 _slugCounts，保证 id 稳定');
+            assert.ok(/ctx\.slugCounts\s*=\s*Object\.create\(null\)/.test(source),
+                'renderBlocks 开头应重置 ctx.slugCounts，保证 id 稳定');
         });
 
         test('BT-ReviewFixes.T1.4 批注偏移计算必须把软换行 <br> 计入', () => {
@@ -179,7 +179,7 @@ suite('Review Fixes Regression Test Suite', () => {
                 '.fm-body 应使用视口相关的最大高度');
 
             const js = readSource('webview', 'js', 'renderer.js');
-            assert.ok(js.includes('_frontmatterExpanded'),
+            assert.ok(js.includes('ctx.frontmatterExpanded'),
                 'renderer.js 应持久化 frontmatter 展开状态');
         });
     });

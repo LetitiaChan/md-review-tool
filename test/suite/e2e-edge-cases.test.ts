@@ -1914,10 +1914,10 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
                 'renderer.js 应包含 onRenderComplete 注册方法'
             );
 
-            // 验证 _renderCompleteCallbacks 回调列表存在
+            // 验证回调列表存在（已迁移到共享 RenderContext）
             assert.ok(
-                rendererJs.includes('_renderCompleteCallbacks'),
-                'renderer.js 应包含 _renderCompleteCallbacks 回调列表'
+                rendererJs.includes('ctx.renderCompleteCallbacks') || rendererJs.includes('_renderCompleteCallbacks'),
+                'renderer.js 应包含 renderCompleteCallbacks 回调列表'
             );
 
             // 验证 onRenderComplete 被暴露为公共 API
