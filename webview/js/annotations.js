@@ -75,6 +75,19 @@ const Annotations = (() => {
         }
     }
 
+    /**
+     * 取批注所在块的原始 Markdown 文本，随批注一起持久化。
+     * 宿主生成 AI 指令时直接用这份文本做锚点，避免宿主/Webview 两套
+     * 分块器规则漂移导致锚点错位。
+     *
+     * 只保留前 400 个字符：AI 指令的锚点指纹只取前 80 字符，
+     * 截断可以避免大代码块被逐条批注重复写入批阅记录。
+     */
+    function getAnnotationBlockText(blockIndex) {
+        if (blockIndex == null || blockIndex < 0 || !Array.isArray(blocks)) return '';
+        return (blocks[blockIndex] || '').slice(0, 400);
+    }
+
     function init(parsedBlocks) {
         blocks = parsedBlocks;
         // 事件监听只绑定一次：init 会在 loadDocument / refreshCurrentView /
@@ -517,6 +530,7 @@ const Annotations = (() => {
             if (!currentSelection) return;
             Store.addAnnotation({
                 type: 'comment',
+                blockText: getAnnotationBlockText(currentSelection.blockIndex),
                 selectedText: currentSelection.text,
                 blockIndex: currentSelection.blockIndex,
                 endBlockIndex: currentSelection.endBlockIndex || currentSelection.blockIndex,
@@ -591,6 +605,7 @@ const Annotations = (() => {
 
         Store.addAnnotation({
             type: 'delete',
+            blockText: getAnnotationBlockText(currentSelection.blockIndex),
             selectedText: currentSelection.text,
             blockIndex: currentSelection.blockIndex,
             endBlockIndex: currentSelection.endBlockIndex || currentSelection.blockIndex,
@@ -694,6 +709,7 @@ const Annotations = (() => {
             const isBefore = currentInsertPosition === 'before';
             Store.addAnnotation({
                 type: 'insert',
+                blockText: getAnnotationBlockText(currentSelection.blockIndex),
                 selectedText: currentSelection.text,
                 blockIndex: currentSelection.blockIndex,
                 endBlockIndex: currentSelection.endBlockIndex || currentSelection.blockIndex,

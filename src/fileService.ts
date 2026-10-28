@@ -185,16 +185,22 @@ export class FileService {
             return { success: true, needsAi: 0, sourceFilePath, message: _aiT('no_valid') };
         }
 
-        // 读取源文件内容并按空行分割为块，用于生成文本锚点指纹
+        // 批注自带 blockText 时直接使用（创建批注时由 Webview 写入，与预览块完全一致）。
+        // 只有旧记录缺少该字段时才回退到宿主分块器，避免两套规则漂移导致锚点错位。
+        const needsSourceBlocks = validAnnotations.some((a: any) =>
+            typeof a.blockText !== 'string' || a.blockText === ''
+        );
         let blocks: string[] = [];
-        try {
-            const absSourcePath = sourceFile ? (path.isAbsolute(sourceFile) ? sourceFile : path.join(this.workspaceRoot, sourceFile)) : '';
-            if (absSourcePath && fs.existsSync(absSourcePath)) {
-                const sourceContent = fs.readFileSync(absSourcePath, 'utf-8');
-                blocks = this.splitMarkdownToBlocks(sourceContent);
+        if (needsSourceBlocks) {
+            try {
+                const absSourcePath = sourceFile ? (path.isAbsolute(sourceFile) ? sourceFile : path.join(this.workspaceRoot, sourceFile)) : '';
+                if (absSourcePath && fs.existsSync(absSourcePath)) {
+                    const sourceContent = fs.readFileSync(absSourcePath, 'utf-8');
+                    blocks = this.splitMarkdownToBlocks(sourceContent);
+                }
+            } catch (e) {
+                // 读取失败时 blocks 为空，不影响指令生成
             }
-        } catch (e) {
-            // 读取失败时 blocks 为空，不影响指令生成
         }
 
         // 按 blockIndex 倒序排列（从文档末尾到开头），同一块内按 startOffset 倒序
@@ -216,7 +222,9 @@ export class FileService {
         lines.push('');
 
         sortedAnnotations.forEach((ann: any, i: number) => {
-            const blockContent = (ann.blockIndex != null && blocks[ann.blockIndex]) ? blocks[ann.blockIndex] : '';
+            const blockContent = (typeof ann.blockText === 'string' && ann.blockText !== '')
+                ? ann.blockText
+                : ((ann.blockIndex != null && blocks[ann.blockIndex]) ? blocks[ann.blockIndex] : '');
             const blockFingerprint = blockContent.substring(0, 80).replace(/\n/g, ' ');
 
             const insertLabel = ann.type === 'insert' ? (ann.insertPosition === 'before' ? _aiT('label_insert_before') : _aiT('label_insert_after')) : '';

@@ -143,6 +143,41 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
         });
 
+        test('批注自带 blockText 时以它为准，不使用宿主分块结果', () => {
+            const content = '# 标题\n\n源文件里的旧内容\n';
+            const filePath = createTestFile('anchor-doc.md', content);
+
+            const annotations = [{
+                id: 1,
+                type: 'comment',
+                selectedText: '旧内容',
+                blockIndex: 1,
+                startOffset: 0,
+                endOffset: 3,
+                comment: '请修改',
+                // Webview 创建批注时记录的块文本，故意与源文件不同
+                blockText: '批注创建时的块文本（与源文件不同）',
+            }];
+
+            const result = fileService.applyReview(annotations, filePath, 'anchor-doc.md');
+            assert.strictEqual(result.success, true);
+
+            const instruction = fs.readFileSync(result.aiInstructionFilePath!, 'utf-8');
+            assert.ok(
+                instruction.includes('批注创建时的块文本（与源文件不同）'),
+                'AI 指令的文本锚点应使用批注记录的 blockText'
+            );
+            assert.ok(
+                !instruction.includes('源文件里的旧内容'),
+                '不应回退到宿主分块器读取源文件内容'
+            );
+
+            cleanupFile(filePath);
+            if (result.aiInstructionFilePath && fs.existsSync(result.aiInstructionFilePath)) {
+                fs.unlinkSync(result.aiInstructionFilePath);
+            }
+        });
+
         test('超长单行文本 → 读取和保存正常', () => {
             const longLine = 'A'.repeat(100000);
             const content = `# 超长行\n\n${longLine}\n`;
