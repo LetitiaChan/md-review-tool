@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - **Keep unresolved annotations visible** — Mark annotations as unresolved when their target text is missing or ambiguous, preserving them for manual review
 - **Prevent incorrect annotation targeting** — Handle repeated text, cross-block selections, and same-name files in different directories without silently moving annotations
 - **Exclude unresolved annotations from AI apply** — Avoid generating executable AI instructions with stale block indexes and offsets
+- **Keep the custom editor buffer in sync when writing footnotes** — In Custom Editor mode, footnote comments are now applied through `WorkspaceEdit` and saved, instead of writing to disk behind the open document
 
 ### 🧪 Tests
 - **Add annotation re-anchoring regression coverage** — Cover source updates, closed-file changes, duplicate anchors, cross-block anchors, same-name files, and unresolved exports

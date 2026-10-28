@@ -81,6 +81,33 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
         let _suppressFileChanged = false;
         let _suppressTimer: ReturnType<typeof setTimeout> | undefined;
 
+        /** 把相对路径按当前文档所属工作区解析为绝对路径 */
+        const resolveSourcePath = (filePath: string): string => {
+            if (path.isAbsolute(filePath)) {
+                return path.resolve(filePath);
+            }
+            const folder = vscode.workspace.getWorkspaceFolder(document.uri)?.uri.fsPath;
+            return path.resolve(folder || path.dirname(document.uri.fsPath), filePath);
+        };
+        const isCurrentDocument = (filePath: string): boolean =>
+            resolveSourcePath(filePath).toLowerCase() === path.resolve(document.uri.fsPath).toLowerCase();
+
+        /** 通过 WorkspaceEdit 整体替换当前文档内容（不落盘） */
+        const applyDocumentContent = async (content: string): Promise<boolean> => {
+            // 抑制自身保存触发的 fileChanged 通知（防止"文件已更新"徽章闪烁）
+            _suppressFileChanged = true;
+            if (_suppressTimer) { clearTimeout(_suppressTimer); }
+            _suppressTimer = setTimeout(() => { _suppressFileChanged = false; }, 1500);
+
+            const edit = new vscode.WorkspaceEdit();
+            const fullRange = new vscode.Range(
+                0, 0,
+                document.lineCount, 0
+            );
+            edit.replace(document.uri, fullRange, content);
+            return vscode.workspace.applyEdit(edit);
+        };
+
         // 创建共享消息处理上下文
         const handlerCtx: MessageHandlerContext = {
             postMessage: (msg) => webviewPanel.webview.postMessage(msg),
@@ -92,21 +119,27 @@ export class MarkdownEditorProvider implements vscode.CustomTextEditorProvider {
             setCurrentFilePath: () => {
                 // Custom Editor 模式下文件路径由 VS Code 管理，不需要手动设置
             },
+            // 脚注评论等直接修改源文件的操作用内存文档内容，避免与后续保存互相覆盖
+            readSourceFile: (filePath) => (isCurrentDocument(filePath) ? document.getText() : undefined),
+            writeSourceFile: async (filePath, content) => {
+                if (!isCurrentDocument(filePath)) {
+                    fileService.writeSourceText(filePath, content);
+                    return;
+                }
+                const applied = await applyDocumentContent(content);
+                if (!applied) {
+                    throw new Error('写入源文件失败');
+                }
+                // 脚注必须立即落盘，否则关闭编辑器时会随未保存缓冲一起丢失
+                const saved = await document.save();
+                if (!saved) {
+                    throw new Error('保存源文件失败');
+                }
+            },
             saveFileImpl: async (filePath, content, requestId) => {
                 // Custom Editor 模式：通过 WorkspaceEdit 修改 TextDocument
                 try {
-                    // 抑制自身保存触发的 fileChanged 通知（防止"文件已更新"徽章闪烁）
-                    _suppressFileChanged = true;
-                    if (_suppressTimer) { clearTimeout(_suppressTimer); }
-                    _suppressTimer = setTimeout(() => { _suppressFileChanged = false; }, 1500);
-
-                    const edit = new vscode.WorkspaceEdit();
-                    const fullRange = new vscode.Range(
-                        0, 0,
-                        document.lineCount, 0
-                    );
-                    edit.replace(document.uri, fullRange, content);
-                    const success = await vscode.workspace.applyEdit(edit);
+                    const success = await applyDocumentContent(content);
                     handlerCtx.postMessage({
                         type: 'fileSaved',
                         payload: { success, filePath: document.uri.fsPath },

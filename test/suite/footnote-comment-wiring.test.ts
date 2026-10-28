@@ -69,4 +69,19 @@ suite('Footnote Comment Wiring — 脚注评论接线', () => {
         const source = read('src/fileService.ts');
         assert.ok(/footnoteComments:\s*this\.extractFootnoteComments\(content\)/.test(source));
     });
+
+    test('BT-footnote-wiring.7 消息处理应优先使用文档缓冲读写', () => {
+        const helper = read('src/webviewHelper.ts');
+        assert.ok(helper.includes('ctx.readSourceFile'), '应优先从 TextDocument 读取源内容');
+        assert.ok(helper.includes('ctx.writeSourceFile'), '应优先写回 TextDocument');
+        assert.ok(helper.includes('buildFootnoteComment'), '应使用纯计算构造脚注内容');
+    });
+
+    test('BT-footnote-wiring.8 Custom Editor 应通过 WorkspaceEdit 写回并落盘', () => {
+        const provider = read('src/customEditorProvider.ts');
+        assert.ok(provider.includes('readSourceFile:'), 'Custom Editor 应提供 readSourceFile');
+        assert.ok(provider.includes('writeSourceFile:'), 'Custom Editor 应提供 writeSourceFile');
+        assert.ok(/new vscode\.WorkspaceEdit\(\)/.test(provider), '应通过 WorkspaceEdit 修改文档');
+        assert.ok(/document\.save\(\)/.test(provider), '脚注写回后应立即落盘');
+    });
 });

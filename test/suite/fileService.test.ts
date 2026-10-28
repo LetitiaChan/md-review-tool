@@ -473,12 +473,38 @@ suite('FileService Test Suite', () => {
 
             fs.unlinkSync(testFilePath);
         });
+
+        test('buildFootnoteComment 应只计算内容、不读写磁盘', () => {
+            const markdown = '# 标题\n\n需要评论的句子。';
+            const result = fileService.buildFootnoteComment(markdown, {
+                selectedText: '需要评论的句子',
+                comment: '纯计算',
+                blockIndex: 1,
+                startOffset: 0
+            });
+
+            assert.strictEqual(result.success, true);
+            assert.strictEqual(result.footnoteId, 'mdhr-1');
+            assert.ok(result.content.includes('需要评论的句子[^mdhr-1]'));
+            assert.ok(result.content.includes('[^mdhr-1]: MDHR-COMMENT: 纯计算'));
+        });
+
+        test('readSourceText / writeSourceText 应按路径读写文本', () => {
+            const testFilePath = path.join(testDir, 'test-source-text.md');
+            fs.writeFileSync(testFilePath, '旧内容', 'utf-8');
+
+            assert.strictEqual(fileService.readSourceText(testFilePath), '旧内容');
+            fileService.writeSourceText(testFilePath, '新内容');
+            assert.strictEqual(fs.readFileSync(testFilePath, 'utf-8'), '新内容');
+
+            fs.unlinkSync(testFilePath);
+        });
     });
 
     // ===== addFootnoteComment 消息处理测试 =====
 
     suite('addFootnoteComment 消息处理', () => {
-        function createHandler() {
+        function createHandler(overrides: any = {}) {
             const posted: any[] = [];
             const handler = createMessageHandler({
                 postMessage: (message: any) => posted.push(message),
@@ -492,6 +518,7 @@ suite('FileService Test Suite', () => {
                 onReady: () => undefined,
                 webview: {} as any,
                 getDocumentIsDirty: () => false,
+                ...overrides,
             });
             return { handler, posted };
         }
@@ -552,6 +579,106 @@ suite('FileService Test Suite', () => {
             assert.match(posted[0].payload.error, /无法在源文件中定位选中文本/);
 
             fs.unlinkSync(testFilePath);
+        });
+
+        test('Custom Editor 路径应从内存文档读取并写回文档而非磁盘', async () => {
+            const testFilePath = path.join(testDir, 'test-handler-editor.md');
+            fs.writeFileSync(testFilePath, '磁盘上的旧内容', 'utf-8');
+
+            let readPath = '';
+            const writes: Array<{ filePath: string; content: string }> = [];
+            const { handler, posted } = createHandler({
+                readSourceFile: (filePath: string) => {
+                    readPath = filePath;
+                    // 模拟 TextDocument 缓冲比磁盘更新
+                    return '# 标题\n\n内存中的句子。';
+                },
+                writeSourceFile: async (filePath: string, content: string) => {
+                    writes.push({ filePath, content });
+                },
+            });
+
+            await handler({
+                type: 'addFootnoteComment',
+                requestId: 'req-3',
+                payload: {
+                    sourceFile: testFilePath,
+                    annotation: {
+                        selectedText: '内存中的句子',
+                        comment: '来自编辑器缓冲',
+                        blockIndex: 1,
+                        startOffset: 0
+                    }
+                }
+            });
+
+            assert.strictEqual(readPath, testFilePath, '应通过 readSourceFile 读取');
+            assert.strictEqual(writes.length, 1, '应通过 writeSourceFile 写回');
+            assert.strictEqual(writes[0].filePath, testFilePath);
+            assert.ok(writes[0].content.includes('内存中的句子[^mdhr-1]'));
+            assert.strictEqual(posted[0].payload.success, true);
+            assert.strictEqual(posted[0].payload.footnoteId, 'mdhr-1');
+            // 磁盘内容不应被 direct fs 写入
+            assert.strictEqual(fs.readFileSync(testFilePath, 'utf-8'), '磁盘上的旧内容');
+
+            fs.unlinkSync(testFilePath);
+        });
+
+        test('readSourceFile 返回 undefined 时应回退到磁盘读取', async () => {
+            const testFilePath = path.join(testDir, 'test-handler-fallback.md');
+            fs.writeFileSync(testFilePath, '# 标题\n\n磁盘中的句子。', 'utf-8');
+
+            const writes: string[] = [];
+            const { handler, posted } = createHandler({
+                readSourceFile: () => undefined,
+                writeSourceFile: async (_filePath: string, content: string) => {
+                    writes.push(content);
+                },
+            });
+
+            await handler({
+                type: 'addFootnoteComment',
+                requestId: 'req-4',
+                payload: {
+                    sourceFile: testFilePath,
+                    annotation: {
+                        selectedText: '磁盘中的句子',
+                        comment: '回退磁盘',
+                        blockIndex: 1,
+                        startOffset: 0
+                    }
+                }
+            });
+
+            assert.strictEqual(posted[0].payload.success, true);
+            assert.ok(writes[0].includes('磁盘中的句子[^mdhr-1]'));
+
+            fs.unlinkSync(testFilePath);
+        });
+
+        test('writeSourceFile 抛错时应回传失败信息', async () => {
+            const { handler, posted } = createHandler({
+                readSourceFile: () => '需要评论的句子',
+                writeSourceFile: async () => {
+                    throw new Error('保存源文件失败');
+                },
+            });
+
+            await handler({
+                type: 'addFootnoteComment',
+                requestId: 'req-5',
+                payload: {
+                    sourceFile: '/virtual/doc.md',
+                    annotation: {
+                        selectedText: '需要评论的句子',
+                        comment: '评论'
+                    }
+                }
+            });
+
+            assert.strictEqual(posted[0].type, 'footnoteCommentSaved');
+            assert.strictEqual(posted[0].payload.success, false);
+            assert.match(posted[0].payload.error, /保存源文件失败/);
         });
     });
 

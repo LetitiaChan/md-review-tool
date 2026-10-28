@@ -294,15 +294,21 @@ suite('Custom Editor Provider Tests', () => {
             'fileWatcher.onDidChange 回调应检查 _suppressFileChanged 标志位');
     });
 
-    test('BT-custom-editor.32 Tier3 — saveFileImpl 应在 applyEdit 前设置 _suppressFileChanged = true', () => {
+    test('BT-custom-editor.32 Tier3 — 文档写回应在 applyEdit 前设置 _suppressFileChanged = true', () => {
         const content = fs.readFileSync(path.join(projectRoot, 'src', 'customEditorProvider.ts'), 'utf-8');
         const saveIdx = content.indexOf('saveFileImpl');
         assert.ok(saveIdx > -1, 'customEditorProvider.ts 应包含 saveFileImpl');
         const saveBlock = content.substring(saveIdx, saveIdx + 1000);
-        const suppressIdx = saveBlock.indexOf('_suppressFileChanged = true');
-        const applyIdx = saveBlock.indexOf('applyEdit');
-        assert.ok(suppressIdx > -1, 'saveFileImpl 应设置 _suppressFileChanged = true');
-        assert.ok(applyIdx > -1, 'saveFileImpl 应调用 applyEdit');
+        assert.ok(saveBlock.includes('applyDocumentContent'),
+            'saveFileImpl 应复用 applyDocumentContent 写回文档');
+
+        const helperIdx = content.indexOf('applyDocumentContent');
+        assert.ok(helperIdx > -1, 'customEditorProvider.ts 应包含 applyDocumentContent');
+        const helperBlock = content.substring(helperIdx, helperIdx + 1000);
+        const suppressIdx = helperBlock.indexOf('_suppressFileChanged = true');
+        const applyIdx = helperBlock.indexOf('applyEdit');
+        assert.ok(suppressIdx > -1, 'applyDocumentContent 应设置 _suppressFileChanged = true');
+        assert.ok(applyIdx > -1, 'applyDocumentContent 应调用 applyEdit');
         assert.ok(suppressIdx < applyIdx,
             '_suppressFileChanged = true 应在 applyEdit 之前设置');
     });

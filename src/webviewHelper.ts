@@ -119,6 +119,16 @@ export interface MessageHandlerContext {
     setCurrentFilePath: (filePath: string) => void;
     /** 保存文件的实现（Panel 模式用 fs.writeFile，Custom Editor 模式用 WorkspaceEdit） */
     saveFileImpl: (filePath: string, content: string, requestId?: string) => Promise<void>;
+    /**
+     * 读取源文件文本（可选）。Custom Editor 传入时优先返回内存中的 TextDocument 内容，
+     * 避免磁盘内容落后于用户正在看的文档。
+     */
+    readSourceFile?: (filePath: string) => string | undefined;
+    /**
+     * 写回源文件（可选）。Custom Editor 通过 WorkspaceEdit 修改已打开的 TextDocument，
+     * 保证文档缓冲与磁盘一致。
+     */
+    writeSourceFile?: (filePath: string, content: string) => Promise<void> | void;
     /** webview 就绪回调 */
     onReady: () => void;
     /** webview 面板（用于 resolveImageUris 等） */
@@ -164,7 +174,22 @@ export function createMessageHandler(ctx: MessageHandlerContext): (message: any)
             }
             case 'addFootnoteComment': {
                 try {
-                    const result = ctx.fileService.addFootnoteComment(payload.sourceFile, payload.annotation);
+                    let result: { success: boolean; footnoteId: string; content: string };
+                    if (ctx.readSourceFile || ctx.writeSourceFile) {
+                        // Custom Editor：从 TextDocument 读取，写回同一个文档缓冲
+                        const content = ctx.readSourceFile
+                            ? (ctx.readSourceFile(payload.sourceFile) ?? ctx.fileService.readSourceText(payload.sourceFile))
+                            : ctx.fileService.readSourceText(payload.sourceFile);
+                        result = ctx.fileService.buildFootnoteComment(content, payload.annotation);
+                        if (ctx.writeSourceFile) {
+                            await ctx.writeSourceFile(payload.sourceFile, result.content);
+                        } else {
+                            ctx.fileService.writeSourceText(payload.sourceFile, result.content);
+                        }
+                    } else {
+                        // Panel 模式：直接读写磁盘
+                        result = ctx.fileService.addFootnoteComment(payload.sourceFile, payload.annotation);
+                    }
                     ctx.postMessage({ type: 'footnoteCommentSaved', payload: result, requestId });
                 } catch (e: any) {
                     ctx.postMessage({ type: 'footnoteCommentSaved', payload: { success: false, error: e.message }, requestId });

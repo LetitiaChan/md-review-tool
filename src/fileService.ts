@@ -157,35 +157,65 @@ export class FileService {
 
     /**
      * 将一条评论写回源 Markdown，使用脚注引用作为稳定锚点。
+     *
+     * 走磁盘读写；Custom Editor 场景应改用 buildFootnoteComment + 文档写回，
+     * 避免绕过已打开的 TextDocument。
      */
     addFootnoteComment(sourceFile: string, annotation: any): { success: boolean; footnoteId: string; content: string } {
-        const absPath = path.isAbsolute(sourceFile) ? sourceFile : path.join(this.workspaceRoot, sourceFile);
+        const absPath = this.resolveSourcePath(sourceFile);
         if (!fs.existsSync(absPath)) {
             throw new Error('文件不存在: ' + absPath);
         }
 
-        const content = fs.readFileSync(absPath, 'utf-8');
-        const footnoteId = this.nextMdhrFootnoteId(content);
+        const result = this.buildFootnoteComment(fs.readFileSync(absPath, 'utf-8'), annotation);
+        fs.writeFileSync(absPath, result.content, 'utf-8');
+        return result;
+    }
+
+    /**
+     * 计算写入脚注评论后的 Markdown 内容（纯函数，不读写磁盘）。
+     */
+    buildFootnoteComment(markdown: string, annotation: any): { success: boolean; footnoteId: string; content: string } {
+        const footnoteId = this.nextMdhrFootnoteId(markdown);
         const marker = `[^${footnoteId}]`;
-        const selectedText = String(annotation.selectedText || '');
+        const selectedText = String(annotation?.selectedText || '');
         if (!selectedText) {
             throw new Error('脚注评论缺少选中文本');
         }
 
-        const targetIndex = this.findAnnotationTargetIndex(content, selectedText, annotation.startOffset, annotation.blockIndex);
+        const targetIndex = this.findAnnotationTargetIndex(markdown, selectedText, annotation?.startOffset, annotation?.blockIndex);
         if (targetIndex < 0) {
             throw new Error('无法在源文件中定位选中文本');
         }
 
         const insertAt = targetIndex + selectedText.length;
-        const withReference = content.slice(0, insertAt) + marker + content.slice(insertAt);
-        const comment = this.sanitizeFootnoteComment(annotation.comment || '');
+        const withReference = markdown.slice(0, insertAt) + marker + markdown.slice(insertAt);
+        const comment = this.sanitizeFootnoteComment(annotation?.comment || '');
         const definition = `[^${footnoteId}]: MDHR-COMMENT: ${comment}`;
         const separator = withReference.endsWith('\n') ? '\n' : '\n\n';
-        const updated = `${withReference}${separator}${definition}\n`;
+        return { success: true, footnoteId, content: `${withReference}${separator}${definition}\n` };
+    }
 
-        fs.writeFileSync(absPath, updated, 'utf-8');
-        return { success: true, footnoteId, content: updated };
+    /**
+     * 读取源文件文本（相对路径按工作区根目录解析）。
+     */
+    readSourceText(filePath: string): string {
+        const absPath = this.resolveSourcePath(filePath);
+        if (!fs.existsSync(absPath)) {
+            throw new Error('文件不存在: ' + absPath);
+        }
+        return fs.readFileSync(absPath, 'utf-8');
+    }
+
+    /**
+     * 直接写回源文件文本（仅供没有 TextDocument 的 Panel 模式使用）。
+     */
+    writeSourceText(filePath: string, content: string): void {
+        fs.writeFileSync(this.resolveSourcePath(filePath), content, 'utf-8');
+    }
+
+    private resolveSourcePath(filePath: string): string {
+        return path.isAbsolute(filePath) ? filePath : path.join(this.workspaceRoot, filePath);
     }
 
     /**
