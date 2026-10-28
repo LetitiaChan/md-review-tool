@@ -44,6 +44,10 @@ llms.txt
 .analysis-cache.md
 .analysis-archive/**
 
+# ===== 开发文档（仅仓库阅读，不打入发行包） =====
+docs/**
+CHANGELOG.archive.md
+
 # ===== 其他 =====
 .gitignore
 .vscodeignore
