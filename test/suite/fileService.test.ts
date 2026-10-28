@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { FileService } from '../../src/fileService';
+import { createMessageHandler } from '../../src/webviewHelper';
 
 suite('FileService Test Suite', () => {
     let fileService: FileService;
@@ -70,6 +71,36 @@ suite('FileService Test Suite', () => {
 
             const result = fileService.readFile(testFilePath);
             assert.strictEqual(result.docVersion, null);
+
+            fs.unlinkSync(testFilePath);
+        });
+
+        test('应随文件内容返回脚注评论批注', () => {
+            const testFilePath = path.join(testDir, 'test-read-footnote.md');
+            const content = [
+                '# 标题',
+                '',
+                '需要评论的句子[^mdhr-1]。',
+                '',
+                '[^mdhr-1]: MDHR-COMMENT: 补充背景'
+            ].join('\n');
+            fs.writeFileSync(testFilePath, content, 'utf-8');
+
+            const result = fileService.readFile(testFilePath);
+            assert.strictEqual(result.footnoteComments.length, 1);
+            assert.strictEqual(result.footnoteComments[0].footnoteId, 'mdhr-1');
+            assert.strictEqual(result.footnoteComments[0].comment, '补充背景');
+            assert.strictEqual(result.footnoteComments[0].source, 'footnote');
+
+            fs.unlinkSync(testFilePath);
+        });
+
+        test('没有脚注评论时应返回空数组', () => {
+            const testFilePath = path.join(testDir, 'test-read-no-footnote.md');
+            fs.writeFileSync(testFilePath, '# 标题\n\n普通内容', 'utf-8');
+
+            const result = fileService.readFile(testFilePath);
+            assert.deepStrictEqual(result.footnoteComments, []);
 
             fs.unlinkSync(testFilePath);
         });
@@ -316,6 +347,211 @@ suite('FileService Test Suite', () => {
             assert.strictEqual(annotations[0].footnoteId, 'mdhr-1');
             assert.strictEqual(annotations[0].comment, '这里需要补充背景');
             assert.strictEqual(annotations[0].selectedText, '这是需要评论的句子');
+        });
+
+        test('应忽略没有 MDHR-COMMENT 定义的普通脚注', () => {
+            const markdown = [
+                '正文里的普通脚注[^note]。',
+                '',
+                '[^note]: 这是普通脚注内容'
+            ].join('\n');
+
+            const annotations = fileService.extractFootnoteComments(markdown);
+
+            assert.deepStrictEqual(annotations, []);
+        });
+
+        test('只有脚注定义没有引用时不应恢复批注', () => {
+            const markdown = [
+                '# 标题',
+                '',
+                '[^mdhr-1]: MDHR-COMMENT: 孤立定义'
+            ].join('\n');
+
+            const annotations = fileService.extractFootnoteComments(markdown);
+
+            assert.deepStrictEqual(annotations, []);
+        });
+
+        test('应恢复多条脚注评论并按位置排序', () => {
+            const markdown = [
+                '# 标题',
+                '',
+                '第一处[^mdhr-1]。',
+                '',
+                '第二处[^mdhr-2]。',
+                '',
+                '[^mdhr-1]: MDHR-COMMENT: 评论一',
+                '[^mdhr-2]: MDHR-COMMENT: 评论二'
+            ].join('\n');
+
+            const annotations = fileService.extractFootnoteComments(markdown);
+
+            assert.strictEqual(annotations.length, 2);
+            assert.deepStrictEqual(annotations.map(a => a.footnoteId), ['mdhr-1', 'mdhr-2']);
+            assert.ok(annotations[0].startOffset < annotations[1].startOffset, '位置应递增');
+        });
+
+        test('选中文本含空格时以行尾连续文本作为恢复锚点', () => {
+            const markdown = [
+                'This is a sentence[^mdhr-1].',
+                '',
+                '[^mdhr-1]: MDHR-COMMENT: needs context'
+            ].join('\n');
+
+            const annotations = fileService.extractFootnoteComments(markdown);
+
+            assert.strictEqual(annotations.length, 1);
+            // 行尾连续 token 是脚注引用前最可靠的锚点，避免把整行都当成选区
+            assert.strictEqual(annotations[0].selectedText, 'sentence');
+        });
+
+        test('多行评论应折叠为单行写入脚注定义', () => {
+            const testFilePath = path.join(testDir, 'test-footnote-multiline.md');
+            fs.writeFileSync(testFilePath, '# 标题\n\n需要评论的句子。', 'utf-8');
+
+            const result = fileService.addFootnoteComment(testFilePath, {
+                selectedText: '需要评论的句子',
+                comment: '第一行\n第二行',
+                blockIndex: 1,
+                startOffset: 0,
+                endOffset: 7
+            });
+
+            const saved = fs.readFileSync(testFilePath, 'utf-8');
+            assert.ok(saved.includes('[^mdhr-1]: MDHR-COMMENT: 第一行 第二行'), '多行评论应折叠为单行');
+            assert.ok(!saved.includes('MDHR-COMMENT: 第一行\n第二行'), '定义中不应保留换行');
+
+            fs.unlinkSync(testFilePath);
+        });
+
+        test('缺少选中文本时应拒绝写入', () => {
+            const testFilePath = path.join(testDir, 'test-footnote-no-selection.md');
+            fs.writeFileSync(testFilePath, '# 标题\n\n正文', 'utf-8');
+
+            assert.throws(() => {
+                fileService.addFootnoteComment(testFilePath, { selectedText: '', comment: '评论' });
+            }, /脚注评论缺少选中文本/);
+
+            fs.unlinkSync(testFilePath);
+        });
+
+        test('无法在源文件中定位选中文本时应拒绝写入', () => {
+            const testFilePath = path.join(testDir, 'test-footnote-missing-text.md');
+            const original = '# 标题\n\n正文';
+            fs.writeFileSync(testFilePath, original, 'utf-8');
+
+            assert.throws(() => {
+                fileService.addFootnoteComment(testFilePath, {
+                    selectedText: '不存在的文本',
+                    comment: '评论',
+                    blockIndex: 1,
+                    startOffset: 0
+                });
+            }, /无法在源文件中定位选中文本/);
+            assert.strictEqual(fs.readFileSync(testFilePath, 'utf-8'), original, '失败时不应改动源文件');
+
+            fs.unlinkSync(testFilePath);
+        });
+
+        test('重复文本应按 blockIndex 定位到目标块', () => {
+            const testFilePath = path.join(testDir, 'test-footnote-duplicate.md');
+            fs.writeFileSync(testFilePath, '重复文本第一段\n\n重复文本第二段', 'utf-8');
+
+            const result = fileService.addFootnoteComment(testFilePath, {
+                selectedText: '重复文本',
+                comment: '定位第二段',
+                blockIndex: 1,
+                startOffset: 0,
+                endOffset: 4
+            });
+
+            assert.strictEqual(result.success, true);
+            const saved = fs.readFileSync(testFilePath, 'utf-8');
+            assert.ok(saved.startsWith('重复文本第一段'), '第一段不应插入脚注引用');
+            assert.ok(saved.includes('重复文本[^mdhr-1]第二段'), '应在第二段末尾插入脚注引用');
+
+            fs.unlinkSync(testFilePath);
+        });
+    });
+
+    // ===== addFootnoteComment 消息处理测试 =====
+
+    suite('addFootnoteComment 消息处理', () => {
+        function createHandler() {
+            const posted: any[] = [];
+            const handler = createMessageHandler({
+                postMessage: (message: any) => posted.push(message),
+                fileService,
+                extensionContext: {} as any,
+                extensionUri: vscode.Uri.file(testDir),
+                stateService: {} as any,
+                getCurrentFilePath: () => undefined,
+                setCurrentFilePath: () => undefined,
+                saveFileImpl: async () => undefined,
+                onReady: () => undefined,
+                webview: {} as any,
+                getDocumentIsDirty: () => false,
+            });
+            return { handler, posted };
+        }
+
+        test('成功时应回传 footnoteId 与更新后的内容', async () => {
+            const testFilePath = path.join(testDir, 'test-handler-footnote.md');
+            fs.writeFileSync(testFilePath, '# 标题\n\n需要评论的句子。', 'utf-8');
+            const { handler, posted } = createHandler();
+
+            await handler({
+                type: 'addFootnoteComment',
+                requestId: 'req-1',
+                payload: {
+                    sourceFile: testFilePath,
+                    annotation: {
+                        selectedText: '需要评论的句子',
+                        comment: '补充背景',
+                        blockIndex: 1,
+                        startOffset: 0,
+                        endOffset: 7
+                    }
+                }
+            });
+
+            assert.strictEqual(posted.length, 1);
+            assert.strictEqual(posted[0].type, 'footnoteCommentSaved');
+            assert.strictEqual(posted[0].requestId, 'req-1');
+            assert.strictEqual(posted[0].payload.success, true);
+            assert.strictEqual(posted[0].payload.footnoteId, 'mdhr-1');
+            assert.ok(posted[0].payload.content.includes('需要评论的句子[^mdhr-1]'));
+
+            fs.unlinkSync(testFilePath);
+        });
+
+        test('失败时应回传 success:false 与错误信息', async () => {
+            const testFilePath = path.join(testDir, 'test-handler-footnote-fail.md');
+            fs.writeFileSync(testFilePath, '# 标题\n\n正文', 'utf-8');
+            const { handler, posted } = createHandler();
+
+            await handler({
+                type: 'addFootnoteComment',
+                requestId: 'req-2',
+                payload: {
+                    sourceFile: testFilePath,
+                    annotation: {
+                        selectedText: '不存在的文本',
+                        comment: '评论',
+                        blockIndex: 1,
+                        startOffset: 0
+                    }
+                }
+            });
+
+            assert.strictEqual(posted.length, 1);
+            assert.strictEqual(posted[0].type, 'footnoteCommentSaved');
+            assert.strictEqual(posted[0].requestId, 'req-2');
+            assert.strictEqual(posted[0].payload.success, false);
+            assert.match(posted[0].payload.error, /无法在源文件中定位选中文本/);
+
+            fs.unlinkSync(testFilePath);
         });
     });
 

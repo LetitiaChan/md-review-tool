@@ -200,4 +200,49 @@ suite('Annotation Reanchor Tests', () => {
         assert.strictEqual(store.getAnnotations()[0].blockIndex, 2);
         assert.strictEqual(result.unresolved, 0);
     });
+
+    test('应从源文件脚注恢复评论批注并按位置排序', () => {
+        const store = loadStore();
+        store.setFile('doc.md', '第一处\n\n第二处', 'hash-1', '1.0');
+
+        const changed = store.restoreFootnoteComments([
+            {
+                type: 'comment', selectedText: '第二处', comment: '评论二',
+                footnoteId: 'mdhr-2', blockIndex: 2, startOffset: 0, endOffset: 3,
+            },
+            {
+                type: 'comment', selectedText: '第一处', comment: '评论一',
+                footnoteId: 'mdhr-1', blockIndex: 0, startOffset: 0, endOffset: 3,
+            },
+        ]);
+
+        assert.strictEqual(changed, true);
+        const annotations = store.getAnnotations();
+        assert.strictEqual(annotations.map((a: any) => a.footnoteId).join(','), 'mdhr-1,mdhr-2');
+        assert.strictEqual(annotations.map((a: any) => a.id).sort().join(','), '1,2', 'id 应连续分配');
+        assert.ok(annotations.every((a: any) => a.timestamp), '应补充时间戳');
+    });
+
+    test('重复恢复同一脚注评论时不应产生重复批注', () => {
+        const store = loadStore();
+        store.setFile('doc.md', '目标文本', 'hash-1', '1.0');
+        const comments = [{
+            type: 'comment', selectedText: '目标文本', comment: '评论',
+            footnoteId: 'mdhr-1', blockIndex: 0, startOffset: 0, endOffset: 4,
+        }];
+
+        assert.strictEqual(store.restoreFootnoteComments(comments), true);
+        assert.strictEqual(store.restoreFootnoteComments(comments), false, '第二次恢复应无变化');
+        assert.strictEqual(store.getAnnotations().length, 1);
+    });
+
+    test('恢复脚注评论失败时不改变批注列表', () => {
+        const store = loadStore();
+        store.setFile('doc.md', '目标文本', 'hash-1', '1.0');
+
+        assert.strictEqual(store.restoreFootnoteComments([]), false);
+        assert.strictEqual(store.restoreFootnoteComments(null), false);
+        assert.strictEqual(store.restoreFootnoteComments([{ selectedText: 'x' }]), false, '缺少 footnoteId 应跳过');
+        assert.strictEqual(store.getAnnotations().length, 0);
+    });
 });
