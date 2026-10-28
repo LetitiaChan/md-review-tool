@@ -1,3 +1,4 @@
+import { readRendererSource } from './helpers/module-source';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -231,7 +232,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
 
             const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
-            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             // Tier 1：securityLevel 应为 'loose' 而非 'strict'
             // 'strict' 会强制 htmlLabels=false，导致 C++ 等含特殊字符的节点名渲染失败
@@ -276,7 +277,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
 
             const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
-            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             // Tier 1：验证通用预处理入口函数存在
             assert.ok(
@@ -311,7 +312,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
 
             const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
-            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             assert.ok(
                 rendererCode.includes('dataset.mermaidRetry'),
@@ -327,7 +328,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
 
             const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
-            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             assert.ok(
                 rendererCode.includes('requestAnimationFrame'),
@@ -343,7 +344,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
 
             const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
-            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             // 验证 catch 块中先标记为重试，而非直接显示错误
             assert.ok(
@@ -365,7 +366,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
 
             const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
-            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             // 验证重试失败后有 fallback 错误提示
             assert.ok(
@@ -387,7 +388,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
 
             const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
-            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             // 验证重试时检查 container.isConnected
             assert.ok(
@@ -750,7 +751,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
             if (!extPath) { throw new Error('扩展路径未找到'); }
             const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
-            const rendererSrc = fs.readFileSync(rendererPath, 'utf-8');
+            const rendererSrc = readRendererSource(extPath);
             assert.ok(
                 rendererSrc.includes('openSpans'),
                 'wrapLines 应包含 openSpans 跨行标签追踪变量'
@@ -798,7 +799,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
             if (!extPath) { throw new Error('扩展路径未找到'); }
             const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
-            const rendererSrc = fs.readFileSync(rendererPath, 'utf-8');
+            const rendererSrc = readRendererSource(extPath);
 
             // 验证源码中 wrapLines 函数包含标签平衡的关键逻辑模式：
             // 1. 使用正则扫描 <span> 和 </span>
@@ -1649,7 +1650,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
 
             const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
-            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             // 找到 plantuml/puml 的 code renderer 区域（从 "if (lang === 'plantuml'" 到下一个 return 之后的 "}"）
             const plantumlBlockMatch = rendererCode.match(/\/\/ PlantUML[\s\S]*?if\s*\(lang\s*===\s*'plantuml'[\s\S]*?return\s*`[^`]*`;[\s\S]*?\}/);
@@ -1683,7 +1684,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             }
 
             const rendererPath = path.join(extPath, 'webview', 'js', 'renderer.js');
-            const rendererCode = fs.readFileSync(rendererPath, 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             // renderPlantUML 函数应包含从 data-source 解码源码的逻辑
             assert.ok(
@@ -1906,7 +1907,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
         test('BT-codeFontVar.9 renderBlocks 完成后应触发渲染完成回调（Tier 2 — 行为级断言）', () => {
             // Tier 2 — 行为级断言：验证 renderer.js 中 renderBlocks 末尾调用了渲染完成回调
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-            const rendererJs = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+            const rendererJs = readRendererSource(extPath);
 
             // 验证 onRenderComplete 注册方法存在
             assert.ok(
@@ -2007,7 +2008,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
         test('BT-mdEmphasis.1 renderer.js 应包含 Markdown 代码块 emphasis 后处理逻辑（Tier 1 — 存在性断言）', () => {
             // Tier 1 — 存在性断言：验证 renderer.js 中存在 Markdown emphasis 后处理代码
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-            const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             assert.ok(
                 rendererCode.includes('hljs-emphasis'),
@@ -2022,7 +2023,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
         test('BT-mdEmphasis.2 后处理应对所有代码块生效以防止下划线变量名被错误渲染（Tier 2 — 行为级断言）', () => {
             // Tier 2 — 行为级断言：验证后处理逻辑对所有 highlighted 输出生效
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-            const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             // 验证后处理条件是 if (highlighted)，对所有代码块生效
             assert.ok(
@@ -2040,7 +2041,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
         test('BT-mdEmphasis.3 后处理应用正则匹配完整标签对去掉 emphasis/strong 标签（Tier 3 — 回归断言）', () => {
             // Tier 3 — 任务特定断言：验证后处理逻辑正确去掉 emphasis 和 strong 的完整标签对
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-            const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             // 验证去掉 <span class="hljs-emphasis">...</span> 完整标签对（highlight.js 实际输出格式）
             assert.ok(
@@ -2073,7 +2074,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             // 场景：> 直接修改 node_modules\n\n### 错误 (CAUTION)
             // hljs 输出中 hljs-quote 因未闭合的 _ 导致 emphasis 跨行，连带 quote 也跨行吞掉 ### 标题
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-            const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             // 验证存在 hljs-quote 跨行检测逻辑
             assert.ok(
@@ -2097,7 +2098,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             // 去掉错误的 emphasis/quote span 后，能识别裸的标题/引用/列表并补上 hljs-section/hljs-quote/hljs-bullet 高亮
             // 场景：rules_PT\n\n# 标题 — emphasis 吞掉 # 标题 导致标题失去高亮色
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-            const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             // 验证存在 markdown 语言的特殊处理分支
             assert.ok(
@@ -2139,7 +2140,7 @@ suite('E2E Edge Cases Test Suite — 边界场景端到端', () => {
             //   > 直接修改 `node_modules` 中的文件...下次 `npm install` 后修改将丢失
             // 根因：emphasis 跨段后 inline code 反引号配对错乱，最后一行失去 hljs-quote 且中段被染为 hljs-code
             if (!extPath) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
-            const rendererCode = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+            const rendererCode = readRendererSource(extPath);
 
             // 验证存在"跨段 emphasis"的前置检测逻辑
             assert.ok(

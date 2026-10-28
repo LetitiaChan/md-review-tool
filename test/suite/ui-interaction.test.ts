@@ -1,3 +1,4 @@
+import { readRendererSource } from './helpers/module-source';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -1551,7 +1552,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
         test('BT-gitGraph.1 mermaid.render 调用应传递 container 参数（Tier 1 — 存在性断言）', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
-            const js = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+            const js = readRendererSource(extPath);
 
             // mermaid.render 应传递第三个参数 container，确保临时 SVG 在可见的渲染树中
             assert.ok(
@@ -1562,7 +1563,7 @@ suite('UI Interaction Test Suite — UI 交互测试', () => {
 
         test('BT-gitGraph.2 mermaid.render 传递 container 应防止 gitGraph getBBox 失败回归（Tier 3 — 回归断言）', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')!.extensionPath;
-            const js = fs.readFileSync(path.join(extPath, 'webview', 'js', 'renderer.js'), 'utf-8');
+            const js = readRendererSource(extPath);
 
             // 确保 render 调用中包含 container 参数（不是只传 id 和 code）
             const renderCallMatch = js.match(/await\s+mermaid\.render\s*\(\s*id\s*,\s*code\s*,\s*container\s*\)/);

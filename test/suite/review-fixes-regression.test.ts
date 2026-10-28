@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { readPmSource } from './helpers/module-source';
+import { readPmSource, readRendererSource } from './helpers/module-source';
 
 /**
  * review-fixes-regression — 2026-10 全库代码评审修复项回归测试
@@ -57,7 +57,7 @@ suite('Review Fixes Regression Test Suite', () => {
     suite('Tier 1 — 源码不变量', () => {
 
         test('BT-ReviewFixes.T1.1 renderer.js 不得使用内联 onerror（CSP 会拦截）', () => {
-            const source = readSource('webview', 'js', 'renderer.js');
+            const source = readRendererSource(extPath);
             if (!source) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             assert.ok(!/onerror\s*=\s*"/.test(source),
                 'renderer.js 不应出现内联 onerror="..."，webview CSP 禁止内联事件处理器');
@@ -68,7 +68,7 @@ suite('Review Fixes Regression Test Suite', () => {
         });
 
         test('BT-ReviewFixes.T1.2 链接渲染应使用 parseInline 而非原始 data.text', () => {
-            const source = readSource('webview', 'js', 'renderer.js');
+            const source = readRendererSource(extPath);
             if (!source) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             // renderer.link 是赋值给 renderer.link 的匿名函数，按标记片段截取
             const linkStart = source.indexOf('renderer.link = function');
@@ -82,7 +82,7 @@ suite('Review Fixes Regression Test Suite', () => {
         });
 
         test('BT-ReviewFixes.T1.3 标题 slug 必须去重，并在每次整篇渲染时重置', () => {
-            const source = readSource('webview', 'js', 'renderer.js');
+            const source = readRendererSource(extPath);
             if (!source) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             assert.ok(source.includes('function uniqueHeadingSlug('),
                 'renderer.js 应提供 uniqueHeadingSlug 去重函数');
@@ -178,7 +178,7 @@ suite('Review Fixes Regression Test Suite', () => {
             assert.ok(/max-height:\s*70vh/.test(fmBody),
                 '.fm-body 应使用视口相关的最大高度');
 
-            const js = readSource('webview', 'js', 'renderer.js');
+            const js = readRendererSource(extPath);
             assert.ok(js.includes('ctx.frontmatterExpanded'),
                 'renderer.js 应持久化 frontmatter 展开状态');
         });
@@ -225,7 +225,7 @@ suite('Review Fixes Regression Test Suite', () => {
         });
 
         test('BT-ReviewFixes.T3.2 跨行高亮：三个匹配路径都基于 collectTextSegments', () => {
-            const source = readSource('webview', 'js', 'renderer.js');
+            const source = readRendererSource(extPath);
             if (!source) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
             const crossBody = extractFunctionBody(source, 'tryCrossNodeHighlight');
             const partialBody = extractFunctionBody(source, 'tryPartialBlockHighlight');

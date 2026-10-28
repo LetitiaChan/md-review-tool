@@ -1,3 +1,4 @@
+import { readRendererSource } from './helpers/module-source';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -889,7 +890,7 @@ suite('Workflow Test Suite — 完整工作流', () => {
             const extPath = vscode.extensions.getExtension('letitia.md-human-review')?.extensionPath;
             assert.ok(extPath);
 
-            const rendererJs = fs.readFileSync(path.join(extPath!, 'webview', 'js', 'renderer.js'), 'utf-8');
+            const rendererJs = readRendererSource(extPath!);
 
             // 验证 cleanedLines 使用 trimEnd 进行比较
             assert.ok(
