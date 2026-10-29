@@ -46,8 +46,7 @@ suite('Issues #3-#6 Regression Guards', () => {
         );
     });
 
-    test('BT-issue5.guard 导出模板使用 i18n key，不再硬编码中文', () => {
-        const source = read('webview', 'js', 'export.js');
+    test('BT-issue5.guard 导出模板使用 i18n key，不再硬编码中文', () => {        const source = read('webview', 'js', 'export.js');
         if (!source) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
         for (const key of [
             'export.instruction_num',
@@ -88,6 +87,32 @@ suite('Issues #3-#6 Regression Guards', () => {
         assert.ok(app.includes("key === 'b'"), '应绑定 Ctrl+Shift+B');
         assert.ok(app.includes("key === 'j'"), '应绑定 Ctrl+Shift+J');
         assert.ok(app.includes("key === 'k'"), '应绑定 Ctrl+Shift+K');
+    });
+
+    test('BT-issue5-6.guard 新增 i18n key 在中英字典中都存在', () => {
+        const source = read('webview', 'js', 'i18n.js');
+        if (!source) { assert.ok(true, '测试环境中扩展路径不可用'); return; }
+
+        const exportKeys = [
+            'export.field_separator',
+            'export.image_alt',
+            'export.field_locate_status',
+            'export.orphaned_note',
+        ];
+        const helpKeys = [
+            'help.shortcut_comment',
+            'help.shortcut_delete',
+            'help.shortcut_insert_after',
+            'help.shortcut_insert_before',
+            'help.shortcut_next_annotation',
+            'help.shortcut_prev_annotation',
+            'help.shortcut_toggle_toc',
+        ];
+
+        for (const key of [...exportKeys, ...helpKeys]) {
+            const occurrences = (source.match(new RegExp(`'${key}':`, 'g')) || []).length;
+            assert.strictEqual(occurrences, 2, `i18n key ${key} 应在中英字典中各出现一次`);
+        }
     });
 });
 

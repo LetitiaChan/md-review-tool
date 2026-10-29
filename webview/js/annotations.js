@@ -1085,8 +1085,14 @@ const Annotations = (() => {
         if (sorted.length === 0) return false;
 
         const cards = Array.from(document.querySelectorAll('#annotationsList .annotation-card'));
-        let current = cards.findIndex((c) => c.classList.contains('active'));
-        if (current === -1 && currentSelection) {
+        // 卡片默认按时间排序，而导航按位置排序；必须先用 active 卡片的 id
+        // 反查它在位置序列中的下标，不能直接混用卡片下标
+        const activeCard = cards.find((c) => c.classList.contains('active'));
+        let current = -1;
+        if (activeCard) {
+            const activeId = Number(activeCard.dataset.id);
+            current = sorted.findIndex((a) => a.id === activeId);
+        } else if (currentSelection) {
             current = sorted.findIndex((a) =>
                 a.blockIndex === currentSelection.blockIndex && a.startOffset === currentSelection.startOffset);
         }
