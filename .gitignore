@@ -1,22 +1,42 @@
+# ===== 依赖与构建产物 =====
 node_modules/
 out/
+webview/dist/
+*.tsbuildinfo
 *.vsix
+
+# ===== 编辑器 / 测试运行时 =====
+# 共享调试配置（launch.json / tasks.json）需要入库，其余本地配置忽略
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
 .vscode-test/
 .vscode-test-userdata/
-.vscode/
+.playwright/
 
-# 测试产物
+# ===== 测试产物 =====
 test-output*.log
 test-output*.txt
 test-screenshots/
 playwright-report/
+blob-report/
 test-results/
+coverage/
+# Playwright 视觉回归失败时生成的临时截图
+test/ui/specs/__screenshots__/**/*-actual.png
+test/ui/specs/__screenshots__/**/*-diff.png
 
-# TypeScript 编译产物（src 目录下的 .js 和 .map 应由 tsc 输出到 out/）
+# ===== TypeScript 编译产物 =====
+# src 目录下的 .js / .map 应由 tsc 输出到 out/，不应入库
 src/**/*.js
 src/**/*.js.map
 
-# AI 工具配置：追踪共享 aikit 真源与 Cursor shim，忽略本地私有项
+# ===== 操作系统 / 编辑器临时文件 =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== AI 工具配置：追踪共享 aikit 真源与 Cursor shim，忽略本地私有项 =====
 .claude/
 CODEBUDDY.md
 
@@ -42,16 +62,14 @@ CODEBUDDY.md
 !.cursor/skills
 !.cursor/skills/**
 
-# OpenSpec 工作流产物
+# ===== OpenSpec 工作流产物 =====
 openspec/
 AGENT-PROGRESS.md
 
-# 临时/草稿文件
+# ===== 临时 / 草稿文件 =====
 .review/
 todo.md
 
-# 分析缓存与归档（output-phrasing-engineering skill 产物）
+# ===== 分析缓存与归档（output-phrasing-engineering skill 产物）=====
 .analysis-cache.md
 .analysis-archive/
-# Webview 构建产物（由 npm run build:webview 生成，不再入库）
-webview/dist/

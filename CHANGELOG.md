@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.6.0] - 2026-10-30
 
 ### 🐛 Bug Fixes
 - Opening a Markdown file no longer creates an empty `.review/` record when nothing was annotated (#3)
@@ -11,6 +11,17 @@ All notable changes to this project will be documented in this file.
 
 ### ✨ Features
 - Keyboard shortcuts for annotation actions: `Ctrl+Enter` comment, `Ctrl+Shift+D` delete, `Ctrl+Shift+A/B` insert after/before, `Ctrl+Shift+J/K` navigate annotations, `Ctrl+Shift+T` toggle TOC, and `Ctrl+Enter` submits modals (#6)
+
+### 🧪 Tests
+- Extend the full-syntax fixture (`test/ui/fixtures/full-syntax.md`) with YAML Front Matter and cover it in preview, Rich Mode and round-trip specs alongside the full GFM syntax
+- Add `BT-custom-editor.INT.6` — open the rich fixture through `vscode.openWith` and verify the Custom Editor loads its front matter and GFM content intact
+
+### 🧹 Chores
+- Refresh `.gitignore` / `.vscodeignore`: ignore Playwright failure screenshots and incremental build caches, keep `*.tsbuildinfo` out of the package, and drop ignore entries that no longer match any file (`out/reviewPanel_original.js`, `test_debug.js`)
+- Track the shared `.vscode/launch.json` and `.vscode/tasks.json` so `F5` works after a fresh clone
+- Update development docs with current test counts, tracked-vs-generated paths and the `.vsix` packaging rules
+- Remove unused legacy fixtures under `test/fixtures/` (unreferenced since the 1.4.0 turndown removal); `test/ui/fixtures/full-syntax.md` is now the single rich-format fixture
+- README now presents Chinese before English
 
 ## [1.5.7] - 2026-09-09
 

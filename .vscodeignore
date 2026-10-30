@@ -17,18 +17,20 @@ node_modules/**
 package-lock.json
 *.vsix
 
-# ===== 编译产物中的测试 / 冗余输出 =====
+# ===== 编译产物中的测试 / 增量缓存 =====
 out/test/**
+# compile:test 会为集成测试生成 src 副本（测试代码 require '../../src/*'）
 out/src/**
-out/reviewPanel_original.js
+out/.tsbuildinfo*
+**/*.tsbuildinfo
+**/*.tsbuildinfo-*
 
 # ===== 测试报告和临时日志 =====
 playwright-report/**
+blob-report/**
 test-results/**
-test_debug.js
 test-output*.log
 test-output*.txt
-test-out*.log
 
 # ===== AI 工具 aikit（CodeBuddy 真源 + Cursor shim，仅开发期使用，不打入发行包） =====
 .claude/**

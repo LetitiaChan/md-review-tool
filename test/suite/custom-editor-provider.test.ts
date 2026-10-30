@@ -492,5 +492,36 @@ suite('Custom Editor Provider Tests', () => {
                 }
             }
         });
+
+        test('BT-custom-editor.INT.6 用 Custom Editor 打开富 GFM 夹具 full-syntax.md', async () => {
+            const fixturePath = path.join(projectRoot, 'test', 'ui', 'fixtures', 'full-syntax.md');
+            assert.ok(fs.existsSync(fixturePath), 'GFM 夹具 test/ui/fixtures/full-syntax.md 应存在');
+
+            const source = fs.readFileSync(fixturePath, 'utf-8');
+            assert.ok(/^---\r?\n/.test(source), '夹具应以 YAML Front Matter 开头');
+            assert.ok(source.includes('## 8. 表格'), '夹具应包含 GFM 表格章节');
+            assert.ok(source.includes('```mermaid'), '夹具应包含 Mermaid 图表');
+            assert.ok(source.includes('[^1]:'), '夹具应包含脚注定义');
+
+            const uri = vscode.Uri.file(fixturePath);
+            await vscode.commands.executeCommand('vscode.openWith', uri, 'mdReview.markdownEditor');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            const activeTab = vscode.window.tabGroups.activeTabGroup.activeTab;
+            assert.ok(activeTab, '应有活跃的 tab');
+            const input = activeTab!.input;
+            assert.ok(input instanceof vscode.TabInputCustom,
+                '富 GFM 文档应通过 Custom Editor 打开');
+            assert.strictEqual((input as vscode.TabInputCustom).uri.fsPath, uri.fsPath,
+                '打开的文件路径应与夹具一致');
+
+            // Provider 加载文档后，原始 Markdown 应完整保留
+            const doc = vscode.workspace.textDocuments.find(d => d.uri.fsPath === uri.fsPath);
+            assert.ok(doc, 'Custom Editor 应把夹具加载为 TextDocument');
+            const text = doc!.getText();
+            assert.ok(/^---\r?\n/.test(text), '加载的文档应保留 YAML Front Matter');
+            assert.ok(text.includes('| 功能 | 状态 | 说明 |'), '加载的文档应保留 GFM 表格');
+            assert.ok(text.includes('###### 六级标题'), '加载的文档应保留全部标题层级');
+        });
     });
 });

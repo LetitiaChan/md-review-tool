@@ -5,8 +5,8 @@ import { addComment, insertAfter, markDelete, prepareAnnotationUi } from '../hel
 /**
  * 完整语法文档（test/ui/fixtures/full-syntax.md）
  *
- * 覆盖预览渲染与批注交互：表格、代码块、告警块、任务列表、脚注、定义列表、
- * 折叠内容、数学公式、Mermaid / PlantUML / Graphviz。
+ * 覆盖预览渲染与批注交互：YAML Front Matter、表格、代码块、告警块、任务列表、
+ * 脚注、定义列表、折叠内容、数学公式、Mermaid / PlantUML / Graphviz。
  */
 
 const FIXTURE = 'full-syntax.md';
@@ -17,6 +17,29 @@ test.describe('完整语法文档 — 预览渲染', () => {
         await openContainer(page);
         await loadFixture(page, FIXTURE);
         await waitForRender(page);
+    });
+
+    test('BT-fullsyntax.0 YAML Front Matter 渲染为卡片且不干扰 GFM 正文', async ({ page }) => {
+        // 首个块是 frontmatter 卡片，默认折叠
+        const firstBlock = page.locator('#documentContent .md-block').first();
+        const card = firstBlock.locator('.frontmatter-card');
+        await expect(card).toHaveCount(1);
+        await expect(card).toHaveClass(/fm-collapsed/);
+        await expect(card.locator('.fm-title')).toHaveText('YAML Front Matter');
+
+        // 展开后展示 YAML 键值（含嵌套字段）
+        await card.locator('.fm-header').click();
+        await expect(card).not.toHaveClass(/fm-collapsed/);
+        for (const key of ['title', 'description', 'author', 'version', 'tags', 'settings', 'theme', 'enableMath']) {
+            await expect(card.locator('.fm-key').filter({ hasText: new RegExp(`^${key}$`) })).toHaveCount(1);
+        }
+        await expect(card).toContainText('完整语法与图表渲染测试文档');
+        await expect(card).toContainText('enableMath: true');
+
+        // frontmatter 之后的 GFM 正文仍正常渲染
+        await expect(page.locator('#documentContent h1').first()).toHaveText('📋 完整语法与图表渲染测试文档');
+        await expect(page.locator('#documentContent strong').first()).toBeVisible();
+        await expect(page.locator('#documentContent table').first()).toBeVisible();
     });
 
     test('BT-fullsyntax.1 标题 H1-H6 全部渲染', async ({ page }) => {

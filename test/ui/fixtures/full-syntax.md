@@ -1,6 +1,20 @@
+---
+title: 完整语法与图表渲染测试文档
+description: 覆盖 GFM 全量语法、YAML Front Matter 与 Mermaid / PlantUML / Graphviz 图表渲染
+author: md-review-tool
+version: 1.0.0
+tags:
+  - markdown
+  - gfm
+  - frontmatter
+settings:
+  theme: dark
+  enableMath: true
+---
+
 # 📋 完整语法与图表渲染测试文档
 
-> 本文档覆盖 GFM（GitHub Flavored Markdown）全量语法 + Mermaid / PlantUML / Graphviz 图表渲染，用于验证 MD Human Review 的渲染能力。
+> 本文档覆盖 GFM（GitHub Flavored Markdown）全量语法 + YAML Front Matter + Mermaid / PlantUML / Graphviz 图表渲染，用于验证 MD Human Review 的渲染能力。
 
 ---
 

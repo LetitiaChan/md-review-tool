@@ -25,6 +25,8 @@ test.describe('富文本模式 — 完整语法', () => {
     test('BT-richfull.1 各类块级语法都能进入编辑器', async ({ page }) => {
         await createRichEditor(page, readFixture('full-syntax.md'));
 
+        // YAML Front Matter 与 GFM 正文共存
+        await expect(page.locator('.ProseMirror .frontmatter-nodeview')).toHaveCount(1);
         for (const level of [1, 2, 3, 4, 5, 6]) {
             await expect(page.locator(`.ProseMirror h${level}`).first()).toBeVisible();
         }
@@ -46,6 +48,7 @@ test.describe('富文本模式 — 完整语法', () => {
         const output = await getMarkdown(page);
 
         for (const marker of [
+            '---\ntitle: 完整语法与图表渲染测试文档',
             '**粗体文本**',
             '*斜体文本*',
             '~~删除线文本~~',

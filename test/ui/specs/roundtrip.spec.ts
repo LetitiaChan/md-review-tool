@@ -172,6 +172,11 @@ test.describe('Rich Mode 往返保真', () => {
         }, markdown);
         const twice = await page.evaluate((md) => (window as any).PM.serializeMarkdown(md, false), once);
 
+        // YAML Front Matter 与 GFM 正文一起往返，前置信息必须保留
+        expect(once.startsWith('---\n')).toBe(true);
+        expect(once).toContain('title: 完整语法与图表渲染测试文档');
+        expect(once).toContain('enableMath: true');
+        expect(once).toContain('| 功能 | 状态 | 说明 |');
         expect(twice).toBe(once);
     });
 });

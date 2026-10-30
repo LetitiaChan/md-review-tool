@@ -1,110 +1,6 @@
-<a id="english"></a>
-# MD Human Review
-
 [![CI](https://github.com/LetitiaChan/md-review-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/LetitiaChan/md-review-tool/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/visual-studio-marketplace/v/letitia.md-human-review?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=letitia.md-human-review)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-> Markdown review & annotation for VS Code — comment, mark deletions, insert content, edit in Rich Mode, and generate AI fix instructions in one click.
->
-> 🖊️ 像导师批改论文一样批阅 Markdown。
-
-**Works with** VS Code, Cursor, Windsurf, CodeBuddy IDE, Trae and any VS Code–based editor.
-[中文](#chinese) · [Configuration](https://github.com/LetitiaChan/md-review-tool/blob/main/docs/configuration.md) · [Development](https://github.com/LetitiaChan/md-review-tool/blob/main/docs/development.md)
-
-![intro](https://raw.githubusercontent.com/LetitiaChan/md-review-tool/main/assets/intro.gif)
-
-![Main Page](https://raw.githubusercontent.com/LetitiaChan/md-review-tool/main/assets/main_page_en.png)
-
-## ✨ Features
-
-**Review**
-- **Comments** — select text to comment, with image attachments (paste, drag or pick from disk)
-- **Deletion marks** — pending deletions shown as strikethrough
-- **Insertions** — insert Markdown before or after an anchor
-- **Rich Mode** — ProseMirror editor with formatting toolbar, tables, links, diagrams, local images and smart paste
-- **Structure-preserving editing** — blockquotes, alerts, code blocks, math and diagrams keep their original Markdown
-- Editable YAML front matter, link bubble menu, 6×6 table picker, 5 alert types, 12 code languages
-- Three refresh strategies: visual refresh, disk reload and editor reload
-
-**Read & navigate**
-- Full GFM rendering with 15 code themes
-- Mermaid, KaTeX, PlantUML (online server) and Graphviz (local Viz.js)
-- TOC with search, content search (`Ctrl+F`) and annotation search
-- Image lightbox, Zen mode, light/dark theme, typography and layout settings
-
-**AI & storage**
-- **One-click AI fix** — builds structured instructions and sends them to CodeBuddy / Cursor / Windsurf chats; clipboard fallback for other editors
-- **Export** (`Ctrl+E`) — Markdown instructions ordered back-to-front so edits stay safe
-- **Auto-save** — annotations live in `.review/`, with a new review version whenever the source changes
-
-## ⌨️ Shortcuts
-
-| Shortcut | Action |
-|---|---|
-| `Ctrl+F` | Content search |
-| `Ctrl+E` | Export review records |
-| `Ctrl+S` | Save edits to the source file |
-| `Ctrl+Shift+E` | Toggle preview / edit mode |
-| `Alt+Z` | Zen mode |
-| `Ctrl+Enter` | Open review panel from Explorer |
-| `Ctrl+Enter` (in panel) | Comment on the selected text |
-| `Ctrl+Shift+D` | Mark the selection for deletion |
-| `Ctrl+Shift+A` / `B` | Insert content after / before the selection |
-| `Ctrl+Shift+J` / `K` | Next / previous annotation |
-| `Ctrl+Shift+T` | Show / hide the table of contents |
-| `ESC` | Close modal / exit Zen mode / close search |
-
-> On macOS use `Cmd` instead of `Ctrl`.
-
-## 🚀 Quick Start
-
-**Install (recommended):** open the Extensions panel (`Ctrl+Shift+X`), search **"MD Human Review"** and install. Also available on [Open VSX](https://open-vsx.org/extension/letitia/md-human-review).
-
-**From source:** `git clone` → `npm install` → `npm run compile` → press `F5`. See [Development](https://github.com/LetitiaChan/md-review-tool/blob/main/docs/development.md).
-
-**Use:**
-1. Open a `.md`, `.mdc` or `.markdown` file.
-2. Right-click → **Open With...** → **MD Human Review** (or use the editor title button).
-3. Select text and use the floating toolbar or right-click menu.
-4. Click **🤖 AI Fix** or press `Ctrl+E` to export.
-
-## ⚙️ Configuration
-
-| Setting | Default | Purpose |
-|---|---|---|
-| `mdReview.theme` | `light` | `light` / `dark` / `auto` |
-| `mdReview.fontSize` | `16` | Body font size (12–24 px) |
-| `mdReview.showToc` | `true` | Show the table of contents |
-| `mdReview.showAnnotations` | `true` | Show the annotations panel |
-| `mdReview.autoSave` | `true` | Auto-save annotations |
-| `mdReview.enablePlantUML` | `true` | PlantUML rendering (needs network) |
-
-All 22 settings → [docs/configuration.md](https://github.com/LetitiaChan/md-review-tool/blob/main/docs/configuration.md).
-
-## 🍴 Fork & Customize
-
-Review styles, interaction logic and AI instruction templates are fully open source. Fork, adjust, run `npm run compile`, press `F5`, and package a `.vsix` for your team.
-
-## ❓ FAQ
-
-**How is it different from the built-in preview?** The built-in preview is read-only. MD Human Review lets you annotate rendered documents and turn the annotations into AI instructions. Hide the review panels and it also works as a rich Markdown reader.
-
-**Which diagram formats are supported?** Mermaid, KaTeX, PlantUML (online) and Graphviz (DOT, local).
-
-**Where are annotations stored?** In the workspace `.review/` directory, versioned by source content.
-
-**Which files are supported?** `.md`, `.markdown` and `.mdc`.
-
-## 🙏 Acknowledgements
-
-Inspired by [MDReviewTool](https://github.com/hexQQ666/MDReviewTool), rebuilt as a VS Code extension with full rendering, AI fix instructions and extensive customization.
-
-## 📄 License
-
-MIT
-
----
 
 <a id="chinese"></a>
 # MD Human Review
@@ -122,6 +18,8 @@ MIT
 
 **批阅**
 - **评论** —— 选中文字添加评论，支持图片附件（粘贴 / 拖拽 / 选择本地文件）
+- **脚注评论** —— 可选地把评论写入源文件，以 `[^mdhr-N]` 脚注形式持久化，重新打开时还原为批注
+- **批注跟随源文件** —— 源文件修改后批注自动重新锚定；无法定位的批注保留为「未解决」而不是被丢弃
 - **删除标记** —— 待删除内容以删除线展示
 - **插入内容** —— 在锚点文字前后插入 Markdown 内容
 - **富文本模式** —— 基于 ProseMirror 的编辑器，含格式工具栏、表格、链接、图表、本地图片与智能粘贴
@@ -203,5 +101,111 @@ MIT
 原型来自 [MDReviewTool](https://github.com/hexQQ666/MDReviewTool)，在此基础上重构为 VS Code 插件，并补齐完整渲染、AI 修改指令与大量可定制项。
 
 ## 📄 许可证
+
+MIT
+
+---
+
+<a id="english"></a>
+# MD Human Review
+
+> Markdown review & annotation for VS Code — comment, mark deletions, insert content, edit in Rich Mode, and generate AI fix instructions in one click.
+>
+> 🖊️ 像导师批改论文一样批阅 Markdown。
+
+**Works with** VS Code, Cursor, Windsurf, CodeBuddy IDE, Trae and any VS Code–based editor.
+[中文](#chinese) · [Configuration](https://github.com/LetitiaChan/md-review-tool/blob/main/docs/configuration.md) · [Development](https://github.com/LetitiaChan/md-review-tool/blob/main/docs/development.md)
+
+![intro](https://raw.githubusercontent.com/LetitiaChan/md-review-tool/main/assets/intro.gif)
+
+![Main Page](https://raw.githubusercontent.com/LetitiaChan/md-review-tool/main/assets/main_page_en.png)
+
+## ✨ Features
+
+**Review**
+- **Comments** — select text to comment, with image attachments (paste, drag or pick from disk)
+- **Footnote comments** — optionally persist a comment into the source as a `[^mdhr-N]` footnote and restore it as an annotation on reopen
+- **Resilient annotations** — re-anchor to the updated source after edits; unresolved targets stay visible instead of being dropped
+- **Deletion marks** — pending deletions shown as strikethrough
+- **Insertions** — insert Markdown before or after an anchor
+- **Rich Mode** — ProseMirror editor with formatting toolbar, tables, links, diagrams, local images and smart paste
+- **Structure-preserving editing** — blockquotes, alerts, code blocks, math and diagrams keep their original Markdown
+- Editable YAML front matter, link bubble menu, 6×6 table picker, 5 alert types, 12 code languages
+- Three refresh strategies: visual refresh, disk reload and editor reload
+
+**Read & navigate**
+- Full GFM rendering with 15 code themes
+- Mermaid, KaTeX, PlantUML (online server) and Graphviz (local Viz.js)
+- TOC with search, content search (`Ctrl+F`) and annotation search
+- Image lightbox, Zen mode, light/dark theme, typography and layout settings
+
+**AI & storage**
+- **One-click AI fix** — builds structured instructions and sends them to CodeBuddy / Cursor / Windsurf chats; clipboard fallback for other editors
+- **Export** (`Ctrl+E`) — Markdown instructions ordered back-to-front so edits stay safe
+- **Auto-save** — annotations live in `.review/`, with a new review version whenever the source changes
+
+## ⌨️ Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+F` | Content search |
+| `Ctrl+E` | Export review records |
+| `Ctrl+S` | Save edits to the source file |
+| `Ctrl+Shift+E` | Toggle preview / edit mode |
+| `Alt+Z` | Zen mode |
+| `Ctrl+Enter` | Open review panel from Explorer |
+| `Ctrl+Enter` (in panel) | Comment on the selected text |
+| `Ctrl+Shift+D` | Mark the selection for deletion |
+| `Ctrl+Shift+A` / `B` | Insert content after / before the selection |
+| `Ctrl+Shift+J` / `K` | Next / previous annotation |
+| `Ctrl+Shift+T` | Show / hide the table of contents |
+| `ESC` | Close modal / exit Zen mode / close search |
+
+> On macOS use `Cmd` instead of `Ctrl`.
+
+## 🚀 Quick Start
+
+**Install (recommended):** open the Extensions panel (`Ctrl+Shift+X`), search **"MD Human Review"** and install. Also available on [Open VSX](https://open-vsx.org/extension/letitia/md-human-review).
+
+**From source:** `git clone` → `npm install` → `npm run compile` → press `F5`. See [Development](https://github.com/LetitiaChan/md-review-tool/blob/main/docs/development.md).
+
+**Use:**
+1. Open a `.md`, `.mdc` or `.markdown` file.
+2. Right-click → **Open With...** → **MD Human Review** (or use the editor title button).
+3. Select text and use the floating toolbar or right-click menu.
+4. Click **🤖 AI Fix** or press `Ctrl+E` to export.
+
+## ⚙️ Configuration
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `mdReview.theme` | `light` | `light` / `dark` / `auto` |
+| `mdReview.fontSize` | `16` | Body font size (12–24 px) |
+| `mdReview.showToc` | `true` | Show the table of contents |
+| `mdReview.showAnnotations` | `true` | Show the annotations panel |
+| `mdReview.autoSave` | `true` | Auto-save annotations |
+| `mdReview.enablePlantUML` | `true` | PlantUML rendering (needs network) |
+
+All 22 settings → [docs/configuration.md](https://github.com/LetitiaChan/md-review-tool/blob/main/docs/configuration.md).
+
+## 🍴 Fork & Customize
+
+Review styles, interaction logic and AI instruction templates are fully open source. Fork, adjust, run `npm run compile`, press `F5`, and package a `.vsix` for your team.
+
+## ❓ FAQ
+
+**How is it different from the built-in preview?** The built-in preview is read-only. MD Human Review lets you annotate rendered documents and turn the annotations into AI instructions. Hide the review panels and it also works as a rich Markdown reader.
+
+**Which diagram formats are supported?** Mermaid, KaTeX, PlantUML (online) and Graphviz (DOT, local).
+
+**Where are annotations stored?** In the workspace `.review/` directory, versioned by source content.
+
+**Which files are supported?** `.md`, `.markdown` and `.mdc`.
+
+## 🙏 Acknowledgements
+
+Inspired by [MDReviewTool](https://github.com/hexQQ666/MDReviewTool), rebuilt as a VS Code extension with full rendering, AI fix instructions and extensive customization.
+
+## 📄 License
 
 MIT

@@ -14,6 +14,7 @@ Build, test and release notes for MD Human Review.
 npm install                 # install dependencies
 
 npm run compile             # tsc + esbuild (webview bundles)
+npm run compile:test        # compile test suites into out/ for debugging
 npm run watch               # tsc watch
 npm run build:webview:watch # esbuild watch for webview only
 
@@ -74,13 +75,27 @@ test/
 └── ui/fixtures/                  Rich-format Markdown fixtures
 ```
 
+## Repository hygiene / 仓库产物
+
+Generated files stay out of git:
+
+| Path | Tracked | Purpose |
+|---|---|---|
+| `out/` | no | tsc output (`npm run compile`) |
+| `webview/dist/` | no | esbuild bundles (`npm run build:webview`) |
+| `test-results/`, `playwright-report/`, `blob-report/` | no | Playwright artifacts |
+| `test/ui/specs/__screenshots__/` | yes | Visual baselines (`.png` only; failure `-actual` / `-diff` images are ignored) |
+| `*.vsix`, `.vscode-test*/` | no | Local packages and test runner caches |
+
+`.vscode/launch.json` and `.vscode/tasks.json` are tracked so `F5` works right after cloning; other `.vscode/` files stay local. `.vscodeignore` mirrors this list and additionally keeps development-only files (AI workflow configs, `docs/`, `openspec/`, sources) out of the `.vsix`.
+
 ## Testing
 
-- **Integration** (`npm test`, ~1055 cases): service logic, source-level invariants and end-to-end flows inside a real VS Code instance.
-- **UI** (`npm run test:ui`, ~128 cases): preview rendering, annotations, rich mode, round-trip fidelity and performance budgets in Chromium.
+- **Integration** (`npm test`, ~1,100 cases): service logic, source-level invariants and end-to-end flows inside a real VS Code instance.
+- **UI** (`npm run test:ui`, ~155 cases): preview rendering, annotations, rich mode, round-trip fidelity and performance budgets in Chromium.
 - Visual regression is excluded from CI because font rendering differs per platform.
 
-Add fixtures under `test/ui/fixtures/` and specs under `test/ui/specs/`. Read fixtures through `readFixture()` so line endings are normalized (the repo forces CRLF on checkout).
+Add fixtures under `test/ui/fixtures/` and specs under `test/ui/specs/`. Read fixtures through `readFixture()` so line endings are normalized (the repo forces CRLF on checkout). `full-syntax.md` is the canonical rich-format fixture: YAML Front Matter plus the full GFM syntax (tables, alerts, task lists, footnotes, math, Mermaid / PlantUML / Graphviz), used by preview, Rich Mode and round-trip specs.
 
 ## Release
 

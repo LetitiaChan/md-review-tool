@@ -8,7 +8,7 @@
 - **Edit** in Rich Mode (ProseMirror) with a formatting toolbar, tables, links, diagrams and local images
 - **Generate AI fix instructions** from all annotations (`Ctrl+E` or one click); sent to CodeBuddy / Cursor / Windsurf chats, clipboard fallback elsewhere
 - **Render** full GFM plus Mermaid, KaTeX, PlantUML (online) and Graphviz (local Viz.js)
-- **Persist** annotations in the workspace `.review/` directory with per-content-change version history
+- **Persist** annotations in the workspace `.review/` directory with per-content-change version history; optionally write comments into the source as `[^mdhr-N]` footnotes and restore them on reopen
 
 ## Why it is different
 
